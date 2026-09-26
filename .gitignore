@@ -1,0 +1,14 @@
+# Internal plans, handoffs and notes (never committed)
+.local/
+
+# Dependencies and build output
+node_modules/
+out/
+dist/
+release/
+*.tsbuildinfo
+
+# Test output
+coverage/
+test-results/
+playwright-report/
