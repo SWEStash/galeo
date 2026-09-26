@@ -1,6 +1,7 @@
 # ADR-008 — Build & packaging: Vite 8 + electron-builder; .deb official, AppImage and macOS/Windows previews secondary; GitHub Releases; no auto-update
 
-- Status: Accepted (2026-09-26, with review amendments)
+- Status: Accepted (2026-09-26, with review amendments; amended 2026-09-26: opt-in unsandboxed
+  mode, see "Sandbox")
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [ADR-001](ADR-001-app-shell-stack.md), [ADR-004](ADR-004-security-and-zero-network.md),
@@ -35,10 +36,22 @@ The sibling projects use semantic-release on `main` with Conventional Commits.
     On Ubuntu 24.04+ it cannot run sandboxed (its random mount path can't be targeted by an
     AppArmor profile, and the SUID sandbox helper can't work from the mount). A Settings command
     "Install command-line launcher" writes `~/.local/bin/galeo` and a user `.desktop` file.
-- **Never unsandboxed**: galeo never passes or honours `--no-sandbox`. If Chromium's sandbox is
-  unavailable, the app shows a clear "sandbox unavailable" error with platform-specific
-  instructions (on Ubuntu 24.04+: install the `.deb`) and exits, rather than running renderers
-  unprotected (SR-01).
+- **Sandbox: on by default, off only by the user's explicit choice** (amended 2026-09-26, owner
+  decision: running unsandboxed is a risk the user may choose to take, as long as they're warned).
+  - Nothing galeo ships passes `--no-sandbox`: not the `.deb`, the `.desktop` entry, nor the
+    `gal` launcher's defaults.
+  - The user opts in **per launch**, in one of two ways: `--no-sandbox` on the command line
+    (`galeo --no-sandbox …` forwards it), or "Run without sandbox" in the "sandbox unavailable" window.
+    When Chromium's sandbox is unavailable, that window names the detected cause and the fix
+    (on Ubuntu 24.04+: install the `.deb`) and offers **Quit** (default) or "Run without sandbox"
+    with the risk stated. The choice is never persisted: users who want it permanently put the
+    flag in their own launcher or alias.
+  - The sandbox state is fixed at process start. A later launch forwarded to a running instance
+    cannot change it, and document content never can.
+  - While unsandboxed, **every window shows a persistent, non-dismissable warning** (status-bar
+    badge and a title suffix), so a wrapper or a crafted `.desktop` file that adds the flag is
+    visible. Every other SR-01…SR-17 layer stays on (context isolation, CSP, sanitizer, network
+    guard, Trusted Types).
 - **macOS and Windows previews** from the same config, built on CI runners for each OS:
   macOS `.dmg`/`.zip` (x64 + arm64), Windows NSIS installer. They are **unsigned** and labelled
   *preview*: unsupported, and the release notes say macOS Gatekeeper and Windows SmartScreen will
@@ -89,8 +102,11 @@ The sibling projects use semantic-release on `main` with Conventional Commits.
 ### Negative
 - No auto-update: users must notice new releases. Mitigation: release notes, GitHub
   "watch releases", and an apt repository later if there's demand.
-- The AppImage is not usable on Ubuntu 24.04+ (by design: no unsandboxed fallback). AppImage
-  users elsewhere must run "Install command-line launcher" once to get `galeo`.
+- The AppImage can't run sandboxed on Ubuntu 24.04+. There it runs only if the user opts in to
+  unsandboxed mode each launch, with the warning shown. AppImage users must run "Install
+  command-line launcher" once to get `galeo`.
+- Unsandboxed mode means a renderer exploit from hostile content (threat model T1/T4) runs with
+  the user's full privileges. That risk is the user's to accept, and the UI keeps it visible.
 
 ### Risks
 - **The packager's fuse support is misconfigured, or changes between versions.** Mitigation:

@@ -239,7 +239,7 @@ live in the [UX specification](design/ux.md).
 - **Platform**: official: Ubuntu 24.04 LTS, GNOME, Wayland (primary) and X11; x86_64. Package: `.deb`
   (official; installs the AppArmor profile Chromium's sandbox needs on 24.04), `galeo` on `PATH`,
   `.desktop` file with MIME associations. AppImage as a secondary portable build for
-  distributions without user-namespace restrictions (it refuses to run unsandboxed). Previews
+  distributions without user-namespace restrictions (on Ubuntu 24.04+ it runs only if the user opts in to unsandboxed mode, with a warning). Previews
   (unsigned, unsupported): macOS `.dmg`/`.zip` (x64, arm64), Windows NSIS installer. No npm
   package in v0.1 (it could not offer desktop integration or the hardened binary).
 - **Accessibility**: full keyboard operation; visible focus; ARIA roles for tabs; bundled themes

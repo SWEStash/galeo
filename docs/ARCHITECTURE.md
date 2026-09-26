@@ -310,7 +310,7 @@ The performance harness (`tests/perf/`) measures each row on the owner's machine
 source (src/shared · core · main · preload · renderer)
   └─ Vite 8 builds (main + preload as library builds, renderer, worker) · scripts/dev.mjs in development
       └─ electron-builder (fuses set) ─┬─ galeo_<v>_amd64.deb              (official)
-                                       ├─ galeo-<v>-x86_64.AppImage        (secondary; refuses to run unsandboxed)
+                                       ├─ galeo-<v>-x86_64.AppImage        (secondary; unsandboxed on 24.04 only by opt-in)
                                        ├─ galeo-<v>-{x64,arm64}.dmg/.zip   (macOS preview, unsigned)
                                        └─ galeo-Setup-<v>.exe              (Windows preview, unsigned)
           CI (matrix ubuntu/macos/windows): tests · fuse read-back · no-network harness (Linux) ·

@@ -63,7 +63,7 @@ ADR-002…007).
 ### F1 — Open from the terminal
 
 ```
-$ galeo [--profile P] [--new-window] file…
+$ galeo [--profile P] [--new-window] [--no-sandbox] file…
         │
         ├─ galeo not running ─→ start → profile P (or last-used, else default)
         │                            → restore P's session (hibernated) → open files as new tabs, focus last
@@ -235,7 +235,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 | **Empty window** (no tabs) | Centered: "Drop files here · Ctrl+P to open · Recent" with the 8 most recent files of the profile |
 | **Settings file invalid** | A hand edit broke `settings.json`, `profile.json` or a session file | Non-modal notice naming the file (and line, when known): "Your file was left untouched; using the last valid settings". Actions: Open file · Dismiss |
 | **Starting** | Window appears with tab bar immediately; active tab paints first; others stay hibernated |
-| **Sandbox unavailable** (app-level, at startup) | Chromium's sandbox can't start (e.g. the AppImage on Ubuntu 24.04+) | A small error window naming the detected cause and the fix (on Ubuntu 24.04+: install the `.deb`), then exit. galeo never runs unsandboxed |
+| **Sandbox unavailable** (app-level, at startup) | Chromium's sandbox can't start (e.g. the AppImage on Ubuntu 24.04+) | A small error window naming the detected cause and the fix (on Ubuntu 24.04+: install the `.deb`). Actions: **Quit** (default) · Run without sandbox (states the risk: a malicious document could then act with your user's full permissions; applies to this launch only) |
+| **Running unsandboxed** (app-level, persistent) | Started with `--no-sandbox` or "Run without sandbox" | Every window: a warning badge "Unsandboxed" in the status bar (icon + text; its tooltip explains the risk and how to go back: restart without the flag, or install the `.deb`) and " — unsandboxed" in the window title. Not dismissable |
 
 ### Document-level
 

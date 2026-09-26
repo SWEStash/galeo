@@ -153,7 +153,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T11 | **Accept.** Same-user processes already have equal privilege; the channel only opens files, which is intended behaviour. Owner: project owner. | SR-13 (argv handled as data) |
 | T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo; exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner. | SR-12 (drop grants from the preload's isolated world) |
 | T14 | Mitigate | SR-17 |
-| T17 | Mitigate + eliminate (never run unsandboxed; `.deb` ships the AppArmor `userns` profile) | SR-01, SR-08 |
+| T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
 
 ### Security requirements
@@ -164,13 +164,18 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 page navigation). Permission request and check handlers deny everything (camera, microphone,
 geolocation, notifications, clipboard-read, HID, serial, USB) except `clipboard-sanitized-write`
 (copy buttons).
-The app **never runs without Chromium's sandbox**: `--no-sandbox` is neither passed nor honoured;
-if the sandbox is unavailable (for example the AppImage on Ubuntu 24.04+, where AppArmor restricts
-user namespaces), galeo shows an error and exits. The `.deb` installs the AppArmor `userns`
+The app **runs with Chromium's sandbox unless the user explicitly opts out for that launch**
+(amended 2026-09-26, ADR-008): nothing galeo ships passes `--no-sandbox`; the user can pass it,
+or choose "Run without sandbox" when the sandbox is unavailable (for example the AppImage on
+Ubuntu 24.04+, where AppArmor restricts user namespaces); the default there is to quit. The choice
+is never persisted, is fixed at process start (a forwarded launch can't change it), and every
+window shows a persistent warning while unsandboxed. The `.deb` installs the AppArmor `userns`
 profile that makes the sandbox work on Ubuntu 24.04+ (ADR-008).
 *AC*: an automated test asserts these `webPreferences` for every created window, and that
 `window.open`, top-level navigation and permission requests are refused; a test asserts that
-starting with `--no-sandbox` or with the sandbox unavailable exits with the error.
+with the sandbox unavailable and no opt-in, the app shows the error and exits (Quit is the
+default); with `--no-sandbox`, every window shows the unsandboxed warning; a second launch with
+`--no-sandbox` forwarded to a sandboxed instance leaves it sandboxed.
 
 **SR-02 — Content is inert.** A strict Content-Security-Policy on app pages:
 `default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' galeo: data:; font-src 'self'; connect-src 'self'`
@@ -271,9 +276,11 @@ that reads of paths never surfaced to the user are rejected.
 
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as
 absolute paths. The `.desktop` entry uses `%F`. Main parses argv with a strict schema and never
-forwards it to Chromium switches. `second-instance` data is treated like argv: files to open and
-the few documented flags, nothing else.
-*AC*: tests with switch-like file names (`--inspect`, `--gpu-launcher=…`) open them as files.
+forwards it to Chromium switches; the one Chromium switch a user may pass is `--no-sandbox`,
+before the `--` separator, at first launch (SR-01). `second-instance` data is treated like argv:
+files to open and the few documented flags, nothing else (a forwarded `--no-sandbox` is ignored).
+*AC*: tests with switch-like file names (`--inspect`, `--gpu-launcher=…`, `--no-sandbox`) after
+`--` open them as files.
 
 **SR-14 — Bounded work.**
 - Size thresholds from the PRD apply: Markdown over 5 MB is shown as source; binary files are
