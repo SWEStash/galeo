@@ -31,6 +31,10 @@ updates:
           - electron
           - electron-builder
           - '@electron/*'
+    ignore:
+      # Node types follow the Node runtime major (24, see .nvmrc), not the latest release.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     open-pull-requests-limit: 10
 
   - package-ecosystem: github-actions
