@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rendererUrl, trustedOrigins } from './renderer-entry';
+import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 
 describe('rendererUrl', () => {
   const env = { GALEO_DEV_SERVER_URL: 'http://127.0.0.1:5173/' };
@@ -30,5 +30,14 @@ describe('trustedOrigins', () => {
 
   it('never trusts the dev server origin in packaged builds', () => {
     expect([...trustedOrigins({ isPackaged: true, env })]).toEqual(['galeo://app']);
+  });
+});
+
+describe('devServerOrigin', () => {
+  it('is the dev server origin in development runs only', () => {
+    const env = { GALEO_DEV_SERVER_URL: 'http://127.0.0.1:5173/' };
+    expect(devServerOrigin({ isPackaged: false, env })).toBe('http://127.0.0.1:5173');
+    expect(devServerOrigin({ isPackaged: true, env })).toBeNull();
+    expect(devServerOrigin({ isPackaged: false, env: {} })).toBeNull();
   });
 });

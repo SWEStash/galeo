@@ -4,8 +4,10 @@ import { parseArgv } from '../core/argv';
 import { startupMode, type StartupMode } from '../core/startup';
 import { registerIpc } from './ipc/register';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
-import { rendererUrl, trustedOrigins } from './renderer-entry';
+import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
+import { disableBackgroundNetworking, installNetworkGuard } from './security/network-guard';
+import { appResponseHeaders } from './security/network-policy';
 import { createAppWindow } from './window/factory';
 import { ownArgs } from './window/policy';
 
@@ -30,12 +32,17 @@ function start(initialMode: StartupMode): void {
   let choiceWindow: BrowserWindow | undefined;
 
   registerSchemes();
+  disableBackgroundNetworking();
 
   const openMainWindow = () => createAppWindow({ url: rendererUrl(runtime), sandboxed });
 
   void app.whenReady().then(() => {
     hardenWebContents();
-    registerAppProtocol(path.join(import.meta.dirname, '../renderer'));
+    installNetworkGuard(
+      { devServerOrigin: devServerOrigin(runtime), allowDevTools: !app.isPackaged },
+      recordBlockedRequest,
+    );
+    registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(runtime));
     registerIpc(
       {
         'app.info': () => ({
@@ -68,4 +75,14 @@ function start(initialMode: StartupMode): void {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
   });
+}
+
+/**
+ * Cancelled requests, readable by end-to-end tests from the main process as
+ * `globalThis.__galeoBlockedRequests`. Unpackaged builds only.
+ */
+function recordBlockedRequest(url: string): void {
+  if (app.isPackaged) return;
+  const global = globalThis as { __galeoBlockedRequests?: string[] };
+  (global.__galeoBlockedRequests ??= []).push(url);
 }

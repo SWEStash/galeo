@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { resolveAppAsset } from './app-assets';
+import { contentTypeFor, resolveAppAsset } from './app-assets';
 
 const ROOT = path.resolve('/opt/galeo/out/renderer');
 
@@ -30,5 +30,26 @@ describe('resolveAppAsset', () => {
 
   it('refuses other hosts of the scheme', () => {
     expect(resolveAppAsset('galeo://file/1', ROOT)).toBeNull();
+  });
+});
+
+describe('contentTypeFor', () => {
+  it.each([
+    ['index.html', 'text/html; charset=utf-8'],
+    ['assets/main-abc.js', 'text/javascript; charset=utf-8'],
+    ['assets/worker.mjs', 'text/javascript; charset=utf-8'],
+    ['assets/main.css', 'text/css; charset=utf-8'],
+    ['assets/main.js.map', 'application/json; charset=utf-8'],
+    ['icon.svg', 'image/svg+xml'],
+    ['icon.png', 'image/png'],
+    ['fonts/Inter.woff2', 'font/woff2'],
+    ['ASSETS/UPPER.JS', 'text/javascript; charset=utf-8'],
+  ])('%s → %s', (file, type) => {
+    expect(contentTypeFor(file)).toBe(type);
+  });
+
+  it('falls back to a type browsers never execute or render', () => {
+    expect(contentTypeFor('notes.bin')).toBe('application/octet-stream');
+    expect(contentTypeFor('Makefile')).toBe('application/octet-stream');
   });
 });

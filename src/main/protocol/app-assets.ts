@@ -18,3 +18,21 @@ export function resolveAppAsset(requestUrl: string, root: string): string | null
   const file = path.resolve(root, relative);
   return file.startsWith(root + path.sep) ? file : null;
 }
+
+const CONTENT_TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.woff2': 'font/woff2',
+};
+
+/** The Content-Type for a built renderer asset; unknown files get one that never executes. */
+export function contentTypeFor(file: string): string {
+  return CONTENT_TYPES[path.extname(file).toLowerCase()] ?? 'application/octet-stream';
+}

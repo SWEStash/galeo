@@ -19,8 +19,14 @@ export function rendererUrl(context: RuntimeContext): string {
   return devServerUrl(context) ?? `${APP_ORIGIN}/index.html`;
 }
 
+/** The dev server's origin in development runs; null otherwise (always in packaged builds). */
+export function devServerOrigin(context: RuntimeContext): string | null {
+  const dev = devServerUrl(context);
+  return dev ? new URL(dev).origin : null;
+}
+
 /** Origins whose main frame may call IPC: the app, plus the dev server in development runs. */
 export function trustedOrigins(context: RuntimeContext): ReadonlySet<string> {
-  const dev = devServerUrl(context);
-  return new Set(dev ? [APP_ORIGIN, new URL(dev).origin] : [APP_ORIGIN]);
+  const dev = devServerOrigin(context);
+  return new Set(dev ? [APP_ORIGIN, dev] : [APP_ORIGIN]);
 }
