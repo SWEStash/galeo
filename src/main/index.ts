@@ -1,7 +1,6 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
-
-const devServerUrl = process.env['GALEO_DEV_SERVER_URL'];
+import { rendererEntry } from './renderer-entry';
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -16,10 +15,11 @@ function createWindow(): void {
     },
   });
   window.once('ready-to-show', () => window.show());
-  if (devServerUrl) {
-    void window.loadURL(devServerUrl);
+  const entry = rendererEntry({ isPackaged: app.isPackaged, env: process.env });
+  if ('url' in entry) {
+    void window.loadURL(entry.url);
   } else {
-    void window.loadFile(path.join(import.meta.dirname, '../renderer/index.html'));
+    void window.loadFile(path.join(import.meta.dirname, '..', entry.file));
   }
 }
 
