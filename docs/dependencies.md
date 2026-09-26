@@ -94,6 +94,7 @@ installed as npm packages. They are plain assets with no code and change rarely.
 | `@vitejs/plugin-react` | 6.1.x | MIT | 2026-09 | JSX + fast refresh for Vite 8 (1 dependency; its Babel/compiler peers are optional and not used) |
 | `electron-builder` | 26.15.x | MIT | 2026-09-07 | Packaging: `.deb` (official) + AppImage (secondary), and unsigned macOS `.dmg`/`.zip` and Windows NSIS previews. **Verified**: its configuration schema has `electronFuses` (fuses at package time, SR-08), and its v26 `.deb` post-install installs an AppArmor `userns` profile on Ubuntu 24.04+ |
 | `@electron/fuses` | 2.1.x | MIT | 2026-06-29 | Reading fuses back from the packaged binary in CI (SR-08) |
+| `happy-dom` | 20.14.x | MIT | 2026-09 | DOM environment for the `renderer` vitest project. Lighter and faster than jsdom; renderer tests are unit-level, so its missing layout APIs don't matter (added 2026-09-26) |
 | `vitest` | 5.0.x | MIT | 2026-09-25 | Unit and renderer tests (Node ≥ 22.12; the project pins Node 24) |
 | `@playwright/test` | 1.63.x | Apache-2.0 | 2026-09-25 | End-to-end tests via Playwright's Electron support (`_electron`, which Playwright labels experimental) |
 | `@axe-core/playwright` | 4.13.x | MPL-2.0 (dev only) | 2026-09-02 | Accessibility checks in end-to-end tests |
@@ -113,7 +114,7 @@ so they carry the tests those packages would have had).
 | Encoding detection | UTF-8 strict → BOM (UTF-16/32) → Windows-1252 fallback with a banner and "Reopen with encoding…"; decode with `TextDecoder` | `chardet` | ~40 lines |
 | Frontmatter display | Shown as a collapsible, syntax-highlighted YAML block (never parsed) | `yaml` | 0 |
 | Dev orchestration | `scripts/dev.mjs`: Vite watch builds + Electron restart on main/preload change; renderer hot reload via Vite's dev server | `electron-vite` | ~60 lines |
-| Import-boundary check (ADR-007) | `scripts/check-boundaries.mjs` scanning `import` specifiers per folder | `dependency-cruiser` (18 deps; needs the TS JS API, which TS 7 lacks) | ~30 lines |
+| Import-boundary check (ADR-007) | `scripts/check-boundaries.mjs` scanning `import` specifiers per folder, plus value-import reachability of `zod` from the preload and renderer | `dependency-cruiser` (18 deps; needs the TS JS API, which TS 7 lacks) | ~200 lines |
 | Decoding text | `TextDecoder` (WHATWG encodings) | — | — |
 | Binary detection | Own sniff (NUL bytes / invalid UTF-8 ratio in the first 8 KB) | — | — |
 | Atomic writes, fsync, modes | `node:fs` | — | — |

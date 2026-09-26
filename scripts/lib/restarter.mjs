@@ -1,8 +1,8 @@
 /**
- * Coalesces restart requests: bursts within `delayMs` cause one restart, and a request that
- * arrives while a restart is running schedules exactly one more after it finishes.
+ * Coalesces restart requests: requests within `delayMs` of each other cause one restart, and
+ * requests that arrive while a restart is running cause exactly one more after it finishes.
  */
-export function createRestarter({ restart, delayMs, setTimer = setTimeout, clearTimer = clearTimeout }) {
+export function createRestarter({ restart, delayMs, onError = console.error }) {
   let timer = null;
   let running = false;
   let pending = false;
@@ -16,6 +16,8 @@ export function createRestarter({ restart, delayMs, setTimer = setTimeout, clear
     running = true;
     try {
       await restart();
+    } catch (error) {
+      onError(error);
     } finally {
       running = false;
       if (pending) {
@@ -26,12 +28,12 @@ export function createRestarter({ restart, delayMs, setTimer = setTimeout, clear
   }
 
   function request() {
-    if (timer !== null) clearTimer(timer);
-    timer = setTimer(run, delayMs);
+    clearTimeout(timer);
+    timer = setTimeout(run, delayMs);
   }
 
   function cancel() {
-    if (timer !== null) clearTimer(timer);
+    clearTimeout(timer);
     timer = null;
     pending = false;
   }

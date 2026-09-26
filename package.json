@@ -10,23 +10,33 @@
     "node": ">=24"
   },
   "scripts": {
-    "setup": "install-electron",
+    "setup": "install-electron && husky",
     "typecheck": "tsc -b",
     "dev": "node scripts/dev.mjs",
     "build": "npm run build:main && npm run build:preload && npm run build:renderer",
     "build:main": "vite build --config build/vite.main.config.ts",
     "build:preload": "vite build --config build/vite.preload.config.ts",
     "build:renderer": "vite build --config build/vite.renderer.config.ts",
-    "start": "electron ."
+    "start": "electron .",
+    "test": "vitest run",
+    "test:unit": "vitest run --project unit",
+    "test:renderer": "vitest run --project renderer",
+    "boundaries": "node scripts/check-boundaries.mjs",
+    "check": "npm run typecheck && npm run boundaries && npm test"
   },
   "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
     "@types/node": "24.19.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
     "electron": "44.4.5",
+    "happy-dom": "20.14.5",
+    "husky": "9.1.7",
     "typescript": "7.0.2",
-    "vite": "8.3.1"
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
   },
   "dependencies": {
     "react": "19.3.0",

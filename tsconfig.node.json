@@ -1,9 +1,14 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "declarationDir": "out/tsc/node",
     "tsBuildInfoFile": "out/tsc/node.tsbuildinfo"
   },
-  "include": ["build/*.ts"]
+  "include": [
+    "build/*.ts",
+    "vitest.config.ts"
+  ]
 }
