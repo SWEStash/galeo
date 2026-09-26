@@ -4,7 +4,7 @@ import { parseArgv } from './argv';
 const resolve = (cwd: string, file: string) => (file.startsWith('/') ? file : `${cwd}/${file}`);
 const parse = (argv: string[], forwarded = false) => parseArgv(argv, { cwd: '/work', forwarded, resolve });
 
-const defaults = { profile: null, newWindow: false, noSandbox: false, files: [] };
+const defaults = { profile: null, newWindow: false, noSandbox: false, sandboxUnavailable: null, files: [] };
 
 describe('parseArgv', () => {
   it('treats empty argv as a plain launch with no files (focus)', () => {
@@ -14,7 +14,7 @@ describe('parseArgv', () => {
   it('reads the documented flags before the separator', () => {
     expect(parse(['--profile', 'acme', '--new-window', '--', 'a.md'])).toEqual({
       ok: true,
-      args: { profile: 'acme', newWindow: true, noSandbox: false, files: ['/work/a.md'] },
+      args: { ...defaults, profile: 'acme', newWindow: true, files: ['/work/a.md'] },
     });
     expect(parse(['--profile=acme'])).toMatchObject({ ok: true, args: { profile: 'acme' } });
   });
@@ -69,5 +69,23 @@ describe('parseArgv', () => {
 
   it('rejects a repeated --profile', () => {
     expect(parse(['--profile', 'a', '--profile', 'b'])).toEqual({ ok: false, error: '--profile given twice' });
+  });
+
+  it.each([
+    ['apparmor-userns', 'apparmor-userns'],
+    ['suid-helper', 'suid-helper'],
+    ['something-new', 'unknown'],
+  ])('reads the launcher wrapper cause %s at first launch', (cause, expected) => {
+    expect(parse(['--no-sandbox', `--galeo-sandbox-unavailable=${cause}`, '--', 'a.md'])).toMatchObject({
+      ok: true,
+      args: { noSandbox: true, sandboxUnavailable: expected, files: ['/work/a.md'] },
+    });
+  });
+
+  it('ignores the launcher wrapper flag when forwarded', () => {
+    expect(parse(['--no-sandbox', '--galeo-sandbox-unavailable=suid-helper'], true)).toMatchObject({
+      ok: true,
+      args: { noSandbox: false, sandboxUnavailable: null },
+    });
   });
 });

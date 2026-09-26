@@ -14,6 +14,6 @@ describe('buildApi', () => {
     const api = buildApi(vi.fn());
 
     expect(Object.keys(api)).toEqual(['app']);
-    expect(Object.keys(api.app)).toEqual(['info']);
+    expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable']);
   });
 });

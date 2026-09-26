@@ -35,8 +35,9 @@ step renames the binary to `galeo-bin` and installs the wrapper as `galeo`, so t
    waits for the process and forwards termination signals to it.
 2. If the process dies from the abort **and** its stderr contains Chromium's sandbox FATAL
    marker, the wrapper relaunches once. The relaunch runs `galeo-bin --no-sandbox
-   --galeo-sandbox-unavailable=<cause> <original arguments>`. `<cause>` is the detected reason: the
-   AppArmor user-namespace restriction, or a helper that isn't setuid root. In every other case
+   --galeo-sandbox-unavailable=<cause> <original arguments>`. `<cause>` is the detected reason:
+   `apparmor-userns` (the AppArmor user-namespace restriction) or `suid-helper` (a helper that
+   isn't setuid root). Main treats any other value as `unknown` and still shows the window. In every other case
    the wrapper exits with the child's status and changes nothing.
 3. Main honours `--galeo-sandbox-unavailable` only when all of these hold:
    - it is the first launch;

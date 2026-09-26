@@ -7,4 +7,5 @@ import type { Channel, Requests } from './ipc';
  */
 export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),
+  'app.resolveSandboxUnavailable': z.tuple([z.enum(['quit', 'run-unsandboxed'])]),
 };
