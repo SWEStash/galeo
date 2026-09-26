@@ -1,0 +1,67 @@
+#!/bin/sh
+# galeo command-line launcher. Passes galeo's own flags first, then `--`, then every file as
+# an absolute path, so no file name can be read as an Electron or Chromium switch (SR-13).
+set -eu
+
+GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"
+
+die() {
+  printf 'galeo: %s\n' "$1" >&2
+  printf 'usage: galeo [--profile NAME] [--new-window] [--no-sandbox] [--] [file...]\n' >&2
+  exit 2
+}
+
+cwd=$(pwd)
+remaining=$#
+reading_flags=1
+
+# Rebuild "$@" in place: each original argument is shifted off the front and its translation
+# appended at the back.
+while [ "$remaining" -gt 0 ]; do
+  arg=$1
+  shift
+  remaining=$((remaining - 1))
+  if [ "$reading_flags" -eq 1 ]; then
+    case $arg in
+      --)
+        reading_flags=0
+        set -- "$@" --
+        continue
+        ;;
+      --new-window | --no-sandbox)
+        set -- "$@" "$arg"
+        continue
+        ;;
+      --profile=)
+        die '--profile needs a value'
+        ;;
+      --profile=*)
+        set -- "$@" "$arg"
+        continue
+        ;;
+      --profile)
+        [ "$remaining" -gt 0 ] || die '--profile needs a value'
+        value=$1
+        shift
+        remaining=$((remaining - 1))
+        case $value in -* | '') die '--profile needs a value' ;; esac
+        set -- "$@" --profile "$value"
+        continue
+        ;;
+      -*)
+        die "unknown option: $arg"
+        ;;
+      *)
+        reading_flags=0
+        set -- "$@" --
+        ;;
+    esac
+  fi
+  case $arg in
+    /*) set -- "$@" "$arg" ;;
+    *) set -- "$@" "$cwd/$arg" ;;
+  esac
+done
+
+[ "$reading_flags" -eq 0 ] || set -- "$@" --
+exec "$GALEO_BIN" "$@"
