@@ -1,7 +1,7 @@
 import { app, ipcMain } from 'electron';
 import type { Channel, Requests, Responses } from '../../shared/contracts';
 import { createHandler, type IpcEvent } from './handle';
-import { requestSchemas } from './schemas';
+import { requestSchemas } from '../../shared/contracts/schemas';
 
 type Handlers = { [C in Channel]: (args: Requests[C], event: IpcEvent) => Responses[C] | Promise<Responses[C]> };
 
