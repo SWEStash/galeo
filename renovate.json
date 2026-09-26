@@ -1,0 +1,60 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests",
+    ":semanticCommits"
+  ],
+  "rangeStrategy": "pin",
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 6am on monday"
+    ]
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "security"
+    ],
+    "minimumReleaseAge": null,
+    "schedule": [
+      "at any time"
+    ],
+    "semanticCommitType": "fix"
+  },
+  "packageRules": [
+    {
+      "description": "Development tooling doesn't ship in the app, so its updates don't trigger a release (the Electron rule below overrides this for Electron's packages).",
+      "matchDepTypes": [
+        "devDependencies"
+      ],
+      "semanticCommitType": "build"
+    },
+    {
+      "description": "Electron and its packaging tools move together. Updates are commit type fix so they trigger a release: Electron fixes must ship within 7 days (SR-09).",
+      "groupName": "electron",
+      "matchPackageNames": [
+        "electron",
+        "electron-builder",
+        "@electron/fuses"
+      ],
+      "minimumReleaseAge": null,
+      "prPriority": 10,
+      "semanticCommitType": "fix",
+      "schedule": [
+        "at any time"
+      ]
+    },
+    {
+      "description": "GitHub Actions stay pinned by digest and are grouped.",
+      "groupName": "GitHub Actions",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "semanticCommitType": "ci"
+    }
+  ]
+}
