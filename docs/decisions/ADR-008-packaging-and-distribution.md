@@ -1,7 +1,7 @@
 # ADR-008 — Build & packaging: Vite 8 + electron-builder; .deb official, AppImage and macOS/Windows previews secondary; GitHub Releases; no auto-update
 
 - Status: Accepted (2026-09-26, with review amendments; amended 2026-09-26: opt-in unsandboxed
-  mode, see "Sandbox")
+  mode, see "Sandbox"; one clause superseded by [ADR-009](ADR-009-sandbox-unavailable-launcher.md))
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [ADR-001](ADR-001-app-shell-stack.md), [ADR-004](ADR-004-security-and-zero-network.md),
@@ -38,7 +38,7 @@ The sibling projects use semantic-release on `main` with Conventional Commits.
     "Install command-line launcher" writes `~/.local/bin/galeo` and a user `.desktop` file.
 - **Sandbox: on by default, off only by the user's explicit choice** (amended 2026-09-26, owner
   decision: running unsandboxed is a risk the user may choose to take, as long as they're warned).
-  - Nothing galeo ships passes `--no-sandbox`: not the `.deb`, the `.desktop` entry, nor the
+  - *(Superseded by ADR-009 for the "sandbox unavailable" relaunch.)* Nothing galeo ships passes `--no-sandbox`: not the `.deb`, the `.desktop` entry, nor the
     `gal` launcher's defaults.
   - The user opts in **per launch**, in one of two ways: `--no-sandbox` on the command line
     (`galeo --no-sandbox …` forwards it), or "Run without sandbox" in the "sandbox unavailable" window.

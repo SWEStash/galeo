@@ -10,7 +10,8 @@
   [005](decisions/ADR-005-profiles-and-session-persistence.md) ·
   [006](decisions/ADR-006-renderer-ui-framework.md) ·
   [007](decisions/ADR-007-platform-seam.md) ·
-  [008](decisions/ADR-008-packaging-and-distribution.md)
+  [008](decisions/ADR-008-packaging-and-distribution.md) ·
+  [009](decisions/ADR-009-sandbox-unavailable-launcher.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -22,7 +23,7 @@ Every diagram uses these names exactly.
 
 | Name | Meaning |
 |---|---|
-| **Launcher** | The `gal` shell script. Passes `-- <absolute paths>` to the app binary |
+| **Launcher** | The `gal` shell script. Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
 | **Main** | The Electron main process (Node). Hosts the Core and the Adapters |
 | **Core** | Pure TypeScript domain logic: routing, tab registry, lifecycle policy, sessions, settings, capability checks, argv parsing, link extraction (ADR-007) |
 | **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `WindowHost`, `OsShell`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `Clock` |
@@ -318,7 +319,8 @@ source (src/shared · core · main · preload · renderer)
               └─ semantic-release → GitHub Release
 ```
 
-Installed layout (`.deb`): `/opt/galeo/` (app), `/etc/apparmor.d/galeo` (`userns` profile for
+Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`
+Electron binary, ADR-009), `/etc/apparmor.d/galeo` (`userns` profile for `galeo-bin`, for
 Chromium's sandbox on Ubuntu 24.04+), `/usr/bin/gal` (Launcher),
 `/usr/share/applications/galeo.desktop` (`Exec=galeo -- %F`, MIME types),
 `/usr/share/icons/hicolor/*/apps/galeo.png`. Per-user data lives only in the Config, State and

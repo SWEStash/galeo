@@ -153,7 +153,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T11 | **Accept.** Same-user processes already have equal privilege; the channel only opens files, which is intended behaviour. Owner: project owner. | SR-13 (argv handled as data) |
 | T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo; exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner. | SR-12 (drop grants from the preload's isolated world) |
 | T14 | Mitigate | SR-17 |
-| T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
+| T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
 
 ### Security requirements
@@ -165,8 +165,10 @@ page navigation). Permission request and check handlers deny everything (camera,
 geolocation, notifications, clipboard-read, HID, serial, USB) except `clipboard-sanitized-write`
 (copy buttons).
 The app **runs with Chromium's sandbox unless the user explicitly opts out for that launch**
-(amended 2026-09-26, ADR-008): nothing galeo ships passes `--no-sandbox`; the user can pass it,
-or choose "Run without sandbox" when the sandbox is unavailable (for example the AppImage on
+(amended 2026-09-26, ADR-008, ADR-009): the user can pass `--no-sandbox`, or choose "Run without
+sandbox" when the sandbox is unavailable. Nothing galeo ships passes the flag, except that the
+Linux launcher wrapper relaunches with it after a real sandbox failure, to show that choice and
+nothing else (ADR-009) (for example the AppImage on
 Ubuntu 24.04+, where AppArmor restricts user namespaces); the default there is to quit. The choice
 is never persisted, is fixed at process start (a forwarded launch can't change it), and every
 window shows a persistent warning while unsandboxed. The `.deb` installs the AppArmor `userns`
