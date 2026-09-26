@@ -1,0 +1,45 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    # Daily, so an Electron security release is picked up well within the 7-day policy (SR-09).
+    schedule:
+      interval: daily
+    # Non-security updates wait a few days after publication (compromised releases are usually
+    # caught by then). Security updates and Electron skip the wait.
+    cooldown:
+      default-days: 3
+      exclude:
+        - electron
+        - electron-builder
+        - '@electron/*'
+    # Runtime dependencies ship in the app (fix → release); dev tooling doesn't (build → none).
+    # Electron is a devDependency but ships too: .releaserc.json releases its updates.
+    commit-message:
+      prefix: fix
+      prefix-development: build
+      include: scope
+    groups:
+      electron:
+        patterns:
+          - electron
+          - electron-builder
+          - '@electron/*'
+      dev-tooling:
+        dependency-type: development
+        exclude-patterns:
+          - electron
+          - electron-builder
+          - '@electron/*'
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns:
+          - '*'

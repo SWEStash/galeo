@@ -29,7 +29,8 @@ rejected, so later additions follow the same bar.
    disabled except on an allowlist (`.npmrc` sets `ignore-scripts=true`; `npm run setup` runs the
    allowlisted steps: Electron's binary download and the git hooks); npm audit/OSV scanning fails
    on high severity; exact versions for security-sensitive renderers (Mermaid, KaTeX, DOMPurify,
-   sanitizer); Renovate groups updates; Electron security releases follow SR-09.
+   sanitizer); Dependabot (`.github/dependabot.yml`) groups updates, with a cooldown for
+   non-security ones; Electron security releases follow SR-09.
 7. **Wrap at the seams.** Third-party APIs sit behind our own modules (ports in `core/`, the
    format registry, the render pipeline), so any one of them can be replaced (ADR-007).
 
