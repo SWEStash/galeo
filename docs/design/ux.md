@@ -342,8 +342,8 @@ this map only.
 
 Each is decided when the feature that needs it is built.
 
-- [ ] Which dropped file becomes active when dropping many (current spec: the first).
-- [ ] Tab overflow with many tabs: shrink-to-icon (Chrome) or scrollable tab strip.
-- [ ] Profile accent palette: fixed presets only, or free colour picker (contrast risk).
-- [ ] `.txt` default view: reader or monospace (current: reader; toggle with Ctrl+U).
-- [ ] Zoom per tab or per window (current: per window).
+- [ ] Which dropped file becomes active when dropping many (current spec: the first) — decide with drag and drop.
+- [ ] Tab overflow with many tabs: shrink-to-icon (Chrome) or scrollable tab strip — decide with the tab bar.
+- [ ] Profile accent palette: fixed presets only, or free colour picker (contrast risk) — decide with profiles.
+- [ ] `.txt` default view: reader or monospace (current: reader; toggle with Ctrl+U) — decide with the text/log views.
+- [ ] Zoom per tab or per window (current: per window) — decide with tab labels and the status bar.

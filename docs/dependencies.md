@@ -63,7 +63,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | `rehype-raw`, `rehype-sanitize`, `rehype-slug`, `rehype-stringify` | 7 / 6 / 6 / 10 | MIT | 2023–2024 | 4–17 M | Raw HTML → allowlist sanitize (SR-02) → slugs → HTML string |
 | `shiki`, `@shikijs/rehype` | 4.4.x | MIT | 2026-08-10 | 21 M / 680 k | Code highlighting with the GitHub themes; grammars loaded per document |
 | `katex`, `rehype-katex` | 0.18.x / 7.0.x | MIT | 2026-09-23 / 2024-08-19 | 24 M / 6.8 M | Math (`trust: false`, limits; SR-03). **Exact version pin** |
-| `mermaid` | 12.0.x (see note) | MIT | 2026-09-10 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. **Note:** 12.0.0 is two weeks old; 11.17.2 is the mature line. Re-decide when diagrams are built, taking 12.x if it has patch releases by then, else 11.17.x |
+| `mermaid` | 12.0.x (see note) | MIT | 2026-09-10 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. **Note:** 12.0.0 is two weeks old; 11.17.2 is the mature line. Re-decide at Mermaid integration, taking 12.x if it has patch releases by then, else 11.17.x |
 | `dompurify` | 3.4.x | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
 
 ### Runtime: source views (CodeMirror 6, ADR-003)
@@ -153,7 +153,7 @@ The about/licences view and the packages must include:
 
 ## Watch list and revisit triggers
 
-- **Mermaid 12.x vs 11.17.x**: decide when diagrams are built (see the adopted table).
+- **Mermaid 12.x vs 11.17.x**: decide when Mermaid is integrated (see the adopted table).
 - **TypeScript 7** friction with any tool: fall back to 6.0.3 for that tool.
 - **Maintainer health**: any adopted package with no release for over 12 months is re-vetted;
   small ones are replaced by own modules.

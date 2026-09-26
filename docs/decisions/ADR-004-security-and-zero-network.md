@@ -119,7 +119,7 @@ the threat.
   anchors). Mitigation: extract links from the same parse used for rendering, and fuzz-compare
   the renderer's link set with main's.
 - **Library Trusted Types violations** block enforcement. Mitigation: report-only in development
-  from the start; exceptions are recorded here, never silently disabled.
+  from the first hardened window; exceptions are recorded here, never silently disabled.
 - **Electron network paths not covered by `webRequest`.** Mitigation: the socket-level CI harness
   (layer 5) catches what the in-process filter misses.
 

@@ -268,10 +268,10 @@ live in the [UX specification](design/ux.md).
       last-focused window without stealing focus.
 - [x] **Flatpak.** Deferred (ADR-008): its sandbox conflicts with "open any file" and the `galeo` CLI.
 - [ ] **Custom CSS contract.** Mechanism decided (ADR-006: `--galeo-*` variables and a few `galeo-*`
-      classes, adopted into every document's shadow root); the exact list is fixed when it is built.
+      classes, adopted into every document's shadow root); the exact list is fixed when the document styling is built.
 - [ ] **Quick-open exclusions**: default list, and whether to honour a galeo-specific ignore
-      file.
-- [ ] **Log level patterns**: fixed set or user-configurable regexes.
+      file (decided when quick open is built).
+- [ ] **Log level patterns**: fixed set or user-configurable regexes (decided when the log view is built).
 - [ ] **Obsidian syntax** priority (Could → Should?): GitHub-style alerts / callouts are noted on
       the ADR-003 roadmap; decide after v0.1.
 
