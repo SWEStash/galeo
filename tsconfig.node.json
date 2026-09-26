@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "declarationDir": "out/tsc/node",
+    "tsBuildInfoFile": "out/tsc/node.tsbuildinfo"
+  },
+  "include": ["build/*.ts"]
+}
