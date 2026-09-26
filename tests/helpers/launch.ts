@@ -17,6 +17,7 @@ export async function launchApp(args: string[] = []): Promise<LaunchedApp> {
   const home = mkdtempSync(path.join(tmpdir(), 'galeo-e2e-'));
   const app = await electron.launch({
     args: ['.', ...args],
+    chromiumSandbox: true,
     cwd: path.resolve(import.meta.dirname, '../..'),
     env: {
       ...process.env,
