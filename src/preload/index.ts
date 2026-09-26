@@ -1,3 +1,9 @@
-// The only bridge between main and the renderer. The typed `window.galeo` API is built here
-// from the shared IPC contracts.
-export {};
+// The only bridge between main and the renderer: `window.galeo` has one fixed method per
+// channel of the shared contract, and never exposes `ipcRenderer` or a generic invoke (SR-11).
+import { contextBridge, ipcRenderer } from 'electron';
+import { buildApi } from '../shared/contracts';
+
+contextBridge.exposeInMainWorld(
+  'galeo',
+  buildApi((channel, args) => ipcRenderer.invoke(channel, ...args)),
+);

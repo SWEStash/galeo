@@ -1,6 +1,10 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'node:path';
-import { rendererEntry } from './renderer-entry';
+import { registerIpc } from './ipc/register';
+import { registerAppProtocol, registerSchemes } from './protocol/register';
+import { rendererUrl, trustedOrigins } from './renderer-entry';
+
+const runtime = { isPackaged: app.isPackaged, env: process.env };
 
 function createWindow(): void {
   const window = new BrowserWindow({
@@ -15,15 +19,16 @@ function createWindow(): void {
     },
   });
   window.once('ready-to-show', () => window.show());
-  const entry = rendererEntry({ isPackaged: app.isPackaged, env: process.env });
-  if ('url' in entry) {
-    void window.loadURL(entry.url);
-  } else {
-    void window.loadFile(path.join(import.meta.dirname, '..', entry.file));
-  }
+  void window.loadURL(rendererUrl(runtime));
 }
 
-void app.whenReady().then(createWindow);
+registerSchemes();
+
+void app.whenReady().then(() => {
+  registerAppProtocol(path.join(import.meta.dirname, '../renderer'));
+  registerIpc(trustedOrigins(runtime));
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

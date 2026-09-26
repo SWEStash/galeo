@@ -43,7 +43,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | Package | Version | Licence | Last publish | Weekly dl | Role / notes |
 |---|---|---|---|---|---|
 | `electron` | 44.4.5 | MIT | 2026-09-24 | 6.9 M | Shell (ADR-001). Chromium 152, Node 24 |
-| `zod` | 4.6.x | MIT | 2026-09-25 | 274 M | Runtime schemas for IPC, settings and sessions (SR-11, SR-17). Main + preload only |
+| `zod` | 4.6.x | MIT | 2026-09-25 | 274 M | Runtime schemas for IPC, settings and sessions (SR-11, SR-17). Main only: the preload and renderer import its inferred types, never its code |
 | `mdast-util-from-markdown` (+ `micromark-extension-gfm`, `mdast-util-gfm`) | 2.0.x | MIT | 2026-02-21 | 53 M | Link extraction in main for capability checks (ADR-004); the same parser family (unified collective) as the renderer, so no new maintainer |
 
 ### Runtime: renderer, chrome UI

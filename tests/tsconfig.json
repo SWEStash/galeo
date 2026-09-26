@@ -6,5 +6,6 @@
     "declarationDir": "../out/tsc/tests",
     "tsBuildInfoFile": "../out/tsc/tests.tsbuildinfo"
   },
-  "include": ["**/*.ts"]
+  "include": ["**/*.ts"],
+  "references": [{ "path": "../src/shared" }]
 }
