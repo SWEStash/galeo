@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024"],
+    "types": [],
+    "declarationDir": "../../out/tsc/core",
+    "tsBuildInfoFile": "../../out/tsc/core.tsbuildinfo"
+  },
+  "include": ["**/*.ts"],
+  "references": [{ "path": "../shared" }]
+}

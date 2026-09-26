@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": [],
+    "declarationDir": "../../out/tsc/renderer",
+    "tsBuildInfoFile": "../../out/tsc/renderer.tsbuildinfo",
+    "jsx": "react-jsx"
+  },
+  "include": ["**/*.ts", "**/*.tsx"],
+  "references": [{ "path": "../shared" }]
+}

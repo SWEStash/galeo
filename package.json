@@ -1,0 +1,27 @@
+{
+  "name": "galeo",
+  "version": "0.0.0-development",
+  "private": true,
+  "description": "A fast, private desktop reader for Markdown, text and log files",
+  "license": "MIT",
+  "author": "SWEStash",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "setup": "install-electron",
+    "typecheck": "tsc -b"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "electron": "44.4.5",
+    "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

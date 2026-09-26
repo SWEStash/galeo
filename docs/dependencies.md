@@ -26,9 +26,10 @@ rejected, so later additions follow the same bar.
 5. **Weight.** Anything heavy loads lazily in the renderer (ADR-003). Packages with native
    modules are avoided, since they need rebuilding for Electron.
 6. **Hygiene** (SR-10): commit `package-lock.json`; CI uses `npm ci`; install scripts are
-   disabled except on an allowlist; npm audit/OSV scanning fails on high severity; exact versions
-   for security-sensitive renderers (Mermaid, KaTeX, DOMPurify, sanitizer); Renovate groups
-   updates; Electron security releases follow SR-09.
+   disabled except on an allowlist (`.npmrc` sets `ignore-scripts=true`; `npm run setup` runs the
+   allowlisted steps: Electron's binary download and the git hooks); npm audit/OSV scanning fails
+   on high severity; exact versions for security-sensitive renderers (Mermaid, KaTeX, DOMPurify,
+   sanitizer); Renovate groups updates; Electron security releases follow SR-09.
 7. **Wrap at the seams.** Third-party APIs sit behind our own modules (ports in `core/`, the
    format registry, the render pipeline), so any one of them can be replaced (ADR-007).
 
@@ -86,7 +87,9 @@ installed as npm packages. They are plain assets with no code and change rarely.
 
 | Package | Version | Licence | Last publish | Role / notes |
 |---|---|---|---|---|
-| `typescript` | 7.0.x | Apache-2.0 | 2026-09-25 | Type checking only (`tsc --noEmit`), native compiler. Fallback: 6.0.3 if a tool needs the JS compiler API (TS 7 does not ship it) |
+| `typescript` | 7.0.x | Apache-2.0 | 2026-09-25 | Type checking only (`tsc -b` over per-folder project references; it emits nothing but declarations into the ignored `out/tsc/`), native compiler. Fallback: 6.0.3 if a tool needs the JS compiler API (TS 7 does not ship it) |
+| `@types/node` | 24.x | MIT | 2026-09 | Node API types for `main`/`preload`, pinned to the Node 24 major. Electron depends on it transitively; listed explicitly so the typecheck doesn't rest on a transitive package (added 2026-09-26) |
+| `@types/react`, `@types/react-dom` | 19.3.x | MIT | 2026-09 | React types (React ships none) for the renderer typecheck (added 2026-09-26) |
 | `vite` | 8.3.x | MIT | 2026-09-24 | Builds all four bundles: main and preload (library/SSR builds), renderer, worker (ADR-008). A small own dev script (`scripts/dev.mjs`) restarts Electron when main or preload rebuild |
 | `@vitejs/plugin-react` | 6.1.x | MIT | 2026-09 | JSX + fast refresh for Vite 8 (1 dependency; its Babel/compiler peers are optional and not used) |
 | `electron-builder` | 26.15.x | MIT | 2026-09-07 | Packaging: `.deb` (official) + AppImage (secondary), and unsigned macOS `.dmg`/`.zip` and Windows NSIS previews. **Verified**: its configuration schema has `electronFuses` (fuses at package time, SR-08), and its v26 `.deb` post-install installs an AppArmor `userns` profile on Ubuntu 24.04+ |
