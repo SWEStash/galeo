@@ -20,7 +20,8 @@ const GENERATED = '.katex, .katex-error, pre.shiki';
 function urlProblem(value: string): string | null {
   // Browsers ignore ASCII whitespace and control characters inside a scheme.
   const compact = value.replace(/[\u0000- ]/g, '');
-  if (compact.startsWith('//') || compact.startsWith('\\\\') || compact.startsWith('/\\')) return 'protocol-relative URL';
+  // Browsers read any two of `/` and `\` as the start of a host.
+  if (/^[\\/]{2}/.test(compact)) return 'protocol-relative URL';
   const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(compact)?.[1];
   if (scheme && !SAFE_SCHEMES.has(`${scheme.toLowerCase()}:`)) return `scheme ${scheme}`;
   return null;

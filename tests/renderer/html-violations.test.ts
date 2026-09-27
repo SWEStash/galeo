@@ -43,6 +43,8 @@ describe('findViolations', () => {
     ['<a href="file:///etc/passwd">', 'href: scheme file'],
     ['<a href="xmpp:a@b.c">', 'href: scheme xmpp'],
     ['<a href="//evil.example/x">', 'href: protocol-relative URL'],
+    ['<a href="\\/evil.example/x">', 'href: protocol-relative URL'],
+    ['<a href="\\\\evil.example/x">', 'href: protocol-relative URL'],
   ])('flags %s', (html, violation) => {
     expect(violationsIn(html)).toContain(violation);
   });
