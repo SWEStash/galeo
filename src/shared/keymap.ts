@@ -42,3 +42,44 @@ const MACOS: Partial<Record<Command, string[]>> = { quit: ['Cmd+Q'] };
 export function keymap(platform: Platform): Record<Command, string[]> {
   return platform === 'darwin' ? { ...BASE, ...MACOS } : BASE;
 }
+
+/** The part of a `KeyboardEvent` (or Electron's `Input`) that matching needs. */
+export interface KeyEventLike {
+  key: string;
+  ctrlKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+  metaKey: boolean;
+}
+
+// Accelerator key names (Electron's) that differ from `KeyboardEvent.key`.
+const KEY_NAMES: Record<string, string> = { Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown' };
+
+function matches(accelerator: string, event: KeyEventLike, platform: Platform): boolean {
+  const parts = accelerator.split('+');
+  const key = parts.pop()!;
+  const wanted = { ctrl: false, alt: false, shift: false, meta: false };
+  for (const part of parts) {
+    if (part === 'CmdOrCtrl') wanted[platform === 'darwin' ? 'meta' : 'ctrl'] = true;
+    else if (part === 'Cmd') wanted.meta = true;
+    else if (part === 'Ctrl') wanted.ctrl = true;
+    else if (part === 'Alt') wanted.alt = true;
+    else if (part === 'Shift') wanted.shift = true;
+  }
+  return (
+    event.ctrlKey === wanted.ctrl &&
+    event.altKey === wanted.alt &&
+    event.shiftKey === wanted.shift &&
+    event.metaKey === wanted.meta &&
+    event.key.toLowerCase() === (KEY_NAMES[key] ?? key).toLowerCase()
+  );
+}
+
+/** The command a key press triggers on `platform`, or null. */
+export function commandFor(event: KeyEventLike, platform: Platform): Command | null {
+  const map = keymap(platform);
+  for (const command of Object.keys(map) as Command[]) {
+    if (map[command].some((accelerator) => matches(accelerator, event, platform))) return command;
+  }
+  return null;
+}
