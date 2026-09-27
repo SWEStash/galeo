@@ -1,0 +1,183 @@
+/* The document theme, adopted by every document's shadow root. Tokens come from the app root. */
+:host {
+  display: block;
+  color: var(--galeo-color-fg);
+  background: var(--galeo-color-bg);
+}
+
+.galeo-document {
+  box-sizing: border-box;
+  max-width: var(--galeo-measure);
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  font-family: var(--galeo-font-prose);
+  font-size: var(--galeo-font-size);
+  line-height: var(--galeo-line-height);
+  overflow-wrap: break-word;
+}
+
+.galeo-document > :first-child {
+  margin-top: 0;
+}
+
+p, ul, ol, dl, blockquote, pre, table, details, hr, .katex-display {
+  margin: 0 0 var(--galeo-space-block);
+}
+
+/* Modular scale, ratio 1.2. */
+h1, h2, h3, h4, h5, h6 {
+  margin: 1.6em 0 0.6em;
+  line-height: 1.25;
+  font-weight: 650;
+}
+h1 { font-size: 2.074em; }
+h2 { font-size: 1.728em; padding-bottom: 0.2em; border-bottom: 1px solid var(--galeo-color-border); }
+h3 { font-size: 1.44em; }
+h4 { font-size: 1.2em; }
+h5 { font-size: 1em; }
+h6 { font-size: 0.875em; color: var(--galeo-color-muted); }
+
+a {
+  color: var(--galeo-color-link);
+  text-underline-offset: 0.15em;
+}
+
+:focus-visible {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+ul, ol {
+  padding-left: 1.6em;
+}
+li + li, li > ul, li > ol {
+  margin-top: 0.25em;
+}
+li > ul, li > ol {
+  margin-bottom: 0;
+}
+.contains-task-list {
+  padding-left: 0.4em;
+}
+.task-list-item {
+  list-style: none;
+}
+.task-list-item input {
+  margin: 0 0.4em 0 0;
+  vertical-align: -0.1em;
+}
+
+blockquote {
+  margin-left: 0;
+  padding: 0 1em;
+  color: var(--galeo-color-muted);
+  border-left: 0.25em solid var(--galeo-color-border);
+}
+
+hr {
+  height: 0;
+  border: 0;
+  border-top: 1px solid var(--galeo-color-border);
+}
+
+img {
+  max-width: 100%;
+}
+
+code, kbd, samp, pre {
+  font-family: var(--galeo-font-code);
+  font-size: var(--galeo-code-size);
+}
+:not(pre) > code {
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--galeo-color-code-bg);
+}
+kbd {
+  padding: 0.1em 0.4em;
+  border: 1px solid var(--galeo-color-border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+}
+pre {
+  overflow-x: auto;
+  padding: 0.9em 1em;
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-code-bg);
+  line-height: 1.5;
+}
+pre code {
+  font-size: 1em;
+}
+
+/* Shiki emits both themes as variables; the shadow host's scheme picks one without a re-render. */
+.shiki, .shiki span {
+  color: var(--shiki-light);
+}
+:host([data-scheme='dark']) .shiki,
+:host([data-scheme='dark']) .shiki span {
+  color: var(--shiki-dark);
+}
+
+table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+th, td {
+  padding: 0.4em 0.8em;
+  border: 1px solid var(--galeo-color-border);
+}
+th {
+  font-weight: 650;
+}
+tbody tr:nth-child(2n) {
+  background: color-mix(in srgb, var(--galeo-color-code-bg) 70%, transparent);
+}
+
+details > summary {
+  cursor: pointer;
+}
+
+.galeo-frontmatter > summary {
+  color: var(--galeo-color-muted);
+  font-size: 0.85em;
+}
+.galeo-frontmatter > pre {
+  margin: 0.5em 0 0;
+}
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.galeo-remote-image {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  border: 1px dashed var(--galeo-color-border);
+  border-radius: 4px;
+  color: var(--galeo-color-muted);
+  font-family: var(--galeo-font-ui);
+  font-size: 0.85em;
+}
+
+.footnotes {
+  margin-top: 2.5em;
+  padding-top: 1em;
+  border-top: 1px solid var(--galeo-color-border);
+  font-size: 0.9em;
+}
+
+/* GitHub's footnote heading is for screen readers only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

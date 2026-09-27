@@ -308,7 +308,8 @@ this map only.
 - **Custom CSS**: a global `custom.css` and one per profile, applied in that order after the
   bundled theme; changes apply live to every open tab when the file is saved (hand edits to
   `settings.json` and `profile.json` apply live too). galeo documents a small set of
-  stable CSS variables and class names as the theming contract (PRD Open Question 2). v0.1 edits
+  stable CSS variables and class names as the theming contract (PRD Open Question 2;
+  first version: [document-styling.md](document-styling.md)). v0.1 edits
   custom CSS in the user's external editor ("Open custom CSS" in Settings).
 - **Settings tab (v0.1 scope)**: theme mode, accent colour, prose font, code font, font size,
   measure, status bar visibility, quick-open exclusions, open-custom-CSS buttons. Each setting

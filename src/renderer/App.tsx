@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
+import { useColorScheme } from './document/theme';
 import { markFirstPaint } from './perf';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { spawnRenderWorker } from './worker/spawn';
 
 export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
+  useColorScheme();
 
   useEffect(() => {
     void window.galeo.app.info().then(setInfo);

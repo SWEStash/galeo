@@ -1,0 +1,41 @@
+/*
+ * galeo's design tokens (ADR-006). Documents inherit them through their shadow host, and a
+ * user's custom.css may override the documented ones (docs/design/document-styling.md).
+ * The colour scheme is chosen by `data-scheme` on the root element (see theme.ts).
+ */
+:root {
+  --galeo-font-ui: 'Inter', system-ui, sans-serif;
+  --galeo-font-prose: 'Inter', system-ui, sans-serif;
+  --galeo-font-serif: 'Source Serif 4', Georgia, serif;
+  --galeo-font-code: 'JetBrains Mono', ui-monospace, monospace;
+  --galeo-font-size: 17px;
+  --galeo-line-height: 1.6;
+  --galeo-measure: 72ch;
+  --galeo-code-size: 0.9em;
+  --galeo-space-block: 1em;
+  --galeo-radius: 6px;
+
+  --galeo-color-bg: #ffffff;
+  --galeo-color-fg: #1f2328;
+  --galeo-color-muted: #59636e;
+  --galeo-color-border: #d1d9e0;
+  --galeo-color-link: #0969da;
+  --galeo-color-code-bg: #f6f8fa;
+  --galeo-color-focus: #0969da;
+  --galeo-color-mark: rgb(255 212 59 / 45%);
+  --galeo-color-mark-current: #ffa62b;
+  color-scheme: light;
+}
+
+:root[data-scheme='dark'] {
+  --galeo-color-bg: #0d1117;
+  --galeo-color-fg: #e6edf3;
+  --galeo-color-muted: #9198a1;
+  --galeo-color-border: #3d444d;
+  --galeo-color-link: #4493f8;
+  --galeo-color-code-bg: #161b22;
+  --galeo-color-focus: #4493f8;
+  --galeo-color-mark: rgb(187 128 9 / 45%);
+  --galeo-color-mark-current: #d29922;
+  color-scheme: dark;
+}

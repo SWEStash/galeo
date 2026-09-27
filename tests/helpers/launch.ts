@@ -31,6 +31,8 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
     app = await electron.launch({
       args: ['.', ...args],
       chromiumSandbox: true,
+      // Playwright emulates a light `prefers-color-scheme` by default; the app must see the real one.
+      colorScheme: null,
       ...(options.executablePath ? { executablePath: options.executablePath } : {}),
       cwd: path.resolve(import.meta.dirname, '../..'),
       env: {

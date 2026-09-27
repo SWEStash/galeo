@@ -36,6 +36,8 @@ export default defineConfig({
     emptyOutDir: true,
     target: 'chrome152',
     sourcemap: true,
+    // No `data:` assets: the CSP allows fonts only from the app itself.
+    assetsInlineLimit: 0,
   },
   worker: { format: 'es', plugins: () => [workerEntries()] },
   server: { host: '127.0.0.1', strictPort: false },

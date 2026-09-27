@@ -61,6 +61,20 @@ describe('App', () => {
     expect(container.querySelector('[data-testid="unsandboxed-badge"]')).not.toBeNull();
   });
 
+  it('applies the system colour scheme to the app and follows it live', async () => {
+    const query = Object.assign(new EventTarget(), { matches: true });
+    vi.stubGlobal('matchMedia', (media: string) => (media === '(prefers-color-scheme: dark)' ? query : null));
+    stubBridge();
+    await renderApp();
+    expect(document.documentElement.dataset['scheme']).toBe('dark');
+    await act(async () => {
+      query.matches = false;
+      query.dispatchEvent(new Event('change'));
+    });
+    expect(document.documentElement.dataset['scheme']).toBe('light');
+    vi.unstubAllGlobals();
+  });
+
   it('shows only the sandbox choice and sends it to main', async () => {
     const api = stubBridge({ sandboxed: false, sandboxUnavailable: 'suid-helper' });
     const container = await renderApp();
