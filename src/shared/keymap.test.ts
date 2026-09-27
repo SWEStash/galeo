@@ -62,6 +62,11 @@ describe('commandFor', () => {
     expect(commandFor(key({ key: 'P', ctrlKey: true, shiftKey: true }), 'linux')).toBe('commandPalette');
   });
 
+  it('follows the end of a log with End, unmodified only', () => {
+    expect(commandFor(key({ key: 'End' }), 'linux')).toBe('followEnd');
+    expect(commandFor(key({ key: 'End', ctrlKey: true }), 'linux')).toBeNull();
+  });
+
   it('matches named keys', () => {
     expect(commandFor(key({ key: 'F3' }), 'linux')).toBe('findNext');
     expect(commandFor(key({ key: 'F3', shiftKey: true }), 'linux')).toBe('findPrevious');

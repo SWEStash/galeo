@@ -1,0 +1,338 @@
+2026-09-27T12:00:01Z DEBUG worker-1 step 1 done
+2026-09-27T12:00:02Z INFO worker-2 step 2 done
+2026-09-27T12:00:03Z WARN worker-3 step 3 done
+2026-09-27T12:00:04Z INFO worker-0 step 4 done
+2026-09-27T12:00:05Z ERROR worker-1 step 5 done
+    at handler (server.js:42:7)
+2026-09-27T12:00:06Z DEBUG worker-2 step 6 done
+2026-09-27T12:00:07Z INFO worker-3 step 7 done
+2026-09-27T12:00:08Z INFO worker-0 step 8 done
+2026-09-27T12:00:09Z DEBUG worker-1 step 9 done
+2026-09-27T12:00:10Z INFO worker-2 step 10 done
+2026-09-27T12:00:11Z WARN worker-3 step 11 done
+2026-09-27T12:00:12Z INFO worker-0 step 12 done
+2026-09-27T12:00:13Z ERROR worker-1 step 13 done
+    at handler (server.js:42:7)
+2026-09-27T12:00:14Z DEBUG worker-2 step 14 done
+2026-09-27T12:00:15Z INFO worker-3 step 15 done
+2026-09-27T12:00:16Z INFO worker-0 step 16 done
+2026-09-27T12:00:17Z DEBUG worker-1 step 17 done
+2026-09-27T12:00:18Z INFO worker-2 step 18 done
+2026-09-27T12:00:19Z WARN worker-3 step 19 done
+2026-09-27T12:00:20Z INFO worker-0 step 20 done
+2026-09-27T12:00:21Z ERROR worker-1 step 21 done
+    at handler (server.js:42:7)
+2026-09-27T12:00:22Z DEBUG worker-2 step 22 done
+2026-09-27T12:00:23Z INFO worker-3 step 23 done
+2026-09-27T12:00:24Z INFO worker-0 step 24 done
+2026-09-27T12:00:25Z DEBUG worker-1 step 25 done
+2026-09-27T12:00:26Z INFO worker-2 step 26 done
+2026-09-27T12:00:27Z WARN worker-3 step 27 done
+2026-09-27T12:00:28Z INFO worker-0 step 28 done
+2026-09-27T12:00:29Z ERROR worker-1 step 29 done
+    at handler (server.js:42:7)
+2026-09-27T12:00:30Z DEBUG worker-2 step 30 done
+2026-09-27T12:00:31Z INFO worker-3 step 31 done
+2026-09-27T12:00:32Z INFO worker-0 step 32 done
+2026-09-27T12:00:33Z DEBUG worker-1 step 33 done
+2026-09-27T12:00:34Z INFO worker-2 step 34 done
+2026-09-27T12:00:35Z WARN worker-3 step 35 done
+2026-09-27T12:00:36Z INFO worker-0 step 36 done
+2026-09-27T12:00:37Z ERROR worker-1 step 37 done
+    at handler (server.js:42:7)
+2026-09-27T12:00:38Z DEBUG worker-2 step 38 done
+2026-09-27T12:00:39Z INFO worker-3 step 39 done
+2026-09-27T12:00:40Z INFO worker-0 step 40 done
+2026-09-27T12:00:41Z DEBUG worker-1 step 41 done
+2026-09-27T12:00:42Z INFO worker-2 step 42 done
+2026-09-27T12:00:43Z WARN worker-3 step 43 done
+2026-09-27T12:00:44Z INFO worker-0 step 44 done
+2026-09-27T12:00:45Z ERROR worker-1 step 45 done
+    at handler (server.js:42:7)
+2026-09-27T12:00:46Z DEBUG worker-2 step 46 done
+2026-09-27T12:00:47Z INFO worker-3 step 47 done
+2026-09-27T12:00:48Z INFO worker-0 step 48 done
+2026-09-27T12:00:49Z DEBUG worker-1 step 49 done
+2026-09-27T12:00:50Z INFO worker-2 step 50 done
+2026-09-27T12:00:51Z WARN worker-3 step 51 done
+2026-09-27T12:00:52Z INFO worker-0 step 52 done
+2026-09-27T12:00:53Z ERROR worker-1 step 53 done
+    at handler (server.js:42:7)
+2026-09-27T12:00:54Z DEBUG worker-2 step 54 done
+2026-09-27T12:00:55Z INFO worker-3 step 55 done
+2026-09-27T12:00:56Z INFO worker-0 step 56 done
+2026-09-27T12:00:57Z DEBUG worker-1 step 57 done
+2026-09-27T12:00:58Z INFO worker-2 step 58 done
+2026-09-27T12:00:59Z WARN worker-3 step 59 done
+2026-09-27T12:01:00Z INFO worker-0 step 60 done
+2026-09-27T12:01:01Z ERROR worker-1 step 61 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:02Z DEBUG worker-2 step 62 done
+2026-09-27T12:01:03Z INFO worker-3 step 63 done
+2026-09-27T12:01:04Z INFO worker-0 step 64 done
+2026-09-27T12:01:05Z DEBUG worker-1 step 65 done
+2026-09-27T12:01:06Z INFO worker-2 step 66 done
+2026-09-27T12:01:07Z WARN worker-3 step 67 done
+2026-09-27T12:01:08Z INFO worker-0 step 68 done
+2026-09-27T12:01:09Z ERROR worker-1 step 69 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:10Z DEBUG worker-2 step 70 done
+2026-09-27T12:01:11Z INFO worker-3 step 71 done
+2026-09-27T12:01:12Z INFO worker-0 step 72 done
+2026-09-27T12:01:13Z DEBUG worker-1 step 73 done
+2026-09-27T12:01:14Z INFO worker-2 step 74 done
+2026-09-27T12:01:15Z WARN worker-3 step 75 done
+2026-09-27T12:01:16Z INFO worker-0 step 76 done
+2026-09-27T12:01:17Z ERROR worker-1 step 77 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:18Z DEBUG worker-2 step 78 done
+2026-09-27T12:01:19Z INFO worker-3 step 79 done
+2026-09-27T12:01:20Z INFO worker-0 step 80 done
+2026-09-27T12:01:21Z DEBUG worker-1 step 81 done
+2026-09-27T12:01:22Z INFO worker-2 step 82 done
+2026-09-27T12:01:23Z WARN worker-3 step 83 done
+2026-09-27T12:01:24Z INFO worker-0 step 84 done
+2026-09-27T12:01:25Z ERROR worker-1 step 85 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:26Z DEBUG worker-2 step 86 done
+2026-09-27T12:01:27Z INFO worker-3 step 87 done
+2026-09-27T12:01:28Z INFO worker-0 step 88 done
+2026-09-27T12:01:29Z DEBUG worker-1 step 89 done
+2026-09-27T12:01:30Z INFO worker-2 step 90 done
+2026-09-27T12:01:31Z WARN worker-3 step 91 done
+2026-09-27T12:01:32Z INFO worker-0 step 92 done
+2026-09-27T12:01:33Z ERROR worker-1 step 93 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:34Z DEBUG worker-2 step 94 done
+2026-09-27T12:01:35Z INFO worker-3 step 95 done
+2026-09-27T12:01:36Z INFO worker-0 step 96 done
+2026-09-27T12:01:37Z DEBUG worker-1 step 97 done
+2026-09-27T12:01:38Z INFO worker-2 step 98 done
+2026-09-27T12:01:39Z WARN worker-3 step 99 done
+2026-09-27T12:01:40Z INFO worker-0 step 100 done
+2026-09-27T12:01:41Z ERROR worker-1 step 101 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:42Z DEBUG worker-2 step 102 done
+2026-09-27T12:01:43Z INFO worker-3 step 103 done
+2026-09-27T12:01:44Z INFO worker-0 step 104 done
+2026-09-27T12:01:45Z DEBUG worker-1 step 105 done
+2026-09-27T12:01:46Z INFO worker-2 step 106 done
+2026-09-27T12:01:47Z WARN worker-3 step 107 done
+2026-09-27T12:01:48Z INFO worker-0 step 108 done
+2026-09-27T12:01:49Z ERROR worker-1 step 109 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:50Z DEBUG worker-2 step 110 done
+2026-09-27T12:01:51Z INFO worker-3 step 111 done
+2026-09-27T12:01:52Z INFO worker-0 step 112 done
+2026-09-27T12:01:53Z DEBUG worker-1 step 113 done
+2026-09-27T12:01:54Z INFO worker-2 step 114 done
+2026-09-27T12:01:55Z WARN worker-3 step 115 done
+2026-09-27T12:01:56Z INFO worker-0 step 116 done
+2026-09-27T12:01:57Z ERROR worker-1 step 117 done
+    at handler (server.js:42:7)
+2026-09-27T12:01:58Z DEBUG worker-2 step 118 done
+2026-09-27T12:01:59Z INFO worker-3 step 119 done
+2026-09-27T12:02:00Z INFO worker-0 step 120 done
+2026-09-27T12:02:01Z DEBUG worker-1 step 121 done
+2026-09-27T12:02:02Z INFO worker-2 step 122 done
+2026-09-27T12:02:03Z WARN worker-3 step 123 done
+2026-09-27T12:02:04Z INFO worker-0 step 124 done
+2026-09-27T12:02:05Z ERROR worker-1 step 125 done
+    at handler (server.js:42:7)
+2026-09-27T12:02:06Z DEBUG worker-2 step 126 done
+2026-09-27T12:02:07Z INFO worker-3 step 127 done
+2026-09-27T12:02:08Z INFO worker-0 step 128 done
+2026-09-27T12:02:09Z DEBUG worker-1 step 129 done
+2026-09-27T12:02:10Z INFO worker-2 step 130 done
+2026-09-27T12:02:11Z WARN worker-3 step 131 done
+2026-09-27T12:02:12Z INFO worker-0 step 132 done
+2026-09-27T12:02:13Z ERROR worker-1 step 133 done
+    at handler (server.js:42:7)
+2026-09-27T12:02:14Z DEBUG worker-2 step 134 done
+2026-09-27T12:02:15Z INFO worker-3 step 135 done
+2026-09-27T12:02:16Z INFO worker-0 step 136 done
+2026-09-27T12:02:17Z DEBUG worker-1 step 137 done
+2026-09-27T12:02:18Z INFO worker-2 step 138 done
+2026-09-27T12:02:19Z WARN worker-3 step 139 done
+2026-09-27T12:02:20Z INFO worker-0 step 140 done
+2026-09-27T12:02:21Z ERROR worker-1 step 141 done
+    at handler (server.js:42:7)
+2026-09-27T12:02:22Z DEBUG worker-2 step 142 done
+2026-09-27T12:02:23Z INFO worker-3 step 143 done
+2026-09-27T12:02:24Z INFO worker-0 step 144 done
+2026-09-27T12:02:25Z DEBUG worker-1 step 145 done
+2026-09-27T12:02:26Z INFO worker-2 step 146 done
+2026-09-27T12:02:27Z WARN worker-3 step 147 done
+2026-09-27T12:02:28Z INFO worker-0 step 148 done
+2026-09-27T12:02:29Z ERROR worker-1 step 149 done
+    at handler (server.js:42:7)
+2026-09-27T12:02:30Z DEBUG worker-2 step 150 done
+2026-09-27T12:02:31Z INFO worker-3 step 151 done
+2026-09-27T12:02:32Z INFO worker-0 step 152 done
+2026-09-27T12:02:33Z DEBUG worker-1 step 153 done
+2026-09-27T12:02:34Z INFO worker-2 step 154 done
+2026-09-27T12:02:35Z WARN worker-3 step 155 done
+2026-09-27T12:02:36Z INFO worker-0 step 156 done
+2026-09-27T12:02:37Z ERROR worker-1 step 157 done
+    at handler (server.js:42:7)
+2026-09-27T12:02:38Z DEBUG worker-2 step 158 done
+2026-09-27T12:02:39Z INFO worker-3 step 159 done
+2026-09-27T12:02:40Z INFO worker-0 step 160 done
+2026-09-27T12:02:41Z DEBUG worker-1 step 161 done
+2026-09-27T12:02:42Z INFO worker-2 step 162 done
+2026-09-27T12:02:43Z WARN worker-3 step 163 done
+2026-09-27T12:02:44Z INFO worker-0 step 164 done
+2026-09-27T12:02:45Z ERROR worker-1 step 165 done
+    at handler (server.js:42:7)
+2026-09-27T12:02:46Z DEBUG worker-2 step 166 done
+2026-09-27T12:02:47Z INFO worker-3 step 167 done
+2026-09-27T12:02:48Z INFO worker-0 step 168 done
+2026-09-27T12:02:49Z DEBUG worker-1 step 169 done
+2026-09-27T12:02:50Z INFO worker-2 step 170 done
+2026-09-27T12:02:51Z WARN worker-3 step 171 done
+2026-09-27T12:02:52Z INFO worker-0 step 172 done
+2026-09-27T12:02:53Z ERROR worker-1 step 173 done
+    at handler (server.js:42:7)
+2026-09-27T12:02:54Z DEBUG worker-2 step 174 done
+2026-09-27T12:02:55Z INFO worker-3 step 175 done
+2026-09-27T12:02:56Z INFO worker-0 step 176 done
+2026-09-27T12:02:57Z DEBUG worker-1 step 177 done
+2026-09-27T12:02:58Z INFO worker-2 step 178 done
+2026-09-27T12:02:59Z WARN worker-3 step 179 done
+2026-09-27T12:03:00Z INFO worker-0 step 180 done
+2026-09-27T12:03:01Z ERROR worker-1 step 181 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:02Z DEBUG worker-2 step 182 done
+2026-09-27T12:03:03Z INFO worker-3 step 183 done
+2026-09-27T12:03:04Z INFO worker-0 step 184 done
+2026-09-27T12:03:05Z DEBUG worker-1 step 185 done
+2026-09-27T12:03:06Z INFO worker-2 step 186 done
+2026-09-27T12:03:07Z WARN worker-3 step 187 done
+2026-09-27T12:03:08Z INFO worker-0 step 188 done
+2026-09-27T12:03:09Z ERROR worker-1 step 189 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:10Z DEBUG worker-2 step 190 done
+2026-09-27T12:03:11Z INFO worker-3 step 191 done
+2026-09-27T12:03:12Z INFO worker-0 step 192 done
+2026-09-27T12:03:13Z DEBUG worker-1 step 193 done
+2026-09-27T12:03:14Z INFO worker-2 step 194 done
+2026-09-27T12:03:15Z WARN worker-3 step 195 done
+2026-09-27T12:03:16Z INFO worker-0 step 196 done
+2026-09-27T12:03:17Z ERROR worker-1 step 197 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:18Z DEBUG worker-2 step 198 done
+2026-09-27T12:03:19Z INFO worker-3 step 199 done
+2026-09-27T12:03:20Z INFO worker-0 step 200 done
+2026-09-27T12:03:21Z DEBUG worker-1 step 201 done
+2026-09-27T12:03:22Z INFO worker-2 step 202 done
+2026-09-27T12:03:23Z WARN worker-3 step 203 done
+2026-09-27T12:03:24Z INFO worker-0 step 204 done
+2026-09-27T12:03:25Z ERROR worker-1 step 205 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:26Z DEBUG worker-2 step 206 done
+2026-09-27T12:03:27Z INFO worker-3 step 207 done
+2026-09-27T12:03:28Z INFO worker-0 step 208 done
+2026-09-27T12:03:29Z DEBUG worker-1 step 209 done
+2026-09-27T12:03:30Z INFO worker-2 step 210 done
+2026-09-27T12:03:31Z WARN worker-3 step 211 done
+2026-09-27T12:03:32Z INFO worker-0 step 212 done
+2026-09-27T12:03:33Z ERROR worker-1 step 213 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:34Z DEBUG worker-2 step 214 done
+2026-09-27T12:03:35Z INFO worker-3 step 215 done
+2026-09-27T12:03:36Z INFO worker-0 step 216 done
+2026-09-27T12:03:37Z DEBUG worker-1 step 217 done
+2026-09-27T12:03:38Z INFO worker-2 step 218 done
+2026-09-27T12:03:39Z WARN worker-3 step 219 done
+2026-09-27T12:03:40Z INFO worker-0 step 220 done
+2026-09-27T12:03:41Z ERROR worker-1 step 221 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:42Z DEBUG worker-2 step 222 done
+2026-09-27T12:03:43Z INFO worker-3 step 223 done
+2026-09-27T12:03:44Z INFO worker-0 step 224 done
+2026-09-27T12:03:45Z DEBUG worker-1 step 225 done
+2026-09-27T12:03:46Z INFO worker-2 step 226 done
+2026-09-27T12:03:47Z WARN worker-3 step 227 done
+2026-09-27T12:03:48Z INFO worker-0 step 228 done
+2026-09-27T12:03:49Z ERROR worker-1 step 229 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:50Z DEBUG worker-2 step 230 done
+2026-09-27T12:03:51Z INFO worker-3 step 231 done
+2026-09-27T12:03:52Z INFO worker-0 step 232 done
+2026-09-27T12:03:53Z DEBUG worker-1 step 233 done
+2026-09-27T12:03:54Z INFO worker-2 step 234 done
+2026-09-27T12:03:55Z WARN worker-3 step 235 done
+2026-09-27T12:03:56Z INFO worker-0 step 236 done
+2026-09-27T12:03:57Z ERROR worker-1 step 237 done
+    at handler (server.js:42:7)
+2026-09-27T12:03:58Z DEBUG worker-2 step 238 done
+2026-09-27T12:03:59Z INFO worker-3 step 239 done
+2026-09-27T12:04:00Z INFO worker-0 step 240 done
+2026-09-27T12:04:01Z DEBUG worker-1 step 241 done
+2026-09-27T12:04:02Z INFO worker-2 step 242 done
+2026-09-27T12:04:03Z WARN worker-3 step 243 done
+2026-09-27T12:04:04Z INFO worker-0 step 244 done
+2026-09-27T12:04:05Z ERROR worker-1 step 245 done
+    at handler (server.js:42:7)
+2026-09-27T12:04:06Z DEBUG worker-2 step 246 done
+2026-09-27T12:04:07Z INFO worker-3 step 247 done
+2026-09-27T12:04:08Z INFO worker-0 step 248 done
+2026-09-27T12:04:09Z DEBUG worker-1 step 249 done
+2026-09-27T12:04:10Z INFO worker-2 step 250 done
+2026-09-27T12:04:11Z WARN worker-3 step 251 done
+2026-09-27T12:04:12Z INFO worker-0 step 252 done
+2026-09-27T12:04:13Z ERROR worker-1 step 253 done
+    at handler (server.js:42:7)
+2026-09-27T12:04:14Z DEBUG worker-2 step 254 done
+2026-09-27T12:04:15Z INFO worker-3 step 255 done
+2026-09-27T12:04:16Z INFO worker-0 step 256 done
+2026-09-27T12:04:17Z DEBUG worker-1 step 257 done
+2026-09-27T12:04:18Z INFO worker-2 step 258 done
+2026-09-27T12:04:19Z WARN worker-3 step 259 done
+2026-09-27T12:04:20Z INFO worker-0 step 260 done
+2026-09-27T12:04:21Z ERROR worker-1 step 261 done
+    at handler (server.js:42:7)
+2026-09-27T12:04:22Z DEBUG worker-2 step 262 done
+2026-09-27T12:04:23Z INFO worker-3 step 263 done
+2026-09-27T12:04:24Z INFO worker-0 step 264 done
+2026-09-27T12:04:25Z DEBUG worker-1 step 265 done
+2026-09-27T12:04:26Z INFO worker-2 step 266 done
+2026-09-27T12:04:27Z WARN worker-3 step 267 done
+2026-09-27T12:04:28Z INFO worker-0 step 268 done
+2026-09-27T12:04:29Z ERROR worker-1 step 269 done
+    at handler (server.js:42:7)
+2026-09-27T12:04:30Z DEBUG worker-2 step 270 done
+2026-09-27T12:04:31Z INFO worker-3 step 271 done
+2026-09-27T12:04:32Z INFO worker-0 step 272 done
+2026-09-27T12:04:33Z DEBUG worker-1 step 273 done
+2026-09-27T12:04:34Z INFO worker-2 step 274 done
+2026-09-27T12:04:35Z WARN worker-3 step 275 done
+2026-09-27T12:04:36Z INFO worker-0 step 276 done
+2026-09-27T12:04:37Z ERROR worker-1 step 277 done
+    at handler (server.js:42:7)
+2026-09-27T12:04:38Z DEBUG worker-2 step 278 done
+2026-09-27T12:04:39Z INFO worker-3 step 279 done
+2026-09-27T12:04:40Z INFO worker-0 step 280 done
+2026-09-27T12:04:41Z DEBUG worker-1 step 281 done
+2026-09-27T12:04:42Z INFO worker-2 step 282 done
+2026-09-27T12:04:43Z WARN worker-3 step 283 done
+2026-09-27T12:04:44Z INFO worker-0 step 284 done
+2026-09-27T12:04:45Z ERROR worker-1 step 285 done
+    at handler (server.js:42:7)
+2026-09-27T12:04:46Z DEBUG worker-2 step 286 done
+2026-09-27T12:04:47Z INFO worker-3 step 287 done
+2026-09-27T12:04:48Z INFO worker-0 step 288 done
+2026-09-27T12:04:49Z DEBUG worker-1 step 289 done
+2026-09-27T12:04:50Z INFO worker-2 step 290 done
+2026-09-27T12:04:51Z WARN worker-3 step 291 done
+2026-09-27T12:04:52Z INFO worker-0 step 292 done
+2026-09-27T12:04:53Z ERROR worker-1 step 293 done
+    at handler (server.js:42:7)
+2026-09-27T12:04:54Z DEBUG worker-2 step 294 done
+2026-09-27T12:04:55Z INFO worker-3 step 295 done
+2026-09-27T12:04:56Z INFO worker-0 step 296 done
+2026-09-27T12:04:57Z DEBUG worker-1 step 297 done
+2026-09-27T12:04:58Z INFO worker-2 step 298 done
+2026-09-27T12:04:59Z WARN worker-3 step 299 done
+2026-09-27T12:05:00Z INFO worker-0 step 300 done
+2026-09-27T12:59:59Z INFO last line of the sample

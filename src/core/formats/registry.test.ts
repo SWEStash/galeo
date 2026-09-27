@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseView, detectFormat, FORMATS, MARKDOWN_RENDER_MAX_BYTES } from './registry';
+import { chooseView, detectFormat, FORMATS, MARKDOWN_RENDER_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
 
 describe('detectFormat', () => {
   it.each([
@@ -43,6 +43,11 @@ describe('chooseView', () => {
       view: 'source',
       banner: 'too-large',
     });
+  });
+
+  it('opens plain text over the reader limit as source with the too-large banner', () => {
+    expect(chooseView('text', { size: TEXT_READER_MAX_BYTES })).toEqual({ view: 'rendered', banner: null });
+    expect(chooseView('text', { size: TEXT_READER_MAX_BYTES + 1 })).toEqual({ view: 'source', banner: 'too-large' });
   });
 
   it('renders anyway when the user asks, past the limit', () => {

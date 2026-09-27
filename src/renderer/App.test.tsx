@@ -44,7 +44,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
   return api;
 }
 
-function readyContent(format: 'markdown' | 'plain', view: 'rendered' | 'source', text: string): DocumentContent {
+function readyContent(format: 'markdown' | 'plain' | 'text' | 'log', view: 'rendered' | 'source', text: string): DocumentContent {
   return { state: 'ready', path: '/d/x', format, view, banner: null, text, encoding: 'utf-8', guessedEncoding: false, size: text.length };
 }
 
@@ -168,6 +168,44 @@ describe('App', () => {
     expect(renderRequests).toEqual([]);
     await press({ key: 'u', ctrlKey: true });
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># big</p>'));
+  });
+
+  it('shows .txt in the reader view and its source on Ctrl+U, without the worker', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a\n\nb') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelectorAll('article.galeo-text-reader p')).toHaveLength(2));
+    expect(renderRequests).toEqual([]);
+    await press({ key: 'u', ctrlKey: true });
+    expect(shadow.querySelector<HTMLElement>('.galeo-source')?.hidden).toBe(false);
+  });
+
+  it('shows a log with level badges and follows its end on End until scrolled up', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/app.log' }], content: readyContent('log', 'source', 'INFO a\nERROR b\n') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.galeo-log-gutter')).not.toBeNull());
+    const documentElement = container.querySelector<HTMLElement>('[data-testid="document"]')!;
+    expect(documentElement.dataset['follow']).toBe('off');
+    await press({ key: 'End' });
+    expect(documentElement.dataset['follow']).toBe('on');
+    const scroller = shadow.querySelector<HTMLElement>('.cm-scroller')!;
+    await act(async () => {
+      scroller.scrollTop = 100;
+      scroller.dispatchEvent(new Event('scroll'));
+      scroller.scrollTop = 40;
+      scroller.dispatchEvent(new Event('scroll'));
+    });
+    expect(documentElement.dataset['follow']).toBe('off');
+  });
+
+  it('ignores End outside logs', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'x') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    await press({ key: 'End' });
+    expect(container.querySelector<HTMLElement>('[data-testid="document"]')?.dataset['follow']).toBe('off');
   });
 
   it('shows the state of a document that cannot be rendered', async () => {

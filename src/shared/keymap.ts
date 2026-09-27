@@ -9,6 +9,8 @@ const BASE = {
   findPrevious: ['Shift+F3'],
   toggleSource: ['CmdOrCtrl+U'],
   toggleWrap: ['Alt+Z'],
+  /** Logs: jump to the end and keep following it; scrolling up leaves. */
+  followEnd: ['End'],
   toggleOutline: ['CmdOrCtrl+Shift+O'],
   reload: ['F5', 'CmdOrCtrl+R'],
   back: ['Alt+Left'],

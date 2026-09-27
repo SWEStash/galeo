@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
-import type { ViewMode } from '../shared/formats';
+import type { FormatId, ViewMode } from '../shared/formats';
 import { commandFor, type Platform } from '../shared/keymap';
-import { DocumentView } from './document/DocumentView';
+import { DocumentView, type RenderedContent } from './document/DocumentView';
 import type { ColorScheme } from './document/host';
+import type { SourceLanguage } from './document/source-view';
 import { useColorScheme } from './document/theme';
 import { useFirstDocument } from './document/useFirstDocument';
 import { useRenderedHtml } from './document/useRenderedHtml';
@@ -11,6 +12,8 @@ import { markFirstPaint } from './perf';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
+
+const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
 
 export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
@@ -38,8 +41,15 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
   const [chosenView, setChosenView] = useState<ViewMode | null>(null);
   const view = chosenView ?? ready?.view ?? 'rendered';
   const [wrap, setWrap] = useState(false);
-  const renderable = ready?.format === 'markdown';
-  const html = useRenderedHtml(client, renderable ? ready.text : null, view === 'rendered');
+  const [follow, setFollow] = useState(false);
+  // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
+  const renderable = ready?.format === 'markdown' || ready?.format === 'text';
+  const html = useRenderedHtml(client, ready?.format === 'markdown' ? ready.text : null, view === 'rendered');
+  const rendered = useMemo<RenderedContent | null>(() => {
+    if (ready?.format === 'text') return { text: ready.text };
+    return html === null ? null : { html };
+  }, [ready, html]);
+  const endFollow = useCallback(() => setFollow(false), []);
 
   useEffect(markFirstPaint, []);
 
@@ -63,21 +73,26 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
       } else if (command === 'toggleWrap' && view === 'source') {
         event.preventDefault();
         setWrap((current) => !current);
+      } else if (command === 'followEnd' && ready?.format === 'log') {
+        event.preventDefault();
+        setFollow(true);
       }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [platform, renderable, view]);
+  }, [platform, renderable, view, ready]);
 
   return (
     <>
       <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
         {ready && (
           <DocumentView
-            html={html}
-            source={{ text: ready.text, language: ready.format === 'markdown' ? 'markdown' : null }}
+            rendered={rendered}
+            source={{ text: ready.text, language: SOURCE_LANGUAGES[ready.format] }}
             view={view}
             wrap={wrap}
+            follow={follow}
+            onFollowEnded={endFollow}
             scheme={scheme}
           />
         )}

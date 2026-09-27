@@ -2,6 +2,7 @@ import katexCss from 'katex/dist/katex.min.css?inline';
 import type { ViewMode } from '../../shared/formats';
 import documentCss from './document.css?inline';
 import { createSourceView, type SourceLanguage, type SourceView } from './source-view';
+import { textParagraphs } from './text-reader';
 
 export type ColorScheme = 'light' | 'dark';
 
@@ -11,6 +12,8 @@ export interface DocumentHost {
   readonly article: HTMLElement;
   /** Replaces the rendered content with worker output (already sanitized, ADR-003). */
   setContent(html: string): void;
+  /** Shows plain text in the reading column (the `.txt` reader), as text nodes only. */
+  setReaderText(text: string): void;
   /** The source view, created on first use and updated in place afterwards. */
   showSource(text: string, language: SourceLanguage, wrap: boolean): SourceView;
   readonly source: SourceView | null;
@@ -64,7 +67,19 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
       return source;
     },
     setContent(html) {
+      article.classList.remove('galeo-text-reader');
       article.innerHTML = (policy ? policy.createHTML(html) : html) as string;
+    },
+    setReaderText(text) {
+      article.classList.add('galeo-text-reader');
+      article.replaceChildren(
+        ...textParagraphs(text).map(({ line, text: paragraph }) => {
+          const element = document.createElement('p');
+          element.dataset['srcLine'] = String(line);
+          element.textContent = paragraph;
+          return element;
+        }),
+      );
     },
     showSource(text, language, wrap) {
       if (!source) {

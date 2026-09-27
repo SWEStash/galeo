@@ -52,4 +52,20 @@ describe('createSourceView', () => {
     expect(line?.querySelector('span[class]')).not.toBeNull();
     source.destroy();
   });
+
+  it('marks log lines with their level, as a text badge and a line class', () => {
+    const { root, parent } = shadowContainer();
+    const text = 'INFO started\nplain line\nWARN slow\nERROR boom\nDEBUG detail\n';
+    const source = createSourceView({ root, parent, text, language: 'log', wrap: false });
+    // The gutter's width spacer is a hidden element too.
+    const badges = [...parent.querySelectorAll<HTMLElement>('.galeo-log-gutter .cm-gutterElement')]
+      .filter((element) => element.style.visibility !== 'hidden')
+      .map((element) => element.textContent);
+    expect(badges.filter(Boolean)).toEqual(['INF', 'WRN', 'ERR', 'DBG']);
+    const classes = [...parent.querySelectorAll('.cm-line')].map((line) =>
+      [...line.classList].find((name) => name.startsWith('galeo-log-')) ?? null,
+    );
+    expect(classes).toEqual(['galeo-log-info', null, 'galeo-log-warn', 'galeo-log-error', 'galeo-log-debug', null]);
+    source.destroy();
+  });
 });

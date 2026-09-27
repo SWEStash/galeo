@@ -34,6 +34,9 @@ Defined on `:root`; the dark values apply when the root element has `data-scheme
 | `--galeo-color-focus` | `#0969da` / `#4493f8` | Focus ring |
 | `--galeo-color-mark` | yellow, 45% | Find matches |
 | `--galeo-color-mark-current` | orange | The current find match |
+| `--galeo-color-log-error` | `#d1242f` / `#f85149` | Log error badges and line tint |
+| `--galeo-color-log-warn` | `#9a6700` / `#d29922` | Log warning badges and line tint |
+| `--galeo-color-log-info` | `#0969da` / `#4493f8` | Log info badges |
 
 The fonts ship with the app (no web fonts), each with a system fallback.
 
@@ -45,6 +48,7 @@ The fonts ship with the app (no web fonts), each with a system fallback.
 | `:host([data-scheme='dark'])` | The document while the app is dark; code highlighting switches on it |
 | `.galeo-frontmatter` | The collapsible frontmatter block |
 | `.galeo-remote-image` | Placeholder for a blocked remote image (`data-host`, `data-url`) |
+| `.galeo-text-reader` | The `.txt` reader view (paragraphs keep their line breaks) |
 
 Code blocks are highlighted with the `github-light` and `github-dark` themes, emitted as
 `--shiki-light` / `--shiki-dark` variables on each token.

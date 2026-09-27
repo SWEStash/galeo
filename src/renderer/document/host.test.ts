@@ -60,6 +60,20 @@ describe('mountDocumentHost', () => {
     expect(host.root.querySelector('p')?.textContent).toBe('again');
   });
 
+  it('shows plain text as reader paragraphs built from text, never parsed as HTML', () => {
+    const host = mountDocumentHost(container());
+    host.setReaderText('first <b>not bold</b>\nsame paragraph\n\nsecond');
+    const paragraphs = [...host.article.querySelectorAll('p')];
+    expect(paragraphs.map((p) => [p.dataset['srcLine'], p.textContent])).toEqual([
+      ['1', 'first <b>not bold</b>\nsame paragraph'],
+      ['4', 'second'],
+    ]);
+    expect(host.article.querySelector('b')).toBeNull();
+    expect(host.article.classList.contains('galeo-text-reader')).toBe(true);
+    host.setContent('<p>markdown</p>');
+    expect(host.article.classList.contains('galeo-text-reader')).toBe(false);
+  });
+
   it('marks the document with the colour scheme for the code themes', () => {
     const element = container();
     const host = mountDocumentHost(element);

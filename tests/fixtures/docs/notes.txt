@@ -1,0 +1,4 @@
+Plain notes, kept as written.
+A second line of the same paragraph.
+
+A new paragraph <b>not markup</b>.

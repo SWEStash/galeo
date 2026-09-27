@@ -14,6 +14,9 @@ export interface FormatSpec {
 /** Markdown over 5 MB opens as source (SR-14). */
 export const MARKDOWN_RENDER_MAX_BYTES = 5 * 1024 * 1024;
 
+/** The `.txt` reader builds a paragraph per block of text; past this, source is lighter. */
+export const TEXT_READER_MAX_BYTES = 5 * 1024 * 1024;
+
 /** The core half of the format registry: detection, limits and the default view per format. */
 export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
   markdown: {
@@ -25,7 +28,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
   text: {
     extensions: ['.txt'],
     defaultView: 'rendered',
-    renderMaxBytes: null,
+    renderMaxBytes: TEXT_READER_MAX_BYTES,
     capabilities: { follow: false, outline: false },
   },
   log: {

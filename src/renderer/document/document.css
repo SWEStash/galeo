@@ -9,6 +9,11 @@
   display: none !important;
 }
 
+/* The .txt reader: the text's own line breaks, in the reading column. */
+.galeo-text-reader p {
+  white-space: pre-wrap;
+}
+
 /* The source view fills the document area and scrolls itself; the rendered view scrolls the host. */
 .galeo-source {
   height: 100%;

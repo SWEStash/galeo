@@ -4,8 +4,9 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
+import { logLevels } from './log-view';
 
-export type SourceLanguage = 'markdown' | null;
+export type SourceLanguage = 'markdown' | 'log' | null;
 
 export interface SourceView {
   readonly view: EditorView;
@@ -14,6 +15,9 @@ export interface SourceView {
   /** The line at the top of the viewport. */
   topLine(): number;
   scrollToLine(line: number): void;
+  scrollToEnd(): void;
+  /** Calls `listener` when the view scrolls up (the user leaving the end of a log). */
+  onScrollUp(listener: () => void): () => void;
   destroy(): void;
 }
 
@@ -39,6 +43,7 @@ const theme = EditorView.theme({
 
 const LANGUAGES: Record<Exclude<SourceLanguage, null>, () => Extension> = {
   markdown: () => markdown(),
+  log: () => logLevels(),
 };
 
 /**
@@ -87,6 +92,19 @@ export function createSourceView(options: {
     scrollToLine(line) {
       const target = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines));
       view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: 'start', yMargin: 0 }) });
+    },
+    scrollToEnd() {
+      view.dispatch({ effects: EditorView.scrollIntoView(view.state.doc.length, { y: 'end', yMargin: 0 }) });
+    },
+    onScrollUp(listener) {
+      let last = view.scrollDOM.scrollTop;
+      const onScroll = () => {
+        const top = view.scrollDOM.scrollTop;
+        if (top < last) listener();
+        last = top;
+      };
+      view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
+      return () => view.scrollDOM.removeEventListener('scroll', onScroll);
     },
     destroy() {
       view.destroy();
