@@ -23,16 +23,19 @@ export function createRenderedFinder(article: HTMLElement, scroller: HTMLElement
   const result = (): FindResult => ({ current: current + 1, total: ranges.length, capped: false });
 
   const paint = () => {
-    const highlights = registry();
-    highlights?.set(ALL, new Highlight(...ranges));
     const range = ranges[current];
-    if (range) {
-      // Above the other matches' highlight, so its colours win where the two overlap.
-      const highlight = new Highlight(range);
-      highlight.priority = 1;
-      highlights?.set(CURRENT, highlight);
+    const highlights = registry();
+    if (highlights) {
+      highlights.set(ALL, new Highlight(...ranges));
+      if (range) {
+        // Above the other matches' highlight, so its colours win where the two overlap.
+        const highlight = new Highlight(range);
+        highlight.priority = 1;
+        highlights.set(CURRENT, highlight);
+      } else {
+        highlights.delete(CURRENT);
+      }
     }
-    else highlights?.delete(CURRENT);
     if (!range) return;
     // The current match goes to the middle of the view (UX F9).
     const box = range.getBoundingClientRect();
