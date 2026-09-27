@@ -12,9 +12,10 @@ import remarkMath from 'remark-math';
 import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
-import { classesOf, eachElement, textOf } from './hast';
+import { classesOf, eachElement, textOf } from '../../../shared/markdown/hast';
 import { CODE_THEMES, loadHighlighter, type Highlighter } from './highlighter';
-import { SANITIZE_SCHEMA } from './sanitize-schema';
+import { isLocalReference, isNetworkPathReference } from '../../../shared/markdown/references';
+import { SANITIZE_SCHEMA } from '../../../shared/markdown/sanitize-schema';
 
 /** Code blocks longer than this are shown without highlighting (ADR-003: ~200 KB). */
 export const SHIKI_MAX_BLOCK_CHARS = 200_000;
@@ -98,22 +99,10 @@ const annotate = (collected: Collected) => () => (tree: Root) => {
   if (collected.frontmatter) tree.children.unshift(frontmatterBlock(collected.frontmatter));
 };
 
-/** Browsers ignore whitespace and control characters in a URL's scheme and leading slashes. */
-const compact = (url: string) => url.replace(/[\u0000-\u0020]/g, '');
-
-/** `//host/path` (or with backslashes, which browsers treat as slashes): another host. */
-function isNetworkPathReference(url: string): boolean {
-  return /^[\\/]{2}/.test(compact(url));
-}
-
-/** A path relative to the document: no scheme and no host. */
-function isLocalReference(url: string): boolean {
-  return !isNetworkPathReference(url) && !/^[a-z][a-z0-9+.-]*:/i.test(compact(url));
-}
-
 function hostOf(url: string): string {
   try {
-    const parsed = new URL(isNetworkPathReference(url) ? `https:${compact(url).replace(/\\/g, '/')}` : url);
+    const trimmed = url.replace(/[\u0000-\u0020]/g, '').replace(/\\/g, '/');
+    const parsed = new URL(isNetworkPathReference(url) ? `https:${trimmed}` : url);
     return parsed.host || parsed.protocol.replace(/:$/, '');
   } catch {
     return 'unknown host';
