@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import type { TextEncoding } from '../shared/documents';
 import type { FormatId, ViewMode } from '../shared/formats';
 import { commandFor, type Platform } from '../shared/keymap';
 import { DocumentBanner, DocumentLoading, DocumentState } from './document/DocumentState';
-import { DocumentView, type RenderedContent } from './document/DocumentView';
+import { DocumentView, type DocumentHandle, type RenderedContent } from './document/DocumentView';
+import { FindBar } from './document/FindBar';
+import type { FindResult } from './document/source-view';
 import type { ColorScheme } from './document/host';
 import type { SourceLanguage } from './document/source-view';
 import { useColorScheme } from './document/theme';
@@ -70,6 +72,27 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
     return render.html === null ? null : { html: render.html };
   }, [ready, render.html]);
   const endFollow = useCallback(() => setFollow(false), []);
+  const documentHandle = useRef<DocumentHandle>(null);
+  const [find, setFind] = useState<{ open: boolean; token: number; query: string; caseSensitive: boolean }>({
+    open: false,
+    token: 0,
+    query: '',
+    caseSensitive: false,
+  });
+  const [findResult, setFindResult] = useState<FindResult>({ current: 0, total: 0, capped: false });
+  const runFind = useCallback((query: string, caseSensitive: boolean) => {
+    setFind((current) => ({ ...current, query, caseSensitive }));
+    setFindResult(documentHandle.current?.find(query, { caseSensitive }) ?? { current: 0, total: 0, capped: false });
+  }, []);
+  const stepFind = useCallback((direction: 1 | -1) => {
+    if (documentHandle.current) setFindResult(documentHandle.current.step(direction));
+  }, []);
+  const closeFind = useCallback(() => {
+    documentHandle.current?.clear();
+    setFind((current) => ({ ...current, open: false, query: '' }));
+    // Esc keeps the scroll position at the current match; focus goes back to the document.
+    documentHandle.current?.focus();
+  }, []);
   const showRendered = useCallback(() => {
     setRenderAnyway(true);
     setChosenView('rendered');
@@ -100,11 +123,26 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
       } else if (command === 'followEnd' && ready?.format === 'log') {
         event.preventDefault();
         setFollow(true);
+      } else if (command === 'find' && ready) {
+        event.preventDefault();
+        setFind((current) => ({ ...current, open: true, token: current.token + 1 }));
+      } else if ((command === 'findNext' || command === 'findPrevious') && find.open) {
+        event.preventDefault();
+        stepFind(command === 'findNext' ? 1 : -1);
+      } else if (event.key === 'Escape' && find.open) {
+        event.preventDefault();
+        closeFind();
       }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [platform, renderable, view, ready]);
+  }, [platform, renderable, view, ready, find.open, stepFind, closeFind]);
+
+  // Switching views, or the rendered HTML arriving, repeats the search in what is now showing.
+  useEffect(() => {
+    if (find.open && find.query) runFind(find.query, find.caseSensitive);
+    // Only a change of view or content repeats the search, not typing (that already ran it).
+  }, [view, rendered]);
 
   return (
     <>
@@ -115,8 +153,12 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
         {ready?.guessedEncoding && <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]} />}
         {render.status === 'failed' && <DocumentBanner kind="render-failed" onAction={render.retry} />}
         {loading && <DocumentLoading />}
+        {find.open && ready && (
+          <FindBar result={findResult} focusToken={find.token} onQuery={runFind} onStep={stepFind} onClose={closeFind} />
+        )}
         {ready && (
           <DocumentView
+            ref={documentHandle}
             rendered={rendered}
             source={{ text: ready.text, language: SOURCE_LANGUAGES[ready.format] }}
             view={view}

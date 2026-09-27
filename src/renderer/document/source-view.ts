@@ -1,12 +1,32 @@
 import { standardKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
-import { Compartment, EditorState, type Extension } from '@codemirror/state';
+import {
+  closeSearchPanel,
+  findNext,
+  findPrevious,
+  openSearchPanel,
+  search,
+  SearchQuery,
+  searchPanelOpen,
+  setSearchQuery,
+} from '@codemirror/search';
+import { Compartment, EditorSelection, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { logLevels } from './log-view';
 
 export type SourceLanguage = 'markdown' | 'log' | null;
+
+/** Where find is: the 1-based current match (0 without one) of `total`, which stops at a cap. */
+export interface FindResult {
+  current: number;
+  total: number;
+  capped: boolean;
+}
+
+/** Counting stops here, so a common word in a 100 MB log doesn't stall the find bar. */
+const FIND_CAP = 10_000;
 
 export interface SourceView {
   readonly view: EditorView;
@@ -16,6 +36,10 @@ export interface SourceView {
   topLine(): number;
   scrollToLine(line: number): void;
   scrollToEnd(): void;
+  /** Highlights `query` and selects the first match from the reading position on. */
+  find(query: string, options: { caseSensitive: boolean }): FindResult;
+  findStep(direction: 1 | -1): FindResult;
+  clearFind(): void;
   /** Calls `listener` when the view scrolls up (the user leaving the end of a log). */
   onScrollUp(listener: () => void): () => void;
   destroy(): void;
@@ -39,6 +63,8 @@ const theme = EditorView.theme({
   '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--galeo-color-fg)' },
   '&.cm-focused': { outline: 'none' },
   '.cm-content': { caretColor: 'var(--galeo-color-fg)' },
+  '.cm-searchMatch': { backgroundColor: 'var(--galeo-color-mark)' },
+  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--galeo-color-mark-current)', color: '#1f2328' },
 });
 
 const LANGUAGES: Record<Exclude<SourceLanguage, null>, () => Extension> = {
@@ -56,8 +82,11 @@ export function createSourceView(options: {
   text: string;
   language: SourceLanguage;
   wrap: boolean;
+  findCap?: number;
 }): SourceView {
   const wrapping = new Compartment();
+  const findCap = options.findCap ?? FIND_CAP;
+  let total = { count: 0, capped: false };
   const view = new EditorView({
     root: options.root,
     parent: options.parent,
@@ -71,24 +100,83 @@ export function createSourceView(options: {
         syntaxHighlighting(highlight),
         theme,
         wrapping.of(options.wrap ? EditorView.lineWrapping : []),
+        // The find bar is the app's own; CodeMirror only highlights and selects the matches.
+        search({ createPanel: () => ({ dom: Object.assign(document.createElement('div'), { hidden: true }) }) }),
         options.language ? LANGUAGES[options.language]() : [],
       ],
     }),
   });
 
+  const topLine = () => {
+    // `documentTop` already moves with scrolling: the viewport top is this far into the document.
+    const block = view.lineBlockAtHeight(view.scrollDOM.getBoundingClientRect().top - view.documentTop);
+    return view.state.doc.lineAt(block.from).number;
+  };
+
+  const query = () => new SearchQuery({ search: '', literal: true });
+  let active = query();
+
+  /** How many matches start before `position`, up to the cap. */
+  const matchesBefore = (position: number) => {
+    let count = 0;
+    const cursor = active.getCursor(view.state, 0, position);
+    while (!cursor.next().done && count < findCap) count++;
+    return count;
+  };
+
+  const where = (): FindResult => {
+    const selection = view.state.selection.main;
+    const onMatch = total.count > 0 && active.getCursor(view.state, selection.from, selection.to).next().value?.from === selection.from;
+    return { current: onMatch ? Math.min(matchesBefore(selection.from) + 1, total.count) : 0, total: total.count, capped: total.capped };
+  };
+
+  const reveal = (from: number, to: number) =>
+    view.dispatch({
+      selection: EditorSelection.single(from, to),
+      // The current match goes to the middle of the view (UX F9).
+      effects: EditorView.scrollIntoView(from, { y: 'center' }),
+    });
+
   return {
     view,
+    find(text, { caseSensitive }) {
+      active = new SearchQuery({ search: text, caseSensitive, literal: true });
+      if (!searchPanelOpen(view.state)) openSearchPanel(view);
+      view.dispatch({ effects: setSearchQuery.of(active) });
+      if (!text) {
+        total = { count: 0, capped: false };
+        return where();
+      }
+      let count = 0;
+      const counter = active.getCursor(view.state);
+      while (count < findCap && !counter.next().done) count++;
+      total = { count, capped: count >= findCap && !counter.next().done };
+      const start = view.state.doc.line(topLine()).from;
+      const first = active.getCursor(view.state, start).next();
+      const match = first.done ? active.getCursor(view.state).next() : first;
+      if (!match.done) reveal(match.value.from, match.value.to);
+      return where();
+    },
+    findStep(direction) {
+      if (total.count === 0) return where();
+      (direction === 1 ? findNext : findPrevious)(view);
+      const { from } = view.state.selection.main;
+      view.dispatch({ effects: EditorView.scrollIntoView(from, { y: 'center' }) });
+      return where();
+    },
+    clearFind() {
+      active = query();
+      total = { count: 0, capped: false };
+      view.dispatch({ effects: setSearchQuery.of(active) });
+      closeSearchPanel(view);
+    },
     setText(text) {
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
     },
     setWrap(wrap) {
       view.dispatch({ effects: wrapping.reconfigure(wrap ? EditorView.lineWrapping : []) });
     },
-    topLine() {
-      // `documentTop` already moves with scrolling: the viewport top is this far into the document.
-      const block = view.lineBlockAtHeight(view.scrollDOM.getBoundingClientRect().top - view.documentTop);
-      return view.state.doc.lineAt(block.from).number;
-    },
+    topLine,
     scrollToLine(line) {
       const target = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines));
       view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: 'start', yMargin: 0 }) });

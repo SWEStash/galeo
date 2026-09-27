@@ -68,4 +68,42 @@ describe('createSourceView', () => {
     expect(classes).toEqual(['galeo-log-info', null, 'galeo-log-warn', 'galeo-log-error', 'galeo-log-debug', null]);
     source.destroy();
   });
+
+  it('finds matches, steps through them with wrap-around and reports n of m', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'Plan\nthe plan\nno\nPLAN\n', language: null, wrap: false });
+    expect(source.find('plan', { caseSensitive: false })).toEqual({ current: 1, total: 3, capped: false });
+    expect(source.view.state.sliceDoc(source.view.state.selection.main.from, source.view.state.selection.main.to)).toBe('Plan');
+    expect(source.findStep(1)).toEqual({ current: 2, total: 3, capped: false });
+    expect(source.findStep(1)).toEqual({ current: 3, total: 3, capped: false });
+    expect(source.findStep(1)).toEqual({ current: 1, total: 3, capped: false });
+    expect(source.findStep(-1)).toEqual({ current: 3, total: 3, capped: false });
+    expect(parent.querySelectorAll('.cm-searchMatch').length).toBeGreaterThan(0);
+    source.destroy();
+  });
+
+  it('matches case when asked, treats the query as text, and reports no matches', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'Plan plan a.b', language: null, wrap: false });
+    expect(source.find('plan', { caseSensitive: true })).toEqual({ current: 1, total: 1, capped: false });
+    expect(source.find('a.b', { caseSensitive: false }).total).toBe(1);
+    expect(source.find('zzz', { caseSensitive: false })).toEqual({ current: 0, total: 0, capped: false });
+    source.destroy();
+  });
+
+  it('stops counting at the cap', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'x'.repeat(50), language: null, wrap: false, findCap: 10 });
+    expect(source.find('x', { caseSensitive: false })).toMatchObject({ total: 10, capped: true });
+    source.destroy();
+  });
+
+  it('clears its highlights', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a a a', language: null, wrap: false });
+    source.find('a', { caseSensitive: false });
+    source.clearFind();
+    expect(parent.querySelectorAll('.cm-searchMatch')).toHaveLength(0);
+    source.destroy();
+  });
 });

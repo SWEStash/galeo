@@ -17,6 +17,7 @@ body,
 }
 
 main {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -109,4 +110,47 @@ button:focus-visible {
   .document-loading-line {
     animation: none;
   }
+}
+
+/* Find overlay at the top right of the document area (UX F9). */
+.find-bar {
+  position: absolute;
+  top: 8px;
+  right: 20px;
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-bg);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+.find-bar input {
+  width: 16em;
+  padding: 3px 6px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: 4px;
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  font: inherit;
+}
+.find-bar input:focus-visible {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 0;
+}
+.find-count {
+  min-width: 6.5em;
+  color: var(--galeo-color-muted);
+  font-variant-numeric: tabular-nums;
+}
+.find-bar button[aria-pressed='true'] {
+  border-color: var(--galeo-color-focus);
+  background: color-mix(in srgb, var(--galeo-color-focus) 15%, var(--galeo-color-bg));
+}
+
+.document-view:focus-visible {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: -2px;
 }

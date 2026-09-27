@@ -213,6 +213,46 @@ describe('App', () => {
     expect(container.querySelector<HTMLElement>('[data-testid="document"]')?.dataset['follow']).toBe('off');
   });
 
+  it('opens find with Ctrl+F, counts matches as the user types, and steps with F3', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'plan\nplan\nplan') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    await press({ key: 'f', ctrlKey: true });
+    const input = container.querySelector<HTMLInputElement>('.find-bar input')!;
+    expect(document.activeElement).toBe(input);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'plan');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const status = container.querySelector('.find-bar [role="status"]')!;
+    expect(status.textContent).toBe('1 of 3');
+    await press({ key: 'F3' });
+    expect(status.textContent).toBe('2 of 3');
+    await press({ key: 'F3', shiftKey: true });
+    expect(status.textContent).toBe('1 of 3');
+  });
+
+  it('closes find with Esc, clearing the highlights and returning focus to the document', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'a a') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    await press({ key: 'f', ctrlKey: true });
+    const input = container.querySelector<HTMLInputElement>('.find-bar input')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'a');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(shadow.querySelectorAll('.cm-searchMatch').length).toBeGreaterThan(0);
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    });
+    expect(container.querySelector('.find-bar')).toBeNull();
+    expect(shadow.querySelectorAll('.cm-searchMatch')).toHaveLength(0);
+    expect(document.activeElement).toBe(container.querySelector('[data-testid="document"]'));
+  });
+
   it.each([
     [{ state: 'empty', path: '/d/e.md', format: 'markdown' }, 'This file is empty'],
     [{ state: 'missing', path: '/d/gone.md' }, 'File not found'],

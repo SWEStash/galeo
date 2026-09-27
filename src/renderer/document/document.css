@@ -173,6 +173,16 @@ details > summary {
   overflow-y: hidden;
 }
 
+/* Find matches (the CSS Custom Highlight API); the current one stands out. */
+::highlight(galeo-find) {
+  background-color: var(--galeo-color-mark);
+  color: inherit;
+}
+::highlight(galeo-find-current) {
+  background-color: var(--galeo-color-mark-current);
+  color: #1f2328;
+}
+
 /* A block that failed on its own (a formula), with its message and source; the rest renders. */
 .galeo-block-error {
   display: inline-block;

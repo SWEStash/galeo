@@ -1,7 +1,8 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useImperativeHandle, useLayoutEffect, useRef, type Ref } from 'react';
 import type { ViewMode } from '../../shared/formats';
 import { blockAtOrBefore, firstVisibleLine } from './anchor';
 import { mountDocumentHost, type ColorScheme, type DocumentHost } from './host';
+import { createRenderedFinder, type Finder } from './rendered-finder';
 import type { SourceLanguage } from './source-view';
 
 /** What the rendered view shows: worker HTML (Markdown) or reader text (`.txt`). */
@@ -17,6 +18,12 @@ export interface DocumentViewProps {
   follow?: boolean;
   onFollowEnded?: () => void;
   scheme: ColorScheme;
+  /** Find in whichever view is showing, and focus the document area. */
+  ref?: Ref<DocumentHandle>;
+}
+
+export interface DocumentHandle extends Finder {
+  focus(): void;
 }
 
 /** The source line at the top of the rendered view. */
@@ -43,10 +50,31 @@ function scrollRenderedTo(host: DocumentHost, line: number): void {
  * document lives in its shadow root and is updated in place. Switching views keeps the reading
  * position through the blocks' source lines (UX F10).
  */
-export function DocumentView({ rendered, source, view, wrap, follow = false, onFollowEnded, scheme }: DocumentViewProps) {
+export function DocumentView({ rendered, source, view, wrap, follow = false, onFollowEnded, scheme, ref }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const shownView = useRef<ViewMode | null>(null);
+  const renderedFinder = useRef<Finder | null>(null);
   const host = () => mountDocumentHost(container.current!);
+
+  useImperativeHandle(ref, () => {
+    const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, container.current!));
+    const active = (): Finder => {
+      const sourceView = host().source;
+      if (view === 'source' && sourceView) {
+        return { find: sourceView.find, step: sourceView.findStep, clear: sourceView.clearFind };
+      }
+      return inRendered();
+    };
+    return {
+      find: (query, options) => active().find(query, options),
+      step: (direction) => active().step(direction),
+      clear: () => {
+        inRendered().clear();
+        host().source?.clearFind();
+      },
+      focus: () => container.current?.focus(),
+    };
+  }, [view]);
 
   useLayoutEffect(() => {
     if (!rendered) return;
@@ -86,5 +114,16 @@ export function DocumentView({ rendered, source, view, wrap, follow = false, onF
     host().setScheme(scheme);
   }, [scheme]);
 
-  return <div ref={container} className="document-view" data-testid="document" data-follow={follow ? 'on' : 'off'} />;
+  return (
+    <div
+      ref={container}
+      className="document-view"
+      data-testid="document"
+      data-follow={follow ? 'on' : 'off'}
+      // The document area takes focus, for keyboard scrolling and for focus after find (UX §7).
+      tabIndex={0}
+      role="document"
+      aria-label="Document"
+    />
+  );
 }
