@@ -23,7 +23,8 @@
     "test:renderer": "vitest run --project renderer",
     "boundaries": "node scripts/check-boundaries.mjs",
     "check": "npm run typecheck && npm run boundaries && npm test",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test --project=e2e",
+    "test:no-network": "playwright test --project=no-network"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.3",

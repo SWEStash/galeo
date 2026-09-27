@@ -9,21 +9,30 @@ export interface LaunchedApp {
   close: () => Promise<void>;
 }
 
+export interface LaunchOptions {
+  /** Extra environment variables for the app. */
+  env?: Record<string, string>;
+  /** Run this instead of the Electron binary (for example a wrapper that traces it). */
+  executablePath?: string;
+}
+
 /**
  * Starts the built app (`npm run build` first) with isolated XDG config/state/cache directories,
  * and returns it with its first window.
  */
-export async function launchApp(args: string[] = []): Promise<LaunchedApp> {
+export async function launchApp(args: string[] = [], options: LaunchOptions = {}): Promise<LaunchedApp> {
   const home = mkdtempSync(path.join(tmpdir(), 'galeo-e2e-'));
   const app = await electron.launch({
     args: ['.', ...args],
     chromiumSandbox: true,
+    ...(options.executablePath ? { executablePath: options.executablePath } : {}),
     cwd: path.resolve(import.meta.dirname, '../..'),
     env: {
       ...process.env,
       XDG_CONFIG_HOME: path.join(home, 'config'),
       XDG_STATE_HOME: path.join(home, 'state'),
       XDG_CACHE_HOME: path.join(home, 'cache'),
+      ...options.env,
     },
   });
   const window = await app.firstWindow();

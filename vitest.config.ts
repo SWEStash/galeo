@@ -10,6 +10,7 @@ export default defineConfig({
           include: [
             'src/{core,shared,main}/**/*.test.ts',
             'tests/unit/**/*.test.ts',
+            'tests/security/**/*.test.ts',
             'scripts/**/*.test.mjs',
           ],
         },
