@@ -59,6 +59,12 @@ jobs:
           path: tests/perf/results/
           if-no-files-found: ignore
           retention-days: 30
+      # Packages build, the fuses read back from the binary as configured (SR-08), and the
+      # packaged app starts through the launcher wrapper (ADR-009).
+      - name: Package
+        run: npm run package
+      - name: Verify the package
+        run: xvfb-run -a npm run verify:package
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -79,7 +85,7 @@ jobs:
           - name: Windows
             os: windows-2025
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -94,6 +100,10 @@ jobs:
       - run: npm run build
       - name: Smoke end-to-end test
         run: npm run test:e2e
+      - name: Package
+        run: npm run package
+      - name: Verify the package
+        run: npm run verify:package
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
