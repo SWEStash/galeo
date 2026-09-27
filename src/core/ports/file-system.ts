@@ -1,4 +1,5 @@
-export type FsErrorCode = 'ENOENT' | 'EACCES' | 'EISDIR' | 'ENOTDIR' | 'ETOOBIG' | 'EOTHER';
+/** `ENOTFILE`: a FIFO, device or socket (reads are limited to regular files, SR-12). */
+export type FsErrorCode = 'ENOENT' | 'EACCES' | 'EISDIR' | 'ENOTDIR' | 'ENOTFILE' | 'ETOOBIG' | 'EOTHER';
 
 /** The only error a `FileSystem` rejects with, so core can branch on `code`. */
 export class FsError extends Error {
@@ -29,7 +30,7 @@ export interface DirEntry {
 /** Local file access. Paths are absolute; all failures reject with `FsError`. */
 export interface FileSystem {
   stat(path: string): Promise<FileStat>;
-  /** Reads a regular file, refusing (`ETOOBIG`) anything over `maxBytes`. */
+  /** Reads a regular file (following symlinks), refusing (`ETOOBIG`) anything over `maxBytes`. */
   readFile(path: string, options: { maxBytes: number }): Promise<Uint8Array>;
   realpath(path: string): Promise<string>;
   /** Streams one directory's entries without following symlinks; callers bound the walk. */
