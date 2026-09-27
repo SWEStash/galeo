@@ -35,16 +35,18 @@ test.describe('hardened windows (SR-01)', () => {
   test('top-level navigation is refused', async () => {
     const { app, window: page, close } = await launchApp();
     try {
-      const attempted = app.evaluate(
-        ({ BrowserWindow }) =>
-          new Promise<string>((resolve) => {
-            BrowserWindow.getAllWindows()[0]!.webContents.once('will-navigate', (_event, url) => resolve(url));
-          }),
-      );
+      // The listener must exist in main before the page navigates, so register it first.
+      await app.evaluate(({ BrowserWindow }) => {
+        (globalThis as { __galeoNavigation?: Promise<string> }).__galeoNavigation = new Promise((resolve) => {
+          BrowserWindow.getAllWindows()[0]!.webContents.once('will-navigate', (_event, url) => resolve(url));
+        });
+      });
       await page.evaluate(() => {
         location.href = 'https://example.com/';
       });
-      expect(await attempted).toBe('https://example.com/');
+      expect(await app.evaluate(() => (globalThis as { __galeoNavigation?: Promise<string> }).__galeoNavigation)).toBe(
+        'https://example.com/',
+      );
       expect(await page.evaluate(() => location.href)).toBe('galeo://app/index.html');
     } finally {
       await close();
