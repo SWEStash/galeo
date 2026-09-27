@@ -23,11 +23,11 @@ export function isTrustedSender(event: IpcEvent, trustedOrigins: ReadonlySet<str
   return origin !== null && trustedOrigins.has(origin);
 }
 
-export interface HandlerOptions<Args extends unknown[], Result> {
+export interface HandlerOptions<Args extends unknown[], Result, Event extends IpcEvent = IpcEvent> {
   channel: string;
   schema: ZodType<Args>;
   trustedOrigins: ReadonlySet<string>;
-  handle: (args: Args, event: IpcEvent) => Result | Promise<Result>;
+  handle: (args: Args, event: Event) => Result | Promise<Result>;
   onReject?: (channel: string, reason: string) => void;
 }
 
@@ -35,13 +35,13 @@ export interface HandlerOptions<Args extends unknown[], Result> {
  * Wraps an IPC handler so it runs only for a trusted sender with arguments that pass the
  * channel's schema. Anything else is rejected and reported.
  */
-export function createHandler<Args extends unknown[], Result>({
+export function createHandler<Args extends unknown[], Result, Event extends IpcEvent = IpcEvent>({
   channel,
   schema,
   trustedOrigins,
   handle,
   onReject = (name, reason) => console.warn(`[ipc] rejected ${name}: ${reason}`),
-}: HandlerOptions<Args, Result>): (event: IpcEvent, ...args: unknown[]) => Promise<Result> {
+}: HandlerOptions<Args, Result, Event>): (event: Event, ...args: unknown[]) => Promise<Result> {
   const reject = (reason: string): never => {
     onReject(channel, reason);
     throw new Error(`${channel}: ${reason}`);

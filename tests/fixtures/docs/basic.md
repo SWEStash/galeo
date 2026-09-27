@@ -1,6 +1,6 @@
 # galeo basic fixture
 
-A paragraph with **bold**, *emphasis*, `inline code` and a [relative link](other.md).
+A paragraph with **bold**, *emphasis*, `inline code` and a [relative link](other.md) &copy; 2026.
 
 ## Second heading
 

@@ -1,10 +1,15 @@
 import { app, BrowserWindow } from 'electron';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
+import { readDocument } from '../core/documents/read';
+import { DocumentRecords } from '../core/documents/records';
 import { startupMode, type StartupMode } from '../core/startup';
 import { resolveAppPaths } from './adapters/app-paths';
+import { NodeFileSystem } from './adapters/file-system';
 import { ElectronInstanceChannel } from './adapters/instance-channel';
 import { installAppLifecycle } from './adapters/lifecycle';
+import { decodeWithPlatform } from './adapters/text-decoder';
 import { registerIpc } from './ipc/register';
 import { perfMark, reportColdStart } from './perf';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
@@ -49,12 +54,16 @@ if (!parsed.ok) {
   // Another instance runs: it received these arguments with the lock request.
   app.quit();
 } else {
-  start(startupMode(parsed.args, { sandboxed }));
+  start(startupMode(parsed.args, { sandboxed }), parsed.args.files);
 }
 
-function start(initialMode: StartupMode): void {
+function start(initialMode: StartupMode, files: readonly string[]): void {
   let mode = initialMode;
   let choiceWindow: BrowserWindow | undefined;
+  const documents = new DocumentRecords(randomUUID);
+  const fs = new NodeFileSystem();
+  // The launch's files open in the first main window; later launches are routed by the router.
+  let pendingFiles = [...files];
 
   const lockdown = networkLockdown(runtime);
   registerSchemes();
@@ -62,6 +71,10 @@ function start(initialMode: StartupMode): void {
 
   const openMainWindow = () => {
     const window = createAppWindow({ url: rendererUrl(runtime), sandboxed });
+    const windowId = window.webContents.id;
+    for (const file of pendingFiles) documents.open(file, windowId);
+    pendingFiles = [];
+    window.on('closed', () => documents.closeWindow(windowId));
     perfMark('window-created');
     reportColdStart(window);
   };
@@ -94,6 +107,12 @@ function start(initialMode: StartupMode): void {
           mode = { kind: 'normal' };
           openMainWindow();
           choiceWindow?.close();
+        },
+        'documents.list': (_args, event) => documents.list(event.sender.id),
+        'documents.read': ([id], event) => {
+          const record = documents.get(id, event.sender.id);
+          if (!record) throw new Error('unknown document');
+          return readDocument(record.path, { fs, decode: decodeWithPlatform });
         },
       },
       trustedOrigins(runtime),

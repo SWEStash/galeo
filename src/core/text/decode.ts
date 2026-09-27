@@ -1,4 +1,6 @@
-export type TextEncoding = 'utf-8' | 'utf-16le' | 'utf-16be' | 'utf-32le' | 'utf-32be' | 'windows-1252';
+import type { TextEncoding } from '../../shared/documents';
+
+export type { TextEncoding };
 
 /** A WHATWG encoding the platform decodes (`TextDecoder`); throws on invalid input when `fatal`. */
 export type WhatwgEncoding = Exclude<TextEncoding, 'utf-32le' | 'utf-32be'>;

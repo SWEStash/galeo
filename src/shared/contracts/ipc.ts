@@ -1,6 +1,9 @@
 // The IPC contract between main and the renderer (ADR-007, SR-11). Only names and types live
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS`, one fixed method per channel.
+import type { DocumentContent, DocumentRecord } from '../documents';
+
+export type { DocumentContent, DocumentRecord };
 
 /** Why Chromium's sandbox couldn't start, as detected by the Linux launcher wrapper (ADR-009). */
 export type SandboxCause = 'apparmor-userns' | 'suid-helper' | 'unknown';
@@ -17,7 +20,7 @@ export interface AppInfo {
 }
 
 /** Renderer → main request/response channels, named `<group>.<method>`. */
-export const CHANNELS = ['app.info', 'app.resolveSandboxUnavailable'] as const;
+export const CHANNELS = ['app.info', 'app.resolveSandboxUnavailable', 'documents.list', 'documents.read'] as const;
 
 export type Channel = (typeof CHANNELS)[number];
 
@@ -25,12 +28,18 @@ export type Channel = (typeof CHANNELS)[number];
 export interface Requests {
   'app.info': [];
   'app.resolveSandboxUnavailable': [choice: SandboxChoice];
+  /** The documents open in the sender's window. */
+  'documents.list': [];
+  /** Reads one of them by id; there is no way to read by path (SR-12). */
+  'documents.read': [id: string];
 }
 
 /** Resolved value of each channel. */
 export interface Responses {
   'app.info': AppInfo;
   'app.resolveSandboxUnavailable': void;
+  'documents.list': DocumentRecord[];
+  'documents.read': DocumentContent;
 }
 
 type Group<C extends string> = C extends `${infer G}.${string}` ? G : never;

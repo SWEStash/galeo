@@ -13,7 +13,8 @@ describe('buildApi', () => {
   it('exposes no generic invoke or channel access', () => {
     const api = buildApi(vi.fn());
 
-    expect(Object.keys(api)).toEqual(['app']);
+    expect(Object.keys(api)).toEqual(['app', 'documents']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable']);
+    expect(Object.keys(api.documents)).toEqual(['list', 'read']);
   });
 });
