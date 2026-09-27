@@ -24,27 +24,38 @@ export interface LaunchOptions {
  */
 export async function launchApp(args: string[] = [], options: LaunchOptions = {}): Promise<LaunchedApp> {
   const home = mkdtempSync(path.join(tmpdir(), 'galeo-e2e-'));
-  const app = await electron.launch({
-    args: ['.', ...args],
-    chromiumSandbox: true,
-    ...(options.executablePath ? { executablePath: options.executablePath } : {}),
-    cwd: path.resolve(import.meta.dirname, '../..'),
-    env: {
-      ...process.env,
-      XDG_CONFIG_HOME: path.join(home, 'config'),
-      XDG_STATE_HOME: path.join(home, 'state'),
-      XDG_CACHE_HOME: path.join(home, 'cache'),
-      ...options.env,
-    },
-  });
-  const window = await app.firstWindow();
+  const removeHome = () => rmSync(home, { recursive: true, force: true });
+  let app: ElectronApplication;
+  let window: Page;
+  try {
+    app = await electron.launch({
+      args: ['.', ...args],
+      chromiumSandbox: true,
+      ...(options.executablePath ? { executablePath: options.executablePath } : {}),
+      cwd: path.resolve(import.meta.dirname, '../..'),
+      env: {
+        ...process.env,
+        XDG_CONFIG_HOME: path.join(home, 'config'),
+        XDG_STATE_HOME: path.join(home, 'state'),
+        XDG_CACHE_HOME: path.join(home, 'cache'),
+        ...options.env,
+      },
+    });
+    window = await app.firstWindow();
+  } catch (error) {
+    removeHome();
+    throw error;
+  }
   return {
     app,
     window,
     home,
     close: async () => {
-      await app.close();
-      rmSync(home, { recursive: true, force: true });
+      try {
+        await app.close();
+      } finally {
+        removeHome();
+      }
     },
   };
 }
