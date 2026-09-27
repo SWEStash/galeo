@@ -1,6 +1,4 @@
 // Packaging (ADR-008): .deb (official) and AppImage on Linux, unsigned macOS and Windows previews.
-import { builderFuses } from './packaging/fuses.mjs';
-
 /** @type {import('electron-builder').Configuration} */
 export default {
   appId: 'io.github.swestash.galeo',
@@ -10,9 +8,8 @@ export default {
   files: ['out/**/*', '!out/tsc/**', '!**/*.map', 'package.json', '!node_modules/**/*'],
   asar: true,
   npmRebuild: false,
+  // Sets the fuses for every target, and puts the Linux binary behind its wrapper (ADR-009).
   afterPack: './packaging/after-pack.mjs',
-  // Linux flips its fuses in afterPack, before the binary moves behind the wrapper (ADR-009).
-  ...(process.platform === 'linux' ? {} : { electronFuses: builderFuses() }),
 
   linux: {
     target: ['deb', 'AppImage'],

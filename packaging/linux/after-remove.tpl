@@ -10,7 +10,9 @@ else
     rm -f '/usr/bin/${executable}'
 fi
 
-rm -f '/usr/bin/gal'
+if [ "`readlink '/usr/bin/gal'`" = '/opt/${sanitizedProductName}/gal' ]; then
+    rm -f '/usr/bin/gal'
+fi
 
 APPARMOR_PROFILE_DEST='/etc/apparmor.d/${executable}'
 

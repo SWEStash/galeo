@@ -10,9 +10,3 @@ export const FUSES = {
   GrantFileProtocolExtraPrivileges: false,
 };
 
-/** The table in electron-builder's `electronFuses` spelling (`runAsNode`, …). */
-export function builderFuses() {
-  return Object.fromEntries(
-    Object.entries(FUSES).map(([name, value]) => [name[0].toLowerCase() + name.slice(1), value]),
-  );
-}

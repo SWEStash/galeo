@@ -19,8 +19,11 @@ else
     chmod 0755 '/opt/${sanitizedProductName}/chrome-sandbox' || true
 fi
 
-# The command-line launcher (SR-13: files after `--`, as absolute paths).
-ln -sf '/opt/${sanitizedProductName}/gal' '/usr/bin/gal'
+# The command-line launcher (SR-13: files after `--`, as absolute paths). Never replace a `gal`
+# that belongs to something else.
+if [ ! -e '/usr/bin/gal' ] || [ "`readlink '/usr/bin/gal'`" = '/opt/${sanitizedProductName}/gal' ]; then
+    ln -sf '/opt/${sanitizedProductName}/gal' '/usr/bin/gal'
+fi
 
 if hash update-mime-database 2>/dev/null; then
     update-mime-database /usr/share/mime || true
