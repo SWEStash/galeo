@@ -1,5 +1,6 @@
-// Render worker entry. The unified pipeline runs here (ADR-003); for now it only answers the
-// startup handshake.
-self.addEventListener('message', (event: MessageEvent<unknown>) => {
-  if (event.data === 'ping') self.postMessage('ready');
-});
+// Render worker entry: one per window, parsing and highlighting only (no DOM, no IPC; ADR-003).
+import { createMessageHandler } from './handler';
+import { createRenderer } from './pipeline/render';
+
+const handle = createMessageHandler(createRenderer(), (reply) => self.postMessage(reply));
+self.addEventListener('message', (event: MessageEvent<unknown>) => void handle(event.data));
