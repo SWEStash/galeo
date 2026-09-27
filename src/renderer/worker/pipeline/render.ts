@@ -77,28 +77,51 @@ const annotate = (collected: Collected) => () => (tree: Root) => {
         line,
       });
     }
-    if (node.tagName === 'a' && typeof node.properties['href'] === 'string') collected.links.add(node.properties['href']);
-    if (node.tagName === 'img' && typeof node.properties['src'] === 'string') {
-      const remote = remoteHost(node.properties['src']);
-      if (remote === null) collected.images.add(node.properties['src']);
-      else parent.children[index] = remotePlaceholder(node.properties['src'], remote);
+    if (node.tagName === 'a' && typeof node.properties['href'] === 'string') {
+      // The sanitizer counts `//host/x` as relative; from the app page it would name another host.
+      if (isNetworkPathReference(node.properties['href'])) delete node.properties['href'];
+      else collected.links.add(node.properties['href']);
+    }
+    if (node.tagName === 'img') {
+      const src = node.properties['src'];
+      delete node.properties['src'];
+      if (typeof src === 'string' && isLocalReference(src)) {
+        // Loaded only once main has checked it against the document (ADR-004), never by the page.
+        node.properties['dataGaleoSrc'] = src;
+        collected.images.add(src);
+      } else if (typeof src === 'string') {
+        parent.children[index] = remotePlaceholder(src);
+      }
     }
     if (node.tagName === 'pre') unhighlightIfHuge(node);
   });
   if (collected.frontmatter) tree.children.unshift(frontmatterBlock(collected.frontmatter));
 };
 
-function remoteHost(src: string): string | null {
+/** Browsers ignore whitespace and control characters in a URL's scheme and leading slashes. */
+const compact = (url: string) => url.replace(/[\u0000-\u0020]/g, '');
+
+/** `//host/path` (or with backslashes, which browsers treat as slashes): another host. */
+function isNetworkPathReference(url: string): boolean {
+  return /^[\\/]{2}/.test(compact(url));
+}
+
+/** A path relative to the document: no scheme and no host. */
+function isLocalReference(url: string): boolean {
+  return !isNetworkPathReference(url) && !/^[a-z][a-z0-9+.-]*:/i.test(compact(url));
+}
+
+function hostOf(url: string): string {
   try {
-    // A base keeps relative sources relative; anything with its own scheme or host is remote.
-    const url = new URL(src, 'galeo-relative://document/');
-    return url.protocol === 'galeo-relative:' ? null : url.host || url.protocol;
+    const parsed = new URL(isNetworkPathReference(url) ? `https:${compact(url).replace(/\\/g, '/')}` : url);
+    return parsed.host || parsed.protocol.replace(/:$/, '');
   } catch {
-    return null;
+    return 'unknown host';
   }
 }
 
-function remotePlaceholder(url: string, host: string): Element {
+function remotePlaceholder(url: string): Element {
+  const host = hostOf(url);
   return {
     type: 'element',
     tagName: 'span',

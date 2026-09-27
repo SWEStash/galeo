@@ -186,8 +186,12 @@ No inline scripts, no `eval`. **Trusted Types**: the Document Host inserts HTML 
 policy (`galeo-document`); report-only in development builds, enforced in release builds, with any
 library exception recorded in ADR-004.
 Raw HTML in Markdown passes an allowlist sanitizer: no `script`, `style`, `iframe`, `object`,
-`embed`, `form`, `base` or `meta`; no event-handler attributes; no `style` attributes; only
-`http`, `https`, `mailto` and relative URLs; ids and names prefixed to prevent clobbering.
+`embed`, `form`, `base`, `meta` or `link` (prefetch and preconnect hints open connections the CSP
+doesn't cover), no `svg`, `math`, `picture` or `source`; no event-handler attributes; no `style`
+attributes; no `accesskey` or `tabindex`; only `http`, `https`, `mailto` and relative URLs
+(protocol-relative `//host` counts as remote); ids and names prefixed to prevent clobbering.
+Images never load by URL from the page: local ones wait for main's check (SR-12), remote ones
+become placeholders.
 Documents render into a container isolated from the app's UI styles (for example Shadow DOM), so
 content can neither restyle nor imitate app chrome.
 *AC*: a corpus of known XSS/SVG/mXSS payloads renders with no script execution (detected by a

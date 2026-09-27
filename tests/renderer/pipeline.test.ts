@@ -107,7 +107,8 @@ describe('Markdown pipeline', () => {
     expect(links).toEqual(['other.md', 'https://example.com/x', '#top']);
     expect(images).toEqual(['img/a.png']);
     const doc = dom(html);
-    expect([...doc.querySelectorAll('img')].map((img) => img.getAttribute('src'))).toEqual(['img/a.png']);
+    expect([...doc.querySelectorAll('img')].map((img) => img.getAttribute('data-galeo-src'))).toEqual(['img/a.png']);
+    expect(doc.querySelector('img[src]')).toBeNull();
     const placeholder = doc.querySelector('.galeo-remote-image');
     expect(placeholder?.getAttribute('data-host')).toBe('tracker.example.net');
     expect(placeholder?.getAttribute('data-url')).toBe('https://tracker.example.net/pixel.gif');
