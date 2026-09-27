@@ -27,7 +27,7 @@ export interface ParseContext {
 
 /**
  * Parses galeo's own arguments strictly: the documented flags, then files. Everything after
- * `--`, and everything from the first plain name on, is a file, whatever it looks like.
+ * `--` is a file, whatever it looks like; before `--`, files are plain names.
  */
 export function parseArgv(argv: readonly string[], context: ParseContext): ParseResult {
   const args: LaunchArgs = {
@@ -38,9 +38,11 @@ export function parseArgv(argv: readonly string[], context: ParseContext): Parse
     files: [],
   };
   let i = 0;
+  let separated = false;
   for (; i < argv.length; i++) {
     const arg = argv[i]!;
     if (arg === '--') {
+      separated = true;
       i++;
       break;
     }
@@ -63,6 +65,11 @@ export function parseArgv(argv: readonly string[], context: ParseContext): Parse
       return { ok: false, error: `unknown option: ${arg}` };
     }
   }
-  args.files = argv.slice(i).map((file) => context.resolve(context.cwd, file));
+  const files = argv.slice(i);
+  // Chromium reads switches anywhere before `--`, so at first launch one after a file name has
+  // already been acted on: refuse to start rather than treat it as a file (SR-13).
+  const stray = !separated && !context.forwarded ? files.find((file) => file.startsWith('-')) : undefined;
+  if (stray !== undefined) return { ok: false, error: `option after a file name: ${stray} (put files after --)` };
+  args.files = files.map((file) => context.resolve(context.cwd, file));
   return { ok: true, args };
 }

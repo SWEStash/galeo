@@ -35,8 +35,22 @@ describe('parseArgv', () => {
     },
   );
 
-  it('accepts plain file names before the separator, then stops reading flags', () => {
-    expect(parse(['a.md', '--new-window'])).toMatchObject({
+  it('accepts plain file names before the separator', () => {
+    expect(parse(['a.md', 'b.md'])).toMatchObject({ ok: true, args: { files: ['/work/a.md', '/work/b.md'] } });
+  });
+
+  it.each([['--remote-debugging-port=9222'], ['--new-window'], ['-']])(
+    'refuses %s after a file name at first launch, because Chromium would act on it',
+    (option) => {
+      expect(parse(['a.md', option])).toEqual({
+        ok: false,
+        error: `option after a file name: ${option} (put files after --)`,
+      });
+    },
+  );
+
+  it('keeps a switch-like name after a file name as a file when forwarded', () => {
+    expect(parse(['a.md', '--new-window'], true)).toMatchObject({
       ok: true,
       args: { newWindow: false, files: ['/work/a.md', '/work/--new-window'] },
     });
