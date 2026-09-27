@@ -100,6 +100,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   const openMainWindow = () => {
     const window = createAppWindow({ url: rendererUrl(runtime), sandboxed });
     const windowId = window.webContents.id;
+    const opensDocument = pendingFiles.length > 0;
     for (const file of pendingFiles) documents.open(file, windowId);
     pendingFiles = [];
     window.on('closed', () => {
@@ -107,7 +108,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       images.closeWindow(windowId);
     });
     perfMark('window-created');
-    reportColdStart(window);
+    reportColdStart(window, { document: opensDocument });
   };
 
   void app.whenReady().then(() => {

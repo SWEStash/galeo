@@ -1,6 +1,7 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, type Ref } from 'react';
 import type { ImageResult } from '../../shared/documents';
 import type { ViewMode } from '../../shared/formats';
+import { markDocumentPaint } from '../perf';
 import { blockAtOrBefore, firstVisibleLine } from './anchor';
 import { mountDocumentHost, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
@@ -135,6 +136,7 @@ export function DocumentView({
     if (!rendered) return;
     if ('html' in rendered) host().setContent(rendered.html);
     else host().setReaderText(rendered.text);
+    if (view === 'rendered') markDocumentPaint();
   }, [rendered]);
 
   // Local images wait for main: the page never names a file to load itself (ADR-004).
@@ -162,6 +164,7 @@ export function DocumentView({
 
   useLayoutEffect(() => {
     if (view === 'source' || host().source) host().showSource(source.text, source.language, wrap);
+    if (view === 'source') markDocumentPaint();
   }, [source.text, source.language, view, wrap]);
 
   useLayoutEffect(() => {

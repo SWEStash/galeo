@@ -11,29 +11,32 @@ export function perfMark(name: string, at = Date.now()): void {
   marks[name] = at;
 }
 
-// Resolves with the epoch time of the page's `galeo:first-paint` mark, as soon as it exists.
-const FIRST_PAINT = `new Promise((resolve) => {
+// Resolves with the epoch time of the page's mark `name`, as soon as it exists.
+const markTime = (name: string) => `new Promise((resolve) => {
   const done = (entry) => resolve(performance.timeOrigin + entry.startTime);
-  const found = performance.getEntriesByName('galeo:first-paint')[0];
+  const found = performance.getEntriesByName('${name}')[0];
   if (found) return done(found);
   new PerformanceObserver((list, observer) => {
-    const entry = list.getEntriesByName('galeo:first-paint')[0];
+    const entry = list.getEntriesByName('${name}')[0];
     if (entry) { observer.disconnect(); done(entry); }
   }).observe({ type: 'mark', buffered: true });
 })`;
 
 /**
- * For the performance harness: once `window` has painted, writes the marks and the app's memory
- * to the file named by `GALEO_PERF_OUT` and quits. Only `GALEO_PERF=1` builds contain it.
+ * For the performance harness: once `window` has painted (and its document, when the launch
+ * opened one), writes the marks and the app's memory to the file named by `GALEO_PERF_OUT` and
+ * quits. Only `GALEO_PERF=1` builds contain it.
  */
-export function reportColdStart(window: BrowserWindow): void {
+export function reportColdStart(window: BrowserWindow, { document }: { document: boolean }): void {
   if (!__GALEO_PERF__) return;
   const out = process.env['GALEO_PERF_OUT'];
   if (!out) return;
   window.webContents.once('did-finish-load', async () => {
-    const firstPaint = (await window.webContents.executeJavaScript(FIRST_PAINT)) as number;
+    const firstPaint = (await window.webContents.executeJavaScript(markTime('galeo:first-paint'))) as number;
+    const paints: Record<string, number> = { 'first-paint': firstPaint };
+    if (document) paints['document-paint'] = (await window.webContents.executeJavaScript(markTime('galeo:document-paint'))) as number;
     const memoryKB = app.getAppMetrics().reduce((sum, metric) => sum + metric.memory.workingSetSize, 0);
-    await writeFile(out, JSON.stringify({ marks: { ...marks, 'first-paint': firstPaint }, memoryKB }));
+    await writeFile(out, JSON.stringify({ marks: { ...marks, ...paints }, memoryKB }));
     app.quit();
   });
 }

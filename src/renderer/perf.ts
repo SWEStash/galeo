@@ -8,3 +8,12 @@ export function markFirstPaint(): void {
   if (!__GALEO_PERF__) return;
   requestAnimationFrame(() => setTimeout(() => performance.mark('galeo:first-paint')));
 }
+
+let documentPainted = false;
+
+/** Marks the frame after the first document content was inserted (`galeo:document-paint`). */
+export function markDocumentPaint(): void {
+  if (!__GALEO_PERF__ || documentPainted) return;
+  documentPainted = true;
+  requestAnimationFrame(() => setTimeout(() => performance.mark('galeo:document-paint')));
+}
