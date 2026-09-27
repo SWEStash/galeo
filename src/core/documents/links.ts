@@ -1,8 +1,9 @@
-import type { FollowResult, HistoryResult } from '../../shared/documents';
+import type { FollowResult, HistoryResult, ImageResult } from '../../shared/documents';
 import type { References } from '../../shared/markdown/references';
 import { classifyLink, type LinkContext } from '../links/classify';
 import type { ExternalOpenLimiter } from '../links/limiter';
-import type { OsShell, TaskRunner } from '../ports';
+import { FsError, type FileSystem, type OsShell, type TaskRunner } from '../ports';
+import { IMAGE_MAX_BYTES, imageTypeOf, type ImageGrants } from './images';
 import type { DocumentRecords, HistoryEntry } from './records';
 
 /** Extraction runs in a worker thread; hostile Markdown gets this long before it's abandoned. */
@@ -10,6 +11,8 @@ export const REFERENCES_TIMEOUT_MS = 2000;
 
 export interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
   records: DocumentRecords;
+  fs: FileSystem;
+  images: ImageGrants;
   /** Runs the `references` task (the shared extractor) off the main thread. */
   tasks: TaskRunner;
   shell: OsShell;
@@ -40,15 +43,10 @@ export class DocumentLinks {
   }
 
   async follow(id: string, window: number, href: string): Promise<FollowResult> {
-    const record = this.deps.records.get(id, window);
-    const read = this.reads.get(id);
-    if (!record || !read || read.path !== record.path) return refused('not-in-document');
-    const references = await (read.references ??= this.extract(read));
-    if (!references) {
-      delete read.references;
-      return refused('unavailable');
-    }
-    if (!references.links.includes(href)) return refused('not-in-document');
+    const found = await this.references(id, window);
+    if (found === 'unavailable') return refused('unavailable');
+    if (!found || !found.references.links.includes(href)) return refused('not-in-document');
+    const { record } = found;
 
     const target = classifyLink(href, { ...this.deps, documentPath: record.path });
     switch (target.kind) {
@@ -63,6 +61,24 @@ export class DocumentLinks {
       case 'refused':
         return refused(target.reason);
     }
+  }
+
+  /** Grants a local image the document shows, as an opaque URL the page can load (ADR-004). */
+  async resolveImage(id: string, window: number, src: string): Promise<ImageResult> {
+    const found = await this.references(id, window);
+    if (found === 'unavailable') return { kind: 'refused', reason: 'unavailable' };
+    if (!found || !found.references.images.includes(src)) return { kind: 'refused', reason: 'not-in-document' };
+    const target = classifyLink(src, { ...this.deps, documentPath: found.record.path });
+    if (target.kind !== 'file' || !imageTypeOf(target.path)) return { kind: 'refused', reason: 'not-an-image' };
+    try {
+      const stat = await this.deps.fs.stat(target.path);
+      if (stat.kind !== 'file') return { kind: 'refused', reason: 'not-an-image' };
+      if (stat.size > IMAGE_MAX_BYTES) return { kind: 'refused', reason: 'too-large' };
+    } catch (error) {
+      if (error instanceof FsError) return { kind: 'refused', reason: 'missing' };
+      throw error;
+    }
+    return { kind: 'image', url: `galeo://file/${this.deps.images.grant(target.path, window)}` };
   }
 
   back(id: string, window: number): Promise<HistoryResult> {
@@ -98,6 +114,22 @@ export class DocumentLinks {
     if (!entry) return { kind: 'none' };
     if (entry.path === before) return { kind: 'anchor', anchor: entry.anchor ?? '' };
     return { kind: 'navigated', anchor: entry.anchor };
+  }
+
+  /** The document's record and references, as main read it; null if main hasn't read it. */
+  private async references(
+    id: string,
+    window: number,
+  ): Promise<{ record: { path: string }; references: References } | null | 'unavailable'> {
+    const record = this.deps.records.get(id, window);
+    const read = this.reads.get(id);
+    if (!record || !read || read.path !== record.path) return null;
+    const references = await (read.references ??= this.extract(read));
+    if (!references) {
+      delete read.references;
+      return 'unavailable';
+    }
+    return { record, references };
   }
 
   private async extract(read: Read): Promise<References | null> {

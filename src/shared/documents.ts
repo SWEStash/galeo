@@ -39,3 +39,8 @@ export type FollowResult =
 
 /** What a step back or forward in a tab's history did. */
 export type HistoryResult = { kind: 'navigated'; anchor: string | null } | { kind: 'anchor'; anchor: string } | { kind: 'none' };
+
+/** A local image the page may show: an opaque `galeo://file/…` URL, or why not. */
+export type ImageResult =
+  | { kind: 'image'; url: string }
+  | { kind: 'refused'; reason: 'not-in-document' | 'missing' | 'not-an-image' | 'too-large' | 'unavailable' };

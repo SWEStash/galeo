@@ -2,6 +2,7 @@ import { app, BrowserWindow, dialog, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
+import { ImageGrants } from '../core/documents/images';
 import { DocumentLinks } from '../core/documents/links';
 import { DocumentRecords } from '../core/documents/records';
 import { ExternalOpenLimiter } from '../core/links/limiter';
@@ -18,6 +19,7 @@ import { decodeWithPlatform } from './adapters/text-decoder';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { perfMark, reportColdStart } from './perf';
+import { serveImage } from './protocol/file-images';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
@@ -68,8 +70,11 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   let choiceWindow: BrowserWindow | undefined;
   const documents = new DocumentRecords(randomUUID);
   const fs = new NodeFileSystem();
+  const images = new ImageGrants(randomUUID);
   const links = new DocumentLinks({
     records: documents,
+    fs,
+    images,
     tasks: new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js')),
     shell: externalShell(),
     limiter: new ExternalOpenLimiter(systemClock),
@@ -97,7 +102,10 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     const windowId = window.webContents.id;
     for (const file of pendingFiles) documents.open(file, windowId);
     pendingFiles = [];
-    window.on('closed', () => documents.closeWindow(windowId));
+    window.on('closed', () => {
+      documents.closeWindow(windowId);
+      images.closeWindow(windowId);
+    });
     perfMark('window-created');
     reportColdStart(window);
   };
@@ -111,7 +119,9 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
         recordBlockedRequest,
       );
     }
-    registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(runtime));
+    registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(runtime), (url) =>
+      serveImage(url, { lookup: (id) => images.lookup(id), fs }),
+    );
     registerIpc(
       {
         'app.info': () => ({

@@ -1,6 +1,6 @@
 import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DocumentView } from './DocumentView';
 
 let root: Root | undefined;
@@ -60,5 +60,19 @@ describe('DocumentView', () => {
   it('creates no editor until the source view is shown', async () => {
     const container = await render(<DocumentView {...props} rendered={{ html: '<p>x</p>' }} scheme="light" />);
     expect(shadowOf(container).querySelector('.cm-editor')).toBeNull();
+  });
+
+  it('asks main for each local image and loads it only from the URL main grants', async () => {
+    const resolve = vi.fn(async (src: string) =>
+      src === 'ok.png' ? ({ kind: 'image', url: 'galeo://file/abc' } as const) : ({ kind: 'refused', reason: 'missing' } as const),
+    );
+    const html = '<p><img data-galeo-src="ok.png" alt="fine"> <img data-galeo-src="gone.png" alt="lost"></p>';
+    const container = await render(<DocumentView {...props} rendered={{ html }} scheme="light" onResolveImage={resolve} />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('img')?.getAttribute('src')).toBe('galeo://file/abc'));
+    expect(resolve.mock.calls.map(([src]) => src)).toEqual(['ok.png', 'gone.png']);
+    const refused = shadow.querySelector('.galeo-image-refused');
+    expect(refused?.textContent).toBe('Image not shown: gone.png');
+    expect(shadow.querySelectorAll('img')).toHaveLength(1);
   });
 });

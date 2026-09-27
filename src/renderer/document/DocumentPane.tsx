@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DocumentContent } from '../../shared/contracts';
-import type { TextEncoding } from '../../shared/documents';
+import type { ImageResult, TextEncoding } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { commandFor, type Platform } from '../../shared/keymap';
 import type { RenderClient } from '../worker/client';
@@ -37,6 +37,7 @@ export interface DocumentPaneProps {
   pendingAnchor: { anchor: string; token: number } | null;
   onAnchorShown: () => void;
   onLink: (href: string) => void;
+  onResolveImage: (src: string) => Promise<ImageResult>;
   onHistory: (direction: 'back' | 'forward') => void;
 }
 
@@ -52,6 +53,7 @@ export function DocumentPane({
   pendingAnchor,
   onAnchorShown,
   onLink,
+  onResolveImage,
   onHistory,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
@@ -161,6 +163,7 @@ export function DocumentPane({
         follow={follow}
         onFollowEnded={endFollow}
         onLink={onLink}
+        onResolveImage={onResolveImage}
         scheme={scheme}
       />
     </>

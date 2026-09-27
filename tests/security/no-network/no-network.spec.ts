@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -96,6 +96,18 @@ async function tryRemoteResources(app: Awaited<ReturnType<typeof launchApp>>['ap
  * and Chromium's zygote children then die with SIGTRAP.
  */
 async function connectsWhileTrying(env: Record<string, string> = {}): Promise<string[]> {
+  return connectsWhile([], env, async (app, page) => {
+    await expect(page.getByTestId('app-root')).toHaveAttribute('data-worker', 'ready');
+    await tryRemoteResources(app, page);
+  });
+}
+
+/** Runs `action` against the app started with `args` under strace; returns its network connects. */
+async function connectsWhile(
+  args: string[] | ((dir: string) => string[]),
+  env: Record<string, string>,
+  action: (app: Awaited<ReturnType<typeof launchApp>>['app'], page: Awaited<ReturnType<typeof launchApp>>['window']) => Promise<void>,
+): Promise<string[]> {
   const dir = mkdtempSync(path.join(tmpdir(), 'galeo-no-network-'));
   try {
     const log = path.join(dir, 'connect.log');
@@ -105,10 +117,12 @@ async function connectsWhileTrying(env: Record<string, string> = {}): Promise<st
       `#!/bin/sh\nexec strace -f --seccomp-bpf -qq -e trace=connect -o '${log}' '${electronBinary as unknown as string}' -r '${playwrightLoader}' "$@"\n`,
     );
     chmodSync(traced, 0o755);
-    const { app, window: page, close } = await launchApp([], { executablePath: traced, env });
+    const { app, window: page, close } = await launchApp(typeof args === 'function' ? args(dir) : args, {
+      executablePath: traced,
+      env,
+    });
     try {
-      await expect(page.getByTestId('app-root')).toHaveAttribute('data-worker', 'ready');
-      await tryRemoteResources(app, page);
+      await action(app, page);
     } finally {
       await close();
     }
@@ -120,6 +134,27 @@ async function connectsWhileTrying(env: Record<string, string> = {}): Promise<st
 
 test('no remote resource makes the app connect to the network (SR-07)', async () => {
   expect(await connectsWhileTrying()).toEqual([]);
+});
+
+test('rendering the whole payload corpus opens no connection (SR-07)', async () => {
+  const payloads = path.resolve(import.meta.dirname, '../../fixtures/payloads');
+  const corpus = readdirSync(payloads)
+    .filter((file) => file.endsWith('.payloads.md'))
+    .map((file) => readFileSync(path.join(payloads, file), 'utf8').replaceAll(/^%%%$/gm, ''))
+    .join('\n\n');
+  const connects = await connectsWhile(
+    (dir) => {
+      writeFileSync(path.join(dir, 'corpus.md'), corpus);
+      return ['--', path.join(dir, 'corpus.md')];
+    },
+    {},
+    async (_app, page) => {
+      await expect(page.getByTestId('document').locator('article')).not.toBeEmpty();
+      // Give loads, prefetch hints and error handlers time to fire before the trace ends.
+      await page.waitForTimeout(2_000);
+    },
+  );
+  expect(connects).toEqual([]);
 });
 
 test('the resolver lockdown alone keeps the app off the network', async () => {

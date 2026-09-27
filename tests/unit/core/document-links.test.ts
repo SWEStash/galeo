@@ -4,7 +4,8 @@ import { DocumentLinks } from '../../../src/core/documents/links';
 import { DocumentRecords } from '../../../src/core/documents/records';
 import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
 import { extractReferences, type References } from '../../../src/shared/markdown/references';
-import { FakeClock, FakeOsShell, FakeTaskRunner } from '../../helpers/fakes';
+import { ImageGrants, IMAGE_MAX_BYTES } from '../../../src/core/documents/images';
+import { FakeClock, FakeFileSystem, FakeOsShell, FakeTaskRunner } from '../../helpers/fakes';
 
 const DOC = [
   '[next](next.md) [section](next.md#scope) [top](#intro)',
@@ -18,9 +19,17 @@ function setup(options: { burst?: boolean; references?: (text: string) => Refere
   const records = new DocumentRecords(() => `id-${++n}`);
   const tasks = new FakeTaskRunner({ references: (text) => (options.references ?? extractReferences)(text as string) });
   const shell = new FakeOsShell();
+  const fs = new FakeFileSystem({
+    '/d/pics/dot.png': new Uint8Array(8),
+    '/d/pics/big.png': new Uint8Array(IMAGE_MAX_BYTES + 1),
+    '/d/notes.txt': 'not an image',
+    '/d/folder.png/inner.txt': 'x',
+  });
   const asked: number[] = [];
   const links = new DocumentLinks({
     records,
+    fs,
+    images: new ImageGrants(() => `img-${++n}`),
     tasks,
     shell,
     limiter: new ExternalOpenLimiter(clock),
@@ -38,7 +47,7 @@ function setup(options: { burst?: boolean; references?: (text: string) => Refere
   });
   const { id } = records.open('/d/plan.md', 1);
   links.remember(id, 1, DOC);
-  return { clock, records, tasks, shell, links, id, asked };
+  return { clock, records, tasks, shell, links, id, asked, fs };
 }
 
 describe('DocumentLinks.follow', () => {
@@ -147,5 +156,42 @@ describe('DocumentLinks history', () => {
   it('has nothing to go back to at the start', async () => {
     const { links, id } = setup();
     expect(await links.back(id, 1)).toEqual({ kind: 'none' });
+  });
+});
+
+describe('DocumentLinks.resolveImage', () => {
+  const IMAGES = '![dot](pics/dot.png) ![big](pics/big.png) ![text](notes.txt) ![gone](pics/gone.png) ![dir](folder.png)';
+
+  it('grants an opaque galeo://file URL for an image the document shows', async () => {
+    const { links, id } = setup();
+    links.remember(id, 1, IMAGES);
+    const result = await links.resolveImage(id, 1, 'pics/dot.png');
+    expect(result).toMatchObject({ kind: 'image' });
+    expect((result as { url: string }).url).toMatch(/^galeo:\/\/file\/img-\d+$/);
+    expect((result as { url: string }).url).not.toContain('dot');
+  });
+
+  it('refuses an image the document does not show, even if it exists (SR-12)', async () => {
+    const { links, id } = setup();
+    links.remember(id, 1, IMAGES);
+    expect(await links.resolveImage(id, 1, '../d/pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
+    expect(await links.resolveImage(id, 1, '/d/pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
+  });
+
+  it.each([
+    ['notes.txt', 'not-an-image'],
+    ['pics/big.png', 'too-large'],
+    ['pics/gone.png', 'missing'],
+    ['folder.png', 'not-an-image'],
+  ] as const)('refuses %s: %s', async (src, reason) => {
+    const { links, id } = setup();
+    links.remember(id, 1, IMAGES);
+    expect(await links.resolveImage(id, 1, src)).toEqual({ kind: 'refused', reason });
+  });
+
+  it("refuses images of another window's document", async () => {
+    const { links, id } = setup();
+    links.remember(id, 1, IMAGES);
+    expect(await links.resolveImage(id, 2, 'pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
   });
 });

@@ -15,6 +15,6 @@ describe('buildApi', () => {
 
     expect(Object.keys(api)).toEqual(['app', 'documents']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable']);
-    expect(Object.keys(api.documents)).toEqual(['list', 'read', 'followLink', 'back', 'forward']);
+    expect(Object.keys(api.documents)).toEqual(['list', 'read', 'followLink', 'back', 'forward', 'resolveImage']);
   });
 });

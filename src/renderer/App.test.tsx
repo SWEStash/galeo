@@ -50,6 +50,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       followLink: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
       back: vi.fn().mockResolvedValue({ kind: 'none' }),
       forward: vi.fn().mockResolvedValue({ kind: 'none' }),
+      resolveImage: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
     },
   } satisfies GaleoApi;
   Object.defineProperty(window, 'galeo', { value: api, configurable: true });

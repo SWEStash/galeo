@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AppInfo, FollowResult, HistoryResult, SandboxChoice } from '../shared/contracts';
-import type { RefusalReason } from '../shared/documents';
+import type { ImageResult, RefusalReason } from '../shared/documents';
 import type { Platform } from '../shared/keymap';
 import { DocumentPane } from './document/DocumentPane';
 import type { ColorScheme } from './document/host';
@@ -37,6 +37,8 @@ const REFUSALS: Record<RefusalReason, string> = {
   blocked: 'Links from this document are blocked',
   unavailable: "This document's links can't be checked right now",
 };
+
+const NOT_SHOWN: ImageResult = { kind: 'refused', reason: 'not-in-document' };
 
 /** Status-bar messages go away on their own. */
 const MESSAGE_MS = 4000;
@@ -89,6 +91,12 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
     [document, moved],
   );
 
+  const resolveImage = useCallback(
+    (src: string): Promise<ImageResult> =>
+      document ? window.galeo.documents.resolveImage(document.id, src) : Promise.resolve(NOT_SHOWN),
+    [document],
+  );
+
   const history = useCallback(
     (direction: 'back' | 'forward') => {
       if (document) void window.galeo.documents[direction](document.id).then(moved);
@@ -109,6 +117,7 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
             pendingAnchor={pendingAnchor}
             onAnchorShown={() => setPendingAnchor(null)}
             onLink={followLink}
+            onResolveImage={resolveImage}
             onHistory={history}
           />
         )}

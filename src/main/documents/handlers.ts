@@ -5,7 +5,13 @@ import type { FileSystem } from '../../core/ports';
 import type { Decode } from '../../core/text/decode';
 import type { Handlers } from '../ipc/register';
 
-type DocumentChannels = 'documents.list' | 'documents.read' | 'documents.followLink' | 'documents.back' | 'documents.forward';
+type DocumentChannels =
+  | 'documents.list'
+  | 'documents.read'
+  | 'documents.followLink'
+  | 'documents.back'
+  | 'documents.forward'
+  | 'documents.resolveImage';
 
 /**
  * The document channels. Every request names a document by id and is scoped to the sending
@@ -32,5 +38,6 @@ export function documentHandlers(deps: {
     'documents.followLink': ([id, href], event) => links.follow(id, event.sender.id, href),
     'documents.back': ([id], event) => links.back(id, event.sender.id),
     'documents.forward': ([id], event) => links.forward(id, event.sender.id),
+    'documents.resolveImage': ([id, src], event) => links.resolveImage(id, event.sender.id, src),
   };
 }

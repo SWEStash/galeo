@@ -1,4 +1,5 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, type Ref } from 'react';
+import type { ImageResult } from '../../shared/documents';
 import type { ViewMode } from '../../shared/formats';
 import { blockAtOrBefore, firstVisibleLine } from './anchor';
 import { mountDocumentHost, type ColorScheme, type DocumentHost } from './host';
@@ -21,6 +22,8 @@ export interface DocumentViewProps {
   follow?: boolean;
   onFollowEnded?: () => void;
   scheme: ColorScheme;
+  /** Asks main for a local image the document shows; only its answer is ever loaded. */
+  onResolveImage?: (src: string) => Promise<ImageResult>;
   /** A link was clicked; main decides what following it does. */
   onLink?: (href: string, options: { background: boolean }) => void;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
@@ -65,6 +68,7 @@ export function DocumentView({
   follow = false,
   onFollowEnded,
   onLink,
+  onResolveImage,
   scheme,
   ref,
 }: DocumentViewProps) {
@@ -132,6 +136,29 @@ export function DocumentView({
     if ('html' in rendered) host().setContent(rendered.html);
     else host().setReaderText(rendered.text);
   }, [rendered]);
+
+  // Local images wait for main: the page never names a file to load itself (ADR-004).
+  useEffect(() => {
+    if (!rendered || !('html' in rendered) || !onResolveImage) return;
+    let current = true;
+    for (const image of host().article.querySelectorAll<HTMLImageElement>('img[data-galeo-src]')) {
+      const src = image.dataset['galeoSrc']!;
+      void onResolveImage(src).then((result) => {
+        if (!current || !image.isConnected) return;
+        if (result.kind === 'image') {
+          image.src = result.url;
+          return;
+        }
+        const placeholder = document.createElement('span');
+        placeholder.className = 'galeo-image-refused';
+        placeholder.textContent = `Image not shown: ${src}`;
+        image.replaceWith(placeholder);
+      });
+    }
+    return () => {
+      current = false;
+    };
+  }, [rendered, onResolveImage]);
 
   useLayoutEffect(() => {
     if (view === 'source' || host().source) host().showSource(source.text, source.language, wrap);

@@ -1,9 +1,9 @@
 // The IPC contract between main and the renderer (ADR-007, SR-11). Only names and types live
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS`, one fixed method per channel.
-import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult } from '../documents';
+import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult } from '../documents';
 
-export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult };
+export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult };
 
 /** Why Chromium's sandbox couldn't start, as detected by the Linux launcher wrapper (ADR-009). */
 export type SandboxCause = 'apparmor-userns' | 'suid-helper' | 'unknown';
@@ -28,6 +28,7 @@ export const CHANNELS = [
   'documents.followLink',
   'documents.back',
   'documents.forward',
+  'documents.resolveImage',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -44,6 +45,8 @@ export interface Requests {
   'documents.followLink': [id: string, href: string];
   'documents.back': [id: string];
   'documents.forward': [id: string];
+  /** An image the document shows, as written in it; main answers with an opaque URL (ADR-004). */
+  'documents.resolveImage': [id: string, src: string];
 }
 
 /** Resolved value of each channel. */
@@ -55,6 +58,7 @@ export interface Responses {
   'documents.followLink': FollowResult;
   'documents.back': HistoryResult;
   'documents.forward': HistoryResult;
+  'documents.resolveImage': ImageResult;
 }
 
 type Group<C extends string> = C extends `${infer G}.${string}` ? G : never;

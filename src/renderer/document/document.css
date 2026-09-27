@@ -201,7 +201,8 @@ div.galeo-block-error {
   font-size: 0.8em;
 }
 
-.galeo-remote-image {
+.galeo-remote-image,
+.galeo-image-refused {
   display: inline-block;
   padding: 0.2em 0.6em;
   border: 1px dashed var(--galeo-color-border);

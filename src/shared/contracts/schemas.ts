@@ -15,4 +15,5 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'documents.followLink': z.tuple([documentId, z.string().min(1).max(8192)]),
   'documents.back': z.tuple([documentId]),
   'documents.forward': z.tuple([documentId]),
+  'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
 };
