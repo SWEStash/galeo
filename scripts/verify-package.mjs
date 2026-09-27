@@ -18,8 +18,10 @@ function packagedApp() {
     return { fuses: path.join(dir, 'galeo-bin'), entry: path.join(dir, 'galeo'), resources: path.join(dir, 'resources') };
   }
   if (process.platform === 'darwin') {
-    const dir = readdirSync(RELEASE).find((name) => /^mac/.test(name));
-    if (!dir) throw new Error('no macOS build in release/');
+    // The build for this machine's architecture (electron-builder: `mac` is x64, `mac-arm64`
+    // arm64), so the arm64 app's renewed ad-hoc signature is exercised on arm64 runners.
+    const dir = process.arch === 'arm64' ? 'mac-arm64' : 'mac';
+    if (!readdirSync(RELEASE).includes(dir)) throw new Error(`no ${dir} build in release/`);
     const app = path.join(RELEASE, dir, 'galeo.app');
     return {
       fuses: app,
