@@ -122,6 +122,22 @@ describe('DocumentLinks.follow', () => {
     expect(shell.calls).toHaveLength(4);
   });
 
+  it('asks only once while a burst confirmation is open', async () => {
+    const { links, shell, clock, id, asked } = setup({ burst: true });
+    for (const href of ['https://a.example', 'https://b.example', 'https://c.example']) {
+      await links.follow(id, 1, href);
+      clock.advance(1000);
+    }
+    const [first, second] = await Promise.all([
+      links.follow(id, 1, 'https://d.example'),
+      links.follow(id, 1, 'https://a.example'),
+    ]);
+    expect(asked).toEqual([1]);
+    expect(first).toEqual({ kind: 'external' });
+    expect(second).toEqual({ kind: 'refused', reason: 'rate-limited' });
+    expect(shell.calls).toHaveLength(4);
+  });
+
   it('blocks the document when the user refuses a burst', async () => {
     const { links, shell, clock, id } = setup({ burst: false });
     for (const href of ['https://a.example', 'https://b.example', 'https://c.example']) {

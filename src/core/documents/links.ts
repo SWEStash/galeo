@@ -33,6 +33,8 @@ interface Read {
  */
 export class DocumentLinks {
   private readonly reads = new Map<string, Read>();
+  /** Documents whose burst confirmation is on screen; their other opens wait for the answer. */
+  private readonly confirming = new Set<string>();
 
   constructor(private readonly deps: DocumentLinksDeps) {}
 
@@ -98,7 +100,15 @@ export class DocumentLinks {
     if (decision === 'too-fast') return refused('rate-limited');
     if (decision === 'blocked') return refused('blocked');
     if (decision === 'confirm') {
-      if (!(await this.deps.confirmBurst(window))) {
+      if (this.confirming.has(id)) return refused('rate-limited');
+      this.confirming.add(id);
+      let allowed: boolean;
+      try {
+        allowed = await this.deps.confirmBurst(window);
+      } finally {
+        this.confirming.delete(id);
+      }
+      if (!allowed) {
         this.deps.limiter.block(id);
         return refused('blocked');
       }
