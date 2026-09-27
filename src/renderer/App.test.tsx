@@ -1,11 +1,11 @@
 import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord } from '../shared/contracts';
 
 const renderRequests: string[] = [];
 /** How the fake worker answers render requests. */
-let workerMode: 'answer' | 'hang' | 'fail' = 'answer';
+let workerMode: 'answer' | 'hang' | 'fail' | 'links' = 'answer';
 
 class FakeWorker extends EventTarget {
   postMessage(message: unknown) {
@@ -16,7 +16,12 @@ class FakeWorker extends EventTarget {
       renderRequests.push(request.text);
       if (workerMode === 'hang') return;
       if (workerMode === 'fail') return reply({ type: 'failed', id: request.id, message: 'boom' });
-      const result = { html: `<p>${request.text}</p>`, outline: [], links: [], images: [], ms: 1, cached: false };
+      // In `links` mode, `[label](href)` becomes a link, as the real pipeline would render it.
+      const html =
+        workerMode === 'links'
+          ? `<p>${request.text.replace(/\[([^\]]*)\]\(([^)]*)\)/g, '<a href="$2">$1</a>')}</p><h2 id="user-content-goals">Goals</h2>`
+          : `<p>${request.text}</p>`;
+      const result = { html, outline: [], links: [], images: [], ms: 1, cached: false };
       reply({ type: 'rendered', id: request.id, result });
     }
   }
@@ -42,6 +47,9 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
     documents: {
       list: vi.fn().mockResolvedValue(documents.records ?? []),
       read: vi.fn().mockResolvedValue(documents.content),
+      followLink: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
+      back: vi.fn().mockResolvedValue({ kind: 'none' }),
+      forward: vi.fn().mockResolvedValue({ kind: 'none' }),
     },
   } satisfies GaleoApi;
   Object.defineProperty(window, 'galeo', { value: api, configurable: true });
@@ -66,21 +74,28 @@ async function press(init: KeyboardEventInit) {
   });
 }
 
+// Every test's app is unmounted afterwards: a live one would still hear the next test's keys.
+const roots: Root[] = [];
+
 async function renderApp() {
   const { App } = await import('./App');
   const container = document.createElement('div');
   document.body.append(container);
+  const root = createRoot(container);
+  roots.push(root);
   await act(async () => {
-    createRoot(container).render(<App />);
+    root.render(<App />);
   });
   return container;
 }
 
 describe('App', () => {
   afterEach(() => {
+    act(() => roots.splice(0).forEach((root) => root.unmount()));
     document.body.innerHTML = '';
     renderRequests.length = 0;
     workerMode = 'answer';
+    vi.restoreAllMocks();
   });
 
   it('marks the root ready once the render worker answers the handshake', async () => {
@@ -251,6 +266,66 @@ describe('App', () => {
     expect(container.querySelector('.find-bar')).toBeNull();
     expect(shadow.querySelectorAll('.cm-searchMatch')).toHaveLength(0);
     expect(document.activeElement).toBe(container.querySelector('[data-testid="document"]'));
+  });
+
+  it('follows a clicked link through main, reading the document it navigated to', async () => {
+    const first = readyContent('markdown', 'rendered', '[next](next.md)');
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: first });
+    api.documents.read.mockResolvedValueOnce(first).mockResolvedValueOnce(readyContent('markdown', 'rendered', 'second'));
+    api.documents.followLink.mockResolvedValue({ kind: 'navigated', anchor: null });
+    workerMode = 'links';
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    const link = await vi.waitFor(() => shadow.querySelector<HTMLAnchorElement>('a[href="next.md"]')!);
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true });
+    await act(async () => link.dispatchEvent(click));
+    expect(click.defaultPrevented).toBe(true);
+    expect(api.documents.followLink).toHaveBeenCalledWith('doc-1', 'next.md');
+    // The navigated document is a new pane, with a new document container.
+    await vi.waitFor(async () => expect((await documentShadow(container)).querySelector('article')?.textContent).toContain('second'));
+    expect(api.documents.read).toHaveBeenCalledTimes(2);
+  });
+
+  it('scrolls to the anchor main confirms, by its prefixed id', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[go](#goals)') });
+    api.documents.followLink.mockResolvedValue({ kind: 'anchor', anchor: 'goals' });
+    workerMode = 'links';
+    const scrolled: string[] = [];
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function (this: Element) {
+      scrolled.push(this.id);
+    });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    const link = await vi.waitFor(() => shadow.querySelector<HTMLAnchorElement>('a[href="#goals"]')!);
+    await act(async () => link.click());
+    await vi.waitFor(() => expect(scrolled).toContain('user-content-goals'));
+  });
+
+  it('says so in the status bar when main refuses a link', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[x](https://x.example)') });
+    api.documents.followLink.mockResolvedValue({ kind: 'refused', reason: 'rate-limited' });
+    workerMode = 'links';
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    const link = await vi.waitFor(() => shadow.querySelector<HTMLAnchorElement>('a[href="https://x.example"]')!);
+    await act(async () => link.click());
+    await vi.waitFor(() =>
+      expect(container.querySelector('[data-testid="status-message"]')?.textContent).toBe(
+        'Links open at most once a second',
+      ),
+    );
+  });
+
+  it('goes back and forward with Alt+Left and Alt+Right', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', 'b') });
+    api.documents.back.mockResolvedValue({ kind: 'navigated', anchor: null });
+    const container = await renderApp();
+    await documentShadow(container);
+    await press({ key: 'ArrowLeft', altKey: true });
+    expect(api.documents.back).toHaveBeenCalledWith('doc-1');
+    await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledTimes(2));
+    await press({ key: 'ArrowRight', altKey: true });
+    expect(api.documents.forward).toHaveBeenCalledWith('doc-1');
   });
 
   it.each([

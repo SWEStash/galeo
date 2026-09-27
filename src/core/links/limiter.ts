@@ -6,7 +6,7 @@ export const WINDOW_INTERVAL_MS = 1000;
 export const BURST_OPENS = 3;
 export const BURST_WINDOW_MS = 10_000;
 
-export type OpenDecision = 'open' | 'confirm' | 'refused';
+export type OpenDecision = 'open' | 'confirm' | 'too-fast' | 'blocked';
 
 /**
  * Rate limits for handing URLs to the browser, so a document can't turn it into a spam or
@@ -22,9 +22,9 @@ export class ExternalOpenLimiter {
 
   request(window: number, document: string): OpenDecision {
     const now = this.clock.now();
-    if (this.blocked.has(document)) return 'refused';
+    if (this.blocked.has(document)) return 'blocked';
     const last = this.lastByWindow.get(window);
-    if (last !== undefined && now - last < WINDOW_INTERVAL_MS) return 'refused';
+    if (last !== undefined && now - last < WINDOW_INTERVAL_MS) return 'too-fast';
     const recent = (this.opensByDocument.get(document) ?? []).filter((at) => now - at < BURST_WINDOW_MS);
     this.opensByDocument.set(document, recent);
     if (recent.length >= BURST_OPENS && !this.allowed.has(document)) return 'confirm';

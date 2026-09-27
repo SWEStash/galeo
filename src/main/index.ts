@@ -1,15 +1,21 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
-import { readDocument } from '../core/documents/read';
+import { DocumentLinks } from '../core/documents/links';
 import { DocumentRecords } from '../core/documents/records';
+import { ExternalOpenLimiter } from '../core/links/limiter';
+import type { OsShell } from '../core/ports';
 import { startupMode, type StartupMode } from '../core/startup';
 import { resolveAppPaths } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
 import { ElectronInstanceChannel } from './adapters/instance-channel';
 import { installAppLifecycle } from './adapters/lifecycle';
+import { systemClock } from './adapters/clock';
+import { ElectronOsShell, RecordingOsShell } from './adapters/os-shell';
+import { WorkerThreadTaskRunner } from './adapters/task-runner';
 import { decodeWithPlatform } from './adapters/text-decoder';
+import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { perfMark, reportColdStart } from './perf';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
@@ -62,6 +68,23 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   let choiceWindow: BrowserWindow | undefined;
   const documents = new DocumentRecords(randomUUID);
   const fs = new NodeFileSystem();
+  const links = new DocumentLinks({
+    records: documents,
+    tasks: new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js')),
+    shell: externalShell(),
+    limiter: new ExternalOpenLimiter(systemClock),
+    confirmBurst,
+    dirname: path.dirname,
+    resolve: path.resolve,
+    parseUrl: (href) => {
+      try {
+        const url = new URL(href);
+        return { protocol: url.protocol, href: url.href };
+      } catch {
+        return null;
+      }
+    },
+  });
   // The launch's files open in the first main window; later launches are routed by the router.
   let pendingFiles = [...files];
 
@@ -108,12 +131,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           openMainWindow();
           choiceWindow?.close();
         },
-        'documents.list': (_args, event) => documents.list(event.sender.id),
-        'documents.read': ([id], event) => {
-          const record = documents.get(id, event.sender.id);
-          if (!record) throw new Error('unknown document');
-          return readDocument(record.path, { fs, decode: decodeWithPlatform });
-        },
+        ...documentHandlers({ records: documents, links, fs, decode: decodeWithPlatform }),
       },
       trustedOrigins(runtime),
     );
@@ -135,6 +153,33 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       openWindow: openMainWindowIfNone,
     });
   });
+}
+
+/** Asks, in a native dialog the page can't answer for itself, whether a burst of opens may go on. */
+async function confirmBurst(windowId: number): Promise<boolean> {
+  const answer = !app.isPackaged ? process.env['GALEO_TEST_BURST_ANSWER'] : undefined;
+  if (answer) return answer === 'allow';
+  const contents = webContents.fromId(windowId);
+  const owner = contents && BrowserWindow.fromWebContents(contents);
+  const options = {
+    type: 'question' as const,
+    message: 'This document is opening many links. Allow?',
+    buttons: ['Allow', 'Block for this tab'],
+    defaultId: 1,
+    cancelId: 1,
+  };
+  const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
+  return response === 0;
+}
+
+/**
+ * The desktop hand-offs. Unpackaged test runs can record external opens instead of starting a
+ * browser (`GALEO_TEST_EXTERNAL=record`, read as `globalThis.__galeoOpenedExternal`).
+ */
+function externalShell(): OsShell {
+  if (app.isPackaged || process.env['GALEO_TEST_EXTERNAL'] !== 'record') return new ElectronOsShell();
+  const global = globalThis as { __galeoOpenedExternal?: string[] };
+  return new RecordingOsShell((global.__galeoOpenedExternal ??= []));
 }
 
 /**

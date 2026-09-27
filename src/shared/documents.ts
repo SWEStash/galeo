@@ -26,3 +26,16 @@ export type DocumentContent =
   | { state: 'binary'; path: string; size: number }
   | { state: 'too-large'; path: string; maxBytes: number }
   | { state: 'missing' | 'no-permission' | 'not-a-file' | 'unreadable'; path: string };
+
+/** Why a link wasn't followed; the page shows it in the status bar. */
+export type RefusalReason = 'not-in-document' | 'scheme' | 'host' | 'malformed' | 'rate-limited' | 'blocked' | 'unavailable';
+
+/** What following a link did. After `navigated`, the page reads the document again. */
+export type FollowResult =
+  | { kind: 'navigated'; anchor: string | null }
+  | { kind: 'anchor'; anchor: string }
+  | { kind: 'external' }
+  | { kind: 'refused'; reason: RefusalReason };
+
+/** What a step back or forward in a tab's history did. */
+export type HistoryResult = { kind: 'navigated'; anchor: string | null } | { kind: 'anchor'; anchor: string } | { kind: 'none' };

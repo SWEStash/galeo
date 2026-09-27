@@ -45,4 +45,38 @@ describe('DocumentRecords', () => {
     expect(records.get(id, 1)).toBeUndefined();
     expect(records.list(2)).toHaveLength(1);
   });
+
+  it('navigates a document to another file or anchor, with back and forward history', () => {
+    const records = new DocumentRecords(counterIds());
+    const { id } = records.open('/d/a.md', 1);
+    records.navigate(id, 1, { path: '/d/a.md', anchor: 'intro' });
+    records.navigate(id, 1, { path: '/d/b.md', anchor: null });
+    expect(records.get(id, 1)?.path).toBe('/d/b.md');
+    expect(records.back(id, 1)).toEqual({ path: '/d/a.md', anchor: 'intro' });
+    expect(records.get(id, 1)?.path).toBe('/d/a.md');
+    expect(records.back(id, 1)).toEqual({ path: '/d/a.md', anchor: null });
+    expect(records.back(id, 1)).toBeNull();
+    expect(records.forward(id, 1)).toEqual({ path: '/d/a.md', anchor: 'intro' });
+    expect(records.forward(id, 1)).toEqual({ path: '/d/b.md', anchor: null });
+    expect(records.forward(id, 1)).toBeNull();
+  });
+
+  it('drops the forward history when navigating after going back', () => {
+    const records = new DocumentRecords(counterIds());
+    const { id } = records.open('/d/a.md', 1);
+    records.navigate(id, 1, { path: '/d/b.md', anchor: null });
+    records.back(id, 1);
+    records.navigate(id, 1, { path: '/d/c.md', anchor: null });
+    expect(records.forward(id, 1)).toBeNull();
+    expect(records.back(id, 1)).toEqual({ path: '/d/a.md', anchor: null });
+  });
+
+  it("refuses history moves on another window's document", () => {
+    const records = new DocumentRecords(counterIds());
+    const { id } = records.open('/d/a.md', 1);
+    records.navigate(id, 1, { path: '/d/b.md', anchor: null });
+    expect(records.back(id, 2)).toBeNull();
+    expect(records.navigate(id, 2, { path: '/etc/x', anchor: null })).toBe(false);
+    expect(records.get(id, 1)?.path).toBe('/d/b.md');
+  });
 });

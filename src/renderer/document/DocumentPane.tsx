@@ -1,0 +1,168 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { DocumentContent } from '../../shared/contracts';
+import type { TextEncoding } from '../../shared/documents';
+import type { FormatId, ViewMode } from '../../shared/formats';
+import { commandFor, type Platform } from '../../shared/keymap';
+import type { RenderClient } from '../worker/client';
+import { DocumentBanner, DocumentLoading, DocumentState } from './DocumentState';
+import { DocumentView, type DocumentHandle, type RenderedContent } from './DocumentView';
+import { FindBar } from './FindBar';
+import type { ColorScheme } from './host';
+import type { FindResult, SourceLanguage } from './source-view';
+import { useDelayed } from './useDelayed';
+import { useRenderedHtml } from './useRenderedHtml';
+
+const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
+
+const ENCODING_NAMES: Record<TextEncoding, string> = {
+  'utf-8': 'UTF-8',
+  'utf-16le': 'UTF-16LE',
+  'utf-16be': 'UTF-16BE',
+  'utf-32le': 'UTF-32LE',
+  'utf-32be': 'UTF-32BE',
+  'windows-1252': 'Windows-1252',
+};
+
+/** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
+const LOADING_DELAY_MS = 150;
+
+const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
+
+export interface DocumentPaneProps {
+  content: DocumentContent;
+  client: RenderClient | null;
+  platform: Platform;
+  scheme: ColorScheme;
+  /** An anchor to scroll to once the document is shown; `onAnchorShown` confirms it. */
+  pendingAnchor: { anchor: string; token: number } | null;
+  onAnchorShown: () => void;
+  onLink: (href: string) => void;
+  onHistory: (direction: 'back' | 'forward') => void;
+}
+
+/**
+ * One document and everything about how it's shown: its view, banners, find and keys. The
+ * window gives it a fresh key per document, so a navigation starts from the document's defaults.
+ */
+export function DocumentPane({
+  content,
+  client,
+  platform,
+  scheme,
+  pendingAnchor,
+  onAnchorShown,
+  onLink,
+  onHistory,
+}: DocumentPaneProps) {
+  const ready = content.state === 'ready' ? content : null;
+  // The document's own opening view until the user toggles it.
+  const [chosenView, setChosenView] = useState<ViewMode | null>(null);
+  const [renderAnyway, setRenderAnyway] = useState(false);
+  const [wrap, setWrap] = useState(false);
+  const [follow, setFollow] = useState(false);
+  const wantedView = chosenView ?? ready?.view ?? 'rendered';
+  // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
+  const renderable = ready?.format === 'markdown' || ready?.format === 'text';
+  const markdown = ready?.format === 'markdown' ? ready.text : null;
+  const render = useRenderedHtml(client, markdown, wantedView === 'rendered');
+  // A document that failed to render shows its source instead.
+  const view = wantedView === 'rendered' && render.status === 'failed' ? 'source' : wantedView;
+  const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending', LOADING_DELAY_MS);
+  const rendered = useMemo<RenderedContent | null>(() => {
+    if (ready?.format === 'text') return { text: ready.text };
+    return render.html === null ? null : { html: render.html };
+  }, [ready, render.html]);
+  const endFollow = useCallback(() => setFollow(false), []);
+  const showRendered = useCallback(() => {
+    setRenderAnyway(true);
+    setChosenView('rendered');
+  }, []);
+
+  const documentHandle = useRef<DocumentHandle>(null);
+  const [find, setFind] = useState({ open: false, token: 0, query: '', caseSensitive: false });
+  const [findResult, setFindResult] = useState<FindResult>(NO_MATCHES);
+  const runFind = useCallback((query: string, caseSensitive: boolean) => {
+    setFind((current) => ({ ...current, query, caseSensitive }));
+    setFindResult(documentHandle.current?.find(query, { caseSensitive }) ?? NO_MATCHES);
+  }, []);
+  const stepFind = useCallback((direction: 1 | -1) => {
+    if (documentHandle.current) setFindResult(documentHandle.current.step(direction));
+  }, []);
+  const closeFind = useCallback(() => {
+    documentHandle.current?.clear();
+    setFind((current) => ({ ...current, open: false, query: '' }));
+    // Esc keeps the scroll position at the current match; focus goes back to the document.
+    documentHandle.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    // Capture phase, so the source view's editor never sees these keys first.
+    const onKey = (event: KeyboardEvent) => {
+      const command = commandFor(event, platform);
+      if (command === 'toggleSource' && renderable) {
+        event.preventDefault();
+        setChosenView(view === 'rendered' ? 'source' : 'rendered');
+      } else if (command === 'toggleWrap' && view === 'source') {
+        event.preventDefault();
+        setWrap((current) => !current);
+      } else if (command === 'followEnd' && ready?.format === 'log') {
+        event.preventDefault();
+        setFollow(true);
+      } else if (command === 'find' && ready) {
+        event.preventDefault();
+        setFind((current) => ({ ...current, open: true, token: current.token + 1 }));
+      } else if ((command === 'findNext' || command === 'findPrevious') && find.open) {
+        event.preventDefault();
+        stepFind(command === 'findNext' ? 1 : -1);
+      } else if (event.key === 'Escape' && find.open) {
+        event.preventDefault();
+        closeFind();
+      } else if (command === 'back' || command === 'forward') {
+        event.preventDefault();
+        onHistory(command);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [platform, renderable, view, ready, find.open, stepFind, closeFind, onHistory]);
+
+  // Switching views, or the rendered HTML arriving, repeats the search in what is now showing.
+  useEffect(() => {
+    if (find.open && find.query) runFind(find.query, find.caseSensitive);
+    // Only a change of view or content repeats the search, not typing (that already ran it).
+  }, [view, rendered]);
+
+  // An anchor waits until the rendered view has content to scroll to.
+  useEffect(() => {
+    if (!pendingAnchor || view !== 'rendered' || !rendered) return;
+    documentHandle.current?.scrollToAnchor(pendingAnchor.anchor);
+    onAnchorShown();
+  }, [pendingAnchor, view, rendered, onAnchorShown]);
+
+  if (!ready) return <DocumentState content={content as Exclude<DocumentContent, { state: 'ready' }>} />;
+
+  return (
+    <>
+      {ready.banner === 'too-large' && view === 'source' && !renderAnyway && (
+        <DocumentBanner kind="too-large" onAction={showRendered} />
+      )}
+      {ready.guessedEncoding && <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]} />}
+      {render.status === 'failed' && <DocumentBanner kind="render-failed" onAction={render.retry} />}
+      {loading && <DocumentLoading />}
+      {find.open && (
+        <FindBar result={findResult} focusToken={find.token} onQuery={runFind} onStep={stepFind} onClose={closeFind} />
+      )}
+      <DocumentView
+        ref={documentHandle}
+        rendered={rendered}
+        source={{ text: ready.text, language: SOURCE_LANGUAGES[ready.format] }}
+        view={view}
+        wrap={wrap}
+        follow={follow}
+        onFollowEnded={endFollow}
+        onLink={onLink}
+        scheme={scheme}
+      />
+    </>
+  );
+}

@@ -12,7 +12,7 @@ describe('ExternalOpenLimiter (SR-04)', () => {
     const { clock, limiter } = setup();
     expect(limiter.request(1, 'doc')).toBe('open');
     clock.advance(999);
-    expect(limiter.request(1, 'doc')).toBe('refused');
+    expect(limiter.request(1, 'doc')).toBe('too-fast');
     clock.advance(1);
     expect(limiter.request(1, 'doc')).toBe('open');
   });
@@ -65,14 +65,14 @@ describe('ExternalOpenLimiter (SR-04)', () => {
   it('counts an allowed open against the per-window second', () => {
     const { limiter } = setup();
     limiter.allow(1, 'doc');
-    expect(limiter.request(1, 'other')).toBe('refused');
+    expect(limiter.request(1, 'other')).toBe('too-fast');
   });
 
   it('once blocked, refuses that document’s links for good', () => {
     const { clock, limiter } = setup();
     limiter.block('doc');
     clock.advance(60_000);
-    expect(limiter.request(1, 'doc')).toBe('refused');
+    expect(limiter.request(1, 'doc')).toBe('blocked');
     expect(limiter.request(1, 'other')).toBe('open');
   });
 });
