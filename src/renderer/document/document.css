@@ -134,6 +134,10 @@ th, td {
 th {
   font-weight: 650;
 }
+/* Headers line up with their column; GFM's alignment (the `align` attribute) still wins. */
+th:not([align]) {
+  text-align: start;
+}
 tbody tr:nth-child(2n) {
   background: color-mix(in srgb, var(--galeo-color-code-bg) 70%, transparent);
 }
