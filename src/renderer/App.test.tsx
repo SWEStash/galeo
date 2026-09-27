@@ -3,12 +3,15 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord } from '../shared/contracts';
 
+const renderRequests: string[] = [];
+
 class FakeWorker extends EventTarget {
   postMessage(message: unknown) {
     const reply = (data: unknown) => queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data })));
     if (message === 'ping') reply('ready');
     const request = message as { type?: string; id: number; text: string };
     if (request.type === 'render') {
+      renderRequests.push(request.text);
       const result = { html: `<p>${request.text}</p>`, outline: [], links: [], images: [], ms: 1, cached: false };
       reply({ type: 'rendered', id: request.id, result });
     }
@@ -41,6 +44,24 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
   return api;
 }
 
+function readyContent(format: 'markdown' | 'plain', view: 'rendered' | 'source', text: string): DocumentContent {
+  return { state: 'ready', path: '/d/x', format, view, banner: null, text, encoding: 'utf-8', guessedEncoding: false, size: text.length };
+}
+
+async function documentShadow(container: HTMLElement): Promise<ShadowRoot> {
+  return vi.waitFor(() => {
+    const shadow = container.querySelector('[data-testid="document"]')?.shadowRoot;
+    if (!shadow) throw new Error('no document yet');
+    return shadow;
+  });
+}
+
+async function press(init: KeyboardEventInit) {
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }));
+  });
+}
+
 async function renderApp() {
   const { App } = await import('./App');
   const container = document.createElement('div');
@@ -54,6 +75,7 @@ async function renderApp() {
 describe('App', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    renderRequests.length = 0;
   });
 
   it('marks the root ready once the render worker answers the handshake', async () => {
@@ -102,6 +124,50 @@ describe('App', () => {
       expect(shadow?.querySelector('article')?.innerHTML).toBe('<p>hello</p>');
     });
     expect(api.documents.read).toHaveBeenCalledWith('doc-1');
+  });
+
+  it('switches a Markdown document to its source and back with Ctrl+U', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# hi') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># hi</p>'));
+    await press({ key: 'u', ctrlKey: true });
+    expect(shadow.querySelector<HTMLElement>('article')?.hidden).toBe(true);
+    expect(shadow.querySelector('.cm-editor')?.textContent).toContain('# hi');
+    await press({ key: 'u', ctrlKey: true });
+    expect(shadow.querySelector<HTMLElement>('article')?.hidden).toBe(false);
+    expect(shadow.querySelector<HTMLElement>('.galeo-source')?.hidden).toBe(true);
+  });
+
+  it('toggles line wrapping in the source view with Alt+Z', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'x') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    expect(shadow.querySelector('.cm-lineWrapping')).toBeNull();
+    await press({ key: 'z', altKey: true });
+    expect(shadow.querySelector('.cm-lineWrapping')).not.toBeNull();
+  });
+
+  it('keeps a document without a rendered view in its source view on Ctrl+U', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'x') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    await press({ key: 'u', ctrlKey: true });
+    expect(shadow.querySelector<HTMLElement>('.galeo-source')?.hidden).toBe(false);
+  });
+
+  it('renders oversized Markdown only when switched to the rendered view', async () => {
+    const content = { ...readyContent('markdown', 'source', '# big'), banner: 'too-large' as const };
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/big.md' }], content });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    expect(shadow.querySelector('article')?.innerHTML).toBe('');
+    expect(renderRequests).toEqual([]);
+    await press({ key: 'u', ctrlKey: true });
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># big</p>'));
   });
 
   it('shows the state of a document that cannot be rendered', async () => {

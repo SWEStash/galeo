@@ -1,12 +1,21 @@
 import katexCss from 'katex/dist/katex.min.css?inline';
+import type { ViewMode } from '../../shared/formats';
 import documentCss from './document.css?inline';
+import { createSourceView, type SourceLanguage, type SourceView } from './source-view';
 
 export type ColorScheme = 'light' | 'dark';
 
 export interface DocumentHost {
   readonly root: ShadowRoot;
-  /** Replaces the document content with worker output (already sanitized, ADR-003). */
+  /** The rendered view's column. */
+  readonly article: HTMLElement;
+  /** Replaces the rendered content with worker output (already sanitized, ADR-003). */
   setContent(html: string): void;
+  /** The source view, created on first use and updated in place afterwards. */
+  showSource(text: string, language: SourceLanguage, wrap: boolean): SourceView;
+  readonly source: SourceView | null;
+  /** Shows one view; the other stays mounted (hidden) so switching back is instant. */
+  showView(view: ViewMode): void;
   /** Picks the code theme matching the app's scheme. */
   setScheme(scheme: ColorScheme): void;
 }
@@ -41,11 +50,36 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
   root.adoptedStyleSheets = documentSheets();
   const article = document.createElement('article');
   article.className = 'galeo-document';
-  root.append(article);
+  const sourceParent = document.createElement('div');
+  sourceParent.className = 'galeo-source';
+  sourceParent.hidden = true;
+  root.append(article, sourceParent);
+  let source: SourceView | null = null;
+  let sourceText: string | null = null;
+
   const host: DocumentHost = {
     root,
+    article,
+    get source() {
+      return source;
+    },
     setContent(html) {
       article.innerHTML = (policy ? policy.createHTML(html) : html) as string;
+    },
+    showSource(text, language, wrap) {
+      if (!source) {
+        source = createSourceView({ root, parent: sourceParent, text, language, wrap });
+      } else {
+        if (text !== sourceText) source.setText(text);
+        source.setWrap(wrap);
+      }
+      sourceText = text;
+      return source;
+    },
+    showView(view) {
+      article.hidden = view !== 'rendered';
+      sourceParent.hidden = view !== 'source';
+      container.dataset['view'] = view;
     },
     setScheme(scheme) {
       container.dataset['scheme'] = scheme;

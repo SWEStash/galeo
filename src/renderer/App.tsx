@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
+import type { ViewMode } from '../shared/formats';
+import { commandFor, type Platform } from '../shared/keymap';
 import { DocumentView } from './document/DocumentView';
 import type { ColorScheme } from './document/host';
 import { useColorScheme } from './document/theme';
 import { useFirstDocument } from './document/useFirstDocument';
+import { useRenderedHtml } from './document/useRenderedHtml';
 import { markFirstPaint } from './perf';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { createRenderClient, type RenderClient } from './worker/client';
@@ -23,13 +26,20 @@ export function App() {
 
   if (!info) return null;
   if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
-  return <MainView sandboxed={info.sandboxed} scheme={scheme} />;
+  return <MainView sandboxed={info.sandboxed} scheme={scheme} platform={info.platform as Platform} />;
 }
 
-function MainView({ sandboxed, scheme }: { sandboxed: boolean; scheme: ColorScheme }) {
+function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme: ColorScheme; platform: Platform }) {
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
-  const shown = useFirstDocument(client);
+  const content = useFirstDocument();
+  const ready = content?.state === 'ready' ? content : null;
+  // The document's own opening view until the user toggles it.
+  const [chosenView, setChosenView] = useState<ViewMode | null>(null);
+  const view = chosenView ?? ready?.view ?? 'rendered';
+  const [wrap, setWrap] = useState(false);
+  const renderable = ready?.format === 'markdown';
+  const html = useRenderedHtml(client, renderable ? ready.text : null, view === 'rendered');
 
   useEffect(markFirstPaint, []);
 
@@ -43,14 +53,38 @@ function MainView({ sandboxed, scheme }: { sandboxed: boolean; scheme: ColorSche
     return () => worker.terminate();
   }, []);
 
+  useEffect(() => {
+    // Capture phase, so the source view's editor never sees these keys first.
+    const onKey = (event: KeyboardEvent) => {
+      const command = commandFor(event, platform);
+      if (command === 'toggleSource' && renderable) {
+        event.preventDefault();
+        setChosenView(view === 'rendered' ? 'source' : 'rendered');
+      } else if (command === 'toggleWrap' && view === 'source') {
+        event.preventDefault();
+        setWrap((current) => !current);
+      }
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [platform, renderable, view]);
+
   return (
     <>
       <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
-        {shown?.kind === 'rendered' && <DocumentView html={shown.html} scheme={scheme} />}
-        {shown?.kind === 'content' && (
-          // Placeholder until the source, text and log views and the document states exist.
-          <p data-testid="document-state" data-state={shown.content.state}>
-            {shown.content.path}
+        {ready && (
+          <DocumentView
+            html={html}
+            source={{ text: ready.text, language: ready.format === 'markdown' ? 'markdown' : null }}
+            view={view}
+            wrap={wrap}
+            scheme={scheme}
+          />
+        )}
+        {content && content.state !== 'ready' && (
+          // Placeholder until the document states exist.
+          <p data-testid="document-state" data-state={content.state}>
+            {content.path}
           </p>
         )}
       </main>

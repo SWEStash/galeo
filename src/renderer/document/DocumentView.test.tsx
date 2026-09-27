@@ -18,13 +18,15 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
+const props = { source: { text: '# src', language: 'markdown' as const }, view: 'rendered' as const, wrap: false };
+
 const shadowOf = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-testid="document"]')!.shadowRoot!;
 
 describe('DocumentView', () => {
   it('mounts one document under StrictMode, whose effects run twice', async () => {
     const container = await render(
       <StrictMode>
-        <DocumentView html="<p>once</p>" scheme="light" />
+        <DocumentView {...props} html="<p>once</p>" scheme="light" />
       </StrictMode>,
     );
     const shadow = shadowOf(container);
@@ -33,11 +35,30 @@ describe('DocumentView', () => {
   });
 
   it('updates the content and the scheme in place', async () => {
-    const container = await render(<DocumentView html="<p>a</p>" scheme="light" />);
+    const container = await render(<DocumentView {...props} html="<p>a</p>" scheme="light" />);
     const shadow = shadowOf(container);
-    await act(async () => root!.render(<DocumentView html="<p>b</p>" scheme="dark" />));
+    await act(async () => root!.render(<DocumentView {...props} html="<p>b</p>" scheme="dark" />));
     expect(shadowOf(container)).toBe(shadow);
     expect(shadow.querySelector('article')?.innerHTML).toBe('<p>b</p>');
     expect(container.querySelector<HTMLElement>('[data-testid="document"]')?.dataset['scheme']).toBe('dark');
+  });
+
+  it('mounts one source editor under StrictMode and keeps it across view switches', async () => {
+    const container = await render(
+      <StrictMode>
+        <DocumentView {...props} view="source" html={null} scheme="light" />
+      </StrictMode>,
+    );
+    const shadow = shadowOf(container);
+    expect(shadow.querySelectorAll('.cm-editor')).toHaveLength(1);
+    const editor = shadow.querySelector('.cm-editor');
+    await act(async () => root!.render(<DocumentView {...props} view="rendered" html="<p>r</p>" scheme="light" />));
+    await act(async () => root!.render(<DocumentView {...props} view="source" html="<p>r</p>" scheme="light" />));
+    expect(shadow.querySelector('.cm-editor')).toBe(editor);
+  });
+
+  it('creates no editor until the source view is shown', async () => {
+    const container = await render(<DocumentView {...props} html="<p>x</p>" scheme="light" />);
+    expect(shadowOf(container).querySelector('.cm-editor')).toBeNull();
   });
 });

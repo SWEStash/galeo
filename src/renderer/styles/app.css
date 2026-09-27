@@ -11,6 +11,25 @@ body,
   margin: 0;
 }
 
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+  min-height: 0;
+}
+
+/* The rendered view scrolls here; the source view fills it and scrolls itself. */
+.document-view {
+  height: 100%;
+  overflow: auto;
+}
+.document-view[data-view='source'] {
+  overflow: hidden;
+}
+
 body {
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);

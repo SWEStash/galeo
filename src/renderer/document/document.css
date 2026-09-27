@@ -5,6 +5,15 @@
   background: var(--galeo-color-bg);
 }
 
+[hidden] {
+  display: none !important;
+}
+
+/* The source view fills the document area and scrolls itself; the rendered view scrolls the host. */
+.galeo-source {
+  height: 100%;
+}
+
 .galeo-document {
   box-sizing: border-box;
   max-width: var(--galeo-measure);
