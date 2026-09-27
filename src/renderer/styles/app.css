@@ -17,13 +17,16 @@ body,
 }
 
 main {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-height: 0;
 }
 
 /* The rendered view scrolls here; the source view fills it and scrolls itself. */
 .document-view {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: auto;
 }
 .document-view[data-view='source'] {
@@ -35,4 +38,75 @@ body {
   color: var(--galeo-color-fg);
   font-family: var(--galeo-font-ui);
   font-size: 14px;
+}
+
+.document-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--galeo-color-border);
+  background: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));
+}
+
+button {
+  padding: 2px 10px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: 4px;
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+button:focus-visible {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 1px;
+}
+
+.document-state,
+.document-loading {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--galeo-measure);
+  margin: 4rem auto 0;
+  padding: 0 1.5rem;
+  font-size: var(--galeo-font-size);
+}
+.document-state-title {
+  margin: 0 0 0.5em;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+.document-state-detail,
+.document-state-path {
+  margin: 0 0 0.4em;
+  color: var(--galeo-color-muted);
+}
+.document-state-path {
+  font-family: var(--galeo-font-code);
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}
+
+.document-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9em;
+  margin-top: 2rem;
+}
+.document-loading-line {
+  height: 0.9em;
+  border-radius: 4px;
+  background: var(--galeo-color-code-bg);
+  animation: galeo-pulse 1.2s ease-in-out infinite alternate;
+}
+@keyframes galeo-pulse {
+  to {
+    opacity: 0.5;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .document-loading-line {
+    animation: none;
+  }
 }

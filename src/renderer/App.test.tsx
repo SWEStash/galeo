@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord } from '../shared/contracts';
 
 const renderRequests: string[] = [];
+/** How the fake worker answers render requests. */
+let workerMode: 'answer' | 'hang' | 'fail' = 'answer';
 
 class FakeWorker extends EventTarget {
   postMessage(message: unknown) {
@@ -12,6 +14,8 @@ class FakeWorker extends EventTarget {
     const request = message as { type?: string; id: number; text: string };
     if (request.type === 'render') {
       renderRequests.push(request.text);
+      if (workerMode === 'hang') return;
+      if (workerMode === 'fail') return reply({ type: 'failed', id: request.id, message: 'boom' });
       const result = { html: `<p>${request.text}</p>`, outline: [], links: [], images: [], ms: 1, cached: false };
       reply({ type: 'rendered', id: request.id, result });
     }
@@ -76,6 +80,7 @@ describe('App', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     renderRequests.length = 0;
+    workerMode = 'answer';
   });
 
   it('marks the root ready once the render worker answers the handshake', async () => {
@@ -208,12 +213,83 @@ describe('App', () => {
     expect(container.querySelector<HTMLElement>('[data-testid="document"]')?.dataset['follow']).toBe('off');
   });
 
-  it('shows the state of a document that cannot be rendered', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/gone.md' }], content: { state: 'missing', path: '/d/gone.md' } });
+  it.each([
+    [{ state: 'empty', path: '/d/e.md', format: 'markdown' }, 'This file is empty'],
+    [{ state: 'missing', path: '/d/gone.md' }, 'File not found'],
+    [{ state: 'no-permission', path: '/d/secret.md' }, "galeo can't read this file (permission denied)"],
+    [{ state: 'binary', path: '/d/x.png', size: 1536 }, 'This looks like a binary file'],
+    [{ state: 'not-a-file', path: '/d/folder' }, "This isn't a regular file"],
+    [{ state: 'too-large', path: '/d/huge.log', maxBytes: 256 * 1024 * 1024 }, 'This file is too large to open'],
+    [{ state: 'unreadable', path: '/d/odd' }, "galeo can't read this file"],
+  ] as [DocumentContent, string][])('shows the %j state with its message and path', async (content, message) => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: content.path }], content });
+    const container = await renderApp();
+    const state = await vi.waitFor(() => {
+      const element = container.querySelector('[data-testid="document-state"]');
+      if (!element) throw new Error('no state yet');
+      return element;
+    });
+    expect(state.getAttribute('data-state')).toBe(content.state);
+    expect(state.querySelector('.document-state-title')?.textContent).toBe(message);
+    expect(state.textContent).toContain(content.path);
+  });
+
+  it('gives a binary file its size and type', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/x.png' }], content: { state: 'binary', path: '/d/x.png', size: 1536 } });
+    const container = await renderApp();
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="document-state"]')?.textContent).toContain('1.5 KB · PNG'));
+  });
+
+  it('shows oversized Markdown as source with a banner offering to render it anyway', async () => {
+    const content = { ...readyContent('markdown', 'source', '# big'), banner: 'too-large' as const };
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/big.md' }], content });
+    const container = await renderApp();
+    const banner = await vi.waitFor(() => container.querySelector<HTMLElement>('[data-banner="too-large"]')!);
+    expect(banner.textContent).toContain('Large file shown as source');
+    await act(async () => banner.querySelector('button')!.click());
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># big</p>'));
+    expect(container.querySelector('[data-banner="too-large"]')).toBeNull();
+  });
+
+  it('names the guessed encoding in a banner', async () => {
+    const content = { ...readyContent('text', 'rendered', 'café'), encoding: 'windows-1252' as const, guessedEncoding: true };
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/latin.txt' }], content });
     const container = await renderApp();
     await vi.waitFor(() =>
-      expect(container.querySelector('[data-testid="document-state"]')?.getAttribute('data-state')).toBe('missing'),
+      expect(container.querySelector('[data-banner="encoding"]')?.textContent).toContain('Windows-1252'),
     );
+  });
+
+  it('falls back to the source view when rendering fails, and can try again', async () => {
+    workerMode = 'fail';
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    const container = await renderApp();
+    const banner = await vi.waitFor(() => container.querySelector<HTMLElement>('[data-banner="render-failed"]')!);
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector<HTMLElement>('.galeo-source')?.hidden).toBe(false));
+    workerMode = 'answer';
+    await act(async () => banner.querySelector('button')!.click());
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
+    expect(container.querySelector('[data-banner="render-failed"]')).toBeNull();
+  });
+
+  it('shows a loading skeleton only once rendering takes longer than 150 ms', async () => {
+    workerMode = 'hang';
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    const started = performance.now();
+    const container = await renderApp();
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="document-loading"]')).not.toBeNull());
+    expect(performance.now() - started).toBeGreaterThanOrEqual(140);
+  });
+
+  it('shows no skeleton for a fast render', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(container.querySelector('[data-testid="document-loading"]')).toBeNull();
   });
 
   it('shows no document when the window has none', async () => {

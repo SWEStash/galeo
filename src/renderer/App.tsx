@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
+import type { TextEncoding } from '../shared/documents';
 import type { FormatId, ViewMode } from '../shared/formats';
 import { commandFor, type Platform } from '../shared/keymap';
+import { DocumentBanner, DocumentLoading, DocumentState } from './document/DocumentState';
 import { DocumentView, type RenderedContent } from './document/DocumentView';
 import type { ColorScheme } from './document/host';
 import type { SourceLanguage } from './document/source-view';
 import { useColorScheme } from './document/theme';
 import { useFirstDocument } from './document/useFirstDocument';
+import { useDelayed } from './document/useDelayed';
 import { useRenderedHtml } from './document/useRenderedHtml';
 import { markFirstPaint } from './perf';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
@@ -32,6 +35,18 @@ export function App() {
   return <MainView sandboxed={info.sandboxed} scheme={scheme} platform={info.platform as Platform} />;
 }
 
+const ENCODING_NAMES: Record<TextEncoding, string> = {
+  'utf-8': 'UTF-8',
+  'utf-16le': 'UTF-16LE',
+  'utf-16be': 'UTF-16BE',
+  'utf-32le': 'UTF-32LE',
+  'utf-32be': 'UTF-32BE',
+  'windows-1252': 'Windows-1252',
+};
+
+/** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
+const LOADING_DELAY_MS = 150;
+
 function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme: ColorScheme; platform: Platform }) {
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
@@ -39,17 +54,26 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
   const ready = content?.state === 'ready' ? content : null;
   // The document's own opening view until the user toggles it.
   const [chosenView, setChosenView] = useState<ViewMode | null>(null);
-  const view = chosenView ?? ready?.view ?? 'rendered';
+  const [renderAnyway, setRenderAnyway] = useState(false);
   const [wrap, setWrap] = useState(false);
   const [follow, setFollow] = useState(false);
+  const wantedView = chosenView ?? ready?.view ?? 'rendered';
   // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
   const renderable = ready?.format === 'markdown' || ready?.format === 'text';
-  const html = useRenderedHtml(client, ready?.format === 'markdown' ? ready.text : null, view === 'rendered');
+  const markdown = ready?.format === 'markdown' ? ready.text : null;
+  const render = useRenderedHtml(client, markdown, wantedView === 'rendered');
+  // A document that failed to render shows its source instead.
+  const view = wantedView === 'rendered' && render.status === 'failed' ? 'source' : wantedView;
+  const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending', LOADING_DELAY_MS);
   const rendered = useMemo<RenderedContent | null>(() => {
     if (ready?.format === 'text') return { text: ready.text };
-    return html === null ? null : { html };
-  }, [ready, html]);
+    return render.html === null ? null : { html: render.html };
+  }, [ready, render.html]);
   const endFollow = useCallback(() => setFollow(false), []);
+  const showRendered = useCallback(() => {
+    setRenderAnyway(true);
+    setChosenView('rendered');
+  }, []);
 
   useEffect(markFirstPaint, []);
 
@@ -85,6 +109,12 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
   return (
     <>
       <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
+        {ready?.banner === 'too-large' && view === 'source' && !renderAnyway && (
+          <DocumentBanner kind="too-large" onAction={showRendered} />
+        )}
+        {ready?.guessedEncoding && <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]} />}
+        {render.status === 'failed' && <DocumentBanner kind="render-failed" onAction={render.retry} />}
+        {loading && <DocumentLoading />}
         {ready && (
           <DocumentView
             rendered={rendered}
@@ -96,12 +126,7 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
             scheme={scheme}
           />
         )}
-        {content && content.state !== 'ready' && (
-          // Placeholder until the document states exist.
-          <p data-testid="document-state" data-state={content.state}>
-            {content.path}
-          </p>
-        )}
+        {content && content.state !== 'ready' && <DocumentState content={content} />}
       </main>
       <footer className="status-bar">{!sandboxed && <UnsandboxedBadge />}</footer>
     </>

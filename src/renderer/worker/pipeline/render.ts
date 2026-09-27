@@ -160,6 +160,38 @@ function frontmatterBlock({ value, lang }: { value: string; lang: string }): Ele
   };
 }
 
+// Parents in which a failed display formula stands as a block of its own.
+const BLOCK_PARENTS = new Set(['div', 'section', 'blockquote', 'li', 'td', 'th', 'details']);
+
+function mathErrorMessage(title: unknown): string {
+  return typeof title === 'string' && title ? title.replace(/^ParseError: /, '') : 'This formula could not be typeset';
+}
+
+/**
+ * KaTeX marks a formula it can't parse with its message in a hover-only `title`. Show it as an
+ * inline error box instead, with the message and the formula's source (UX §4).
+ */
+const explainMathErrors = () => (tree: Root) => {
+  eachElement(tree, (node, index, parent) => {
+    if (!classesOf(node).includes('katex-error')) return;
+    const block = parent.type === 'root' || BLOCK_PARENTS.has(parent.tagName);
+    parent.children[index] = {
+      type: 'element',
+      tagName: block ? 'div' : 'span',
+      properties: { className: ['galeo-block-error'], role: 'note' },
+      children: [
+        {
+          type: 'element',
+          tagName: 'span',
+          properties: { className: ['galeo-block-error-message'] },
+          children: [{ type: 'text', value: mathErrorMessage(node.properties['title']) }],
+        },
+        { type: 'element', tagName: 'code', properties: {}, children: [{ type: 'text', value: textOf(node) }] },
+      ],
+    };
+  });
+};
+
 /** Shiki swaps each code block for its own `pre`, so note their lines just before it runs… */
 const noteCodeLines = (collected: Collected) => () => (tree: Root) => {
   eachElement(tree, (node) => {
@@ -212,6 +244,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
       .use(annotate(collected))
       // KaTeX before Shiki, so Shiki never sees math as a code block; both run after sanitizing.
       .use(rehypeKatex, KATEX_OPTIONS)
+      .use(explainMathErrors)
       .use(noteCodeLines(collected))
       .use(() =>
         rehypeShikiFromHighlighter(shiki, {

@@ -71,9 +71,15 @@ describe('Markdown pipeline', () => {
     expect(doc.querySelector('code.language-math')).toBeNull();
   });
 
-  it('shows invalid math as an inline error instead of failing the document', async () => {
-    const doc = dom((await render.markdown('Before $\\frac{1}{$ after\n\n# Still here\n')).html);
-    expect(doc.querySelector('.katex-error')).not.toBeNull();
+  it('shows invalid math as an inline error box with its message and source, rendering the rest', async () => {
+    const doc = dom((await render.markdown('Before $\\frac{1}{$ after\n\n$$\n\\sqrt{\n$$\n\n# Still here\n')).html);
+    const errors = [...doc.querySelectorAll('.galeo-block-error')];
+    expect(errors).toHaveLength(2);
+    expect(errors[0]!.getAttribute('role')).toBe('note');
+    expect(errors[0]!.querySelector('.galeo-block-error-message')?.textContent).toMatch(/^KaTeX parse error/);
+    expect(errors[0]!.querySelector('code')?.textContent).toBe('\\frac{1}{');
+    expect(errors[1]!.closest('.katex-display, div')).not.toBeNull();
+    expect(doc.querySelector('.katex-error')).toBeNull();
     expect(doc.querySelector('h1')?.textContent).toBe('Still here');
   });
 

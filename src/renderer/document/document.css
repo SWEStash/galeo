@@ -173,6 +173,24 @@ details > summary {
   overflow-y: hidden;
 }
 
+/* A block that failed on its own (a formula), with its message and source; the rest renders. */
+.galeo-block-error {
+  display: inline-block;
+  padding: 0.15em 0.5em;
+  border: 1px solid var(--galeo-color-log-error);
+  border-radius: 4px;
+}
+div.galeo-block-error {
+  display: block;
+  margin: 0 0 var(--galeo-space-block);
+}
+.galeo-block-error-message {
+  display: block;
+  color: var(--galeo-color-log-error);
+  font-family: var(--galeo-font-ui);
+  font-size: 0.8em;
+}
+
 .galeo-remote-image {
   display: inline-block;
   padding: 0.2em 0.6em;
