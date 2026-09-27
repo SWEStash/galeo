@@ -6,8 +6,8 @@ import { registerIpc } from './ipc/register';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
-import { disableBackgroundNetworking, installNetworkGuard } from './security/network-guard';
-import { appResponseHeaders } from './security/network-policy';
+import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
+import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { createAppWindow } from './window/factory';
 import { ownArgs } from './window/policy';
 
@@ -31,17 +31,20 @@ function start(initialMode: StartupMode): void {
   let mode = initialMode;
   let choiceWindow: BrowserWindow | undefined;
 
+  const lockdown = networkLockdown(runtime);
   registerSchemes();
-  disableBackgroundNetworking();
+  lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
 
   const openMainWindow = () => createAppWindow({ url: rendererUrl(runtime), sandboxed });
 
   void app.whenReady().then(() => {
     hardenWebContents();
-    installNetworkGuard(
-      { devServerOrigin: devServerOrigin(runtime), allowDevTools: !app.isPackaged },
-      recordBlockedRequest,
-    );
+    if (lockdown.guard) {
+      installNetworkGuard(
+        { devServerOrigin: devServerOrigin(runtime), allowDevTools: !app.isPackaged },
+        recordBlockedRequest,
+      );
+    }
     registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(runtime));
     registerIpc(
       {

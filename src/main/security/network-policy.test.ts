@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APP_CSP, appResponseHeaders, isRequestAllowed } from './network-policy';
+import { APP_CSP, appResponseHeaders, hostResolverRules, isRequestAllowed, networkLockdown } from './network-policy';
 
 const prod = { devServerOrigin: null, allowDevTools: false };
 const dev = { devServerOrigin: 'http://127.0.0.1:5173', allowDevTools: true };
@@ -55,5 +55,35 @@ describe('appResponseHeaders', () => {
       "require-trusted-types-for 'script'; trusted-types galeo-document",
     );
     expect(appResponseHeaders({ isPackaged: true })).not.toHaveProperty('Content-Security-Policy-Report-Only');
+  });
+});
+
+describe('hostResolverRules', () => {
+  it('makes every host unresolvable, IP literals included', () => {
+    expect(hostResolverRules(null)).toBe('MAP * ~NOTFOUND');
+  });
+
+  it('exempts only the dev server host in development runs', () => {
+    expect(hostResolverRules('http://127.0.0.1:5173')).toBe('MAP * ~NOTFOUND, EXCLUDE 127.0.0.1');
+  });
+});
+
+describe('networkLockdown', () => {
+  const both = { GALEO_TEST_DISABLE_NETWORK_GUARD: '1', GALEO_TEST_DISABLE_RESOLVER_LOCKDOWN: '1' };
+
+  it('keeps both layers on by default', () => {
+    expect(networkLockdown({ isPackaged: false, env: {} })).toEqual({ guard: true, resolver: true });
+  });
+
+  it('lets unpackaged test runs switch each layer off, to prove the harness can go red', () => {
+    expect(networkLockdown({ isPackaged: false, env: { GALEO_TEST_DISABLE_NETWORK_GUARD: '1' } })).toEqual({
+      guard: false,
+      resolver: true,
+    });
+    expect(networkLockdown({ isPackaged: false, env: both })).toEqual({ guard: false, resolver: false });
+  });
+
+  it('ignores the switches in packaged builds', () => {
+    expect(networkLockdown({ isPackaged: true, env: both })).toEqual({ guard: true, resolver: true });
   });
 });

@@ -27,7 +27,7 @@ Every diagram uses these names exactly.
 | **Main** | The Electron main process (Node). Hosts the Core and the Adapters |
 | **Core** | Pure TypeScript domain logic: routing, tab registry, lifecycle policy, sessions, settings, capability checks, argv parsing, link extraction (ADR-007) |
 | **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `WindowHost`, `OsShell`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `Clock` |
-| **Network Guard** | The part of Main that cancels every non-`galeo:`/`data:` request and registers the `galeo:` protocol (ADR-004) |
+| **Network Guard** | The part of Main that cancels every non-`galeo:`/`data:` request, makes every host unresolvable in the network stack, and registers the `galeo:` protocol (ADR-004) |
 | **Preload** | The only bridge. Exposes the typed `window.galeo` API from Contracts |
 | **Contracts** | Shared IPC and domain types plus runtime schemas (`src/shared`) |
 | **Window Renderer** | One sandboxed renderer process per window: Chrome UI + Document Host (ADR-002) |

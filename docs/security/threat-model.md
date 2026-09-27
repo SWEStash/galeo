@@ -217,9 +217,12 @@ files always open inside galeo.
 
 **SR-06 — Zero network, enforced in main.** The default session cancels every request whose
 scheme is not `galeo:`, `data:` or the app's own bundle (`onBeforeRequest`, which also covers
-WebSocket). Spell-check dictionary download is disabled. WebRTC is restricted
-(`webRTCIPHandlingPolicy: 'disable_non_proxied_udp'`), DNS prefetch is off, and there are no
-service workers. There is no auto-updater and no crash reporter upload. Remote images render as
+WebSocket). Below that, the network stack can't resolve any host (Chromium host-resolver rules
+map every host, IP literals included, to "not found"), so traffic that never passes through
+`onBeforeRequest` can't connect either. Spell-check dictionary download is disabled (sessions start
+with no spell-check languages). WebRTC is removed from the app page (and restricted with
+`webRTCIPHandlingPolicy: 'disable_non_proxied_udp'`), DNS prefetch is off (including Blink's
+`<link rel=dns-prefetch>` handling), and there are no service workers. There is no auto-updater and no crash reporter upload. Remote images render as
 placeholders naming the host (UX F11).
 *AC*: SR-07.
 

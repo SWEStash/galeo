@@ -56,6 +56,18 @@ test.describe('zero network (SR-02, SR-06)', () => {
     }
   });
 
+  test('the page has no WebRTC', async () => {
+    const { window: page, close } = await launchApp();
+    try {
+      await expect(page.getByTestId('app-root')).toHaveAttribute('data-worker', 'ready');
+      expect(await page.evaluate(() => ['RTCPeerConnection', 'webkitRTCPeerConnection'].filter((n) => n in window))).toEqual(
+        [],
+      );
+    } finally {
+      await close();
+    }
+  });
+
   test('app pages carry the strict CSP', async () => {
     const { window: page, close } = await launchApp();
     try {

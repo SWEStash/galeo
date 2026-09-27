@@ -19,9 +19,9 @@ export const APP_CSP = [
 const TRUSTED_TYPES = "require-trusted-types-for 'script'; trusted-types galeo-document";
 
 export function appResponseHeaders({ isPackaged }: { isPackaged: boolean }): Record<string, string> {
-  return isPackaged
-    ? { 'Content-Security-Policy': APP_CSP }
-    : { 'Content-Security-Policy': APP_CSP, 'Content-Security-Policy-Report-Only': TRUSTED_TYPES };
+  const headers: Record<string, string> = { 'Content-Security-Policy': APP_CSP };
+  if (!isPackaged) headers['Content-Security-Policy-Report-Only'] = TRUSTED_TYPES;
+  return headers;
 }
 
 export interface NetworkPolicy {
@@ -48,4 +48,31 @@ export function isRequestAllowed(url: string, policy: NetworkPolicy): boolean {
     if (sameHost && dev.protocol === 'http:' && parsed.protocol === 'ws:') return true;
   }
   return false;
+}
+
+/**
+ * Chromium host-resolver rules that make every host unresolvable, IP literals included, so
+ * nothing in the network stack can open a socket, whether a request reaches `webRequest` or not.
+ * Development runs exempt only the dev server's host.
+ */
+export function hostResolverRules(devServerOrigin: string | null): string {
+  return devServerOrigin ? `MAP * ~NOTFOUND, EXCLUDE ${new URL(devServerOrigin).hostname}` : 'MAP * ~NOTFOUND';
+}
+
+/**
+ * Both zero-network layers are always on in packaged builds. Unpackaged test runs may switch
+ * each off, so the no-network harness can show it detects real traffic (SR-07).
+ */
+export function networkLockdown({
+  isPackaged,
+  env,
+}: {
+  isPackaged: boolean;
+  env: Record<string, string | undefined>;
+}): { guard: boolean; resolver: boolean } {
+  if (isPackaged) return { guard: true, resolver: true };
+  return {
+    guard: env['GALEO_TEST_DISABLE_NETWORK_GUARD'] !== '1',
+    resolver: env['GALEO_TEST_DISABLE_RESOLVER_LOCKDOWN'] !== '1',
+  };
 }
