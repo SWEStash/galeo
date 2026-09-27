@@ -28,7 +28,7 @@ export function hardenedWebPreferences({ preload, isPackaged }: { preload: strin
     webSecurity: true,
     allowRunningInsecureContent: false,
     webviewTag: false,
-    // A reader has nothing to spell-check, and Chromium would download dictionaries (SR-06).
+    // A reader has nothing to spell-check.
     spellcheck: false,
     devTools: !isPackaged,
   };

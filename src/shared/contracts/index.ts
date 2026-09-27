@@ -1,2 +1,2 @@
-export { buildApi, type Invoke } from './api';
+export { buildApi } from './api';
 export * from './ipc';
