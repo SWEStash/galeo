@@ -6,6 +6,8 @@ import { _electron as electron, type ElectronApplication, type Page } from '@pla
 export interface LaunchedApp {
   app: ElectronApplication;
   window: Page;
+  /** The isolated home: `config`, `state` and `cache` are its XDG directories. */
+  home: string;
   close: () => Promise<void>;
 }
 
@@ -39,6 +41,7 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
   return {
     app,
     window,
+    home,
     close: async () => {
       await app.close();
       rmSync(home, { recursive: true, force: true });
