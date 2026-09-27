@@ -28,7 +28,7 @@ while [ "$remaining" -gt 0 ]; do
         set -- "$@" --
         continue
         ;;
-      --new-window | --no-sandbox)
+      --new-window | --no-sandbox | --galeo-sandbox-unavailable=*)
         set -- "$@" "$arg"
         continue
         ;;

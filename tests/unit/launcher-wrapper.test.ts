@@ -1,10 +1,10 @@
 import { spawn, spawnSync } from 'node:child_process';
-import { chmodSync, copyFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-const WRAPPER = path.resolve(import.meta.dirname, '../../packaging/linux/galeo.sh');
+const ROOT = path.resolve(import.meta.dirname, '../..');
 const FATAL =
   '[1:0926/160000.000:FATAL:sandbox/linux/suid/client/setuid_sandbox_host.cc:166] The SUID sandbox helper binary was found, but is not configured correctly.';
 
@@ -13,59 +13,118 @@ afterEach(() => {
   for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
-/** Installs the wrapper next to a stub `galeo-bin` with the given shell body. */
-function install(stubBody: string): string {
-  const dir = mkdtempSync(path.join(tmpdir(), 'galeo-wrapper-'));
-  dirs.push(dir);
-  copyFileSync(WRAPPER, path.join(dir, 'galeo'));
-  chmodSync(path.join(dir, 'galeo'), 0o755);
-  writeFileSync(path.join(dir, 'galeo-bin'), `#!/bin/sh\n${stubBody}\n`);
-  chmodSync(path.join(dir, 'galeo-bin'), 0o755);
-  return path.join(dir, 'galeo');
+function executable(file: string, body: string) {
+  writeFileSync(file, body);
+  chmodSync(file, 0o755);
 }
 
-const run = (wrapper: string, ...args: string[]) => spawnSync(wrapper, args, { encoding: 'utf8' });
+/** Installs the wrapper and `gal` next to a stub `galeo-bin`, as the packaging step does. */
+function install(stubBody: string): { wrapper: string; dir: string } {
+  const dir = realpathSync(mkdtempSync(path.join(tmpdir(), 'galeo-wrapper-')));
+  dirs.push(dir);
+  copyFileSync(path.join(ROOT, 'packaging/linux/galeo.sh'), path.join(dir, 'galeo'));
+  copyFileSync(path.join(ROOT, 'bin/gal'), path.join(dir, 'gal'));
+  chmodSync(path.join(dir, 'galeo'), 0o755);
+  chmodSync(path.join(dir, 'gal'), 0o755);
+  executable(path.join(dir, 'galeo-bin'), `#!/bin/sh\n${stubBody}\n`);
+  return { wrapper: path.join(dir, 'galeo'), dir };
+}
+
+/** A PATH whose `unshare` succeeds or fails, so the AppImage check doesn't depend on the host. */
+function withUnshare(dir: string, works: boolean): string {
+  const bin = path.join(dir, 'fake-bin');
+  mkdirSync(bin);
+  executable(path.join(bin, 'unshare'), `#!/bin/sh\nexit ${works ? 0 : 1}\n`);
+  return `${bin}:${process.env['PATH']}`;
+}
+
+const run = (wrapper: string, args: string[], env: Record<string, string> = {}) =>
+  spawnSync(wrapper, args, { encoding: 'utf8', cwd: path.dirname(wrapper), env: { ...process.env, ...env } });
+
+const printArgs = `for a in "$@"; do printf '%s\\n' "$a"; done`;
 
 /** A binary whose sandbox can't start: without --no-sandbox it aborts like Chromium does. */
 const brokenSandbox = `
 case " $* " in
-  *" --no-sandbox "*) for a in "$@"; do printf '%s\\n' "$a"; done; exit 0 ;;
+  *" --no-sandbox "*) ${printArgs}; exit 0 ;;
 esac
 echo '${FATAL}' >&2
 kill -TRAP $$`;
 
 describe.skipIf(process.platform !== 'linux')('Linux launcher wrapper', () => {
-  it('runs the binary with the arguments unchanged and passes its status and stderr through', () => {
-    const wrapper = install(`for a in "$@"; do printf '%s\\n' "$a"; done; echo warn >&2; exit 3`);
-    const result = run(wrapper, '--profile', 'acme', '--', 'a b.md');
+  it('starts the app through gal: files after --, as absolute paths, status and stderr passed through', () => {
+    const { wrapper, dir } = install(`${printArgs}; echo warn >&2; exit 3`);
+    const result = run(wrapper, ['--profile', 'acme', 'a b.md']);
     expect(result.status).toBe(3);
-    expect(result.stdout).toBe('--profile\nacme\n--\na b.md\n');
+    expect(result.stdout).toBe(`--profile\nacme\n--\n${dir}/a b.md\n`);
     expect(result.stderr).toContain('warn');
   });
 
+  it('keeps a switch-like name after a file name as a file, so Chromium never sees it', () => {
+    const { wrapper, dir } = install(printArgs);
+    expect(run(wrapper, ['notes.md', '--remote-debugging-port=9222']).stdout).toBe(
+      `--\n${dir}/notes.md\n${dir}/--remote-debugging-port=9222\n`,
+    );
+  });
+
+  it('refuses an unknown switch without starting the app', () => {
+    const { wrapper } = install('echo started');
+    const result = run(wrapper, ['--renderer-cmd-prefix=evil', 'a.md']);
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe('');
+  });
+
   it('relaunches unsandboxed into the sandbox-unavailable choice after the sandbox abort', () => {
-    const result = run(install(brokenSandbox), '--', 'a.md');
+    const { wrapper, dir } = install(brokenSandbox);
+    const result = run(wrapper, ['--', 'a.md']);
     expect(result.status).toBe(0);
     const argv = result.stdout.trim().split('\n');
     expect(argv[0]).toBe('--no-sandbox');
     expect(argv[1]).toMatch(/^--galeo-sandbox-unavailable=(apparmor-userns|suid-helper)$/);
-    expect(argv.slice(2)).toEqual(['--', 'a.md']);
+    expect(argv.slice(2)).toEqual(['--', `${dir}/a.md`]);
   });
 
-  it('does not relaunch after an abort without the sandbox message', () => {
-    const result = run(install('echo "something else" >&2; kill -TRAP $$'), '--', 'a.md');
+  it('drops the --no-sandbox an AppImage adds when user namespaces are unavailable', () => {
+    const { wrapper, dir } = install(brokenSandbox);
+    const result = run(wrapper, ['--no-sandbox', '--', 'a.md'], { APPIMAGE: '/x.AppImage', PATH: withUnshare(dir, false) });
+    expect(result.stdout.trim().split('\n')[1]).toMatch(/^--galeo-sandbox-unavailable=/);
+  });
+
+  it('keeps --no-sandbox under an AppImage when user namespaces work (the user asked for it)', () => {
+    const { wrapper, dir } = install(brokenSandbox);
+    const result = run(wrapper, ['--no-sandbox', '--', 'a.md'], { APPIMAGE: '/x.AppImage', PATH: withUnshare(dir, true) });
+    expect(result.stdout.trim().split('\n')).toEqual(['--no-sandbox', '--', `${dir}/a.md`]);
+  });
+
+  it('does not relaunch after an abort without the sandbox message on a FATAL line', () => {
+    const { wrapper } = install('echo "note: setuid_sandbox_host mentioned" >&2; kill -TRAP $$');
+    const result = run(wrapper, ['--', 'a.md']);
     expect(result.status).toBe(133);
     expect(result.stdout).toBe('');
   });
 
   it('does not relaunch when the message appears but the process exits normally', () => {
-    const result = run(install(`echo '${FATAL}' >&2; exit 1`));
+    const { wrapper } = install(`echo '${FATAL}' >&2; exit 1`);
+    const result = run(wrapper, []);
     expect(result.status).toBe(1);
     expect(result.stdout).toBe('');
   });
 
+  it('only looks for the sandbox message in the startup output', () => {
+    const { wrapper } = install(`i=0; while [ $i -lt 300 ]; do echo noise >&2; i=$((i+1)); done; echo '${FATAL}' >&2; kill -TRAP $$`);
+    expect(run(wrapper, []).status).toBe(133);
+  });
+
+  it('exits with the app even when a process it started still holds stderr', () => {
+    const { wrapper } = install('sleep 20 >&2 & exit 0');
+    const started = Date.now();
+    const result = run(wrapper, []);
+    expect(result.status).toBe(0);
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
   it('forwards termination to the app', async () => {
-    const wrapper = install(`trap 'echo stopped; exit 0' TERM; echo started; while :; do sleep 0.05; done`);
+    const { wrapper } = install(`trap 'echo stopped; exit 0' TERM; echo started; while :; do sleep 0.05; done`);
     const child = spawn(wrapper, [], { stdio: ['ignore', 'pipe', 'ignore'] });
     let out = '';
     child.stdout.on('data', (chunk: Buffer) => {

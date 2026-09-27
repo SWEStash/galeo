@@ -42,6 +42,15 @@ describe.skipIf(process.platform === 'win32')('bin/gal', () => {
     expect(gal('--profile=acme').argv).toEqual(['--profile=acme', '--']);
   });
 
+  it("passes the launcher wrapper's relaunch flag through", () => {
+    expect(gal('--no-sandbox', '--galeo-sandbox-unavailable=suid-helper', 'a.md').argv).toEqual([
+      '--no-sandbox',
+      '--galeo-sandbox-unavailable=suid-helper',
+      '--',
+      path.join(dir, 'a.md'),
+    ]);
+  });
+
   it('keeps switch-like names after the user separator as files', () => {
     expect(gal('--', '--inspect', '--gpu-launcher=x').argv).toEqual([
       '--',
