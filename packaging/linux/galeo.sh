@@ -50,11 +50,18 @@ while :; do
   kill -0 "$pid" 2>/dev/null || break
 done
 
-# Chromium's sandbox failure: killed by SIGTRAP (or SIGABRT) with its FATAL sandbox message. It
-# happens at startup, before the app starts anything that could keep stderr open.
+# Let the reader pass on what the app wrote last: it ends by itself once the pipe is drained.
+# Stop waiting after a second, when a program the app started still holds stderr open.
+tries=0
+while kill -0 "$reader" 2>/dev/null && [ "$tries" -lt 20 ]; do
+  sleep 0.05
+  tries=$((tries + 1))
+done
+kill "$reader" 2>/dev/null
+
+# Chromium's sandbox failure: killed by SIGTRAP (or SIGABRT) with its FATAL sandbox message.
 case $status in
   133 | 134)
-    wait "$reader"
     if grep -q -E 'FATAL:.*(setuid_sandbox_host|No usable sandbox)' "$work/log"; then
       if [ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns 2>/dev/null)" = 1 ]; then
         cause=apparmor-userns
@@ -66,6 +73,4 @@ case $status in
     fi
     ;;
 esac
-# Otherwise don't wait for the reader: a program the app started may still hold stderr.
-kill "$reader" 2>/dev/null
 exit "$status"

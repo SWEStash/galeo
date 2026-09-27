@@ -115,6 +115,13 @@ describe.skipIf(process.platform !== 'linux')('Linux launcher wrapper', () => {
     expect(run(wrapper, []).status).toBe(133);
   });
 
+  it('passes on everything the app writes to stderr before it exits', () => {
+    const { wrapper } = install('i=0; while [ $i -lt 5000 ]; do echo "line $i" >&2; i=$((i+1)); done; exit 2');
+    const result = run(wrapper, []);
+    expect(result.status).toBe(2);
+    expect(result.stderr.trim().split('\n').at(-1)).toBe('line 4999');
+  });
+
   it('exits with the app even when a process it started still holds stderr', () => {
     const { wrapper } = install('sleep 20 >&2 & exit 0');
     const started = Date.now();
