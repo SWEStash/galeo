@@ -20,8 +20,10 @@ fi
 
 pid=
 work=
+signalled=
 cleanup() { [ -n "$work" ] && rm -rf -- "$work"; }
 on_signal() {
+  signalled=1
   if [ -n "$pid" ]; then
     kill -TERM "$pid" 2>/dev/null
   else
@@ -43,11 +45,13 @@ reader=$!
 "$gal" "$@" 2>"$work/stderr" &
 pid=$!
 
-# `wait` returns early when a signal arrives; keep waiting until the app has exited.
+# A signal interrupts `wait` (status 128+n, not the app's); wait again for the app's own status.
+# The app may already have exited by then, so whether it's alive can't tell the two apart.
 while :; do
+  signalled=
   wait "$pid"
   status=$?
-  kill -0 "$pid" 2>/dev/null || break
+  [ -n "$signalled" ] && [ "$status" -gt 128 ] || break
 done
 
 # Let the reader pass on what the app wrote last: it ends by itself once the pipe is drained.

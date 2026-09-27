@@ -130,16 +130,19 @@ describe.skipIf(process.platform !== 'linux')('Linux launcher wrapper', () => {
     expect(Date.now() - started).toBeLessThan(5_000);
   });
 
-  it('forwards termination to the app', async () => {
-    const { wrapper } = install(`trap 'echo stopped; exit 0' TERM; echo started; while :; do sleep 0.05; done`);
-    const child = spawn(wrapper, [], { stdio: ['ignore', 'pipe', 'ignore'] });
-    let out = '';
-    child.stdout.on('data', (chunk: Buffer) => {
-      out += chunk.toString();
-      if (out.includes('started')) child.kill('SIGTERM');
-    });
-    const status = await new Promise<number | null>((resolve) => child.once('exit', resolve));
-    expect(out).toContain('stopped');
-    expect(status).toBe(0);
+  it("forwards termination to the app and exits with the app's status", async () => {
+    const { wrapper } = install(`trap 'echo stopped; exit 7' TERM; echo started; while :; do sleep 0.05; done`);
+    // The app often exits while the wrapper is still in its signal trap; repeat to cover that race.
+    for (let i = 0; i < 20; i++) {
+      const child = spawn(wrapper, [], { stdio: ['ignore', 'pipe', 'ignore'] });
+      let out = '';
+      child.stdout.on('data', (chunk: Buffer) => {
+        out += chunk.toString();
+        if (out.includes('started')) child.kill('SIGTERM');
+      });
+      const status = await new Promise<number | null>((resolve) => child.once('exit', resolve));
+      expect(out).toContain('stopped');
+      expect(status).toBe(7);
+    }
   });
 });
