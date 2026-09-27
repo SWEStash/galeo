@@ -20,13 +20,13 @@ export type DecodedText =
   | { kind: 'binary' };
 
 /** How much of the head is sniffed for binary content. */
-export const SNIFF_BYTES = 8192;
+const SNIFF_BYTES = 8192;
 
 /**
  * Invalid UTF-8 whose sniffed head has more than this share of control bytes (other than tab,
  * line breaks, form feed and escape) is binary, not a Windows-1252 text file.
  */
-export const BINARY_CONTROL_RATIO = 0.1;
+const BINARY_CONTROL_RATIO = 0.1;
 
 const BOMS: readonly { bytes: readonly number[]; encoding: TextEncoding }[] = [
   // UTF-32LE before UTF-16LE: its mark starts with the same two bytes.

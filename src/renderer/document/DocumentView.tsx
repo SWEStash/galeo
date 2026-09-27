@@ -1,14 +1,12 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, type Ref } from 'react';
 import type { ImageResult } from '../../shared/documents';
 import type { ViewMode } from '../../shared/formats';
+import { ID_PREFIX } from '../../shared/markdown/ids';
 import { markDocumentPaint } from '../perf';
 import { blockAtOrBefore, firstVisibleLine } from './anchor';
 import { mountDocumentHost, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import type { SourceLanguage } from './source-view';
-
-/** The sanitizer's prefix on every id in a document (SR-02). */
-const ID_PREFIX = 'user-content-';
 
 /** What the rendered view shows: worker HTML (Markdown) or reader text (`.txt`). */
 export type RenderedContent = { html: string } | { text: string };
@@ -116,7 +114,7 @@ export function DocumentView({
     const root = host().root;
     const onClick = (event: Event) => {
       if (!(event instanceof MouseEvent)) return;
-      const link = (event.target as Element | null)?.closest?.('a[href]');
+      const link = (event.target as Element | null)?.closest('a[href]');
       if (!link) return;
       event.preventDefault();
       if (event.type === 'auxclick' && event.button !== 1) return;

@@ -25,7 +25,7 @@ export function App() {
 
   if (!info) return null;
   if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
-  return <MainView sandboxed={info.sandboxed} scheme={scheme} platform={info.platform as Platform} />;
+  return <MainView sandboxed={info.sandboxed} scheme={scheme} platform={info.platform} />;
 }
 
 const REFUSALS: Record<RefusalReason, string> = {

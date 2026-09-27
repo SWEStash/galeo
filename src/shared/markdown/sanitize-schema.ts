@@ -1,4 +1,5 @@
 import { defaultSchema, type Options as Schema } from 'rehype-sanitize';
+import { ID_PREFIX } from './ids';
 
 // Removed with their content, so nothing inside shows up as text either.
 const STRIP = [
@@ -22,6 +23,7 @@ export const SANITIZE_SCHEMA: Schema = {
   ...defaultSchema,
   tagNames: defaultSchema.tagNames!.filter((tag) => !DROPPED_TAGS.has(tag)),
   strip: STRIP,
+  clobberPrefix: ID_PREFIX,
   protocols: { ...defaultSchema.protocols, href: ['http', 'https', 'mailto'] },
   attributes: {
     ...Object.fromEntries(Object.entries(defaultSchema.attributes!).filter(([tag]) => !DROPPED_TAGS.has(tag))),

@@ -9,22 +9,10 @@ import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { eachElement } from './hast';
 import { SANITIZE_SCHEMA } from './sanitize-schema';
+import { isLocalReference, isNetworkPathReference } from './urls';
 
 // The links and images of a document, found the way the renderer finds them: the same parse and
 // the same sanitizer, so main's checks see exactly what the page can show (ADR-004).
-
-/** Browsers ignore whitespace and control characters in a URL's scheme and leading slashes. */
-const compact = (url: string) => url.replace(/[\u0000- ]/g, '');
-
-/** `//host/path` (or with backslashes, which browsers treat as slashes): another host. */
-export function isNetworkPathReference(url: string): boolean {
-  return /^[\\/]{2}/.test(compact(url));
-}
-
-/** A path relative to the document: no scheme and no host. */
-export function isLocalReference(url: string): boolean {
-  return !isNetworkPathReference(url) && !/^[a-z][a-z0-9+.-]*:/i.test(compact(url));
-}
 
 export interface References {
   /** Link targets as written, in document order, without duplicates. */
@@ -34,7 +22,7 @@ export interface References {
 }
 
 /** The references a sanitized tree keeps: links to other hosts by `//` and non-local images don't count. */
-export function collectReferences(tree: Root): References {
+function collectReferences(tree: Root): References {
   const links = new Set<string>();
   const images = new Set<string>();
   eachElement(tree, (node) => {

@@ -1,3 +1,4 @@
+import { extensionOf } from '../../shared/paths';
 import type { EntryKind } from '../ports';
 
 // Files that run something when "opened" (SR-05): Linux launchers, and the other platforms' own.
@@ -12,7 +13,5 @@ const LAUNCHERS = new Set([
  */
 export function canOpenWithDefaultApp(file: { path: string; kind: EntryKind; executable: boolean }): boolean {
   if (file.kind !== 'file' || file.executable) return false;
-  const name = file.path.slice(Math.max(file.path.lastIndexOf('/'), file.path.lastIndexOf('\\')) + 1).toLowerCase();
-  const dot = name.lastIndexOf('.');
-  return dot === -1 || !LAUNCHERS.has(name.slice(dot));
+  return !LAUNCHERS.has(extensionOf(file.path));
 }

@@ -1,3 +1,5 @@
+import { extensionOf } from '../../shared/paths';
+
 const IMAGE_TYPES: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -16,9 +18,7 @@ export const IMAGE_MAX_BYTES = 20 * 1024 * 1024;
 
 /** The image type of a file by its extension, or null for anything that isn't an image. */
 export function imageTypeOf(path: string): string | null {
-  const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1).toLowerCase();
-  const dot = name.lastIndexOf('.');
-  return dot === -1 ? null : (IMAGE_TYPES[name.slice(dot)] ?? null);
+  return IMAGE_TYPES[extensionOf(path)] ?? null;
 }
 
 /**

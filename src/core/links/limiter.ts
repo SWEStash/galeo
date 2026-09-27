@@ -1,10 +1,10 @@
 import type { Clock } from '../ports';
 
 /** At most one external open per window per second (SR-04). */
-export const WINDOW_INTERVAL_MS = 1000;
+const WINDOW_INTERVAL_MS = 1000;
 /** More than this many opens from one document within the window below needs a confirmation. */
-export const BURST_OPENS = 3;
-export const BURST_WINDOW_MS = 10_000;
+const BURST_OPENS = 3;
+const BURST_WINDOW_MS = 10_000;
 
 export type OpenDecision = 'open' | 'confirm' | 'too-fast' | 'blocked';
 

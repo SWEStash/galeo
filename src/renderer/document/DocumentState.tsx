@@ -1,12 +1,12 @@
 import type { DocumentContent } from '../../shared/contracts';
+import { extensionOf } from '../../shared/paths';
 import { formatBytes } from './format-bytes';
 
 type Unready = Exclude<DocumentContent, { state: 'ready' }>;
 
 function typeOf(path: string): string {
-  const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(dot + 1).toUpperCase() : 'no extension';
+  const extension = extensionOf(path);
+  return extension ? extension.slice(1).toUpperCase() : 'no extension';
 }
 
 /** What a document shows instead of its content (UX §4). */

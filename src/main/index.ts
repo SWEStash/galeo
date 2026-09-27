@@ -90,7 +90,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       }
     },
   });
-  // The launch's files open in the first main window; later launches are routed by the router.
+  // The launch's files open in the first main window; files from later launches aren't opened yet.
   let pendingFiles = [...files];
 
   const lockdown = networkLockdown(runtime);
@@ -128,7 +128,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
         'app.info': () => ({
           name: app.getName(),
           version: app.getVersion(),
-          platform: process.platform,
+          // The keymap's platforms; other Unixes follow the Linux conventions.
+          platform: process.platform === 'darwin' || process.platform === 'win32' ? process.platform : 'linux',
           sandboxed,
           sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
         }),

@@ -1,3 +1,5 @@
+import { hasScheme, isNetworkPathReference } from '../../shared/markdown/urls';
+
 export type LinkTarget =
   | { kind: 'anchor'; anchor: string }
   | { kind: 'file'; path: string; anchor: string | null }
@@ -29,14 +31,12 @@ function decode(text: string): string | null {
  * nothing. Main calls this only for hrefs in the document's own link set.
  */
 export function classifyLink(href: string, context: LinkContext): LinkTarget {
-  // As browsers do: control characters and spaces never count inside a scheme or leading slashes.
-  const compact = href.replace(/[\u0000- ]/g, '');
-  if (/^[a-z][a-z0-9+.-]*:/i.test(compact)) {
+  if (hasScheme(href)) {
     const url = context.parseUrl(href);
     if (!url) return { kind: 'refused', reason: 'malformed' };
     return EXTERNAL.has(url.protocol.toLowerCase()) ? { kind: 'external', url: url.href } : { kind: 'refused', reason: 'scheme' };
   }
-  if (/^[\\/]{2}/.test(compact)) return { kind: 'refused', reason: 'host' };
+  if (isNetworkPathReference(href)) return { kind: 'refused', reason: 'host' };
 
   const hash = href.indexOf('#');
   const fragment = hash === -1 ? null : decode(href.slice(hash + 1));

@@ -2,6 +2,7 @@
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS`, one fixed method per channel.
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult } from '../documents';
+import type { Platform } from '../keymap';
 
 export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult };
 
@@ -13,7 +14,7 @@ export type SandboxChoice = 'quit' | 'run-unsandboxed';
 export interface AppInfo {
   name: string;
   version: string;
-  platform: string;
+  platform: Platform;
   sandboxed: boolean;
   /** Set while the app shows only the sandbox-unavailable choice (ADR-009). */
   sandboxUnavailable: SandboxCause | null;

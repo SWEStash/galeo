@@ -7,7 +7,7 @@ import { IMAGE_MAX_BYTES, imageTypeOf, type ImageGrants } from './images';
 import type { DocumentRecords, HistoryEntry } from './records';
 
 /** Extraction runs in a worker thread; hostile Markdown gets this long before it's abandoned. */
-export const REFERENCES_TIMEOUT_MS = 2000;
+const REFERENCES_TIMEOUT_MS = 2000;
 
 export interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
   records: DocumentRecords;

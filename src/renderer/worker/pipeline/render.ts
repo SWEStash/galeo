@@ -14,17 +14,16 @@ import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { classesOf, eachElement, textOf } from '../../../shared/markdown/hast';
 import { CODE_THEMES, loadHighlighter, type Highlighter } from './highlighter';
-import { isLocalReference, isNetworkPathReference } from '../../../shared/markdown/references';
+import { ID_PREFIX } from '../../../shared/markdown/ids';
+import { compactUrl, isLocalReference, isNetworkPathReference } from '../../../shared/markdown/urls';
 import { SANITIZE_SCHEMA } from '../../../shared/markdown/sanitize-schema';
 
 /** Code blocks longer than this are shown without highlighting (ADR-003: ~200 KB). */
 export const SHIKI_MAX_BLOCK_CHARS = 200_000;
 
 /** KaTeX limits against expansion bombs (SR-03); `trust: false` keeps `\href` and friends inert. */
-export const KATEX_OPTIONS = { trust: false, maxExpand: 1000, maxSize: 50, throwOnError: false, strict: 'ignore' } as const;
+const KATEX_OPTIONS = { trust: false, maxExpand: 1000, maxSize: 50, throwOnError: false, strict: 'ignore' } as const;
 
-/** Same prefix the sanitizer puts on author ids, so every id in a document has it (SR-02). */
-export const ID_PREFIX = 'user-content-';
 
 export interface OutlineEntry {
   depth: number;
@@ -101,7 +100,7 @@ const annotate = (collected: Collected) => () => (tree: Root) => {
 
 function hostOf(url: string): string {
   try {
-    const trimmed = url.replace(/[\u0000-\u0020]/g, '').replace(/\\/g, '/');
+    const trimmed = compactUrl(url).replace(/\\/g, '/');
     const parsed = new URL(isNetworkPathReference(url) ? `https:${trimmed}` : url);
     return parsed.host || parsed.protocol.replace(/:$/, '');
   } catch {

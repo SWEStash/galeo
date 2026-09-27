@@ -1,4 +1,5 @@
 import type { FormatId, ViewMode } from '../../shared/formats';
+import { fileName } from '../../shared/paths';
 
 export interface FormatSpec {
   /** Lower-case, with the dot; matched against the end of the file name. */
@@ -48,7 +49,7 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
 
 /** The format of a file by its name; anything unrecognised is `plain` text. */
 export function detectFormat(path: string): FormatId {
-  const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1).toLowerCase();
+  const name = fileName(path).toLowerCase();
   for (const [id, spec] of Object.entries(FORMATS) as [FormatId, FormatSpec][]) {
     if (spec.extensions.some((extension) => name.endsWith(extension)) || spec.matchesName?.(name)) return id;
   }

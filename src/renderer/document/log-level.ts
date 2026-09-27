@@ -15,7 +15,7 @@ const LETTERS: Record<string, LogLevel> = { F: 'error', E: 'error', W: 'warn', I
 
 const SYSLOG: LogLevel[] = ['error', 'error', 'error', 'error', 'warn', 'info', 'info', 'debug'];
 
-// The fixed set of level notations (owner decision for v0.1). Each yields the level's token.
+// The fixed set of level notations. Each yields the level's token.
 const PATTERNS: { pattern: RegExp; level: (match: RegExpExecArray) => LogLevel | undefined }[] = [
   // `level=error`, `"level":"info"`, `severity: WARN`
   {
