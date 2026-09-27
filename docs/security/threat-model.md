@@ -284,6 +284,9 @@ absolute paths. The `.desktop` entry uses `%F`. Main parses argv with a strict s
 forwards it to Chromium switches; the one Chromium switch a user may pass is `--no-sandbox`,
 before the `--` separator, at first launch (SR-01). `second-instance` data is treated like argv:
 files to open and the few documented flags, nothing else (a forwarded `--no-sandbox` is ignored).
+Chromium itself acts on switches anywhere before `--`, so on Linux every entry point (desktop
+entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument handling
+(ADR-009). At first launch, main refuses to start when a switch follows a file name without `--`.
 *AC*: tests with switch-like file names (`--inspect`, `--gpu-launcher=…`, `--no-sandbox`) after
 `--` open them as files.
 

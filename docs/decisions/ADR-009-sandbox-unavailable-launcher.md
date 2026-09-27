@@ -1,6 +1,7 @@
 # ADR-009 — Sandbox unavailable: a retry-on-crash launcher wrapper shows the error window
 
-- Status: Accepted (2026-09-26)
+- Status: Accepted (2026-09-26; amended in place 2026-09-27 before first publication, owner decision:
+  argument normalisation, the AppImage case and startup-only capture, see steps 1, 2 and 6)
 - Date: 2026-09-26
 - Deciders: project owner
 - Supersedes: one clause of [ADR-008](ADR-008-packaging-and-distribution.md) "Sandbox": *nothing
@@ -31,11 +32,18 @@ On Linux, a small POSIX shell **wrapper** sits in front of the Electron binary. 
 step renames the binary to `galeo-bin` and installs the wrapper as `galeo`, so the
 `.desktop` entry, `/usr/bin/gal` and the AppImage entry point all go through it.
 
-1. The wrapper starts `galeo-bin` with the user's arguments, **unchanged and sandboxed**. It
-   waits for the process and forwards termination signals to it.
-2. If the process dies from the abort **and** its stderr contains Chromium's sandbox FATAL
-   marker, the wrapper relaunches once. The relaunch runs `galeo-bin --no-sandbox
-   --galeo-sandbox-unavailable=<cause> <original arguments>`. `<cause>` is the detected reason:
+1. The wrapper starts the app **sandboxed, through the `gal` launcher's argument handling**. Chromium
+   acts on switches anywhere before `--`, so every Linux entry point must put files after `--`
+   and refuse unknown switches (SR-13). The desktop entry, `/usr/bin/galeo`, the AppImage and
+   `gal` all get that, whether or not the caller already passed `--`. The wrapper waits for the
+   process and forwards termination signals to it. Under an AppImage, the generated `AppRun`
+   adds `--no-sandbox` by itself when user namespaces are unavailable. When that is the case, the
+   wrapper drops a leading `--no-sandbox` so that the real sandbox failure shows the choice. A user
+   who passed the flag on such a host gets the choice too.
+2. If the process dies from the abort **and** Chromium's sandbox FATAL line is among the first
+   lines of its stderr, the wrapper relaunches once. It keeps only the startup output, so the
+   copy stays small, and it never waits on programs the app started that still hold stderr. The
+   relaunch runs `galeo --no-sandbox --galeo-sandbox-unavailable=<cause> <original arguments>`. `<cause>` is the detected reason:
    `apparmor-userns` (the AppArmor user-namespace restriction) or `suid-helper` (a helper that
    isn't setuid root). Main treats any other value as `unknown` and still shows the window. In
    every other case the wrapper exits with the child's status and changes nothing.
@@ -53,6 +61,9 @@ step renames the binary to `galeo-bin` and installs the wrapper as `galeo`, so t
      unsandboxed, so there is no second relaunch. Every window then shows the persistent
      "Unsandboxed" warning (ADR-008).
 5. Nothing is persisted. The next launch tries the sandbox again.
+6. As a backstop for launches that bypass the wrapper (macOS, Windows, or `galeo-bin` called
+   directly), main refuses to start (exit 2) when a first launch has a switch after a file name
+   and no `--`. Chromium would already have acted on it, so the app can't treat it as a file.
 
 macOS and Windows get no wrapper: Chromium's sandbox has no equivalent startup failure there.
 
