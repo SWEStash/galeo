@@ -1,0 +1,4 @@
+{
+  "$comment": "PRD performance targets in milliseconds. GALEO_PERF_ENFORCE=1 (the release check, on the owner's machine) holds the median to these; other runs fail only above 3x.",
+  "coldStartToFirstPaintMs": 500
+}

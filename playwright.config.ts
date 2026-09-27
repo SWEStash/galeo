@@ -11,5 +11,7 @@ export default defineConfig({
     { name: 'e2e', testDir: 'tests/e2e' },
     // Socket-level zero-network proof (SR-07): the app runs under strace, so it's slower.
     { name: 'no-network', testDir: 'tests/security/no-network', testMatch: '*.spec.ts', timeout: 90_000 },
+    // Needs a `GALEO_PERF=1 npm run build`: only those builds carry the timing marks.
+    { name: 'perf', testDir: 'tests/perf', testMatch: '*.spec.ts' },
   ],
 });

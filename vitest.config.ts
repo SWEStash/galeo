@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  define: { __GALEO_PERF__: 'false' },
   test: {
     projects: [
       {
@@ -11,6 +12,7 @@ export default defineConfig({
             'src/{core,shared,main}/**/*.test.ts',
             'tests/unit/**/*.test.ts',
             'tests/security/**/*.test.ts',
+            'tests/perf/**/*.test.ts',
             'scripts/**/*.test.mjs',
           ],
         },

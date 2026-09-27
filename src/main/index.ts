@@ -3,6 +3,7 @@ import path from 'node:path';
 import { parseArgv } from '../core/argv';
 import { startupMode, type StartupMode } from '../core/startup';
 import { registerIpc } from './ipc/register';
+import { perfMark, reportColdStart } from './perf';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
@@ -10,6 +11,9 @@ import { installNetworkGuard, lockDownBackgroundNetworking } from './security/ne
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { createAppWindow } from './window/factory';
 import { ownArgs } from './window/policy';
+
+// Node's uptime starts with the process, before any of this module runs.
+perfMark('process-start', Date.now() - process.uptime() * 1000);
 
 const runtime = { isPackaged: app.isPackaged, env: process.env };
 // Fixed at process start: a forwarded launch or page content can't change it (ADR-008).
@@ -35,9 +39,14 @@ function start(initialMode: StartupMode): void {
   registerSchemes();
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
 
-  const openMainWindow = () => createAppWindow({ url: rendererUrl(runtime), sandboxed });
+  const openMainWindow = () => {
+    const window = createAppWindow({ url: rendererUrl(runtime), sandboxed });
+    perfMark('window-created');
+    reportColdStart(window);
+  };
 
   void app.whenReady().then(() => {
+    perfMark('app-ready');
     hardenWebContents();
     if (lockdown.guard) {
       installNetworkGuard(

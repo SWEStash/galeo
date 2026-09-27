@@ -48,6 +48,17 @@ jobs:
         run: command -v strace || (sudo apt-get update && sudo apt-get install -y strace)
       - name: No-network harness
         run: xvfb-run -a npm run test:no-network
+      # Startup timings from a build with perf marks; reported, and failing only on a
+      # catastrophic regression until the release check enforces the PRD budgets.
+      - name: Performance smoke
+        run: GALEO_PERF=1 npm run build && xvfb-run -a npm run test:perf
+      - if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: perf-results-linux
+          path: tests/perf/results/
+          if-no-files-found: ignore
+          retention-days: 30
       - if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

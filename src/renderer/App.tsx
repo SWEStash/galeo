@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
+import { markFirstPaint } from './perf';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { spawnRenderWorker } from './worker/spawn';
 
@@ -21,6 +22,8 @@ export function App() {
 
 function MainView({ sandboxed }: { sandboxed: boolean }) {
   const [workerReady, setWorkerReady] = useState(false);
+
+  useEffect(markFirstPaint, []);
 
   useEffect(() => {
     const worker = spawnRenderWorker();

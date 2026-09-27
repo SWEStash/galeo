@@ -12,3 +12,4 @@ release/
 coverage/
 test-results/
 playwright-report/
+tests/perf/results/
