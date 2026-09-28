@@ -20,6 +20,7 @@ function setup(initial: TabSnapshot) {
     move: vi.fn().mockResolvedValue(undefined),
     reopenClosed: vi.fn().mockResolvedValue(undefined),
     position: vi.fn().mockResolvedValue(undefined),
+    zoom: vi.fn().mockResolvedValue(undefined),
     onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
       push = listener;
       return () => {};
@@ -191,15 +192,27 @@ describe('createTabStore', () => {
     expect(store.getSnapshot().statuses.has('a')).toBe(false);
   });
 
-  it('zooms each tab on its own, in steps, and resets it', async () => {
-    const { store } = setup(snapshot(1, ['a', 'b'], 'a'));
+  it('zooms each tab on its own, in steps, at once, and tells main', async () => {
+    const { store, api } = setup(snapshot(1, ['a', 'b'], 'a'));
     await store.start();
     store.zoom('a', 'in');
     store.zoom('a', 'in');
     expect(store.getSnapshot().zooms.get('a')).toBe(1.25);
+    expect(api.zoom).toHaveBeenLastCalledWith('a', 1.25);
     expect(store.getSnapshot().zooms.get('b') ?? 1).toBe(1);
     store.zoom('a', 'reset');
     expect(store.getSnapshot().zooms.get('a') ?? 1).toBe(1);
+  });
+
+  it("takes zoom and last positions from main's snapshots (a restored session)", async () => {
+    const where = { line: 4, offset: 0, heading: null, fraction: 0.3 };
+    const { store } = setup({ revision: 1, active: 'a', tabs: [{ id: 'a', path: '/d/a.md', zoom: 1.5, position: where }] });
+    await store.start();
+    expect(store.getSnapshot().zooms.get('a')).toBe(1.5);
+    expect(store.positionOf('a')).toEqual(where);
+    const here = { ...where, line: 9 };
+    store.moved('a', here);
+    expect(store.positionOf('a')).toEqual(here);
   });
 });
 

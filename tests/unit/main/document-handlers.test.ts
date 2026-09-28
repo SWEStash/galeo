@@ -49,8 +49,9 @@ function setup(files: Record<string, string>, slow = '') {
     resolve: path.posix.resolve,
     parseUrl: () => null,
   });
-  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode });
-  return { fs, records, handlers, id: records.open(Object.keys(files)[0]!, 1).id };
+  const opened: string[] = [];
+  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode, opened: (path) => opened.push(path) });
+  return { fs, records, handlers, opened, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
 describe('documentHandlers', () => {
@@ -82,6 +83,16 @@ describe('documentHandlers', () => {
     const results = await Promise.all(reads);
     expect(fs.reads).toBe(1);
     expect(new Set(results.map((result) => result.state))).toEqual(new Set(['ready']));
+  });
+});
+
+describe('recent files', () => {
+  it('count a file once it was read, and not a missing one', async () => {
+    const { fs, handlers, opened, id } = setup({ '/d/a.md': '# a' });
+    await handlers['documents.read']([id], event);
+    fs.delete('/d/a.md');
+    await handlers['documents.read']([id], event);
+    expect(opened).toEqual(['/d/a.md']);
   });
 });
 

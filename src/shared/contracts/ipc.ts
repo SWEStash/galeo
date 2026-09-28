@@ -14,6 +14,14 @@ export interface SettingsState {
   notices: SettingsNotice[];
 }
 
+/** A previous session of the profile, as "Restore previous session" lists it. */
+export interface PreviousSession {
+  snapshot: number;
+  savedAt: number;
+  windows: number;
+  tabs: number;
+}
+
 /** The encodings "Reopen with encoding…" offers. */
 export const CHOSEN_ENCODINGS = ['utf-8', 'utf-16le', 'utf-16be', 'windows-1252'] as const;
 export type ChosenEncoding = (typeof CHOSEN_ENCODINGS)[number];
@@ -51,10 +59,13 @@ export const CHANNELS = [
   'tabs.activated',
   'tabs.rendered',
   'tabs.position',
+  'tabs.zoom',
   'tabs.close',
   'tabs.reopenClosed',
   'tabs.move',
   'settings.get',
+  'session.previous',
+  'session.restorePrevious',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -88,12 +99,18 @@ export interface Requests {
   'tabs.rendered': [id: string, weight: number];
   /** Where the reader is in the tab, reported after scrolling settles. */
   'tabs.position': [id: string, position: ScrollAnchor];
+  /** The tab's zoom (1 is 100 %), kept by main for the session. */
+  'tabs.zoom': [id: string, zoom: number];
   'tabs.close': [id: string];
   /** Brings back the window's most recently closed tab. */
   'tabs.reopenClosed': [];
   /** Moves a tab to `position` in the window's order. */
   'tabs.move': [id: string, position: number];
   'settings.get': [];
+  /** The profile's previous sessions ("Restore previous session", UX F6). */
+  'session.previous': [];
+  /** Opens one of them again, in new windows. */
+  'session.restorePrevious': [snapshot: number];
 }
 
 /** Resolved value of each channel. */
@@ -112,11 +129,14 @@ export interface Responses {
   'tabs.activated': void;
   'tabs.rendered': void;
   'tabs.position': void;
+  'tabs.zoom': void;
   'tabs.close': void;
   /** The reopened tab's id, or null when none was closed. */
   'tabs.reopenClosed': string | null;
   'tabs.move': void;
   'settings.get': SettingsState;
+  'session.previous': PreviousSession[];
+  'session.restorePrevious': void;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */

@@ -83,6 +83,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       move: vi.fn().mockResolvedValue(undefined),
       rendered: vi.fn().mockResolvedValue(undefined),
       position: vi.fn().mockResolvedValue(undefined),
+      zoom: vi.fn().mockResolvedValue(undefined),
       onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
         events.tabs = listener;
         return () => {};
@@ -95,6 +96,10 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         events.stale = listener;
         return () => {};
       }),
+    },
+    session: {
+      previous: vi.fn().mockResolvedValue([]),
+      restorePrevious: vi.fn().mockResolvedValue(undefined),
     },
     settings: {
       get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [] }),

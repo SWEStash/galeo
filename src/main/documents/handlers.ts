@@ -26,8 +26,10 @@ export function documentHandlers(deps: {
   reads: ReadIdentities;
   fs: FileSystem;
   decode: Decode;
+  /** A file was read (the profile's recent files keep it). */
+  opened: (path: string) => void;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode } = deps;
+  const { records, links, reads, fs, decode, opened } = deps;
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
   const reading = new Map<string, Promise<DocumentContent>>();
 
@@ -35,6 +37,7 @@ export function documentHandlers(deps: {
     // The identity is taken first: a change during the read then shows as a change afterwards.
     await reads.remember(id, path);
     const content = await readDocument(path, { fs, decode, encoding: encoding ?? undefined });
+    if (content.state === 'ready' || content.state === 'empty') opened(path);
     // Only the text main read itself defines which links the page may follow. Only rendered
     // Markdown has links; nothing else is kept.
     if (content.state === 'ready' && content.format === 'markdown' && content.size <= MARKDOWN_RENDER_MAX_BYTES) {

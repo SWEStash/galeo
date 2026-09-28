@@ -103,6 +103,17 @@ export class FakeFileSystem implements FileSystem {
     this.modes.set(path, mode);
   }
 
+  async rename(from: string, to: string): Promise<void> {
+    this.throwIfFailing(from);
+    const content = this.files.get(from);
+    if (!content) throw new FsError('ENOENT', from);
+    this.files.delete(from);
+    this.files.set(to, content);
+    const mode = this.modes.get(from);
+    this.modes.delete(from);
+    if (mode !== undefined) this.modes.set(to, mode);
+  }
+
   /** The mode a directory or file was last created or written with. */
   modeOf(path: string): number | undefined {
     return this.modes.get(path);

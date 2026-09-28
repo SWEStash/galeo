@@ -30,8 +30,11 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
       fraction: z.number().min(0).max(1),
     }),
   ]),
+  'tabs.zoom': z.tuple([documentId, z.number().min(0.5).max(3)]),
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),
   'tabs.move': z.tuple([documentId, z.int().min(0).max(9999)]),
   'settings.get': z.tuple([]),
+  'session.previous': z.tuple([]),
+  'session.restorePrevious': z.tuple([z.int().min(1).max(3)]),
 };

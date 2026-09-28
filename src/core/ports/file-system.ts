@@ -41,4 +41,6 @@ export interface FileSystem {
   mkdir(path: string, options: { mode: number }): Promise<void>;
   /** Replaces the file whole or not at all (temp file, fsync, rename), leaving it with `mode`. */
   writeFileAtomic(path: string, data: Uint8Array, options: { mode: number }): Promise<void>;
+  /** Moves a file, replacing whatever is at `to` (same file system). */
+  rename(from: string, to: string): Promise<void>;
 }

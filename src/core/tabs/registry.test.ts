@@ -229,5 +229,46 @@ describe('TabRegistry', () => {
     tabs.back(id, 1);
     expect(tabs.encoding(id, 1)).toBe('windows-1252');
   });
+
+  it("exports a window's tabs for the session and restores them in another run, under new ids", () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1).id;
+    const b = tabs.open('/d/b.txt', 1).id;
+    const where = { line: 5, offset: 1, heading: null, fraction: 0.2 };
+    tabs.navigate(a, 1, { path: '/d/a2.md', anchor: 'x' });
+    tabs.setPosition(a, 1, where);
+    tabs.setEncoding(b, 1, 'windows-1252');
+    tabs.setZoom(b, 1, 1.25);
+    tabs.activate(b, 1);
+    const saved = tabs.exportWindow(1);
+    expect(saved).toEqual({
+      active: 1,
+      tabs: [
+        { entries: [{ path: '/d/a.md', anchor: null }, { path: '/d/a2.md', anchor: 'x', position: where }], index: 1 },
+        { entries: [{ path: '/d/b.txt', anchor: null, encoding: 'windows-1252' }], index: 0, zoom: 1.25 },
+      ],
+    });
+
+    const next = new TabRegistry(() => `new-${Math.random()}`);
+    const restored = next.restoreWindow(7, saved);
+    expect(restored.map((tab) => tab.path)).toEqual(['/d/a2.md', '/d/b.txt']);
+    expect(restored.map((tab) => tab.id).some((id) => id === a || id === b)).toBe(false);
+    expect(next.snapshot(7).active).toBe(restored[1]!.id);
+    expect(next.back(restored[0]!.id, 7)).toEqual({ path: '/d/a.md', anchor: null });
+    expect(next.encoding(restored[1]!.id, 7)).toBe('windows-1252');
+  });
+
+  it('shows each tab its zoom and last position in snapshots', () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.md', 1);
+    const where = { line: 9, offset: 0, heading: null, fraction: 0.5 };
+    tabs.setPosition(id, 1, where);
+    const revision = tabs.snapshot(1).revision;
+    expect(tabs.setZoom(id, 1, 1.5)).toBe(true);
+    expect(tabs.setZoom(id, 2, 2)).toBe(false);
+    expect(tabs.snapshot(1)).toMatchObject({ revision: revision + 1, tabs: [{ id, path: '/d/a.md', zoom: 1.5, position: where }] });
+    tabs.setZoom(id, 1, 1);
+    expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('zoom');
+  });
 });
 

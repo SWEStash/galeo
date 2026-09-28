@@ -31,7 +31,7 @@ export interface TabsView {
 
 export type TabsApi = Pick<
   GaleoApi['tabs'],
-  'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'position' | 'onChanged' | 'onDemote' | 'onStale'
+  'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'position' | 'zoom' | 'onChanged' | 'onDemote' | 'onStale'
 >;
 
 export interface TabStore {
@@ -104,6 +104,10 @@ export function createTabStore(api: TabsApi): TabStore {
   const apply = (snapshot: TabSnapshot) => {
     if (snapshot.revision <= view.revision) return;
     const ids = snapshot.tabs.map((tab) => tab.id);
+    // Main holds each tab's zoom, and the last position it heard of: what a restored tab starts from.
+    const zooms = new Map(snapshot.tabs.flatMap((tab) => (tab.zoom ? [[tab.id, tab.zoom] as const] : [])));
+    for (const tab of snapshot.tabs) if (tab.position && !positions.has(tab.id)) positions.set(tab.id, tab.position);
+    view = { ...view, zooms };
     if (wanted && ids.includes(wanted)) {
       const id = wanted;
       wanted = null;
@@ -165,6 +169,7 @@ export function createTabStore(api: TabsApi): TabStore {
       if (next === 1) zooms.delete(id);
       else zooms.set(id, next);
       set({ zooms });
+      void api.zoom(id, next);
     },
     reopenClosed() {
       void api.reopenClosed().then((id) => {

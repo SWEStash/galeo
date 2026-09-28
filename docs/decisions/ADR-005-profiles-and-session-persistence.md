@@ -1,6 +1,7 @@
 # ADR-005 — Profiles and session persistence: one process, XDG JSON files, last-focused routing
 
-- Status: Accepted (2026-09-25, with review amendments)
+- Status: Accepted (2026-09-25, with review amendments; amended 2026-09-28: session snapshots rotate
+  once per run)
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [PRD](../PRD.md) (stories 1–3, 9, 10; Open Question 1), [UX](../design/ux.md) (F1, F2,
@@ -51,10 +52,12 @@ which workspace its windows are on.
 - **Setting precedence**: built-in defaults, then global `settings.json`, then the profile's
   overrides. Custom CSS layers in the same order after the bundled theme.
 - **Writes**: session state is saved 2 s after the last change, at most every 10 s while changes
-  continue (scrolling), and on quit; always atomically (temp file, fsync, rename). Each save
-  rotates the previous file into `session.json.1…3`; a "Restore previous session" command recovers
-  from a valid-but-wrong session. Reads are schema-validated. An invalid file is backed up and
-  replaced by defaults with a notice (SR-17). Every file carries a `schemaVersion`, with
+  continue (scrolling), and on quit; always atomically (temp file, fsync, rename). The first save
+  of each run rotates the previous file into `session.json.1…3`; later saves in the run overwrite
+  `session.json`. The snapshots are therefore the last three runs' final states (rotating on every
+  save would keep states only seconds apart), and a "Restore previous session" command recovers
+  from a valid-but-wrong session. Reads are schema-validated. An invalid file is backed up and the
+  newest valid snapshot is restored, then defaults, with a notice (SR-17). Every file carries a `schemaVersion`, with
   forward-only migrations.
 - **Hand-edited config**: `settings.json`, `profile.json` and `custom.css` are watched and external
   edits apply live. The app writes config only when the user changes a setting in the Settings

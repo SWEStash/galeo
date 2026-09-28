@@ -45,6 +45,14 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('tabs.zoom takes an id and a zoom from 50 % to 300 %', () => {
+    expect(accepts('tabs.zoom', [ID, 0.5])).toBe(true);
+    expect(accepts('tabs.zoom', [ID, 3])).toBe(true);
+    for (const bad of [[ID], [ID, 0.4], [ID, 3.1], [ID, '1'], [ID, Number.NaN], [ID, 1, 'x']]) {
+      expect(accepts('tabs.zoom', bad)).toBe(false);
+    }
+  });
+
   it('tabs.move takes an id and a position', () => {
     expect(accepts('tabs.move', [ID, 0])).toBe(true);
     expect(accepts('tabs.move', [ID, 9999])).toBe(true);
@@ -79,7 +87,13 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
-  it.each(['tabs.snapshot', 'tabs.reopenClosed', 'settings.get'] as const)('%s takes nothing', (channel) => {
+  it('session.restorePrevious takes a snapshot number from 1 to 3', () => {
+    expect(accepts('session.restorePrevious', [1])).toBe(true);
+    expect(accepts('session.restorePrevious', [3])).toBe(true);
+    for (const bad of [[], [0], [4], [1.5], ['1'], [1, 2]]) expect(accepts('session.restorePrevious', bad)).toBe(false);
+  });
+
+  it.each(['tabs.snapshot', 'tabs.reopenClosed', 'settings.get', 'session.previous'] as const)('%s takes nothing', (channel) => {
     expect(accepts(channel, [])).toBe(true);
     expect(accepts(channel, [ID])).toBe(false);
   });

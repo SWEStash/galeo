@@ -1,5 +1,5 @@
 import type { DocumentRecord } from '../../shared/documents';
-import type { ScrollAnchor, TabSnapshot } from '../../shared/tabs';
+import type { ScrollAnchor, TabSnapshot, TabView } from '../../shared/tabs';
 import type { WhatwgEncoding } from '../text/decode';
 
 /**
@@ -19,6 +19,20 @@ interface Stored {
   window: number;
   entries: HistoryEntry[];
   index: number;
+  zoom?: number;
+}
+
+/** A tab as a session keeps it: its history, where in it, and its zoom (absent at 100 %). */
+export interface TabState {
+  entries: HistoryEntry[];
+  index: number;
+  zoom?: number;
+}
+
+/** A window's tabs as a session keeps them, and which was shown. */
+export interface WindowState {
+  tabs: TabState[];
+  active: number | null;
 }
 
 interface Closed {
@@ -67,7 +81,47 @@ export class TabRegistry {
   }
 
   snapshot(window: number): TabSnapshot {
-    return { revision: this.revisions.get(window) ?? 0, active: this.active.get(window) ?? null, tabs: this.list(window) };
+    const tabs = (this.order.get(window) ?? []).map((id): TabView => {
+      const record = this.records.get(id)!;
+      const position = record.entries[record.index]!.position;
+      return { ...recordOf(record), ...(record.zoom ? { zoom: record.zoom } : {}), ...(position ? { position } : {}) };
+    });
+    return { revision: this.revisions.get(window) ?? 0, active: this.active.get(window) ?? null, tabs };
+  }
+
+  /** The window's tabs for the session file: history, positions, encodings, zoom (ADR-005). */
+  exportWindow(window: number): WindowState {
+    const order = this.order.get(window) ?? [];
+    const active = this.active.get(window);
+    return {
+      active: active === undefined ? null : order.indexOf(active),
+      tabs: order.map((id) => {
+        const { entries, index, zoom } = this.records.get(id)!;
+        return { entries: entries.map((entry) => ({ ...entry })), index, ...(zoom ? { zoom } : {}) };
+      }),
+    };
+  }
+
+  /** Opens a session's tabs in a window, after any it has, under new ids; the saved active one is active. */
+  restoreWindow(window: number, state: WindowState): DocumentRecord[] {
+    const restored = state.tabs.map((tab) => {
+      const record = this.insert(window, tab.entries.map((entry) => ({ ...entry })), tab.index, this.orderOf(window).length);
+      if (tab.zoom) this.records.get(record.id)!.zoom = tab.zoom;
+      return record;
+    });
+    const active = state.active === null ? undefined : restored[state.active];
+    if (active) this.activate(active.id, window);
+    return restored;
+  }
+
+  /** The tab's zoom (1 is 100 %); part of the snapshot, so the window's mirror follows it. */
+  setZoom(id: string, window: number, zoom: number): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    if (zoom === 1) delete record.zoom;
+    else record.zoom = zoom;
+    this.changed(window);
+    return true;
   }
 
   /** The window says it shows `id` now (it activates tabs itself, then reports it). */

@@ -215,3 +215,19 @@ describe('NodeFileSystem.writeFileAtomic', () => {
     expect(readdirSync(dir)).toEqual(['taken']);
   });
 });
+
+describe('NodeFileSystem.rename', () => {
+  it('moves a file over another, replacing it', async () => {
+    const dir = tempDir();
+    const from = file(dir, 'session.json', 'new');
+    const to = file(dir, 'session.json.1', 'old');
+    await fs.rename(from, to);
+    expect(readFileSync(to, 'utf8')).toBe('new');
+    expect(readdirSync(dir)).toEqual(['session.json.1']);
+  });
+
+  it('refuses a missing file', async () => {
+    const dir = tempDir();
+    expect(await codeOf(fs.rename(path.join(dir, 'no'), path.join(dir, 'x')))).toBe('ENOENT');
+  });
+});

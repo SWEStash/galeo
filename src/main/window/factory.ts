@@ -1,5 +1,6 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import path from 'node:path';
+import type { WindowBounds } from '../../core/session/model';
 import type { Command } from '../../shared/keymap';
 import { capabilityKey, hardenedWebPreferences, keymapPlatform, titleBarOverlay, windowTitle } from './policy';
 
@@ -10,17 +11,23 @@ export interface WindowOptions {
   dialog?: boolean;
   /** A capability key was pressed; the page never saw it (ADR-004). */
   onCapabilityKey?: (command: Command) => void;
+  /** Where the window was last time (a restored session); the platform may place it itself. */
+  bounds?: WindowBounds | null;
 }
 
 /** The only place that constructs a `BrowserWindow`. Main owns the title (never the page). */
-export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKey }: WindowOptions): BrowserWindow {
+export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKey, bounds }: WindowOptions): BrowserWindow {
   const title = windowTitle('galeo', { sandboxed });
   const scheme = () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
   const window = new BrowserWindow({
     title,
     ...(dialog
       ? { width: 560, height: 340, resizable: false }
-      : { width: 1100, height: 800, titleBarStyle: 'hidden', titleBarOverlay: titleBarOverlay(scheme()) }),
+      : {
+          ...(bounds ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } : { width: 1100, height: 800 }),
+          titleBarStyle: 'hidden',
+          titleBarOverlay: titleBarOverlay(scheme()),
+        }),
     show: false,
     webPreferences: hardenedWebPreferences({
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
@@ -39,7 +46,16 @@ export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKe
     nativeTheme.on('updated', followScheme);
     window.on('closed', () => nativeTheme.off('updated', followScheme));
   }
-  window.once('ready-to-show', () => window.show());
+  window.once('ready-to-show', () => {
+    if (bounds?.maximized) window.maximize();
+    window.show();
+  });
   void window.loadURL(url);
   return window;
+}
+
+/** Where a window is, for the session: its size and place when not maximized, and whether it is. */
+export function windowBounds(window: BrowserWindow): WindowBounds {
+  const { x, y, width, height } = window.getNormalBounds();
+  return { x, y, width, height, maximized: window.isMaximized() };
 }

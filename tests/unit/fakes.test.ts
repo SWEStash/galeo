@@ -92,6 +92,18 @@ describe('FakeFileSystem', () => {
     await expect(fs.writeFileAtomic('/cfg/s.json', text('x'), { mode: 0o600 })).rejects.toMatchObject({ code: 'EACCES' });
   });
 
+  it('renames a file over another, keeping its mode, and refuses a missing one', async () => {
+    const fs = new FakeFileSystem();
+    await fs.mkdir('/s', { mode: 0o700 });
+    await fs.writeFileAtomic('/s/a', text('A'), { mode: 0o600 });
+    await fs.writeFileAtomic('/s/b', text('B'), { mode: 0o600 });
+    await fs.rename('/s/a', '/s/b');
+    expect(new TextDecoder().decode(await fs.readFile('/s/b', { maxBytes: 10 }))).toBe('A');
+    await expect(fs.stat('/s/a')).rejects.toMatchObject({ code: 'ENOENT' });
+    expect(fs.modeOf('/s/b')).toBe(0o600);
+    await expect(fs.rename('/s/none', '/s/c')).rejects.toMatchObject({ code: 'ENOENT' });
+  });
+
   it('marks files executable when told to', async () => {
     const fs = new FakeFileSystem({ '/bin/tool': 'x', '/doc.md': 'y' });
     fs.makeExecutable('/bin/tool');

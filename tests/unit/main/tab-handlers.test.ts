@@ -20,7 +20,9 @@ function setup() {
   const closed: string[] = [];
   const demoted: [number, string[]][] = [];
   const stale: [number, string][] = [];
+  let positioned = 0;
   const handlers = tabHandlers({
+    positioned: () => positioned++,
     tabs,
     warm: new WarmTabs({ count: 1, bytes: 10 * MB }),
     reads,
@@ -31,7 +33,7 @@ function setup() {
   });
   const a = tabs.open('/d/a.md', 1).id;
   const b = tabs.open('/d/b.md', 1).id;
-  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b };
+  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, positioned: () => positioned };
 }
 
 describe('tabHandlers', () => {
@@ -83,11 +85,20 @@ describe('tabHandlers', () => {
     expect(stale).toEqual([[1, a]]);
   });
 
-  it('keeps where the reader is in a tab', () => {
+  it("keeps a tab's zoom", () => {
     const { handlers, tabs, a } = setup();
+    handlers['tabs.zoom']([a, 1.5], from(1));
+    expect(tabs.snapshot(1).tabs[0]).toMatchObject({ id: a, zoom: 1.5 });
+  });
+
+  it('keeps where the reader is in a tab, for the session too', () => {
+    const { handlers, tabs, a, positioned } = setup();
     const where = { line: 3, offset: 0, heading: null, fraction: 0.1 };
     handlers['tabs.position']([a, where], from(1));
     expect(tabs.position(a, 1)).toEqual(where);
+    expect(positioned()).toBe(1);
+    handlers['tabs.position']([a, where], from(2));
+    expect(positioned()).toBe(1);
   });
 
   it("re-syncs a window that names a tab it doesn't have, and changes nothing", async () => {

@@ -8,9 +8,13 @@ import { DocumentLinks } from '../core/documents/links';
 import { DocumentMenus } from '../core/documents/menus';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import { ProfileSettings } from '../core/settings/profile-settings';
+import { SessionKeeper } from '../core/session/keeper';
+import type { SessionFile, WindowBounds } from '../core/session/model';
+import { RecentFiles } from '../core/session/recent';
+import { SessionStore } from '../core/session/store';
 import { WarmTabs } from '../core/tabs/lifecycle';
 import { MemoryPressure } from '../core/tabs/pressure';
-import { TabRegistry } from '../core/tabs/registry';
+import { TabRegistry, type WindowState } from '../core/tabs/registry';
 import type { OsShell } from '../core/ports';
 import type { EventName, Events } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
@@ -32,6 +36,7 @@ import { registerIpc } from './ipc/register';
 import { sendEvent } from './ipc/send';
 import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
+import { parseRecentFiles, parseSession } from './session/schemas';
 import { parseGlobalSettings, parseProfileFile } from './settings/schemas';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
@@ -39,7 +44,7 @@ import { hardenWebContents } from './security/harden';
 import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
-import { createAppWindow } from './window/factory';
+import { createAppWindow, windowBounds } from './window/factory';
 import { applicationMenu } from './window/menu';
 import { keymapPlatform } from './window/policy';
 import { showNativeMenu } from './window/native-menu';
@@ -100,7 +105,10 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     const contents = webContents.fromId(windowId);
     if (contents) sendEvent(contents, 'tabs.changed', documents.snapshot(windowId));
   };
-  const documents = new TabRegistry(randomUUID, pushSnapshot);
+  const documents = new TabRegistry(randomUUID, (windowId) => {
+    pushSnapshot(windowId);
+    sessions.changed();
+  });
   const fs = new NodeFileSystem();
   const images = new ImageGrants(randomUUID);
   const shell = externalShell();
@@ -173,20 +181,52 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     reportSettingsNotices(notices);
     broadcastSettings();
   });
-  // The launch's files open in the first main window; files from later launches aren't opened yet.
+  // Profiles arrive with the router; until then the session and recent files are the default profile's.
+  const profileState = path.join(paths.stateDir, 'profiles', 'default');
+  const sessionStore = new SessionStore({ fs, utf8, dir: profileState, parse: parseSession });
+  const recent = new RecentFiles({ fs, utf8, path: path.join(profileState, 'recent.json'), parse: parseRecentFiles, now: Date.now });
+  // Main windows in the order they opened, and their ids with the last focused first.
+  const mainWindows: BrowserWindow[] = [];
+  let focusOrder: number[] = [];
+  const sessions = new SessionKeeper({
+    tabs: documents,
+    clock: systemClock,
+    save: (session) => sessionStore.save(session).catch((error: unknown) => console.warn('galeo: session not saved', error)),
+    windows: () => mainWindows.map((window) => ({ id: window.webContents.id, bounds: windowBounds(window) })),
+    focusOrder: () => focusOrder,
+  });
+  // The launch's files open in the last focused window; files from later launches aren't opened yet.
   let pendingFiles = [...files];
 
   const lockdown = networkLockdown(runtime);
   registerSchemes();
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
 
-  const openMainWindow = () => {
-    const window = createAppWindow({ url: rendererUrl(runtime), sandboxed, onCapabilityKey: recordCapabilityKey });
+  const openMainWindow = ({ bounds = null, state, files: toOpen = [] }: { bounds?: WindowBounds | null; state?: WindowState; files?: readonly string[] } = {}) => {
+    const window = createAppWindow({ url: rendererUrl(runtime), sandboxed, onCapabilityKey: recordCapabilityKey, bounds });
     const windowId = window.webContents.id;
-    const opensDocument = pendingFiles.length > 0;
-    for (const file of pendingFiles) documents.open(file, windowId);
-    pendingFiles = [];
+    mainWindows.push(window);
+    focusOrder = [...focusOrder, windowId];
+    // A restored session's tabs come back hibernated: the page renders each when shown, the active first.
+    if (state) documents.restoreWindow(windowId, state);
+    for (const file of toOpen) documents.open(file, windowId);
+    const followBounds = () => sessions.changed();
+    window.on('move', followBounds);
+    window.on('resize', followBounds);
+    window.on('focus', () => {
+      focusOrder = [windowId, ...focusOrder.filter((id) => id !== windowId)];
+      sessions.changed();
+      // A missing file that came back (or any file that changed) is read again (UX: missing recovers).
+      for (const tab of documents.list(windowId)) {
+        void reads.changed(tab.id, tab.path).then((changed) => changed && sendTo(windowId, 'tabs.stale', tab.id));
+      }
+    });
+    window.on('close', () => {
+      if (mainWindows.length === 1) sessions.holdForQuit();
+    });
     window.on('closed', () => {
+      mainWindows.splice(mainWindows.indexOf(window), 1);
+      focusOrder = focusOrder.filter((id) => id !== windowId);
       for (const tab of documents.list(windowId)) {
         links.forget(tab.id);
         reads.forget(tab.id);
@@ -196,14 +236,38 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       images.closeWindow(windowId);
     });
     perfMark('window-created');
-    reportColdStart(window, { document: opensDocument });
+    reportColdStart(window, { document: toOpen.length > 0 || Boolean(state?.tabs.length) });
+    return window;
   };
+
+  /** A session's windows, the last focused opened last so it ends up in front. */
+  const openSession = (session: SessionFile | null, launchFiles: readonly string[]) => {
+    if (!session || session.windows.length === 0) return void openMainWindow({ files: launchFiles });
+    const order = [...session.windows.keys()].sort((a, b) => rank(session, b) - rank(session, a));
+    const opened = new Map(order.map((index) => [index, openMainWindow({ bounds: session.windows[index]!.bounds, state: session.windows[index]! })]));
+    const front = opened.get(session.focusOrder[0] ?? order.at(-1)!)!;
+    for (const file of launchFiles) documents.open(file, front.webContents.id);
+  };
+
+  // Saving is async; the quit waits for it once.
+  let savedOnQuit = false;
+  app.on('before-quit', (event) => {
+    if (savedOnQuit) return;
+    event.preventDefault();
+    void sessions.flushOnQuit().finally(() => {
+      savedOnQuit = true;
+      app.quit();
+    });
+  });
 
   void app.whenReady().then(async () => {
     perfMark('app-ready');
     const menu = applicationMenu(process.platform);
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     await settings.start();
+    const loaded = await sessionStore.load();
+    if (loaded.notice) reportSessionNotice(loaded.notice);
+    await recent.load();
     nativeTheme.themeSource = settings.current.themeMode;
     warm.setLimits(warmLimits(settings.current));
     pressure.start();
@@ -234,13 +298,27 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
             return;
           }
           mode = { kind: 'normal' };
-          openMainWindow();
+          openSession(loaded.session, pendingFiles);
+          pendingFiles = [];
           choiceWindow?.close();
         },
         'settings.get': () => ({ settings: settings.current, notices: settings.notices }),
+        'session.previous': () => sessionStore.previous(),
+        'session.restorePrevious': async ([snapshot]) => {
+          const previous = await sessionStore.readPrevious(snapshot);
+          if (!previous) throw new Error('no such session');
+          for (const window of previous.windows) openMainWindow({ bounds: window.bounds, state: window });
+        },
         'documents.pathMenu': ([id], event) => menus.path(id, event.sender.id),
         'documents.contextMenu': ([id], event) => menus.document(id, event.sender.id),
-        ...documentHandlers({ records: documents, links, reads, fs, decode: decodeWithPlatform }),
+        ...documentHandlers({
+          records: documents,
+          links,
+          reads,
+          fs,
+          decode: decodeWithPlatform,
+          opened: (file) => void recent.add(file).catch(() => {}),
+        }),
         ...tabHandlers({
           tabs: documents,
           warm,
@@ -249,6 +327,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           closed: (id) => links.forget(id),
           demote,
           stale: (windowId, id) => sendTo(windowId, 'tabs.stale', id),
+          positioned: () => sessions.changed(),
         }),
       },
       trustedOrigins(runtime),
@@ -256,7 +335,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     if (mode.kind === 'sandbox-unavailable') {
       choiceWindow = createAppWindow({ url: rendererUrl(runtime), sandboxed, dialog: true });
     } else {
-      openMainWindow();
+      openSession(loaded.session, pendingFiles);
+      pendingFiles = [];
     }
 
     const openMainWindowIfNone = () => {
@@ -280,6 +360,21 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
 function reportSettingsNotices(notices: readonly SettingsNotice[]): void {
   for (const notice of notices) console.warn(`galeo: ${notice.path} left untouched (${notice.reason}): ${notice.detail ?? ''}`);
   if (!app.isPackaged) (globalThis as { __galeoSettingsNotices?: readonly SettingsNotice[] }).__galeoSettingsNotices = notices;
+}
+
+/** How recently a session's window was focused: 0 for the last focused, higher for older ones. */
+function rank(session: SessionFile, index: number): number {
+  const at = session.focusOrder.indexOf(index);
+  return at < 0 ? session.focusOrder.length + index : at;
+}
+
+/**
+ * A session file galeo couldn't use was backed up and replaced by the newest valid snapshot
+ * (SR-17). Logged; unpackaged test runs read `globalThis.__galeoSessionNotice`.
+ */
+function reportSessionNotice(notice: SettingsNotice): void {
+  console.warn(`galeo: ${notice.path} was invalid (${notice.reason}); restored the newest valid snapshot`);
+  if (!app.isPackaged) (globalThis as { __galeoSessionNotice?: SettingsNotice }).__galeoSessionNotice = notice;
 }
 
 /**

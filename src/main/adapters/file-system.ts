@@ -108,6 +108,14 @@ export class NodeFileSystem implements FileSystem {
     }
   }
 
+  async rename(from: string, to: string): Promise<void> {
+    try {
+      await rename(from, to);
+    } catch (error) {
+      throw toFsError(error, from);
+    }
+  }
+
   async writeFileAtomic(path: string, data: Uint8Array, { mode }: { mode: number }): Promise<void> {
     const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`);
     try {
