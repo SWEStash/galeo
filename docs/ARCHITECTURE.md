@@ -132,7 +132,7 @@ flowchart LR
     prof[Profile & Settings model<br/>precedence · migrations]
     sess[Session store logic<br/>debounce · schema]
     caps[Capability checker<br/>read/open/edit/write grants]
-    links[Link/image extractor<br/>micromark · worker thread · time budget]
+    links[Link/image checks<br/>renderer's own parse · worker thread · time budget]
     fmt[Format detection<br/>extension · sniff · limits]
   end
   subgraph adapt[Adapters · Electron + Node]
@@ -330,12 +330,16 @@ Cache stores.
 
 ```
 src/
-  shared/     contracts (IPC schemas + types), domain types
+  shared/     contracts (IPC schemas + types), domain types, keymap,
+              markdown/ (sanitize schema, link and image rules and extraction: the page and main
+              find a document's links the same way)
   core/       routing, registry, lifecycle, sessions, settings, capabilities, links, formats
-  main/       adapters, IPC handlers, network guard, window host, app entry
+  main/       adapters, IPC handlers, network guard, window host, app entry,
+              tasks/ (the worker thread for parsing main's checks need)
   preload/    window.galeo bridge
-  renderer/   app/ · features/{tabs,quick-open,palette,find,outline,profiles,settings,document}
-              components/ · lib/ (tokens, store) · worker/ (render pipeline) · formats/ (registry)
+  renderer/   document/ (host, rendered/source/text/log views, find, states) · styles/ (tokens,
+              fonts) · worker/ (render pipeline); later features/{tabs,quick-open,palette,outline,
+              profiles,settings}
 tests/
   unit/       core + shared (vitest, node)
   renderer/   pipeline, sanitizer corpus, format registry (vitest)
