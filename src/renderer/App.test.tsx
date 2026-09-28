@@ -220,6 +220,24 @@ describe('App', () => {
     expect(documentElement.dataset['follow']).toBe('off');
   });
 
+  it('leaves End and Alt+arrows to the find field while typing in it', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/app.log' }], content: readyContent('log', 'source', 'INFO a\n') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    await press({ key: 'f', ctrlKey: true });
+    const input = container.querySelector<HTMLInputElement>('.find-bar input')!;
+    const typing = async (init: KeyboardEventInit) => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      await act(async () => input.dispatchEvent(event));
+      return event.defaultPrevented;
+    };
+    expect(await typing({ key: 'End' })).toBe(false);
+    expect(await typing({ key: 'ArrowLeft', altKey: true })).toBe(false);
+    expect(container.querySelector<HTMLElement>('[data-testid="document"]')?.dataset['follow']).toBe('off');
+    expect(api.documents.back).not.toHaveBeenCalled();
+  });
+
   it('ignores End outside logs', async () => {
     stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'x') });
     const container = await renderApp();

@@ -101,13 +101,15 @@ export function DocumentPane({
     // Capture phase, so the source view's editor never sees these keys first.
     const onKey = (event: KeyboardEvent) => {
       const command = commandFor(event, platform);
+      // In a text field (the find bar), End and Alt+arrows edit the text; they don't move the document.
+      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
       if (command === 'toggleSource' && renderable) {
         event.preventDefault();
         setChosenView(view === 'rendered' ? 'source' : 'rendered');
       } else if (command === 'toggleWrap' && view === 'source') {
         event.preventDefault();
         setWrap((current) => !current);
-      } else if (command === 'followEnd' && ready?.format === 'log') {
+      } else if (command === 'followEnd' && ready?.format === 'log' && !typing) {
         event.preventDefault();
         setFollow(true);
       } else if (command === 'find' && ready) {
@@ -119,7 +121,7 @@ export function DocumentPane({
       } else if (event.key === 'Escape' && find.open) {
         event.preventDefault();
         closeFind();
-      } else if (command === 'back' || command === 'forward') {
+      } else if ((command === 'back' || command === 'forward') && !typing) {
         event.preventDefault();
         onHistory(command);
       }
