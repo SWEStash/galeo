@@ -3,33 +3,31 @@ import type { TaskResult, TaskRunner } from '../../core/ports';
 
 type Reply = { id: number; ok: true; value: unknown } | { id: number; ok: false; message: string };
 
-interface Pending {
+interface Job {
+  id: number;
+  task: string;
+  input: unknown;
+  timeoutMs: number;
   resolve: (result: TaskResult<unknown>) => void;
-  timer: NodeJS.Timeout;
 }
 
 /**
- * Runs core tasks in a Node worker thread (ADR-004). A task that overruns its budget is not
- * awaited: the worker is terminated and a fresh one starts with the next task, so no input can
- * stall the main process.
+ * Runs core tasks in a Node worker thread (ADR-004), one at a time. A task's budget starts when
+ * it is dispatched; one that overruns is not awaited: the worker is terminated and a fresh one
+ * runs the rest of the queue, so no input can stall the main process or fail other tasks.
  */
 export class WorkerThreadTaskRunner implements TaskRunner {
   private worker: Worker | null = null;
   private nextId = 0;
-  private readonly pending = new Map<number, Pending>();
+  private readonly queue: Job[] = [];
+  private running: { job: Job; timer: NodeJS.Timeout } | null = null;
 
   constructor(private readonly script: string) {}
 
   run<T>(task: string, input: unknown, { timeoutMs }: { timeoutMs: number }): Promise<TaskResult<T>> {
-    const worker = this.ensureWorker();
-    const id = ++this.nextId;
     return new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        this.settle(id, { ok: false, reason: 'timeout' });
-        this.restart(worker, 'a task overran its time budget');
-      }, timeoutMs);
-      this.pending.set(id, { resolve: resolve as Pending['resolve'], timer });
-      worker.postMessage({ id, task, input });
+      this.queue.push({ id: ++this.nextId, task, input, timeoutMs, resolve: resolve as Job['resolve'] });
+      this.dispatch();
     });
   }
 
@@ -39,31 +37,44 @@ export class WorkerThreadTaskRunner implements TaskRunner {
     await worker?.terminate();
   }
 
+  private dispatch(): void {
+    if (this.running) return;
+    const job = this.queue.shift();
+    if (!job) return;
+    const worker = this.ensureWorker();
+    const timer = setTimeout(() => this.fail(worker, { ok: false, reason: 'timeout' }), job.timeoutMs);
+    this.running = { job, timer };
+    worker.postMessage({ id: job.id, task: job.task, input: job.input });
+  }
+
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
     const worker = new Worker(this.script);
-    worker.on('message', (reply: Reply) =>
-      this.settle(reply.id, reply.ok ? { ok: true, value: reply.value } : { ok: false, reason: 'error', message: reply.message }),
-    );
-    worker.on('error', (error) => this.restart(worker, error.message));
-    worker.on('exit', (code) => this.restart(worker, `the task worker exited (${code})`));
+    worker.on('message', (reply: Reply) => {
+      if (this.running?.job.id !== reply.id) return;
+      this.finish(reply.ok ? { ok: true, value: reply.value } : { ok: false, reason: 'error', message: reply.message });
+    });
+    worker.on('error', (error) => this.fail(worker, { ok: false, reason: 'error', message: error.message }));
+    worker.on('exit', (code) => this.fail(worker, { ok: false, reason: 'error', message: `the task worker exited (${code})` }));
     this.worker = worker;
     return worker;
   }
 
-  /** Drops `worker` and fails whatever it still owed; the next task starts a new worker. */
-  private restart(worker: Worker, message: string): void {
+  /** The running task ends with `result`; the next one starts. */
+  private finish(result: TaskResult<unknown>): void {
+    const running = this.running;
+    if (!running) return;
+    clearTimeout(running.timer);
+    this.running = null;
+    running.job.resolve(result);
+    this.dispatch();
+  }
+
+  /** `worker` can't go on (overran or died): it is dropped, and only its running task fails. */
+  private fail(worker: Worker, result: TaskResult<unknown>): void {
     if (this.worker !== worker) return;
     this.worker = null;
     void worker.terminate();
-    for (const id of [...this.pending.keys()]) this.settle(id, { ok: false, reason: 'error', message });
-  }
-
-  private settle(id: number, result: TaskResult<unknown>): void {
-    const pending = this.pending.get(id);
-    if (!pending) return;
-    clearTimeout(pending.timer);
-    this.pending.delete(id);
-    pending.resolve(result);
+    this.finish(result);
   }
 }

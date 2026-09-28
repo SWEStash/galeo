@@ -72,4 +72,25 @@ describe('WorkerThreadTaskRunner', () => {
     expect(await tasks.run('crash', null, { timeoutMs: 5000 })).toMatchObject({ ok: false, reason: 'error' });
     expect(await tasks.run('echo', 'again', { timeoutMs: 5000 })).toEqual({ ok: true, value: 'again' });
   });
+
+  it('runs a task queued behind an overrunning one, in a fresh worker, with its own full budget', async () => {
+    const tasks = runner();
+    const [spun, echoed] = await Promise.all([
+      tasks.run('spin', null, { timeoutMs: 300 }),
+      // Its budget is shorter than the time it waits in the queue: it only starts when dispatched.
+      tasks.run('echo', 'queued', { timeoutMs: 250 }),
+    ]);
+    expect(spun).toEqual({ ok: false, reason: 'timeout' });
+    expect(echoed).toEqual({ ok: true, value: 'queued' });
+  });
+
+  it('fails only the task a dying worker was running', async () => {
+    const tasks = runner();
+    const [crashed, echoed] = await Promise.all([
+      tasks.run('crash', null, { timeoutMs: 5000 }),
+      tasks.run('echo', 'survives', { timeoutMs: 5000 }),
+    ]);
+    expect(crashed).toMatchObject({ ok: false, reason: 'error' });
+    expect(echoed).toEqual({ ok: true, value: 'survives' });
+  });
 });
