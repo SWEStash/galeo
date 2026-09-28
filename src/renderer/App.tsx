@@ -36,6 +36,7 @@ const REFUSALS: Record<RefusalReason, string> = {
   'rate-limited': 'Links open at most once a second',
   blocked: 'Links from this document are blocked',
   unavailable: "This document's links can't be checked right now",
+  'open-failed': 'No app could open this link',
 };
 
 const NOT_SHOWN: ImageResult = { kind: 'refused', reason: 'not-in-document' };

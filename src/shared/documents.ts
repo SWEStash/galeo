@@ -28,7 +28,15 @@ export type DocumentContent =
   | { state: 'missing' | 'no-permission' | 'not-a-file' | 'unreadable'; path: string };
 
 /** Why a link wasn't followed; the page shows it in the status bar. */
-export type RefusalReason = 'not-in-document' | 'scheme' | 'host' | 'malformed' | 'rate-limited' | 'blocked' | 'unavailable';
+export type RefusalReason =
+  | 'not-in-document'
+  | 'scheme'
+  | 'host'
+  | 'malformed'
+  | 'rate-limited'
+  | 'blocked'
+  | 'unavailable'
+  | 'open-failed';
 
 /** What following a link did. After `navigated`, the page reads the document again. */
 export type FollowResult =

@@ -116,7 +116,12 @@ export class DocumentLinks {
       }
       this.deps.limiter.allow(window, id);
     }
-    await this.deps.shell.openExternal(url);
+    try {
+      await this.deps.shell.openExternal(url);
+    } catch {
+      // No browser or mail client took it; the page says so rather than failing the request.
+      return refused('open-failed');
+    }
     return { kind: 'external' };
   }
 

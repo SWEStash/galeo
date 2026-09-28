@@ -95,6 +95,12 @@ describe('DocumentLinks.follow', () => {
     expect(shell.calls).toEqual([]);
   });
 
+  it('reports a browser that could not be started, instead of failing the request', async () => {
+    const { links, shell, id } = setup();
+    shell.openExternal = async () => Promise.reject(new Error('no handler'));
+    expect(await links.follow(id, 1, 'https://example.org/a')).toEqual({ kind: 'refused', reason: 'open-failed' });
+  });
+
   it('refuses links for a document main has not read, or of another window', async () => {
     const { links, records, id } = setup();
     const unread = records.open('/d/other.md', 1).id;
