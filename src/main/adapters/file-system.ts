@@ -1,5 +1,7 @@
 import { constants, type Dirent, type Stats } from 'node:fs';
-import { open, opendir, realpath, stat } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { chmod, mkdir, open, opendir, realpath, rename, rm, stat } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from '../../core/ports';
 
 const CODES: Record<string, FsErrorCode> = {
@@ -90,5 +92,48 @@ export class NodeFileSystem implements FileSystem {
     } catch (error) {
       throw toFsError(error, path);
     }
+  }
+
+  async mkdir(path: string, { mode }: { mode: number }): Promise<void> {
+    try {
+      const first = await mkdir(path, { recursive: true, mode });
+      // `mkdir`'s mode goes through the umask, and an existing directory keeps its own.
+      for (let dir = path; ; dir = dirname(dir)) {
+        await chmod(dir, mode);
+        if (!first || dir === first || dirname(dir) === dir) break;
+      }
+    } catch (error) {
+      throw toFsError(error, path);
+    }
+  }
+
+  async writeFileAtomic(path: string, data: Uint8Array, { mode }: { mode: number }): Promise<void> {
+    const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`);
+    try {
+      const handle = await open(temp, 'wx', mode);
+      try {
+        await handle.writeFile(data);
+        await handle.chmod(mode);
+        await handle.sync();
+      } finally {
+        await handle.close();
+      }
+      await rename(temp, path);
+      await syncDirectory(dirname(path));
+    } catch (error) {
+      await rm(temp, { force: true });
+      throw toFsError(error, path);
+    }
+  }
+}
+
+/** Makes the rename durable. Windows can't open a directory for this, and doesn't need to. */
+async function syncDirectory(dir: string): Promise<void> {
+  if (process.platform === 'win32') return;
+  const handle = await open(dir, constants.O_RDONLY);
+  try {
+    await handle.sync();
+  } finally {
+    await handle.close();
   }
 }

@@ -1,3 +1,4 @@
+import { chmodSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import type { AppPaths } from '../../core/ports';
 
@@ -36,4 +37,15 @@ export function resolveAppPaths({ platform, env, home, appData }: Context): AppP
     stateDir: join(xdg(env['XDG_STATE_HOME'], join(home, '.local', 'state')), APP),
     cacheDir: join(xdg(env['XDG_CACHE_HOME'], join(home, '.cache')), APP),
   };
+}
+
+/**
+ * Creates the app's own folders owner-only (SR-16), before Chromium writes into them. Synchronous:
+ * it runs at startup, ahead of `app.setPath`. Parents such as `~/.config` keep their modes.
+ */
+export function createPrivateDirs(paths: AppPaths): void {
+  for (const dir of [paths.configDir, paths.stateDir, paths.cacheDir]) {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    chmodSync(dir, 0o700);
+  }
 }

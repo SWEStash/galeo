@@ -16,6 +16,13 @@ export interface LaunchOptions {
   env?: Record<string, string>;
   /** Run this instead of the Electron binary (for example a wrapper that traces it). */
   executablePath?: string;
+  /** Use this home (from `tempHome`) instead of a fresh one; the caller removes it. */
+  home?: string;
+}
+
+/** A fresh isolated home, for tests that write config first or restart the app on the same one. */
+export function tempHome(): string {
+  return mkdtempSync(path.join(tmpdir(), 'galeo-e2e-'));
 }
 
 /**
@@ -23,8 +30,10 @@ export interface LaunchOptions {
  * and returns it with its first window.
  */
 export async function launchApp(args: string[] = [], options: LaunchOptions = {}): Promise<LaunchedApp> {
-  const home = mkdtempSync(path.join(tmpdir(), 'galeo-e2e-'));
-  const removeHome = () => rmSync(home, { recursive: true, force: true });
+  const home = options.home ?? tempHome();
+  const removeHome = () => {
+    if (!options.home) rmSync(home, { recursive: true, force: true });
+  };
   let app: ElectronApplication;
   let window: Page;
   try {

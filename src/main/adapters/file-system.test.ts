@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -136,5 +136,72 @@ describe('NodeFileSystem.readDir', () => {
   it('rejects a file with ENOTDIR', async () => {
     const target = file(tempDir(), 'a.md');
     expect(await codeOf((async () => { for await (const _ of fs.readDir(target)) break; })())).toBe('ENOTDIR');
+  });
+});
+
+function modeOf(target: string): number {
+  return statSync(target).mode & 0o777;
+}
+
+describe('NodeFileSystem.mkdir', () => {
+  it.runIf(posix)('creates missing parents with the given mode, and tightens an existing directory', async () => {
+    const dir = tempDir();
+    const target = path.join(dir, 'a', 'b');
+    await fs.mkdir(target, { mode: 0o700 });
+    expect(modeOf(target)).toBe(0o700);
+    chmodSync(target, 0o755);
+    await fs.mkdir(target, { mode: 0o700 });
+    expect(modeOf(target)).toBe(0o700);
+  });
+
+  it('refuses a path under a file', async () => {
+    const dir = tempDir();
+    const blocker = file(dir, 'plain');
+    expect(await codeOf(fs.mkdir(path.join(blocker, 'x'), { mode: 0o700 }))).toBe('ENOTDIR');
+  });
+});
+
+describe('NodeFileSystem.writeFileAtomic', () => {
+  it.runIf(posix)('writes the whole file with the given mode, whatever the umask', async () => {
+    const dir = tempDir();
+    const target = path.join(dir, 'settings.json');
+    const umask = process.umask(0o000);
+    try {
+      await fs.writeFileAtomic(target, new TextEncoder().encode('{"a":1}'), { mode: 0o600 });
+    } finally {
+      process.umask(umask);
+    }
+    expect(readFileSync(target, 'utf8')).toBe('{"a":1}');
+    expect(modeOf(target)).toBe(0o600);
+  });
+
+  it('replaces an existing file and leaves no temporary file behind', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'session.json', 'old');
+    await fs.writeFileAtomic(target, new TextEncoder().encode('new'), { mode: 0o600 });
+    expect(readFileSync(target, 'utf8')).toBe('new');
+    expect(readdirSync(dir)).toEqual(['session.json']);
+  });
+
+  it.runIf(posix)('tightens the mode of a file it replaces', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'session.json', 'old');
+    chmodSync(target, 0o644);
+    await fs.writeFileAtomic(target, new TextEncoder().encode('new'), { mode: 0o600 });
+    expect(modeOf(target)).toBe(0o600);
+  });
+
+  it('refuses a missing directory and cleans up', async () => {
+    const dir = tempDir();
+    expect(await codeOf(fs.writeFileAtomic(path.join(dir, 'no', 'x.json'), new Uint8Array(), { mode: 0o600 }))).toBe('ENOENT');
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it('refuses to replace a directory, leaving it in place', async () => {
+    const dir = tempDir();
+    mkdirSync(path.join(dir, 'taken'));
+    // Linux says EISDIR; Windows refuses the rename with EPERM.
+    expect(['EISDIR', 'EACCES']).toContain(await codeOf(fs.writeFileAtomic(path.join(dir, 'taken'), new Uint8Array(), { mode: 0o600 })));
+    expect(readdirSync(dir)).toEqual(['taken']);
   });
 });

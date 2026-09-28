@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { resolveAppPaths } from './app-paths';
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { describe, expect, it, onTestFinished } from 'vitest';
+import { createPrivateDirs, resolveAppPaths } from './app-paths';
 
 describe('resolveAppPaths', () => {
   it('uses the XDG base directories on Linux', () => {
@@ -39,5 +42,18 @@ describe('resolveAppPaths', () => {
       stateDir: 'C:\\Users\\u\\AppData\\Roaming\\galeo\\State',
       cacheDir: 'C:\\Users\\u\\AppData\\Local\\galeo\\Cache',
     });
+  });
+});
+
+describe.runIf(process.platform !== 'win32')('createPrivateDirs', () => {
+  it('creates the config, state and cache folders owner-only, tightening existing ones (SR-16)', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'galeo-paths-'));
+    onTestFinished(() => rmSync(root, { recursive: true, force: true }));
+    const paths = { configDir: path.join(root, 'c', 'galeo'), stateDir: path.join(root, 's', 'galeo'), cacheDir: path.join(root, 'k') };
+    mkdirSync(paths.cacheDir, { mode: 0o755 });
+    chmodSync(paths.cacheDir, 0o755);
+    createPrivateDirs(paths);
+    for (const dir of Object.values(paths)) expect(statSync(dir).mode & 0o777).toBe(0o700);
+    expect(statSync(path.join(root, 'c')).isDirectory()).toBe(true);
   });
 });

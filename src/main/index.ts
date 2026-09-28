@@ -1,25 +1,30 @@
-import { app, BrowserWindow, dialog, webContents } from 'electron';
+import { app, BrowserWindow, dialog, nativeTheme, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
 import { ImageGrants } from '../core/documents/images';
 import { DocumentLinks } from '../core/documents/links';
-import { TabRegistry } from '../core/tabs/registry';
 import { ExternalOpenLimiter } from '../core/links/limiter';
+import { ProfileSettings } from '../core/settings/profile-settings';
+import { TabRegistry } from '../core/tabs/registry';
 import type { OsShell } from '../core/ports';
+import type { SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
-import { resolveAppPaths } from './adapters/app-paths';
+import { createPrivateDirs, resolveAppPaths } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
+import { NodeFileWatcher } from './adapters/file-watcher';
 import { ElectronInstanceChannel } from './adapters/instance-channel';
 import { installAppLifecycle } from './adapters/lifecycle';
 import { systemClock } from './adapters/clock';
 import { ElectronOsShell, RecordingOsShell } from './adapters/os-shell';
 import { WorkerThreadTaskRunner } from './adapters/task-runner';
 import { decodeWithPlatform } from './adapters/text-decoder';
+import { utf8 } from './adapters/utf8';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
+import { parseGlobalSettings, parseProfileFile } from './settings/schemas';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
@@ -50,6 +55,7 @@ const paths = resolveAppPaths({
   home: app.getPath('home'),
   appData: app.getPath('appData'),
 });
+createPrivateDirs(paths);
 app.setPath('userData', path.join(paths.stateDir, 'chromium'));
 app.setPath('sessionData', paths.cacheDir);
 
@@ -90,6 +96,18 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       }
     },
   });
+  // Profiles arrive with the router; until then every window uses the default one.
+  const settings = new ProfileSettings({
+    fs,
+    utf8,
+    watcher: new NodeFileWatcher(),
+    configDir: paths.configDir,
+    profile: 'default',
+    parseGlobal: parseGlobalSettings,
+    parseProfile: parseProfileFile,
+  });
+  settings.onChange((current) => (nativeTheme.themeSource = current.themeMode));
+  settings.onNotices(reportSettingsNotices);
   // The launch's files open in the first main window; files from later launches aren't opened yet.
   let pendingFiles = [...files];
 
@@ -111,8 +129,11 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     reportColdStart(window, { document: opensDocument });
   };
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     perfMark('app-ready');
+    await settings.start();
+    nativeTheme.themeSource = settings.current.themeMode;
+    reportSettingsNotices(settings.notices);
     hardenWebContents();
     if (lockdown.guard) {
       installNetworkGuard(
@@ -165,6 +186,15 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       openWindow: openMainWindowIfNone,
     });
   });
+}
+
+/**
+ * Config files galeo can't use are left untouched (SR-17). Until windows can show the notice,
+ * main logs it; unpackaged test runs read the latest list as `globalThis.__galeoSettingsNotices`.
+ */
+function reportSettingsNotices(notices: readonly SettingsNotice[]): void {
+  for (const notice of notices) console.warn(`galeo: ${notice.path} left untouched (${notice.reason}): ${notice.detail ?? ''}`);
+  if (!app.isPackaged) (globalThis as { __galeoSettingsNotices?: readonly SettingsNotice[] }).__galeoSettingsNotices = notices;
 }
 
 /** Asks, in a native dialog the page can't answer for itself, whether a burst of opens may go on. */

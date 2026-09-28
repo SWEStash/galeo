@@ -35,4 +35,8 @@ export interface FileSystem {
   realpath(path: string): Promise<string>;
   /** Streams one directory's entries without following symlinks; callers bound the walk. */
   readDir(path: string): AsyncIterable<DirEntry>;
+  /** Creates the directory and missing parents; the created ones and the target end up with `mode`. */
+  mkdir(path: string, options: { mode: number }): Promise<void>;
+  /** Replaces the file whole or not at all (temp file, fsync, rename), leaving it with `mode`. */
+  writeFileAtomic(path: string, data: Uint8Array, options: { mode: number }): Promise<void>;
 }

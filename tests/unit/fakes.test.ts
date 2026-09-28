@@ -80,6 +80,18 @@ describe('FakeFileSystem', () => {
     ]);
   });
 
+  it('creates directories and writes files with modes, refusing a missing parent', async () => {
+    const fs = new FakeFileSystem();
+    await expect(fs.writeFileAtomic('/cfg/s.json', text('{}'), { mode: 0o600 })).rejects.toMatchObject({ code: 'ENOENT' });
+    await fs.mkdir('/cfg', { mode: 0o700 });
+    await fs.writeFileAtomic('/cfg/s.json', text('{}'), { mode: 0o600 });
+    expect(await fs.stat('/cfg')).toMatchObject({ kind: 'directory' });
+    expect(new TextDecoder().decode(await fs.readFile('/cfg/s.json', { maxBytes: 10 }))).toBe('{}');
+    expect([fs.modeOf('/cfg'), fs.modeOf('/cfg/s.json'), fs.modeOf('/nope')]).toEqual([0o700, 0o600, undefined]);
+    fs.failWith('/cfg/s.json', 'EACCES');
+    await expect(fs.writeFileAtomic('/cfg/s.json', text('x'), { mode: 0o600 })).rejects.toMatchObject({ code: 'EACCES' });
+  });
+
   it('resolves registered symlinks in realpath', async () => {
     const fs = new FakeFileSystem({ '/real/a.md': 'a' });
     fs.symlink('/link', '/real');

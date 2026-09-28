@@ -16,7 +16,8 @@ test("Chromium's data goes to the state and cache directories, not config", asyn
     expect(existsSync(path.join(home, 'state', 'galeo', 'chromium'))).toBe(true);
     expect(existsSync(path.join(home, 'cache', 'galeo'))).toBe(true);
     const config = path.join(home, 'config', 'galeo');
-    expect(existsSync(config) ? readdirSync(config) : []).toEqual([]);
+    // Only galeo's own profile folders; nothing of Chromium's.
+    expect(readdirSync(config)).toEqual(['profiles']);
   } finally {
     await close();
   }

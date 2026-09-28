@@ -5,7 +5,7 @@ export interface WatchEvent {
   kind: 'change' | 'rename' | 'delete';
 }
 
-/** Watches individual open files; events arrive coalesced and rate-capped. */
+/** Watches individual files. One save can arrive as several events; listeners re-read idempotently. */
 export interface FileWatcher {
   watch(path: string, listener: (event: WatchEvent) => void): Unsubscribe;
 }

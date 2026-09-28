@@ -14,6 +14,8 @@ export class FakeFileSystem implements FileSystem {
   private readonly files = new Map<string, Uint8Array>();
   private readonly links = new Map<string, string>();
   private readonly failures = new Map<string, FsErrorCode>();
+  private readonly directories = new Set<string>();
+  private readonly modes = new Map<string, number>();
 
   constructor(files: Record<string, string | Uint8Array> = {}) {
     for (const [path, content] of Object.entries(files)) this.write(path, content);
@@ -76,6 +78,30 @@ export class FakeFileSystem implements FileSystem {
     yield* [...entries.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  async mkdir(path: string, { mode }: { mode: number }): Promise<void> {
+    this.throwIfFailing(path);
+    if (this.files.has(path)) throw new FsError('ENOTDIR', path);
+    for (let dir = path; dir !== '/' && dir !== ''; dir = dir.slice(0, dir.lastIndexOf('/'))) {
+      if (!this.directories.has(dir)) this.modes.set(dir, mode);
+      this.directories.add(dir);
+    }
+    this.modes.set(path, mode);
+  }
+
+  async writeFileAtomic(path: string, data: Uint8Array, { mode }: { mode: number }): Promise<void> {
+    this.throwIfFailing(path);
+    const parent = path.slice(0, path.lastIndexOf('/'));
+    if (parent && !this.isDirectory(parent)) throw new FsError('ENOENT', path);
+    if (this.isDirectory(path)) throw new FsError('EISDIR', path);
+    this.files.set(path, data.slice());
+    this.modes.set(path, mode);
+  }
+
+  /** The mode a directory or file was last created or written with. */
+  modeOf(path: string): number | undefined {
+    return this.modes.get(path);
+  }
+
   private throwIfFailing(path: string): void {
     const code = this.failures.get(path);
     if (code) throw new FsError(code, path);
@@ -89,6 +115,7 @@ export class FakeFileSystem implements FileSystem {
   }
 
   private isDirectory(path: string): boolean {
+    if (this.directories.has(path)) return true;
     const prefix = `${path}/`;
     return [...this.files.keys()].some((file) => file.startsWith(prefix));
   }

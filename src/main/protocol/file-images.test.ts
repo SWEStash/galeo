@@ -28,6 +28,12 @@ describe('serveImage', () => {
     },
     realpath: async (path) => path,
     async *readDir() {},
+    mkdir: async () => {
+      throw new Error('unused');
+    },
+    writeFileAtomic: async () => {
+      throw new Error('unused');
+    },
     readFile: async (path, { maxBytes }) => {
       const file = files[path];
       if (file === 'toobig') throw new FsError('ETOOBIG', path);
