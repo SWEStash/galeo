@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DocumentLinks } from '../../../src/core/documents/links';
-import { DocumentRecords } from '../../../src/core/documents/records';
+import { TabRegistry } from '../../../src/core/tabs/registry';
 import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
 import { extractReferences, type References } from '../../../src/shared/markdown/references';
 import { ImageGrants, IMAGE_MAX_BYTES } from '../../../src/core/documents/images';
@@ -16,7 +16,7 @@ const DOC = [
 function setup(options: { burst?: boolean; references?: (text: string) => References } = {}) {
   const clock = new FakeClock(1_000_000);
   let n = 0;
-  const records = new DocumentRecords(() => `id-${++n}`);
+  const records = new TabRegistry(() => `id-${++n}`);
   const tasks = new FakeTaskRunner({ references: (text) => (options.references ?? extractReferences)(text as string) });
   const shell = new FakeOsShell();
   const fs = new FakeFileSystem({

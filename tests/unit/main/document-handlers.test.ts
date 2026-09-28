@@ -2,7 +2,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ImageGrants } from '../../../src/core/documents/images';
 import { DocumentLinks } from '../../../src/core/documents/links';
-import { DocumentRecords } from '../../../src/core/documents/records';
+import { TabRegistry } from '../../../src/core/tabs/registry';
 import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
 import type { Decode } from '../../../src/core/text/decode';
 import { documentHandlers } from '../../../src/main/documents/handlers';
@@ -33,7 +33,7 @@ class SlowFileSystem extends FakeFileSystem {
 function setup(files: Record<string, string>, slow = '') {
   const fs = new SlowFileSystem(files, slow);
   let n = 0;
-  const records = new DocumentRecords(() => `id-${++n}`);
+  const records = new TabRegistry(() => `id-${++n}`);
   const links = new DocumentLinks({
     records,
     fs,

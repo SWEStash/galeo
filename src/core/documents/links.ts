@@ -4,13 +4,13 @@ import { classifyLink, type LinkContext } from '../links/classify';
 import type { ExternalOpenLimiter } from '../links/limiter';
 import { FsError, type FileSystem, type OsShell, type TaskRunner } from '../ports';
 import { IMAGE_MAX_BYTES, imageTypeOf, type ImageGrants } from './images';
-import type { DocumentRecords, HistoryEntry } from './records';
+import type { HistoryEntry, TabRegistry } from '../tabs/registry';
 
 /** Extraction runs in a worker thread; hostile Markdown gets this long before it's abandoned. */
 const REFERENCES_TIMEOUT_MS = 2000;
 
 export interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
-  records: DocumentRecords;
+  records: TabRegistry;
   fs: FileSystem;
   images: ImageGrants;
   /** Runs the `references` task (the shared extractor) off the main thread. */
@@ -125,7 +125,7 @@ export class DocumentLinks {
     return { kind: 'external' };
   }
 
-  private step(id: string, window: number, move: (records: DocumentRecords) => HistoryEntry | null): HistoryResult {
+  private step(id: string, window: number, move: (records: TabRegistry) => HistoryEntry | null): HistoryResult {
     const before = this.deps.records.get(id, window)?.path;
     const entry = move(this.deps.records);
     if (!entry) return { kind: 'none' };

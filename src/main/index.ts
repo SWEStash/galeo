@@ -4,7 +4,7 @@ import path from 'node:path';
 import { parseArgv } from '../core/argv';
 import { ImageGrants } from '../core/documents/images';
 import { DocumentLinks } from '../core/documents/links';
-import { DocumentRecords } from '../core/documents/records';
+import { TabRegistry } from '../core/tabs/registry';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import type { OsShell } from '../core/ports';
 import { startupMode, type StartupMode } from '../core/startup';
@@ -68,7 +68,7 @@ if (!parsed.ok) {
 function start(initialMode: StartupMode, files: readonly string[]): void {
   let mode = initialMode;
   let choiceWindow: BrowserWindow | undefined;
-  const documents = new DocumentRecords(randomUUID);
+  const documents = new TabRegistry(randomUUID);
   const fs = new NodeFileSystem();
   const images = new ImageGrants(randomUUID);
   const links = new DocumentLinks({

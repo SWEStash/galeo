@@ -136,9 +136,15 @@ export function fakeAppPaths(root = '/home/test'): AppPaths {
 }
 
 export class FakeSystemMetrics implements SystemMetrics {
-  samples = new Map<WindowId, number>();
+  samples = new Map<number, number>();
+  /** The next sample rejects, as a failed metrics call would. */
+  failNext = false;
 
-  async sampleWindowMemory(): Promise<ReadonlyMap<WindowId, number>> {
+  async sampleWindowMemory(): Promise<ReadonlyMap<number, number>> {
+    if (this.failNext) {
+      this.failNext = false;
+      throw new Error('sample failed');
+    }
     return new Map(this.samples);
   }
 }

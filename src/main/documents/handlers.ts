@@ -1,7 +1,7 @@
 import type { DocumentLinks } from '../../core/documents/links';
 import { MARKDOWN_RENDER_MAX_BYTES } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
-import type { DocumentRecords } from '../../core/documents/records';
+import type { TabRegistry } from '../../core/tabs/registry';
 import type { FileSystem } from '../../core/ports';
 import type { Decode } from '../../core/text/decode';
 import type { DocumentContent } from '../../shared/documents';
@@ -20,7 +20,7 @@ type DocumentChannels =
  * window; reads go through main's records, links through main's own check (SR-04, SR-12).
  */
 export function documentHandlers(deps: {
-  records: DocumentRecords;
+  records: TabRegistry;
   links: DocumentLinks;
   fs: FileSystem;
   decode: Decode;
