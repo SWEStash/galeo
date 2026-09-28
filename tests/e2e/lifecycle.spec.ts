@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
@@ -29,8 +29,8 @@ test('keeps three tabs warm besides the shown one, and hibernates the least rece
 test('a hibernated tab wakes where the reader left it, with no visible jump', async () => {
   // No warm tabs: switching away hibernates the tab at once.
   const home = tempHome();
-  mkdirSync(path.join(home, 'config', 'galeo'), { recursive: true });
-  writeFileSync(path.join(home, 'config', 'galeo', 'settings.json'), '{"schemaVersion":1,"warmTabs":0}');
+  mkdirSync(appDirs(home).config, { recursive: true });
+  writeFileSync(path.join(appDirs(home).config, 'settings.json'), '{"schemaVersion":1,"warmTabs":0}');
   const { window, close } = await launchApp(['--', plan, path.join(docs, 'basic.md')], { home });
   try {
     const view = shownDocument(window);

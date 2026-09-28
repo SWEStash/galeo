@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, tempHome } from '../helpers/launch';
 import { checkBudget, summarize } from './stats';
 
 const RUNS = 10;
@@ -33,8 +33,8 @@ function switchTab(page: Page): Promise<{ ms: number; target: number }> {
 
 async function measure(warmTabs: number): Promise<number[]> {
   const home = tempHome();
-  mkdirSync(path.join(home, 'config', 'galeo'), { recursive: true });
-  writeFileSync(path.join(home, 'config', 'galeo', 'settings.json'), JSON.stringify({ schemaVersion: 1, warmTabs }));
+  mkdirSync(appDirs(home).config, { recursive: true });
+  writeFileSync(path.join(appDirs(home).config, 'settings.json'), JSON.stringify({ schemaVersion: 1, warmTabs }));
   const { window, close } = await launchApp(['--', ...FILES], { home });
   try {
     await expect(window.getByTestId('tab-panel')).toHaveCount(2);

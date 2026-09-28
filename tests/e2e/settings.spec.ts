@@ -1,11 +1,11 @@
 import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, tempHome } from '../helpers/launch';
 
 function withSettings(content: string) {
   const home = tempHome();
-  const file = path.join(home, 'config', 'galeo', 'settings.json');
+  const file = path.join(appDirs(home).config, 'settings.json');
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, content);
   return { home, file, remove: () => rmSync(home, { recursive: true, force: true }) };
@@ -48,8 +48,9 @@ test('the config, state and cache folders are owner-only', async () => {
   test.skip(process.platform === 'win32', 'POSIX modes');
   const { home, close } = await launchApp();
   try {
-    for (const dir of ['config/galeo', 'state/galeo', 'cache/galeo', 'config/galeo/profiles/default']) {
-      expect(statSync(path.join(home, dir)).mode & 0o777, dir).toBe(0o700);
+    const dirs = appDirs(home);
+    for (const dir of [dirs.config, dirs.state, dirs.cache, path.join(dirs.config, 'profiles', 'default')]) {
+      expect(statSync(dir).mode & 0o777, dir).toBe(0o700);
     }
   } finally {
     await close();

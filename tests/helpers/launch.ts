@@ -20,6 +20,19 @@ export interface LaunchOptions {
   home?: string;
 }
 
+/**
+ * The app's folders under a test home: XDG on Linux; on macOS and Windows the app moves its app
+ * data under the home itself (`GALEO_TEST_HOME`, unpackaged runs only).
+ */
+export function appDirs(home: string): { config: string; state: string; cache: string } {
+  if (process.platform === 'linux') {
+    return { config: path.join(home, 'config', 'galeo'), state: path.join(home, 'state', 'galeo'), cache: path.join(home, 'cache', 'galeo') };
+  }
+  const config = path.join(home, 'AppData', 'galeo');
+  const cache = process.platform === 'win32' ? path.join(home, 'Local', 'galeo', 'Cache') : path.join(home, 'Library', 'Caches', 'galeo');
+  return { config, state: path.join(config, 'State'), cache };
+}
+
 /** A fresh isolated home, for tests that write config first or restart the app on the same one. */
 export function tempHome(): string {
   return mkdtempSync(path.join(tmpdir(), 'galeo-e2e-'));
@@ -49,6 +62,7 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
         XDG_CONFIG_HOME: path.join(home, 'config'),
         XDG_STATE_HOME: path.join(home, 'state'),
         XDG_CACHE_HOME: path.join(home, 'cache'),
+        GALEO_TEST_HOME: home,
         ...options.env,
       },
     });

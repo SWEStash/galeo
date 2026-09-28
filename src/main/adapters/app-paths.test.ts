@@ -2,7 +2,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
-import { createPrivateDirs, resolveAppPaths } from './app-paths';
+import { createPrivateDirs, resolveAppPaths, withTestHome } from './app-paths';
 
 describe('resolveAppPaths', () => {
   it('uses the XDG base directories on Linux', () => {
@@ -55,5 +55,21 @@ describe.runIf(process.platform !== 'win32')('createPrivateDirs', () => {
     createPrivateDirs(paths);
     for (const dir of Object.values(paths)) expect(statSync(dir).mode & 0o777).toBe(0o700);
     expect(statSync(path.join(root, 'c')).isDirectory()).toBe(true);
+  });
+});
+
+describe('withTestHome', () => {
+  const base = { platform: 'darwin' as const, env: { GALEO_TEST_HOME: '/tmp/t' }, home: '/Users/me', appData: '/Users/me/Library/Application Support' };
+
+  it('puts every folder under the test home in unpackaged runs, on the platforms that ignore XDG', () => {
+    const mac = resolveAppPaths(withTestHome(base, { isPackaged: false }));
+    expect(Object.values(mac).every((dir) => dir.startsWith('/tmp/t/'))).toBe(true);
+    const windows = resolveAppPaths(withTestHome({ ...base, platform: 'win32', env: { GALEO_TEST_HOME: 'C:\\t', LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local' } }, { isPackaged: false }));
+    expect(Object.values(windows).every((dir) => dir.startsWith('C:\\t\\'))).toBe(true);
+  });
+
+  it('is ignored by packaged builds, and when unset', () => {
+    expect(withTestHome(base, { isPackaged: true })).toEqual(base);
+    expect(withTestHome({ ...base, env: {} }, { isPackaged: false })).toEqual({ ...base, env: {} });
   });
 });

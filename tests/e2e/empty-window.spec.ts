@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const basic = path.join(docs, 'basic.md');
@@ -63,7 +63,7 @@ test('Clear recent empties the list, on disk too', async () => {
       const empty = app.window.getByTestId('empty-window');
       await empty.getByRole('button', { name: 'Clear recent' }).click();
       await expect(empty.getByRole('button', { name: /basic\.md/ })).toHaveCount(0);
-      const recent = path.join(home, 'state', 'galeo', 'profiles', 'default', 'recent.json');
+      const recent = path.join(appDirs(home).state, 'profiles', 'default', 'recent.json');
       await expect.poll(() => JSON.parse(readFileSync(recent, 'utf8')).files).toEqual([]);
     } finally {
       await app.close();

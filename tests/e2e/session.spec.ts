@@ -1,14 +1,14 @@
 import { existsSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
 const basic = path.join(docs, 'basic.md');
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const selected = (window: Page) => window.getByRole('tab', { selected: true });
-const stateFile = (home: string, name: string) => path.join(home, 'state', 'galeo', 'profiles', 'default', name);
+const stateFile = (home: string, name: string) => path.join(appDirs(home).state, 'profiles', 'default', name);
 
 /** Waits until the session on disk names every path (the 2 s save after the last change). */
 async function sessionNames(home: string, paths: string[]) {

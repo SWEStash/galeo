@@ -21,7 +21,7 @@ import type { EventName, Events } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
-import { createPrivateDirs, resolveAppPaths } from './adapters/app-paths';
+import { createPrivateDirs, resolveAppPaths, withTestHome } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
 import { NodeFileWatcher } from './adapters/file-watcher';
 import { electronSystemMetrics } from './adapters/system-metrics';
@@ -77,12 +77,12 @@ const parsed = parseArgv(launch.argv, {
 
 // Chromium's own data follows the app's directories (ADR-005). This must happen before the
 // single-instance lock, which lives in `userData`.
-const paths = resolveAppPaths({
-  platform: process.platform,
-  env: process.env,
-  home: app.getPath('home'),
-  appData: app.getPath('appData'),
-});
+const paths = resolveAppPaths(
+  withTestHome(
+    { platform: process.platform, env: process.env, home: app.getPath('home'), appData: app.getPath('appData') },
+    { isPackaged: app.isPackaged },
+  ),
+);
 createPrivateDirs(paths);
 app.setPath('userData', path.join(paths.stateDir, 'chromium'));
 app.setPath('sessionData', paths.cacheDir);

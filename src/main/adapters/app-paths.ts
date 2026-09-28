@@ -17,6 +17,17 @@ function xdg(value: string | undefined, fallback: string): string {
   return value && path.posix.isAbsolute(value) ? value : fallback;
 }
 
+/**
+ * Unpackaged test runs isolate each launch under `GALEO_TEST_HOME`. Linux tests use the XDG variables;
+ * macOS and Windows ignore those, so there the home, app data and local app data move instead.
+ */
+export function withTestHome(context: Context, { isPackaged }: { isPackaged: boolean }): Context {
+  const home = context.env['GALEO_TEST_HOME'];
+  if (isPackaged || !home || context.platform === 'linux') return context;
+  const { join } = context.platform === 'win32' ? path.win32 : path.posix;
+  return { ...context, home, appData: join(home, 'AppData'), env: { ...context.env, LOCALAPPDATA: join(home, 'Local') } };
+}
+
 /** Config, state and cache directories per platform (ADR-005). */
 export function resolveAppPaths({ platform, env, home, appData }: Context): AppPaths {
   if (platform === 'win32') {
