@@ -1,10 +1,14 @@
 import type { DocumentRecord } from '../../shared/documents';
-import type { TabSnapshot } from '../../shared/tabs';
+import type { ScrollAnchor, TabSnapshot } from '../../shared/tabs';
 
-/** A place in a tab's history: a file, and where in it (an anchor, or the top). */
+/**
+ * A place in a tab's history: a file, where a link pointed in it (an anchor, or the top), and
+ * where the reader last was, once the window has said.
+ */
 export interface HistoryEntry {
   path: string;
   anchor: string | null;
+  position?: ScrollAnchor;
 }
 
 interface Stored {
@@ -110,6 +114,19 @@ export class TabRegistry {
     record.index = record.entries.length - 1;
     this.changed(window);
     return true;
+  }
+
+  /** Where the reader is in the tab's current entry. Not a change: no revision, no snapshot. */
+  setPosition(id: string, window: number, position: ScrollAnchor): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    record.entries[record.index]!.position = position;
+    return true;
+  }
+
+  position(id: string, window: number): ScrollAnchor | null {
+    const record = this.owned(id, window);
+    return record?.entries[record.index]!.position ?? null;
   }
 
   back(id: string, window: number): HistoryEntry | null {

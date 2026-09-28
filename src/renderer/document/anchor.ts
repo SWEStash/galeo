@@ -1,5 +1,6 @@
 // Mapping reading positions between the rendered view and the source view through the
-// `data-src-line` of rendered blocks (ADR-003).
+// `data-src-line` of rendered blocks (ADR-003), and keeping a tab's place across re-renders (ADR-002).
+import type { ScrollAnchor } from '../../shared/tabs';
 
 export interface BlockBox {
   line: number;
@@ -23,4 +24,42 @@ export function blockAtOrBefore(lines: readonly number[], line: number): number 
     if (start <= line && (best === -1 || start >= lines[best]!)) best = index;
   });
   return best === -1 && lines.length > 0 ? 0 : best;
+}
+
+/** A rendered block in scroll-content coordinates; `heading` is its id when it is a heading. */
+export interface PlacedBlock extends BlockBox {
+  heading: string | null;
+}
+
+/** The scroll container: how far down it is, how tall its content, how tall its viewport. */
+export interface ScrollState {
+  top: number;
+  height: number;
+  viewport: number;
+}
+
+/** Where the reader is (ADR-002 scroll anchor), from the blocks in document order. */
+export function anchorAt(blocks: readonly PlacedBlock[], scroll: ScrollState): ScrollAnchor {
+  const block = blocks.find((each) => each.bottom > scroll.top) ?? blocks.at(-1);
+  const heading = blocks.filter((each) => each.heading !== null && each.top <= scroll.top).at(-1)?.heading ?? null;
+  const range = scroll.height - scroll.viewport;
+  return {
+    line: block?.line ?? 1,
+    offset: block ? scroll.top - block.top : 0,
+    heading,
+    fraction: range > 0 ? Math.min(1, Math.max(0, scroll.top / range)) : 0,
+  };
+}
+
+/** Where to scroll to be back at `anchor`: its block, else its heading, else as far down. */
+export function scrollTopFor(
+  anchor: ScrollAnchor,
+  blocks: readonly PlacedBlock[],
+  size: Omit<ScrollState, 'top'>,
+): number {
+  const block = blocks.find((each) => each.line === anchor.line);
+  if (block) return block.top + Math.min(anchor.offset, block.bottom - block.top);
+  const heading = anchor.heading && blocks.find((each) => each.heading === anchor.heading);
+  if (heading) return heading.top;
+  return anchor.fraction * Math.max(0, size.height - size.viewport);
 }

@@ -4,9 +4,9 @@
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult } from '../documents';
 import type { Platform } from '../keymap';
 import type { Settings, SettingsNotice } from '../settings';
-import type { TabSnapshot } from '../tabs';
+import type { ScrollAnchor, TabSnapshot } from '../tabs';
 
-export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, TabSnapshot };
+export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
 
 /** The window's resolved settings, and the config files it couldn't use (SR-17). */
 export interface SettingsState {
@@ -42,6 +42,8 @@ export const CHANNELS = [
   'documents.resolveImage',
   'tabs.snapshot',
   'tabs.activated',
+  'tabs.rendered',
+  'tabs.position',
   'tabs.close',
   'tabs.reopenClosed',
   'tabs.move',
@@ -66,6 +68,10 @@ export interface Requests {
   'tabs.snapshot': [];
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
   'tabs.activated': [id: string];
+  /** How much the tab's rendered content weighs (UTF-16 bytes of its HTML or text), for the warm budget. */
+  'tabs.rendered': [id: string, weight: number];
+  /** Where the reader is in the tab, reported after scrolling settles. */
+  'tabs.position': [id: string, position: ScrollAnchor];
   'tabs.close': [id: string];
   /** Brings back the window's most recently closed tab. */
   'tabs.reopenClosed': [];
@@ -85,6 +91,8 @@ export interface Responses {
   'documents.resolveImage': ImageResult;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
+  'tabs.rendered': void;
+  'tabs.position': void;
   'tabs.close': void;
   /** The reopened tab's id, or null when none was closed. */
   'tabs.reopenClosed': string | null;
@@ -93,7 +101,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'settings.changed'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -101,6 +109,10 @@ export type EventName = (typeof EVENTS)[number];
 export interface Events {
   /** The window's tabs changed; a snapshot with a higher revision replaces the one before. */
   'tabs.changed': TabSnapshot;
+  /** Hibernate these tabs: drop their rendered content, keep their place (ADR-002). */
+  'tabs.demote': string[];
+  /** The tab's file changed since the read it shows; read it again. */
+  'tabs.stale': string;
   'settings.changed': SettingsState;
 }
 

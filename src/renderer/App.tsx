@@ -80,6 +80,9 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
             <TabDocument
               id={tab.id}
               active={tab.id === view.active}
+              rendered={view.rendered.has(tab.id)}
+              staleReads={view.reads.get(tab.id) ?? 0}
+              store={store}
               client={client}
               platform={platform}
               scheme={scheme}

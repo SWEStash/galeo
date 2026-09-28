@@ -11,19 +11,30 @@ const snapshot = (revision: number, ids: string[], active: string | null = null)
 
 function setup(initial: TabSnapshot) {
   let push: (snapshot: TabSnapshot) => void = () => {};
+  let demote: (ids: string[]) => void = () => {};
+  let stale: (id: string) => void = () => {};
   const api = {
     snapshot: vi.fn().mockResolvedValue(initial),
     activated: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
     move: vi.fn().mockResolvedValue(undefined),
     reopenClosed: vi.fn().mockResolvedValue(undefined),
+    position: vi.fn().mockResolvedValue(undefined),
     onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
       push = listener;
       return () => {};
     }),
+    onDemote: vi.fn((listener: (ids: string[]) => void) => {
+      demote = listener;
+      return () => {};
+    }),
+    onStale: vi.fn((listener: (id: string) => void) => {
+      stale = listener;
+      return () => {};
+    }),
   };
   const store = createTabStore(api);
-  return { api, store, push: (next: TabSnapshot) => push(next) };
+  return { api, store, push: (next: TabSnapshot) => push(next), demote: (ids: string[]) => demote(ids), stale: (id: string) => stale(id) };
 }
 
 describe('createTabStore', () => {
@@ -131,5 +142,39 @@ describe('createTabStore', () => {
     store.reopenClosed();
     await vi.waitFor(() => expect(store.getSnapshot().active).toBe('c'));
     expect(api.activated).toHaveBeenLastCalledWith('c');
+  });
+
+  it('renders a tab once it is shown, and keeps it rendered until main hibernates it', async () => {
+    const { store, push, demote } = setup(snapshot(1, ['a', 'b', 'c'], 'a'));
+    await store.start();
+    expect(store.getSnapshot().rendered).toEqual(new Set(['a']));
+    store.activate('b');
+    store.activate('c');
+    expect(store.getSnapshot().rendered).toEqual(new Set(['a', 'b', 'c']));
+    demote(['a', 'c']);
+    expect(store.getSnapshot().rendered).toEqual(new Set(['b', 'c']));
+    push(snapshot(2, ['c'], 'c'));
+    expect(store.getSnapshot().rendered).toEqual(new Set(['c']));
+  });
+
+  it('counts the times main said a tab went stale, so it reads again', async () => {
+    const { store, stale } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    expect(store.getSnapshot().reads.get('a') ?? 0).toBe(0);
+    stale('a');
+    stale('a');
+    stale('nope');
+    expect(store.getSnapshot().reads.get('a')).toBe(2);
+    expect(store.getSnapshot().reads.has('nope')).toBe(false);
+  });
+
+  it("keeps each tab's last position here, and reports it to main", async () => {
+    const { store, api } = setup(snapshot(1, ['a'], 'a'));
+    await store.start();
+    const where = { line: 7, offset: 2, heading: null, fraction: 0.4 };
+    expect(store.positionOf('a')).toBeNull();
+    store.moved('a', where);
+    expect(store.positionOf('a')).toEqual(where);
+    expect(api.position).toHaveBeenCalledWith('a', where);
   });
 });

@@ -1,15 +1,22 @@
 import type { GaleoApi } from '../../shared/contracts';
 import type { DocumentRecord } from '../../shared/documents';
-import type { TabSnapshot } from '../../shared/tabs';
+import type { ScrollAnchor, TabSnapshot } from '../../shared/tabs';
 
 export interface TabsView {
   revision: number;
   tabs: DocumentRecord[];
   /** The tab this window shows; the window decides it and tells main (ADR-002). */
   active: string | null;
+  /** Tabs with rendered content: the active one and the warm ones. The rest are hibernated. */
+  rendered: ReadonlySet<string>;
+  /** How many times main said a tab's file changed; each one reads it again. */
+  reads: ReadonlyMap<string, number>;
 }
 
-export type TabsApi = Pick<GaleoApi['tabs'], 'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'onChanged'>;
+export type TabsApi = Pick<
+  GaleoApi['tabs'],
+  'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'position' | 'onChanged' | 'onDemote' | 'onStale'
+>;
 
 export interface TabStore {
   subscribe(listener: () => void): () => void;
@@ -21,6 +28,9 @@ export interface TabStore {
   /** Main owns the order: the new order shows once its snapshot arrives. */
   move(id: string, position: number): void;
   reopenClosed(): void;
+  /** The reader scrolled a tab: kept here for its next wake, and reported to main for history and sessions. */
+  moved(id: string, position: ScrollAnchor): void;
+  positionOf(id: string): ScrollAnchor | null;
 }
 
 /**
@@ -29,19 +39,37 @@ export interface TabStore {
  * tab is active is decided here, at once, and reported afterwards.
  */
 export function createTabStore(api: TabsApi): TabStore {
-  let view: TabsView = { revision: -1, tabs: [], active: null };
+  let view: TabsView = { revision: -1, tabs: [], active: null, rendered: new Set(), reads: new Map() };
+  const positions = new Map<string, ScrollAnchor>();
   /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
   let wanted: string | null = null;
   const listeners = new Set<() => void>();
 
-  const set = (next: TabsView) => {
-    view = next;
+  const set = (next: Partial<TabsView>) => {
+    const merged = { ...view, ...next };
+    // Rendered tabs and read counts only name tabs that still exist; the active one is always rendered.
+    const ids = new Set(merged.tabs.map((tab) => tab.id));
+    const rendered = new Set([...merged.rendered].filter((id) => ids.has(id)));
+    if (merged.active) rendered.add(merged.active);
+    view = { ...merged, rendered, reads: new Map([...merged.reads].filter(([id]) => ids.has(id))) };
+    for (const id of positions.keys()) if (!ids.has(id)) positions.delete(id);
     for (const listener of listeners) listener();
   };
 
   const activateLocally = (active: string | null, tabs: DocumentRecord[], revision: number) => {
     set({ revision, tabs, active });
     if (active) void api.activated(active);
+  };
+
+  const demote = (ids: string[]) => {
+    const rendered = new Set(view.rendered);
+    for (const id of ids) if (id !== view.active) rendered.delete(id);
+    set({ rendered });
+  };
+
+  const stale = (id: string) => {
+    if (!view.tabs.some((tab) => tab.id === id)) return;
+    set({ reads: new Map(view.reads).set(id, (view.reads.get(id) ?? 0) + 1) });
   };
 
   const apply = (snapshot: TabSnapshot) => {
@@ -52,7 +80,7 @@ export function createTabStore(api: TabsApi): TabStore {
       wanted = null;
       activateLocally(id, snapshot.tabs, snapshot.revision);
     } else if (view.active && ids.includes(view.active)) {
-      set({ revision: snapshot.revision, tabs: snapshot.tabs, active: view.active });
+      set({ revision: snapshot.revision, tabs: snapshot.tabs });
     } else if (snapshot.active && ids.includes(snapshot.active)) {
       set({ revision: snapshot.revision, tabs: snapshot.tabs, active: snapshot.active });
     } else {
@@ -71,6 +99,8 @@ export function createTabStore(api: TabsApi): TabStore {
     getSnapshot: () => view,
     async start() {
       api.onChanged(apply);
+      api.onDemote(demote);
+      api.onStale(stale);
       apply(await api.snapshot());
     },
     activate(id) {
@@ -89,6 +119,11 @@ export function createTabStore(api: TabsApi): TabStore {
     move(id, position) {
       void api.move(id, position);
     },
+    moved(id, position) {
+      positions.set(id, position);
+      void api.position(id, position);
+    },
+    positionOf: (id) => positions.get(id) ?? null,
     reopenClosed() {
       void api.reopenClosed().then((id) => {
         if (!id) return;

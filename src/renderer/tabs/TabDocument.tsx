@@ -2,10 +2,12 @@ import { useCallback, useState } from 'react';
 import type { FollowResult, HistoryResult } from '../../shared/contracts';
 import type { ImageResult, RefusalReason } from '../../shared/documents';
 import type { Platform } from '../../shared/keymap';
+import type { ScrollAnchor } from '../../shared/tabs';
 import { DocumentPane } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
 import { useDocument } from '../document/useDocument';
 import type { RenderClient } from '../worker/client';
+import type { TabStore } from './store';
 
 const REFUSALS: Record<RefusalReason, string> = {
   'not-in-document': "This link can't be opened",
@@ -21,16 +23,32 @@ const REFUSALS: Record<RefusalReason, string> = {
 export interface TabDocumentProps {
   id: string;
   active: boolean;
+  /** False while hibernated: nothing is read or kept (ADR-002). */
+  rendered: boolean;
+  /** Main's count of changes to the file; a new one reads it again. */
+  staleReads: number;
+  store: TabStore;
   client: RenderClient | null;
   platform: Platform;
   scheme: ColorScheme;
   onMessage: (message: string) => void;
 }
 
-/** One tab's content: its document, its links and history. */
-export function TabDocument({ id, active, client, platform, scheme, onMessage }: TabDocumentProps) {
-  const { document, reload } = useDocument(id);
-  // Where to scroll, and in which read of the document: after a navigation, the next one.
+/** One tab's content. A hibernated tab has none; it's read and rendered again when shown. */
+export function TabDocument(props: TabDocumentProps) {
+  return props.rendered ? <LiveTab {...props} /> : null;
+}
+
+/** Where the next read lands after a navigation: a history entry's place, or null for the top. */
+interface Arrival {
+  generation: number;
+  position: ScrollAnchor | null;
+}
+
+function LiveTab({ id, active, staleReads, store, client, platform, scheme, onMessage }: TabDocumentProps) {
+  const { document, reload } = useDocument(id, staleReads);
+  const [arrival, setArrival] = useState<Arrival | null>(null);
+  // An anchor within the current read (a link or a history step inside the document).
   const [pendingAnchor, setPendingAnchor] = useState<{ anchor: string; token: number; generation: number } | null>(
     null,
   );
@@ -40,7 +58,9 @@ export function TabDocument({ id, active, client, platform, scheme, onMessage }:
     (result: FollowResult | HistoryResult) => {
       if (result.kind === 'navigated') {
         reload();
-        setPendingAnchor(result.anchor ? { anchor: result.anchor, token: Date.now(), generation: generation + 1 } : null);
+        const position = 'position' in result ? result.position : null;
+        setArrival({ generation: generation + 1, position });
+        setPendingAnchor(result.anchor && !position ? { anchor: result.anchor, token: Date.now(), generation: generation + 1 } : null);
       } else if (result.kind === 'anchor') {
         setPendingAnchor({ anchor: result.anchor, token: Date.now(), generation });
       } else if (result.kind === 'refused') {
@@ -69,23 +89,28 @@ export function TabDocument({ id, active, client, platform, scheme, onMessage }:
     [id, moved],
   );
 
+  const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
+  const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
+
+  if (!document) return null;
+  // A navigation lands where its entry says (or at the top); a wake or a re-read stays put.
+  const initialPosition = arrival?.generation === document.generation ? arrival.position : store.positionOf(id);
   return (
-    <>
-      {document && (
-        <DocumentPane
-          key={`${id}:${document.generation}`}
-          content={document.content}
-          client={client}
-          platform={platform}
-          scheme={scheme}
-          active={active}
-          pendingAnchor={pendingAnchor?.generation === document.generation ? pendingAnchor : null}
-          onAnchorShown={() => setPendingAnchor(null)}
-          onLink={followLink}
-          onResolveImage={resolveImage}
-          onHistory={history}
-        />
-      )}
-    </>
+    <DocumentPane
+      key={`${id}:${document.generation}`}
+      content={document.content}
+      client={client}
+      platform={platform}
+      scheme={scheme}
+      active={active}
+      pendingAnchor={pendingAnchor?.generation === document.generation ? pendingAnchor : null}
+      onAnchorShown={() => setPendingAnchor(null)}
+      onLink={followLink}
+      onResolveImage={resolveImage}
+      onHistory={history}
+      initialPosition={initialPosition}
+      onPosition={onPosition}
+      onWeight={onWeight}
+    />
   );
 }

@@ -45,6 +45,32 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('tabs.rendered takes an id and a whole, bounded weight', () => {
+    expect(accepts('tabs.rendered', [ID, 0])).toBe(true);
+    expect(accepts('tabs.rendered', [ID, 2 ** 31])).toBe(true);
+    for (const bad of [[ID], [ID, -1], [ID, 0.5], [ID, 2 ** 31 + 1], [ID, '1'], [ID, 1, 'x']]) {
+      expect(accepts('tabs.rendered', bad)).toBe(false);
+    }
+  });
+
+  it('tabs.position takes an id and a scroll anchor with bounded fields and nothing else', () => {
+    const at = { line: 12, offset: -3.5, heading: 'user-content-goals', fraction: 0.25 };
+    expect(accepts('tabs.position', [ID, at])).toBe(true);
+    expect(accepts('tabs.position', [ID, { ...at, heading: null }])).toBe(true);
+    for (const bad of [
+      { ...at, line: 0 },
+      { ...at, line: 1.5 },
+      { ...at, offset: Number.POSITIVE_INFINITY },
+      { ...at, fraction: 1.01 },
+      { ...at, heading: '' },
+      { ...at, heading: 'x'.repeat(257) },
+      { ...at, extra: true },
+      { line: 1, offset: 0, fraction: 0 },
+    ]) {
+      expect(accepts('tabs.position', [ID, bad])).toBe(false);
+    }
+  });
+
   it.each(['tabs.snapshot', 'tabs.reopenClosed', 'settings.get'] as const)('%s takes nothing', (channel) => {
     expect(accepts(channel, [])).toBe(true);
     expect(accepts(channel, [ID])).toBe(false);

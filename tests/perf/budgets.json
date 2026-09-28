@@ -1,5 +1,7 @@
 {
-  "$comment": "PRD performance targets in milliseconds. GALEO_PERF_ENFORCE=1 (the release check, on the owner's machine) holds the median to these; other runs fail only above 3x.",
+  "$comment": "PRD performance targets in milliseconds. GALEO_PERF_ENFORCE=1 (the release check, on the owner's machine) holds the median to these; other runs fail only above 3x. warmSwitchMs is one frame at 60 Hz (the PRD's 'next frame').",
   "coldStartToFirstPaintMs": 500,
-  "coldStartToDocumentPaintMs": 500
+  "coldStartToDocumentPaintMs": 500,
+  "warmSwitchMs": 17,
+  "wakeMs": 150
 }

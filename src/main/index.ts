@@ -3,16 +3,21 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
 import { ImageGrants } from '../core/documents/images';
+import { ReadIdentities } from '../core/documents/identities';
 import { DocumentLinks } from '../core/documents/links';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import { ProfileSettings } from '../core/settings/profile-settings';
+import { WarmTabs } from '../core/tabs/lifecycle';
+import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry } from '../core/tabs/registry';
 import type { OsShell } from '../core/ports';
-import type { SettingsNotice } from '../shared/settings';
+import type { EventName, Events } from '../shared/contracts';
+import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
 import { createPrivateDirs, resolveAppPaths } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
 import { NodeFileWatcher } from './adapters/file-watcher';
+import { electronSystemMetrics } from './adapters/system-metrics';
 import { ElectronInstanceChannel } from './adapters/instance-channel';
 import { installAppLifecycle } from './adapters/lifecycle';
 import { systemClock } from './adapters/clock';
@@ -35,6 +40,15 @@ import { tabHandlers } from './tabs/handlers';
 import { createAppWindow } from './window/factory';
 import { applicationMenu } from './window/menu';
 import { ownArgs } from './window/policy';
+
+const MIB = 1024 * 1024;
+/** How often each window's renderer memory is sampled for pressure demotion. */
+const PRESSURE_INTERVAL_MS = 30_000;
+/**
+ * A window's renderer above this is under pressure. Generous until the performance pass sets it
+ * from the measured baseline plus headroom (ADR-002): it should catch runaway documents only.
+ */
+const PRESSURE_THRESHOLD_BYTES = 1536 * MIB;
 
 // Node's uptime starts with the process, before any of this module runs.
 perfMark('process-start', Date.now() - process.uptime() * 1000);
@@ -119,8 +133,28 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       sendEvent(window.webContents, 'settings.changed', { settings: settings.current, notices: settings.notices });
     }
   };
+  const warmLimits = (current: Settings) => ({ count: current.warmTabs, bytes: current.warmMegabytes * MIB });
+  const warm = new WarmTabs(warmLimits(settings.current));
+  const reads = new ReadIdentities(fs);
+  const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
+    const contents = webContents.fromId(windowId);
+    if (contents) sendEvent(contents, event, payload);
+  };
+  const demote = (windowId: number, ids: string[]) => sendTo(windowId, 'tabs.demote', ids);
+  // Memory pressure demotes one warm tab per sample, so a spike doesn't drop them all (ADR-002).
+  const pressure = new MemoryPressure({
+    clock: systemClock,
+    metrics: electronSystemMetrics,
+    intervalMs: PRESSURE_INTERVAL_MS,
+    thresholdBytes: PRESSURE_THRESHOLD_BYTES,
+    onPressure: (windowId) => {
+      const ids = warm.pressure(windowId);
+      if (ids.length > 0) demote(windowId, ids);
+    },
+  });
   settings.onChange((current) => {
     nativeTheme.themeSource = current.themeMode;
+    for (const [windowId, ids] of warm.setLimits(warmLimits(current))) demote(windowId, ids);
     broadcastSettings();
   });
   settings.onNotices((notices) => {
@@ -141,8 +175,12 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     for (const file of pendingFiles) documents.open(file, windowId);
     pendingFiles = [];
     window.on('closed', () => {
-      for (const tab of documents.list(windowId)) links.forget(tab.id);
+      for (const tab of documents.list(windowId)) {
+        links.forget(tab.id);
+        reads.forget(tab.id);
+      }
       documents.closeWindow(windowId);
+      warm.closeWindow(windowId);
       images.closeWindow(windowId);
     });
     perfMark('window-created');
@@ -155,6 +193,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     await settings.start();
     nativeTheme.themeSource = settings.current.themeMode;
+    warm.setLimits(warmLimits(settings.current));
+    pressure.start();
     reportSettingsNotices(settings.notices);
     hardenWebContents();
     if (lockdown.guard) {
@@ -187,11 +227,15 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           choiceWindow?.close();
         },
         'settings.get': () => ({ settings: settings.current, notices: settings.notices }),
-        ...documentHandlers({ records: documents, links, fs, decode: decodeWithPlatform }),
+        ...documentHandlers({ records: documents, links, reads, fs, decode: decodeWithPlatform }),
         ...tabHandlers({
           tabs: documents,
+          warm,
+          reads,
           resync: pushSnapshot,
           closed: (id) => links.forget(id),
+          demote,
+          stale: (windowId, id) => sendTo(windowId, 'tabs.stale', id),
         }),
       },
       trustedOrigins(runtime),

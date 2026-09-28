@@ -8,7 +8,11 @@ export type TabAction =
   | { kind: 'reopen' };
 
 /** What a tab shortcut does to this window's tabs (UX §5); null when it does nothing. */
-export function tabAction(command: Command, tabNumber: number | null, view: TabsView): TabAction | null {
+export function tabAction(
+  command: Command,
+  tabNumber: number | null,
+  view: Pick<TabsView, 'tabs' | 'active'>,
+): TabAction | null {
   if (command === 'reopenClosed') return { kind: 'reopen' };
   const { tabs, active } = view;
   const index = tabs.findIndex((tab) => tab.id === active);

@@ -7,3 +7,14 @@ export interface TabSnapshot {
   active: string | null;
   tabs: DocumentRecord[];
 }
+
+/**
+ * Where a tab is scrolled, as it survives a re-render (ADR-002): the first visible block's source
+ * line and how far into it, else the heading above it, else the fraction of the way down.
+ */
+export interface ScrollAnchor {
+  line: number;
+  offset: number;
+  heading: string | null;
+  fraction: number;
+}

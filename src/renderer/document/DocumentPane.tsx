@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DocumentContent } from '../../shared/contracts';
 import type { ImageResult, TextEncoding } from '../../shared/documents';
+import type { ScrollAnchor } from '../../shared/tabs';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { commandFor, type Platform } from '../../shared/keymap';
 import type { RenderClient } from '../worker/client';
@@ -41,6 +42,10 @@ export interface DocumentPaneProps {
   onLink: (href: string, options: { background: boolean }) => void;
   onResolveImage: (src: string) => Promise<ImageResult>;
   onHistory: (direction: 'back' | 'forward') => void;
+  /** Where to be once shown (a tab waking up, or back in its history). */
+  initialPosition?: ScrollAnchor | null;
+  onPosition?: (position: ScrollAnchor) => void;
+  onWeight?: (bytes: number) => void;
 }
 
 /**
@@ -58,6 +63,9 @@ export function DocumentPane({
   onLink,
   onResolveImage,
   onHistory,
+  initialPosition = null,
+  onPosition,
+  onWeight,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
   // The document's own opening view until the user toggles it.
@@ -171,6 +179,9 @@ export function DocumentPane({
         onLink={onLink}
         onResolveImage={onResolveImage}
         scheme={scheme}
+        initialPosition={initialPosition}
+        onPosition={onPosition}
+        onWeight={onWeight}
       />
     </>
   );

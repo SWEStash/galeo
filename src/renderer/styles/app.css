@@ -280,6 +280,10 @@ button:focus-visible {
   background: color-mix(in srgb, var(--galeo-color-focus) 15%, var(--galeo-color-bg));
 }
 
+.document-view[data-waking] {
+  visibility: hidden;
+}
+
 .document-view:focus-visible {
   outline: 2px solid var(--galeo-color-focus);
   outline-offset: -2px;

@@ -30,7 +30,18 @@ describe('buildApi', () => {
     expect(Object.keys(api)).toEqual(['app', 'documents', 'tabs', 'settings']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable']);
     expect(Object.keys(api.documents)).toEqual(['read', 'followLink', 'back', 'forward', 'resolveImage']);
-    expect(Object.keys(api.tabs)).toEqual(['snapshot', 'activated', 'close', 'reopenClosed', 'move', 'onChanged']);
+    expect(Object.keys(api.tabs)).toEqual([
+      'snapshot',
+      'activated',
+      'rendered',
+      'position',
+      'close',
+      'reopenClosed',
+      'move',
+      'onChanged',
+      'onDemote',
+      'onStale',
+    ]);
     expect(Object.keys(api.settings)).toEqual(['get', 'onChanged']);
   });
 });

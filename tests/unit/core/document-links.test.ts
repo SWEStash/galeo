@@ -61,7 +61,18 @@ describe('DocumentLinks.follow', () => {
     const { links, records, id } = setup();
     expect(await links.follow(id, 1, '#intro')).toEqual({ kind: 'anchor', anchor: 'intro' });
     expect(records.get(id, 1)?.path).toBe('/d/plan.md');
-    expect(await links.back(id, 1)).toEqual({ kind: 'anchor', anchor: '' });
+    expect(await links.back(id, 1)).toEqual({ kind: 'anchor', anchor: '', position: null });
+  });
+
+  it('goes back to where the reader was, not to the link that led there', async () => {
+    const { links, records, id } = setup();
+    const where = { line: 40, offset: 12, heading: 'user-content-scope', fraction: 0.3 };
+    records.setPosition(id, 1, where);
+    await links.follow(id, 1, 'next.md#scope');
+    expect(await links.back(id, 1)).toEqual({ kind: 'navigated', anchor: null, position: where });
+    await links.follow(id, 1, '#intro');
+    records.setPosition(id, 1, { ...where, line: 2 });
+    expect(await links.back(id, 1)).toEqual({ kind: 'anchor', anchor: '', position: where });
   });
 
   it('opens a linked file in a new tab behind the current one, leaving this tab where it is', async () => {
@@ -191,9 +202,9 @@ describe('DocumentLinks history', () => {
   it('goes back to the previous file and forward again', async () => {
     const { links, records, id } = setup();
     await links.follow(id, 1, 'next.md#scope');
-    expect(await links.back(id, 1)).toEqual({ kind: 'navigated', anchor: null });
+    expect(await links.back(id, 1)).toEqual({ kind: 'navigated', anchor: null, position: null });
     expect(records.get(id, 1)?.path).toBe('/d/plan.md');
-    expect(await links.forward(id, 1)).toEqual({ kind: 'navigated', anchor: 'scope' });
+    expect(await links.forward(id, 1)).toEqual({ kind: 'navigated', anchor: 'scope', position: null });
     expect(await links.forward(id, 1)).toEqual({ kind: 'none' });
   });
 

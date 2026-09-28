@@ -135,8 +135,9 @@ export class DocumentLinks {
     const before = this.deps.records.get(id, window)?.path;
     const entry = move(this.deps.records);
     if (!entry) return { kind: 'none' };
-    if (entry.path === before) return { kind: 'anchor', anchor: entry.anchor ?? '' };
-    return { kind: 'navigated', anchor: entry.anchor };
+    const position = entry.position ?? null;
+    if (entry.path === before) return { kind: 'anchor', anchor: entry.anchor ?? '', position };
+    return { kind: 'navigated', anchor: entry.anchor, position };
   }
 
   /** The document's record and references, as main read it; null if main hasn't read it. */

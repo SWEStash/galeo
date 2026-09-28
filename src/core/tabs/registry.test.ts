@@ -198,4 +198,22 @@ describe('TabRegistry', () => {
     tabs.navigate(id, 1, { path: '/d/b.md', anchor: null });
     expect(tabs.back(id, 1)).toEqual({ path: '/d/a.md', anchor: 'intro' });
   });
+
+  it('keeps the scroll position of each history entry, for back and forward', () => {
+    const changed: number[] = [];
+    const tabs = new TabRegistry(counterIds(), (window) => changed.push(window));
+    const { id } = tabs.open('/d/a.md', 1);
+    const at = (line: number) => ({ line, offset: 4, heading: null, fraction: 0.5 });
+    const before = changed.length;
+    const revision = tabs.snapshot(1).revision;
+    expect(tabs.setPosition(id, 1, at(10))).toBe(true);
+    expect(tabs.setPosition(id, 2, at(99))).toBe(false);
+    expect([changed.length, tabs.snapshot(1).revision]).toEqual([before, revision]);
+    tabs.navigate(id, 1, { path: '/d/b.md', anchor: null });
+    tabs.setPosition(id, 1, at(20));
+    expect(tabs.back(id, 1)).toEqual({ path: '/d/a.md', anchor: null, position: at(10) });
+    expect(tabs.forward(id, 1)).toEqual({ path: '/d/b.md', anchor: null, position: at(20) });
+    expect(tabs.position(id, 1)).toEqual(at(20));
+    expect(tabs.position(id, 2)).toBeNull();
+  });
 });

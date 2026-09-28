@@ -20,11 +20,14 @@ export class WarmTabs {
   /** Per window, most recently shown first; the first one is the active tab. */
   private readonly windows = new Map<number, Rendered[]>();
 
-  constructor(private readonly limits: WarmLimits) {}
+  constructor(private limits: WarmLimits) {}
 
-  activated(window: number, id: string, weight: number): string[] {
-    const tabs = (this.windows.get(window) ?? []).filter((tab) => tab.id !== id);
-    tabs.unshift({ id, weight });
+  /** The window shows `id`; without a weight, it keeps the one it last reported (or 0, not rendered yet). */
+  activated(window: number, id: string, weight?: number): string[] {
+    const previous = this.windows.get(window) ?? [];
+    const known = previous.find((tab) => tab.id === id)?.weight ?? 0;
+    const tabs = previous.filter((tab) => tab.id !== id);
+    tabs.unshift({ id, weight: weight ?? known });
     this.windows.set(window, tabs);
     return this.fit(tabs);
   }
@@ -41,6 +44,17 @@ export class WarmTabs {
   pressure(window: number): string[] {
     const tabs = this.windows.get(window) ?? [];
     return tabs.length > 1 ? [tabs.pop()!.id] : [];
+  }
+
+  /** New limits (a settings change); returns, per window, the tabs to hibernate now. */
+  setLimits(limits: WarmLimits): Map<number, string[]> {
+    this.limits = limits;
+    const demoted = new Map<number, string[]>();
+    for (const [window, tabs] of this.windows) {
+      const ids = this.fit(tabs);
+      if (ids.length > 0) demoted.set(window, ids);
+    }
+    return demoted;
   }
 
   forget(window: number, id: string): void {

@@ -52,7 +52,12 @@ const baseInfo: AppInfo = {
 };
 
 /** Pushes an event to the page, as main would. */
-const events: { tabs?: (snapshot: TabSnapshot) => void; settings?: (state: SettingsState) => void } = {};
+const events: {
+  tabs?: (snapshot: TabSnapshot) => void;
+  demote?: (ids: string[]) => void;
+  stale?: (id: string) => void;
+  settings?: (state: SettingsState) => void;
+} = {};
 
 function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: DocumentRecord[]; content?: DocumentContent } = {}) {
   const api = {
@@ -73,8 +78,18 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       close: vi.fn().mockResolvedValue(undefined),
       reopenClosed: vi.fn().mockResolvedValue(undefined),
       move: vi.fn().mockResolvedValue(undefined),
+      rendered: vi.fn().mockResolvedValue(undefined),
+      position: vi.fn().mockResolvedValue(undefined),
       onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
         events.tabs = listener;
+        return () => {};
+      }),
+      onDemote: vi.fn((listener: (ids: string[]) => void) => {
+        events.demote = listener;
+        return () => {};
+      }),
+      onStale: vi.fn((listener: (id: string) => void) => {
+        events.stale = listener;
         return () => {};
       }),
     },
@@ -489,7 +504,7 @@ describe('App', () => {
     expect(api.documents.read).not.toHaveBeenCalled();
   });
 
-  it("shows each tab's document, only the active one, and hands keys to that one only", async () => {
+  it("renders a tab once shown, keeps it warm and hidden after, and gives keys to the shown one only", async () => {
     const records = [
       { id: 'doc-1', path: '/d/a.md' },
       { id: 'doc-2', path: '/d/b.md' },
@@ -497,18 +512,21 @@ describe('App', () => {
     const api = stubBridge({}, { records });
     api.documents.read.mockImplementation(async (id: string) => readyContent('markdown', 'rendered', `text of ${id}`));
     const container = await renderApp();
-    await vi.waitFor(() => expect(container.querySelectorAll('[data-testid="document"]')).toHaveLength(2));
     const panels = () => [...container.querySelectorAll<HTMLElement>('[data-testid="tab-panel"]')];
+    await vi.waitFor(() => expect(container.querySelectorAll('[data-testid="document"]')).toHaveLength(1));
     expect(panels().map((panel) => panel.dataset['active'])).toEqual(['true', 'false']);
-    expect(panels()[1]!.inert).toBe(true);
+    expect(api.documents.read).toHaveBeenCalledTimes(1);
     expect(api.tabs.activated).toHaveBeenCalledWith('doc-1');
+    await press({ key: 'Tab', ctrlKey: true });
+    await vi.waitFor(() => expect(container.querySelectorAll('[data-testid="document"]')).toHaveLength(2));
+    expect(panels()[0]!.inert).toBe(true);
     await press({ key: 'u', ctrlKey: true });
     const shadows = panels().map((panel) => panel.querySelector('[data-testid="document"]')!.shadowRoot!);
-    await vi.waitFor(() => expect(shadows[0]!.querySelector('.cm-editor')).not.toBeNull());
-    expect(shadows[1]!.querySelector('.cm-editor')).toBeNull();
+    await vi.waitFor(() => expect(shadows[1]!.querySelector('.cm-editor')).not.toBeNull());
+    expect(shadows[0]!.querySelector('.cm-editor')).toBeNull();
   });
 
-  it("follows main's snapshots: a tab it adds appears, a tab it drops goes", async () => {
+  it("follows main's snapshots: a tab it adds waits hibernated, a tab it drops goes", async () => {
     const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }] });
     api.documents.read.mockImplementation(async (id: string) => readyContent('markdown', 'rendered', `text of ${id}`));
     const container = await renderApp();
@@ -516,9 +534,37 @@ describe('App', () => {
     await act(async () =>
       events.tabs?.({ revision: 2, active: 'doc-1', tabs: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }] }),
     );
-    await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledWith('doc-2'));
+    expect(container.querySelectorAll('[data-testid="tab-panel"]')).toHaveLength(2);
+    expect(api.documents.read).not.toHaveBeenCalledWith('doc-2');
     await act(async () => events.tabs?.({ revision: 3, active: 'doc-1', tabs: [{ id: 'doc-1', path: '/d/a.md' }] }));
     expect(container.querySelectorAll('[data-testid="tab-panel"]')).toHaveLength(1);
+  });
+
+  it('drops a hibernated tab\'s document and reads it again when shown, reporting its weight', async () => {
+    const records = [
+      { id: 'doc-1', path: '/d/a.md' },
+      { id: 'doc-2', path: '/d/b.md' },
+    ];
+    const api = stubBridge({}, { records });
+    api.documents.read.mockImplementation(async (id: string) => readyContent('markdown', 'rendered', `text of ${id}`));
+    const container = await renderApp();
+    await vi.waitFor(() => expect(api.tabs.rendered).toHaveBeenCalledWith('doc-1', 2 * '<p>text of doc-1</p>'.length));
+    await press({ key: 'Tab', ctrlKey: true });
+    await vi.waitFor(() => expect(container.querySelectorAll('[data-testid="document"]')).toHaveLength(2));
+    await act(async () => events.demote?.(['doc-1']));
+    expect(container.querySelectorAll('[data-testid="document"]')).toHaveLength(1);
+    await press({ key: 'Tab', ctrlKey: true });
+    await vi.waitFor(() => expect(api.documents.read.mock.calls.filter(([id]) => id === 'doc-1')).toHaveLength(2));
+  });
+
+  it('reads a tab again when main says its file changed', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }] });
+    api.documents.read.mockResolvedValueOnce(readyContent('markdown', 'rendered', 'before'));
+    api.documents.read.mockResolvedValueOnce(readyContent('markdown', 'rendered', 'after'));
+    const container = await renderApp();
+    await vi.waitFor(async () => expect((await documentShadow(container)).querySelector('article')?.textContent).toBe('before'));
+    await act(async () => events.stale?.('doc-1'));
+    await vi.waitFor(async () => expect((await documentShadow(container)).querySelector('article')?.textContent).toBe('after'));
   });
 
   it('opens a Ctrl+clicked link in a background tab through main, staying on this document', async () => {

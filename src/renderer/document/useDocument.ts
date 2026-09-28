@@ -7,20 +7,23 @@ export interface OpenDocument {
   generation: number;
 }
 
-/** One tab's document, read from main; `reload` reads it again (after main navigated the tab). */
-export function useDocument(id: string): { document: OpenDocument | null; reload: () => void } {
+/**
+ * One tab's document, read from main; `reload` reads it again (after main navigated the tab), and
+ * so does a new `staleReads` count (main said the file changed).
+ */
+export function useDocument(id: string, staleReads = 0): { document: OpenDocument | null; reload: () => void } {
   const [document, setDocument] = useState<OpenDocument | null>(null);
   const [reads, setReads] = useState(0);
 
   useEffect(() => {
     let current = true;
     void window.galeo.documents.read(id).then((content) => {
-      if (current) setDocument({ content, generation: reads });
+      if (current) setDocument({ content, generation: reads + staleReads });
     });
     return () => {
       current = false;
     };
-  }, [id, reads]);
+  }, [id, reads, staleReads]);
 
   const reload = useCallback(() => setReads((n) => n + 1), []);
   return { document, reload };

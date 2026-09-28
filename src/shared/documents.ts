@@ -1,4 +1,5 @@
 import type { FormatId, ViewMode } from './formats';
+import type { ScrollAnchor } from './tabs';
 
 export type TextEncoding = 'utf-8' | 'utf-16le' | 'utf-16be' | 'utf-32le' | 'utf-32be' | 'windows-1252';
 
@@ -49,8 +50,11 @@ export type FollowResult =
   | { kind: 'external' }
   | { kind: 'refused'; reason: RefusalReason };
 
-/** What a step back or forward in a tab's history did. */
-export type HistoryResult = { kind: 'navigated'; anchor: string | null } | { kind: 'anchor'; anchor: string } | { kind: 'none' };
+/** What a step back or forward in a tab's history did; `position` is where the reader last was there. */
+export type HistoryResult =
+  | { kind: 'navigated'; anchor: string | null; position: ScrollAnchor | null }
+  | { kind: 'anchor'; anchor: string; position: ScrollAnchor | null }
+  | { kind: 'none' };
 
 /** A local image the page may show: an opaque `galeo://file/…` URL, or why not. */
 export type ImageResult =

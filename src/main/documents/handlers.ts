@@ -1,3 +1,4 @@
+import type { ReadIdentities } from '../../core/documents/identities';
 import type { DocumentLinks } from '../../core/documents/links';
 import { MARKDOWN_RENDER_MAX_BYTES } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
@@ -21,14 +22,17 @@ type DocumentChannels =
 export function documentHandlers(deps: {
   records: TabRegistry;
   links: DocumentLinks;
+  reads: ReadIdentities;
   fs: FileSystem;
   decode: Decode;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, fs, decode } = deps;
+  const { records, links, reads, fs, decode } = deps;
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
   const reading = new Map<string, Promise<DocumentContent>>();
 
   const read = async (id: string, window: number, path: string): Promise<DocumentContent> => {
+    // The identity is taken first: a change during the read then shows as a change afterwards.
+    await reads.remember(id, path);
     const content = await readDocument(path, { fs, decode });
     // Only the text main read itself defines which links the page may follow. Only rendered
     // Markdown has links; nothing else is kept.

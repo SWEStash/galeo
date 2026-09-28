@@ -17,6 +17,16 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
   'tabs.snapshot': z.tuple([]),
   'tabs.activated': z.tuple([documentId]),
+  'tabs.rendered': z.tuple([documentId, z.int().min(0).max(2 ** 31)]),
+  'tabs.position': z.tuple([
+    documentId,
+    z.strictObject({
+      line: z.int().min(1).max(100_000_000),
+      offset: z.number().min(-1e7).max(1e7),
+      heading: z.string().min(1).max(256).nullable(),
+      fraction: z.number().min(0).max(1),
+    }),
+  ]),
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),
   'tabs.move': z.tuple([documentId, z.int().min(0).max(9999)]),

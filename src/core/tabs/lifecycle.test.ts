@@ -72,4 +72,25 @@ describe('WarmTabs', () => {
     expect(warm.warm(1)).toEqual([]);
     expect(warm.warm(2)).toEqual(['y', 'x']);
   });
+
+  it('keeps the weight a tab last reported when it is shown again without one', () => {
+    const warm = warmTabs({ count: 3, bytes: 10 * MB });
+    warm.activated(1, 'a');
+    expect(warm.rendered(1, 'a', 8 * MB)).toEqual([]);
+    warm.activated(1, 'b');
+    expect(warm.activated(1, 'c')).toEqual([]);
+    expect(warm.rendered(1, 'b', 4 * MB)).toEqual(['a']);
+  });
+
+  it('applies new limits to every window, returning what each must hibernate', () => {
+    const warm = warmTabs();
+    for (const id of ['a', 'b', 'c', 'd']) warm.activated(1, id, MB);
+    for (const id of ['x', 'y']) warm.activated(2, id, MB);
+    expect(warm.setLimits({ count: 1, bytes: 20 * MB })).toEqual(
+      new Map([
+        [1, ['a', 'b']],
+      ]),
+    );
+    expect(warm.warm(1)).toEqual(['d', 'c']);
+  });
 });

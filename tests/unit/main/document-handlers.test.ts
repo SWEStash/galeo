@@ -2,6 +2,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ImageGrants } from '../../../src/core/documents/images';
 import { DocumentLinks } from '../../../src/core/documents/links';
+import { ReadIdentities } from '../../../src/core/documents/identities';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
 import type { Decode } from '../../../src/core/text/decode';
@@ -13,19 +14,21 @@ import { FakeClock, FakeFileSystem, FakeOsShell, FakeTaskRunner } from '../../he
 const decode: Decode = (bytes, encoding, { fatal }) => new TextDecoder(encoding, { fatal, ignoreBOM: true }).decode(bytes);
 const event = { sender: { id: 1 }, senderFrame: { url: 'galeo://app/index.html', parent: null } } as WindowIpcEvent;
 
-/** A file system whose reads of `slow` wait until released. */
+/** A file system whose reads of `slow` wait until released (a release before the read counts too). */
 class SlowFileSystem extends FakeFileSystem {
   reads = 0;
+  private released = false;
   private release: (() => void) | undefined;
   constructor(files: Record<string, string>, private readonly slow: string) {
     super(files);
   }
   override async readFile(file: string, options: { maxBytes: number }): Promise<Uint8Array> {
     this.reads++;
-    if (file === this.slow) await new Promise<void>((resolve) => (this.release = resolve));
+    if (file === this.slow && !this.released) await new Promise<void>((resolve) => (this.release = resolve));
     return super.readFile(file, options);
   }
   finishSlowRead() {
+    this.released = true;
     this.release?.();
   }
 }
@@ -46,7 +49,7 @@ function setup(files: Record<string, string>, slow = '') {
     resolve: path.posix.resolve,
     parseUrl: () => null,
   });
-  const handlers = documentHandlers({ records, links, fs, decode });
+  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode });
   return { fs, records, handlers, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
