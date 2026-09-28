@@ -38,10 +38,12 @@ export class DocumentLinks {
 
   constructor(private readonly deps: DocumentLinksDeps) {}
 
-  /** The text main just read for a document: its links are the only ones that can be followed. */
-  remember(id: string, window: number, text: string): void {
-    const record = this.deps.records.get(id, window);
-    if (record) this.reads.set(id, { path: record.path, text });
+  /**
+   * The text main just read from `path`: its links are the only ones that can be followed. A read
+   * that finishes after the document moved on to another file is ignored.
+   */
+  remember(id: string, window: number, path: string, text: string): void {
+    if (this.deps.records.get(id, window)?.path === path) this.reads.set(id, { path, text });
   }
 
   async follow(id: string, window: number, href: string): Promise<FollowResult> {

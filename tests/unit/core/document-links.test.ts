@@ -46,7 +46,7 @@ function setup(options: { burst?: boolean; references?: (text: string) => Refere
     },
   });
   const { id } = records.open('/d/plan.md', 1);
-  links.remember(id, 1, DOC);
+  links.remember(id, 1, '/d/plan.md', DOC);
   return { clock, records, tasks, shell, links, id, asked, fs };
 }
 
@@ -154,7 +154,7 @@ describe('DocumentLinks.follow', () => {
     const { links, id } = setup();
     await links.follow(id, 1, 'next.md');
     expect(await links.follow(id, 1, '#intro')).toEqual({ kind: 'refused', reason: 'not-in-document' });
-    links.remember(id, 1, '[back](plan.md)');
+    links.remember(id, 1, '/d/next.md', '[back](plan.md)');
     expect(await links.follow(id, 1, 'plan.md')).toEqual({ kind: 'navigated', anchor: null });
   });
 });
@@ -180,7 +180,7 @@ describe('DocumentLinks.resolveImage', () => {
 
   it('grants an opaque galeo://file URL for an image the document shows', async () => {
     const { links, id } = setup();
-    links.remember(id, 1, IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES);
     const result = await links.resolveImage(id, 1, 'pics/dot.png');
     expect(result).toMatchObject({ kind: 'image' });
     expect((result as { url: string }).url).toMatch(/^galeo:\/\/file\/img-\d+$/);
@@ -189,7 +189,7 @@ describe('DocumentLinks.resolveImage', () => {
 
   it('refuses an image the document does not show, even if it exists (SR-12)', async () => {
     const { links, id } = setup();
-    links.remember(id, 1, IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES);
     expect(await links.resolveImage(id, 1, '../d/pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
     expect(await links.resolveImage(id, 1, '/d/pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
   });
@@ -201,13 +201,13 @@ describe('DocumentLinks.resolveImage', () => {
     ['folder.png', 'not-an-image'],
   ] as const)('refuses %s: %s', async (src, reason) => {
     const { links, id } = setup();
-    links.remember(id, 1, IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES);
     expect(await links.resolveImage(id, 1, src)).toEqual({ kind: 'refused', reason });
   });
 
   it("refuses images of another window's document", async () => {
     const { links, id } = setup();
-    links.remember(id, 1, IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES);
     expect(await links.resolveImage(id, 2, 'pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
   });
 });

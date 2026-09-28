@@ -7,5 +7,5 @@
     "tsBuildInfoFile": "../out/tsc/tests.tsbuildinfo"
   },
   "include": ["**/*.ts"],
-  "references": [{ "path": "../src/shared" }, { "path": "../src/core" }, { "path": "../src/renderer" }]
+  "references": [{ "path": "../src/shared" }, { "path": "../src/core" }, { "path": "../src/renderer" }, { "path": "../src/main" }]
 }

@@ -1,8 +1,10 @@
 import type { DocumentLinks } from '../../core/documents/links';
+import { MARKDOWN_RENDER_MAX_BYTES } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
 import type { DocumentRecords } from '../../core/documents/records';
 import type { FileSystem } from '../../core/ports';
 import type { Decode } from '../../core/text/decode';
+import type { DocumentContent } from '../../shared/documents';
 import type { Handlers } from '../ipc/register';
 
 type DocumentChannels =
@@ -24,16 +26,33 @@ export function documentHandlers(deps: {
   decode: Decode;
 }): Pick<Handlers, DocumentChannels> {
   const { records, links, fs, decode } = deps;
+  // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
+  const reading = new Map<string, Promise<DocumentContent>>();
+
+  const read = async (id: string, window: number, path: string): Promise<DocumentContent> => {
+    const content = await readDocument(path, { fs, decode });
+    // Only the text main read itself defines which links the page may follow. Only rendered
+    // Markdown has links; nothing else is kept.
+    if (content.state === 'ready' && content.format === 'markdown' && content.size <= MARKDOWN_RENDER_MAX_BYTES) {
+      links.remember(id, window, path, content.text);
+    } else {
+      links.forget(id);
+    }
+    return content;
+  };
+
   return {
     'documents.list': (_args, event) => records.list(event.sender.id),
-    'documents.read': async ([id], event) => {
+    'documents.read': ([id], event) => {
       const record = records.get(id, event.sender.id);
       if (!record) throw new Error('unknown document');
-      const content = await readDocument(record.path, { fs, decode });
-      // Only the text main read itself defines which links the page may follow.
-      if (content.state === 'ready') links.remember(id, event.sender.id, content.text);
-      else links.forget(id);
-      return content;
+      const key = `${id}\0${record.path}`;
+      let pending = reading.get(key);
+      if (!pending) {
+        pending = read(id, event.sender.id, record.path).finally(() => reading.delete(key));
+        reading.set(key, pending);
+      }
+      return pending;
     },
     'documents.followLink': ([id, href], event) => links.follow(id, event.sender.id, href),
     'documents.back': ([id], event) => links.back(id, event.sender.id),
