@@ -1,6 +1,7 @@
 import { z, type ZodType } from 'zod';
 import type { RecentFile } from '../../core/session/recent';
 import type { SessionFile } from '../../core/session/model';
+import { HISTORY_DEPTH } from '../../core/tabs/registry';
 import type { Parse } from '../../core/settings/json-file';
 import { CHOSEN_ENCODINGS } from '../../shared/contracts';
 import { scrollAnchor, zoomLevel } from '../../shared/contracts/schemas';
@@ -10,18 +11,24 @@ import { parserFor } from '../schemas/parse';
  * Schemas for the app-written state files (SR-16, SR-17): paths, positions and view state only,
  * bounded so a hostile or corrupt file can't make restoring expensive.
  */
-const path = z.string().min(1).max(4096).refine((value) => value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value), 'absolute path');
+// Absolute: POSIX, a drive letter, or a UNC share. Windows long paths reach 32,767 characters.
+const path = z
+  .string()
+  .min(1)
+  .max(32_767)
+  .refine((value) => value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value) || value.startsWith('\\\\'), 'absolute path');
 
 const entry = z.strictObject({
   path,
-  anchor: z.string().max(1024).nullable(),
+  // As long as a link may be (`documents.followLink` takes 8,192).
+  anchor: z.string().max(8192).nullable(),
   position: scrollAnchor.optional(),
   encoding: z.enum(CHOSEN_ENCODINGS).optional(),
 });
 
 const tab = z
   .strictObject({
-    entries: z.array(entry).min(1).max(50),
+    entries: z.array(entry).min(1).max(HISTORY_DEPTH),
     index: z.int().min(0),
     zoom: zoomLevel.optional(),
   })

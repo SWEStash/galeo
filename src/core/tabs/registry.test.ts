@@ -223,6 +223,8 @@ describe('TabRegistry', () => {
     expect(tabs.encoding(id, 1)).toBeNull();
     expect(tabs.setEncoding(id, 1, 'windows-1252')).toBe(true);
     expect(tabs.setEncoding(id, 2, 'utf-8')).toBe(false);
+    // A change the session keeps: it counts as one.
+    expect(tabs.snapshot(1).revision).toBe(2);
     expect(tabs.encoding(id, 1)).toBe('windows-1252');
     tabs.navigate(id, 1, { path: '/d/b.txt', anchor: null });
     expect(tabs.encoding(id, 1)).toBeNull();
@@ -270,5 +272,24 @@ describe('TabRegistry', () => {
     tabs.setZoom(id, 1, 1);
     expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('zoom');
   });
-});
 
+  it('keeps the last 50 entries of a history, so the session can always hold it', () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.md', 1);
+    for (let n = 1; n <= 60; n++) tabs.navigate(id, 1, { path: '/d/a.md', anchor: `h${n}` });
+    const [tab] = tabs.exportWindow(1).tabs;
+    expect(tab!.entries).toHaveLength(50);
+    expect(tab!.index).toBe(49);
+    expect(tab!.entries[0]!.anchor).toBe('h11');
+    expect(tabs.back(id, 1)).toEqual({ path: '/d/a.md', anchor: 'h59' });
+  });
+
+  it('brings a reopened tab back at its zoom', () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.md', 1);
+    tabs.setZoom(id, 1, 1.5);
+    tabs.close(id, 1);
+    tabs.reopenClosed(1);
+    expect(tabs.snapshot(1).tabs[0]!.zoom).toBe(1.5);
+  });
+});

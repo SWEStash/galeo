@@ -1,5 +1,6 @@
-import { app, BrowserWindow, nativeTheme } from 'electron';
+import { app, BrowserWindow, nativeTheme, screen } from 'electron';
 import path from 'node:path';
+import { visibleBounds } from '../../core/session/bounds';
 import type { WindowBounds } from '../../core/session/model';
 import type { Command } from '../../shared/keymap';
 import { capabilityKey, hardenedWebPreferences, keymapPlatform, titleBarOverlay, windowTitle } from './policy';
@@ -19,12 +20,14 @@ export interface WindowOptions {
 export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKey, bounds }: WindowOptions): BrowserWindow {
   const title = windowTitle('galeo', { sandboxed });
   const scheme = () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+  // A place on a display that's gone isn't restored; the size is.
+  const placed = bounds ? visibleBounds(bounds, screen.getAllDisplays().map((display) => display.workArea)) : null;
   const window = new BrowserWindow({
     title,
     ...(dialog
       ? { width: 560, height: 340, resizable: false }
       : {
-          ...(bounds ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } : { width: 1100, height: 800 }),
+          ...(placed ? { ...(placed.x === undefined ? {} : { x: placed.x, y: placed.y }), width: placed.width, height: placed.height } : { width: 1100, height: 800 }),
           titleBarStyle: 'hidden',
           titleBarOverlay: titleBarOverlay(scheme()),
         }),

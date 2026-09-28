@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DocumentContent } from '../../shared/contracts';
+import { ignoreClosedTab } from '../tabs/closed-tab';
 
 export interface OpenDocument {
   content: DocumentContent;
@@ -17,9 +18,12 @@ export function useDocument(id: string, staleReads = 0): { document: OpenDocumen
 
   useEffect(() => {
     let current = true;
-    void window.galeo.documents.read(id).then((content) => {
-      if (current) setDocument({ content, generation: reads + staleReads });
-    });
+    void window.galeo.documents
+      .read(id)
+      .then((content) => {
+        if (current) setDocument({ content, generation: reads + staleReads });
+      })
+      .catch(ignoreClosedTab);
     return () => {
       current = false;
     };

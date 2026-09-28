@@ -78,6 +78,28 @@ test('closing the last window keeps its tabs for next time', async () => {
   });
 });
 
+test('quitting at the sandbox prompt keeps the last session, and its snapshots', async () => {
+  await withHome(async (home) => {
+    const first = await launchApp(['--', plan, basic], { home });
+    await expect(shownDocument(first.window)).toBeVisible();
+    await first.close();
+
+    const prompt = await launchApp(['--no-sandbox', '--galeo-sandbox-unavailable=apparmor-userns'], { home });
+    const exited = new Promise((resolve) => prompt.app.process().once('exit', resolve));
+    await prompt.window.getByRole('button', { name: 'Quit' }).click();
+    await exited;
+    await prompt.close().catch(() => undefined);
+    expect(existsSync(stateFile(home, 'session.json.1'))).toBe(false);
+
+    const again = await launchApp([], { home });
+    try {
+      await expect(again.window.getByRole('tab')).toHaveText(['plan-50k.md✕', 'basic.md✕']);
+    } finally {
+      await again.close();
+    }
+  });
+});
+
 test('after kill -9 the session is the last one saved, whole', async () => {
   await withHome(async (home) => {
     const first = await launchApp(['--', plan, basic], { home });

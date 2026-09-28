@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { ChosenEncoding } from '../../shared/contracts';
 import { EncodingMenu } from '../document/EncodingMenu';
 import { ENCODING_NAMES } from '../document/encodings';
+import { ignoreClosedTab } from './closed-tab';
 import type { TabStatus, TabStore, TabsView } from './store';
 
 const VIEW_NAMES = { rendered: 'Rendered', source: 'Source' } as const;
@@ -18,7 +19,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
   const status = tab && view.statuses.get(tab.id);
   const zoom = tab ? (view.zooms.get(tab.id) ?? 1) : 1;
   const chooseEncoding = (encoding: ChosenEncoding | null) => {
-    if (tab) void window.galeo.documents.setEncoding(tab.id, encoding).then(() => store.reread(tab.id));
+    if (tab) void window.galeo.documents.setEncoding(tab.id, encoding).then(() => store.reread(tab.id), ignoreClosedTab);
   };
   return (
     <footer className="status-bar" data-testid="status-bar">
@@ -28,7 +29,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
           className="status-path"
           data-testid="status-path"
           title={`${tab.path} — copy or reveal`}
-          onClick={() => void window.galeo.documents.pathMenu(tab.id)}
+          onClick={() => void window.galeo.documents.pathMenu(tab.id).catch(ignoreClosedTab)}
         >
           {tab.path}
         </button>

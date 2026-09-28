@@ -39,10 +39,13 @@ interface Closed {
   entries: HistoryEntry[];
   index: number;
   position: number;
+  zoom?: number;
 }
 
 /** How many closed tabs per window Ctrl+Shift+T can bring back. */
 const CLOSED_DEPTH = 25;
+/** History entries a tab keeps; the oldest go first. Sessions hold this many (their schema says so too). */
+export const HISTORY_DEPTH = 50;
 
 /**
  * The tabs open in each window, as main knows them (ADR-002): which exist, their order and the
@@ -141,7 +144,7 @@ export class TabRegistry {
     this.records.delete(id);
     if (this.active.get(window) === id) this.active.delete(window);
     const closed = this.closed.get(window) ?? [];
-    closed.push({ entries: record.entries, index: record.index, position });
+    closed.push({ entries: record.entries, index: record.index, position, ...(record.zoom ? { zoom: record.zoom } : {}) });
     this.closed.set(window, closed.slice(-CLOSED_DEPTH));
     this.changed(window);
     return true;
@@ -150,7 +153,10 @@ export class TabRegistry {
   /** Brings back the window's most recently closed tab, where it was, under a new id. */
   reopenClosed(window: number): DocumentRecord | null {
     const tab = this.closed.get(window)?.pop();
-    return tab ? this.insert(window, tab.entries, tab.index, tab.position) : null;
+    if (!tab) return null;
+    const record = this.insert(window, tab.entries, tab.index, tab.position);
+    if (tab.zoom) this.records.get(record.id)!.zoom = tab.zoom;
+    return record;
   }
 
   /** Moves the tab to `position` in its window's order, clamped to the ends. */
@@ -167,7 +173,7 @@ export class TabRegistry {
   navigate(id: string, window: number, entry: HistoryEntry): boolean {
     const record = this.owned(id, window);
     if (!record) return false;
-    record.entries = [...record.entries.slice(0, record.index + 1), entry];
+    record.entries = [...record.entries.slice(0, record.index + 1), entry].slice(-HISTORY_DEPTH);
     record.index = record.entries.length - 1;
     this.changed(window);
     return true;
@@ -193,6 +199,7 @@ export class TabRegistry {
     const entry = record.entries[record.index]!;
     if (encoding) entry.encoding = encoding;
     else delete entry.encoding;
+    this.changed(window);
     return true;
   }
 

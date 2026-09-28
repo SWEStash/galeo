@@ -197,6 +197,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     save: (session) => sessionStore.save(session).catch((error: unknown) => console.warn('galeo: session not saved', error)),
     windows: () => mainWindows.map((window) => ({ id: window.webContents.id, bounds: windowBounds(window) })),
     focusOrder: () => focusOrder,
+    // Nothing is saved before the session is restored: a quit at the sandbox prompt keeps the last one.
+    running: false,
   });
   // The launch's files open in the last focused window; files from later launches aren't opened yet.
   let pendingFiles = [...files];
@@ -209,9 +211,16 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     const window = createAppWindow({ url: rendererUrl(runtime), sandboxed, onCapabilityKey: recordCapabilityKey, bounds });
     const windowId = window.webContents.id;
     mainWindows.push(window);
-    focusOrder = [...focusOrder, windowId];
+    // A new window comes to the front; after the last one closed (macOS runs on), saving resumes.
+    focusOrder = [windowId, ...focusOrder];
+    sessions.resume();
     // A restored session's tabs come back hibernated: the page renders each when shown, the active first.
-    if (state) documents.restoreWindow(windowId, state);
+    if (state) {
+      documents.restoreWindow(windowId, state);
+      // The restored active tab is the one the page renders first; main's warm set starts with it.
+      const active = documents.snapshot(windowId).active;
+      if (active) warm.activated(windowId, active);
+    }
     for (const file of toOpen) documents.open(file, windowId);
     const followBounds = () => sessions.changed();
     window.on('move', followBounds);
@@ -219,9 +228,11 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     window.on('focus', () => {
       focusOrder = [windowId, ...focusOrder.filter((id) => id !== windowId)];
       sessions.changed();
-      // A missing file that came back (or any file that changed) is read again (UX: missing recovers).
-      for (const tab of documents.list(windowId)) {
-        void reads.changed(tab.id, tab.path).then((changed) => changed && sendTo(windowId, 'tabs.stale', tab.id));
+      // A shown file that came back (or changed) is read again (UX: missing recovers). Hibernated
+      // tabs read when they wake anyway.
+      for (const id of warm.warm(windowId)) {
+        const tab = documents.get(id, windowId);
+        if (tab) void reads.changed(id, tab.path).then((changed) => changed && sendTo(windowId, 'tabs.stale', id));
       }
     });
     window.on('close', () => {
@@ -253,6 +264,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     for (const file of launchFiles) documents.open(file, front.webContents.id);
   };
 
+  let restoring = false;
   // Saving is async; the quit waits for it once.
   let savedOnQuit = false;
   app.on('before-quit', (event) => {
@@ -271,7 +283,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     await settings.start();
     const loaded = await sessionStore.load();
     if (loaded.notice) reportSessionNotice(loaded.notice);
-    await recent.load();
+    // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
+    void recent.load().catch((error: unknown) => console.warn('galeo: recent files not loaded', error));
     nativeTheme.themeSource = settings.current.themeMode;
     warm.setLimits(warmLimits(settings.current));
     pressure.start();
@@ -304,14 +317,25 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           mode = { kind: 'normal' };
           openSession(loaded.session, pendingFiles);
           pendingFiles = [];
+          sessions.start();
           choiceWindow?.close();
         },
         'settings.get': () => ({ settings: settings.current, notices: settings.notices }),
         'session.previous': () => sessionStore.previous(),
-        'session.restorePrevious': async ([snapshot]) => {
-          const previous = await sessionStore.readPrevious(snapshot);
-          if (!previous) throw new Error('no such session');
-          for (const window of previous.windows) openMainWindow({ bounds: window.bounds, state: window });
+        'session.restorePrevious': async ([snapshot], event) => {
+          if (mode.kind !== 'normal' || restoring) throw new Error('not now');
+          restoring = true;
+          try {
+            const previous = await sessionStore.readPrevious(snapshot);
+            if (!previous) throw new Error('no such session');
+            // The asking window, empty, takes the first window's tabs; the others open new windows.
+            const [first, ...rest] = previous.windows;
+            if (first && documents.list(event.sender.id).length === 0) documents.restoreWindow(event.sender.id, first);
+            else if (first) rest.unshift(first);
+            for (const window of rest) openMainWindow({ bounds: window.bounds, state: window });
+          } finally {
+            restoring = false;
+          }
         },
         'documents.pathMenu': ([id], event) => menus.path(id, event.sender.id),
         'documents.contextMenu': ([id], event) => menus.document(id, event.sender.id),
@@ -342,6 +366,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     } else {
       openSession(loaded.session, pendingFiles);
       pendingFiles = [];
+      sessions.start();
     }
 
     const openMainWindowIfNone = () => {

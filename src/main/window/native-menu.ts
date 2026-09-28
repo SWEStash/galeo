@@ -16,10 +16,11 @@ export function showNativeMenu(windowId: number, items: readonly MenuItem[], isP
   const window = contents && BrowserWindow.fromWebContents(contents);
   if (!window) return Promise.resolve(null);
   return new Promise((resolve) => {
-    let chosen: string | null = null;
+    // A choice resolves at once; the close callback may come before or after it, so it answers
+    // null only on the next turn, when a click would already have resolved.
     const menu = Menu.buildFromTemplate(
-      items.map((item) => ({ label: item.label, enabled: item.enabled ?? true, click: () => (chosen = item.id) })),
+      items.map((item) => ({ label: item.label, enabled: item.enabled ?? true, click: () => resolve(item.id) })),
     );
-    menu.popup({ window, callback: () => resolve(chosen) });
+    menu.popup({ window, callback: () => setImmediate(() => resolve(null)) });
   });
 }

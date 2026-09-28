@@ -57,4 +57,27 @@ describe('RecentFiles (ADR-005, SR-16)', () => {
     await recent.load();
     expect(recent.list()).toEqual([]);
   });
+
+  it('sets an invalid file aside before writing a new one, so nothing is lost silently', async () => {
+    const { fs, recent } = setup({ [PATH]: '{' });
+    await recent.load();
+    await recent.add('/d/a.md');
+    expect(new TextDecoder().decode(await fs.readFile(`${PATH}.invalid`, { maxBytes: 10 }))).toBe('{');
+  });
+
+  it('writes one change at a time, keeping every file added', async () => {
+    const { fs, recent } = setup();
+    await Promise.all([recent.add('/d/a.md'), recent.add('/d/b.md')]);
+    expect((await saved(fs)).files.map((file: { path: string }) => file.path)).toEqual(['/d/b.md', '/d/a.md']);
+  });
+
+  it('keeps a file added while the list is still loading', async () => {
+    const stored = JSON.stringify({ schemaVersion: 1, files: [{ path: '/d/old.md', openedAt: 1 }] });
+    const { recent } = setup({ [PATH]: stored, '/d/old.md': 'x' });
+    const loading = recent.load();
+    const adding = recent.add('/d/new.md');
+    await Promise.all([loading, adding]);
+    expect(recent.list().map((file) => file.path)).toEqual(['/d/new.md', '/d/old.md']);
+  });
 });
+

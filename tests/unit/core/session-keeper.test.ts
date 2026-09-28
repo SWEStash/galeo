@@ -67,4 +67,34 @@ describe('SessionKeeper (ADR-005)', () => {
     await keeper.flushOnQuit();
     expect(saved[0]!.windows[1]!.tabs).toHaveLength(1);
   });
+
+  it('saves nothing until a session is running: a quit before any window keeps the last one', async () => {
+    const clock = new FakeClock();
+    const saved: SessionFile[] = [];
+    const keeper = new SessionKeeper({
+      tabs: new TabRegistry(() => 'x'),
+      clock,
+      save: async (session) => void saved.push(session),
+      windows: () => [],
+      focusOrder: () => [],
+      running: false,
+    });
+    keeper.changed();
+    clock.advance(20_000);
+    await keeper.flushOnQuit();
+    expect(saved).toEqual([]);
+    keeper.start();
+    await keeper.flushOnQuit();
+    expect(saved).toHaveLength(1);
+  });
+
+  it('keeps saving after the last window closed and another opened (macOS keeps running)', () => {
+    const { clock, tabs, saved, keeper } = setup();
+    keeper.holdForQuit();
+    keeper.resume();
+    tabs.open('/d/a.md', 1);
+    keeper.changed();
+    clock.advance(2_000);
+    expect(saved).toHaveLength(1);
+  });
 });

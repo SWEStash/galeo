@@ -72,4 +72,8 @@ describe('capabilityKey', () => {
     expect(capabilityKey(input('f'), 'linux')).toBeNull();
     expect(capabilityKey(input('e', false), 'linux')).toBeNull();
   });
+
+  it('ignores a held key repeating: a capability is granted once per press', () => {
+    expect(capabilityKey({ ...input('e'), isAutoRepeat: true }, 'linux')).toBeNull();
+  });
 });

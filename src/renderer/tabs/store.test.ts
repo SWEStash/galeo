@@ -225,5 +225,26 @@ describe('createTabStore', () => {
     store.close('a');
     expect(api.close).toHaveBeenCalledTimes(2);
   });
+
+  it("tells main about a close before the next tab's activation, so no snapshot brings the closed tab back", async () => {
+    const { store, api } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    const calls: string[] = [];
+    api.close.mockImplementation(async (id: string) => void calls.push(`close ${id}`));
+    api.activated.mockImplementation(async (id: string) => void calls.push(`activated ${id}`));
+    store.close('a');
+    expect(calls).toEqual(['close a', 'activated b']);
+  });
+
+  it('stops hearing main once stopped', async () => {
+    const unsubscribed: string[] = [];
+    const { store, api } = setup(snapshot(1, ['a'], 'a'));
+    api.onChanged.mockReturnValue(() => unsubscribed.push('changed'));
+    api.onDemote.mockReturnValue(() => unsubscribed.push('demote'));
+    api.onStale.mockReturnValue(() => unsubscribed.push('stale'));
+    await store.start();
+    store.stop();
+    expect(unsubscribed.sort()).toEqual(['changed', 'demote', 'stale']);
+  });
 });
 

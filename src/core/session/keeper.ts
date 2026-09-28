@@ -11,14 +11,18 @@ export interface SessionKeeperDeps {
   windows: () => readonly { id: number; bounds: WindowBounds | null }[];
   /** Window ids, the last focused first. */
   focusOrder: () => readonly number[];
+  /** False until the session was restored and windows opened; nothing is saved before (default true). */
+  running?: boolean;
 }
 
 /** Keeps a profile's session written (ADR-005): 2 s after a change, at least every 10 s, and on quit. */
 export class SessionKeeper {
   private readonly scheduler: SaveScheduler;
   private held: SessionFile | null = null;
+  private running: boolean;
 
   constructor(private readonly deps: SessionKeeperDeps) {
+    this.running = deps.running ?? true;
     this.scheduler = new SaveScheduler({
       clock: deps.clock,
       save: () => deps.save(this.capture()),
@@ -27,8 +31,13 @@ export class SessionKeeper {
     });
   }
 
+  /** The session is restored and its windows are open: from now on it is kept. */
+  start(): void {
+    this.running = true;
+  }
+
   changed(): void {
-    if (!this.held) this.scheduler.changed();
+    if (this.running && !this.held) this.scheduler.changed();
   }
 
   capture(): SessionFile {
@@ -47,8 +56,15 @@ export class SessionKeeper {
     this.scheduler.stop();
   }
 
+  /** A window opened after the last one closed (macOS keeps running): keep saving. */
+  resume(): void {
+    this.held = null;
+    this.scheduler.resume();
+  }
+
+  /** Before any window opened (a quit at the sandbox prompt), there is nothing to save: the last session stays. */
   async flushOnQuit(): Promise<void> {
     this.scheduler.stop();
-    await this.deps.save(this.held ?? this.capture());
+    if (this.running) await this.deps.save(this.held ?? this.capture());
   }
 }

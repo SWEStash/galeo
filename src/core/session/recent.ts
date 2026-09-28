@@ -1,5 +1,5 @@
+import { FsError, type FileSystem } from '../ports';
 import { readJsonFile, writeJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
-import type { FileSystem } from '../ports';
 
 /** A file the profile opened: its path and when, nothing of its content (SR-16). */
 export interface RecentFile {
@@ -22,13 +22,24 @@ export interface RecentFilesDeps {
 export class RecentFiles {
   private files: RecentFile[] = [];
   private readonly spec: JsonFileSpec<{ files: RecentFile[] }>;
+  /** Writes run one after another, each with the list as it is by then. */
+  private writing: Promise<void> = Promise.resolve();
+  /** Changes wait for the load (it stats every file, so it runs off the startup path). */
+  private loaded: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: RecentFilesDeps) {
     this.spec = { fs: deps.fs, utf8: deps.utf8, parse: deps.parse, version: 1, migrations: {}, maxBytes: RECENT_MAX_BYTES };
   }
 
-  async load(): Promise<void> {
+  load(): Promise<void> {
+    this.loaded = this.read();
+    return this.loaded;
+  }
+
+  private async read(): Promise<void> {
     const read = await readJsonFile(this.spec, this.deps.path);
+    // An invalid file is set aside, so the next write doesn't silently replace it (SR-17).
+    if (read.kind === 'failed') await this.setAside();
     const stored = read.kind === 'ok' ? read.value.files : [];
     const present = await Promise.all(stored.map((file) => this.exists(file.path)));
     this.files = stored.filter((_, index) => present[index]).slice(0, RECENT_MAX);
@@ -39,17 +50,29 @@ export class RecentFiles {
   }
 
   async add(path: string): Promise<void> {
+    await this.loaded;
     this.files = [{ path, openedAt: this.deps.now() }, ...this.files.filter((file) => file.path !== path)].slice(0, RECENT_MAX);
     await this.save();
   }
 
   async clear(): Promise<void> {
+    await this.loaded;
     this.files = [];
     await this.save();
   }
 
   private save(): Promise<void> {
-    return writeJsonFile(this.spec as JsonFileSpec<unknown>, this.deps.path, { files: this.files });
+    const write = this.writing.then(() => writeJsonFile(this.spec as JsonFileSpec<unknown>, this.deps.path, { files: this.files }));
+    this.writing = write.catch(() => {});
+    return write;
+  }
+
+  private async setAside(): Promise<void> {
+    try {
+      await this.deps.fs.rename(this.deps.path, `${this.deps.path}.invalid`);
+    } catch (error) {
+      if (!(error instanceof FsError && error.code === 'ENOENT')) throw error;
+    }
   }
 
   private async exists(path: string): Promise<boolean> {

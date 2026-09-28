@@ -94,6 +94,15 @@ describe('recent files', () => {
     await handlers['documents.read']([id], event);
     expect(opened).toEqual(['/d/a.md']);
   });
+
+  it("count a tab's file once, not again on every re-read (a wake, a changed file)", async () => {
+    const { handlers, records, opened, id } = setup({ '/d/a.md': '# a', '/d/b.md': '# b' });
+    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id], event);
+    records.navigate(id, 1, { path: '/d/b.md', anchor: null });
+    await handlers['documents.read']([id], event);
+    expect(opened).toEqual(['/d/a.md', '/d/b.md']);
+  });
 });
 
 describe('documents.setEncoding', () => {

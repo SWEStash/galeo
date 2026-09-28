@@ -25,6 +25,8 @@ export class SessionStore {
   private readonly spec: JsonFileSpec<SessionFile>;
   private readonly file: string;
   private rotated = false;
+  /** Saves run one after another: a save never starts before the one before it has rotated and written. */
+  private writing: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: SessionStoreDeps) {
     this.spec = { fs: deps.fs, utf8: deps.utf8, parse: deps.parse, version: SESSION_VERSION, migrations: {}, maxBytes: SESSION_MAX_BYTES };
@@ -40,7 +42,13 @@ export class SessionStore {
     return { session: newest?.session ?? null, notice: read.kind === 'failed' ? read.notice : null };
   }
 
-  async save(session: SessionFile): Promise<void> {
+  save(session: SessionFile): Promise<void> {
+    const write = this.writing.then(() => this.write(session));
+    this.writing = write.catch(() => {});
+    return write;
+  }
+
+  private async write(session: SessionFile): Promise<void> {
     if (!this.rotated) {
       this.rotated = true;
       for (const n of [...SNAPSHOTS].reverse()) {

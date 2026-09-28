@@ -72,3 +72,19 @@ describe('SessionStore (ADR-005, SR-17)', () => {
     expect(await store.readPrevious(2)).toBeNull();
   });
 });
+
+describe('SessionStore writes', () => {
+  it('writes one save at a time, so a quick second save never lands before the rotation', async () => {
+    const fs = new FakeFileSystem({ [FILE]: json(session(1)) });
+    const slow = Object.assign(Object.create(fs) as FakeFileSystem, {
+      rename: async (from: string, to: string) => {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        return fs.rename(from, to);
+      },
+    });
+    const store = new SessionStore({ fs: slow, utf8, dir: DIR, parse });
+    await Promise.all([store.save(session(10)), store.save(session(11))]);
+    expect((await read(fs, `${FILE}.1`)).savedAt).toBe(1);
+    expect((await read(fs, FILE)).savedAt).toBe(11);
+  });
+});

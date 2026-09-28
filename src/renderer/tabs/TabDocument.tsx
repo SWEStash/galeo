@@ -7,6 +7,7 @@ import { DocumentPane } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
 import { useDocument } from '../document/useDocument';
 import type { RenderClient } from '../worker/client';
+import { ignoreClosedTab } from './closed-tab';
 import type { TabStatus, TabStore } from './store';
 
 const REFUSALS: Record<RefusalReason, string> = {
@@ -73,7 +74,7 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
 
   const followLink = useCallback(
     (href: string, { background }: { background: boolean }) => {
-      void window.galeo.documents.followLink(id, href, background ? 'background' : 'current').then(moved);
+      void window.galeo.documents.followLink(id, href, background ? 'background' : 'current').then(moved, ignoreClosedTab);
     },
     [id, moved],
   );
@@ -85,7 +86,7 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
 
   const history = useCallback(
     (direction: 'back' | 'forward') => {
-      void window.galeo.documents[direction](id).then(moved);
+      void window.galeo.documents[direction](id).then(moved, ignoreClosedTab);
     },
     [id, moved],
   );
@@ -93,10 +94,11 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
   const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
   const onStatus = useCallback((status: TabStatus) => store.setStatus(id, status), [id, store]);
-  const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id), [id]);
+  const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id).catch(ignoreClosedTab), [id]);
   const close = useCallback(() => store.close(id), [id, store]);
   const chooseEncoding = useCallback(
-    (encoding: ChosenEncoding | null) => void window.galeo.documents.setEncoding(id, encoding).then(() => store.reread(id)),
+    (encoding: ChosenEncoding | null) =>
+      void window.galeo.documents.setEncoding(id, encoding).then(() => store.reread(id), ignoreClosedTab),
     [id, store],
   );
 

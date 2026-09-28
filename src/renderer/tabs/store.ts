@@ -39,6 +39,7 @@ export interface TabStore {
   getSnapshot(): TabsView;
   /** Pulls main's tabs and follows its snapshots from then on. */
   start(): Promise<void>;
+  stop(): void;
   activate(id: string): void;
   close(id: string): void;
   /** Main owns the order: the new order shows once its snapshot arrives. */
@@ -69,6 +70,7 @@ export function createTabStore(api: TabsApi): TabStore {
     zooms: new Map(),
   };
   const positions = new Map<string, ScrollAnchor>();
+  let unsubscribe: (() => void)[] = [];
   /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
   let wanted: string | null = null;
   const listeners = new Set<() => void>();
@@ -131,10 +133,12 @@ export function createTabStore(api: TabsApi): TabStore {
     },
     getSnapshot: () => view,
     async start() {
-      api.onChanged(apply);
-      api.onDemote(demote);
-      api.onStale(reread);
+      unsubscribe = [api.onChanged(apply), api.onDemote(demote), api.onStale(reread)];
       apply(await api.snapshot());
+    },
+    stop() {
+      for (const stop of unsubscribe) stop();
+      unsubscribe = [];
     },
     activate(id) {
       if (id === view.active || !view.tabs.some((tab) => tab.id === id)) return;
@@ -143,7 +147,9 @@ export function createTabStore(api: TabsApi): TabStore {
     close(id) {
       const index = view.tabs.findIndex((tab) => tab.id === id);
       if (index < 0) return;
-      // Gone at once: a quick second close acts on what is shown now. Main's snapshot confirms it.
+      // Gone at once: a quick second close acts on what is shown now. Main hears of the close
+      // before the next activation, so its snapshot for that one no longer has the tab.
+      void api.close(id);
       const tabs = view.tabs.filter((tab) => tab.id !== id);
       if (id === view.active) {
         const next = view.tabs[index + 1] ?? view.tabs[index - 1];
@@ -151,7 +157,6 @@ export function createTabStore(api: TabsApi): TabStore {
       } else {
         set({ tabs });
       }
-      void api.close(id);
     },
     move(id, position) {
       void api.move(id, position);

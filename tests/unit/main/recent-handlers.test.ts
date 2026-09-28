@@ -43,9 +43,11 @@ describe('recentHandlers', () => {
     expect(tabs.list(2)).toEqual([]);
   });
 
-  it('clears the list', async () => {
+  it('clears the list, and what any window was offered from it', async () => {
     const { handlers, recent } = await setup();
+    const [offered] = await handlers['recent.list']([], from(2));
     await handlers['recent.clear']([], from(1));
+    expect(() => handlers['recent.open']([offered!.id], from(2))).toThrow();
     expect(recent.list()).toEqual([]);
     expect(await handlers['recent.list']([], from(1))).toEqual([]);
   });

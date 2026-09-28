@@ -39,4 +39,16 @@ describe('SelectionGrants', () => {
     grants.closeWindow(1);
     expect(grants.choose(1, 'recent', 'pick-1')).toBeNull();
   });
+
+  it('withdraws a list from every window', () => {
+    const grants = new SelectionGrants(counterIds());
+    grants.offer(1, 'recent', ['/d/a.md']);
+    grants.offer(2, 'recent', ['/d/a.md']);
+    grants.offer(1, 'quick-open', ['/d/b.md']);
+    grants.withdraw('recent');
+    expect(grants.choose(1, 'recent', 'pick-1')).toBeNull();
+    expect(grants.choose(2, 'recent', 'pick-2')).toBeNull();
+    expect(grants.choose(1, 'quick-open', 'pick-3')).toBe('/d/b.md');
+  });
 });
+

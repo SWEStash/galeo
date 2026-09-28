@@ -6,6 +6,7 @@ export function useTabs(): { view: TabsView; store: TabStore } {
   const [store] = useState(() => createTabStore(window.galeo.tabs));
   useEffect(() => {
     void store.start();
+    return () => store.stop();
   }, [store]);
   const view = useSyncExternalStore(store.subscribe, store.getSnapshot);
   return { view, store };

@@ -24,6 +24,9 @@ export function recentHandlers(deps: {
       if (!path) throw new Error('not offered');
       tabs.open(path, event.sender.id);
     },
-    'recent.clear': () => recent.clear(),
+    'recent.clear': () => {
+      selections.withdraw('recent');
+      return recent.clear();
+    },
   };
 }

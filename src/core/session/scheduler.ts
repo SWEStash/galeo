@@ -35,6 +35,10 @@ export class SaveScheduler {
     this.cancel();
   }
 
+  resume(): void {
+    this.stopped = false;
+  }
+
   private save(): Promise<void> {
     this.cancel();
     return this.deps.save();

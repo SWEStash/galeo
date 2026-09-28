@@ -41,6 +41,20 @@ describe('parseSession (SR-17)', () => {
   });
 });
 
+describe('parseSession holds whatever the app itself can write', () => {
+  const withEntries = (entries: unknown[]) => ({ ...valid, windows: [{ ...valid.windows[0]!, active: 0, tabs: [{ entries, index: entries.length - 1 }] }] });
+
+  it('takes Windows UNC paths and anchors as long as a link may be', () => {
+    expect(parseSession(withEntries([{ path: '\\\\srv\\share\\a.md', anchor: 'x'.repeat(8192) }])).ok).toBe(true);
+  });
+
+  it('takes the whole history a tab keeps, and no more', () => {
+    const entry = { path: '/d/a.md', anchor: null };
+    expect(parseSession(withEntries(Array.from({ length: 50 }, () => entry))).ok).toBe(true);
+    expect(parseSession(withEntries(Array.from({ length: 51 }, () => entry))).ok).toBe(false);
+  });
+});
+
 describe('parseRecentFiles', () => {
   it('accepts paths and times only', () => {
     expect(parseRecentFiles({ schemaVersion: 1, files: [{ path: '/d/a.md', openedAt: 1 }] }).ok).toBe(true);

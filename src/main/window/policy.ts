@@ -56,11 +56,12 @@ export interface KeyInput {
   alt: boolean;
   shift: boolean;
   meta: boolean;
+  isAutoRepeat?: boolean;
 }
 
 /** The capability command a key press is (ADR-004), which main handles before the page sees it. */
 export function capabilityKey(input: KeyInput, platform: Platform): Command | null {
-  if (input.type !== 'keyDown') return null;
+  if (input.type !== 'keyDown' || input.isAutoRepeat) return null;
   return capabilityCommandFor(
     { key: input.key, ctrlKey: input.control, altKey: input.alt, shiftKey: input.shift, metaKey: input.meta },
     platform,
