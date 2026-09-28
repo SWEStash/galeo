@@ -5,7 +5,7 @@ const ID = '0b6c1d2e-8f1a-4c3b-9d4e-5f6a7b8c9d0e';
 const accepts = (channel: keyof typeof requestSchemas, args: unknown[]) => requestSchemas[channel].safeParse(args).success;
 
 describe('document channel arguments (SR-11)', () => {
-  it.each(['documents.read', 'documents.back', 'documents.forward', 'documents.pathMenu', 'tabs.activated', 'tabs.close'] as const)('%s takes one document id', (channel) => {
+  it.each(['documents.read', 'documents.back', 'documents.forward', 'documents.pathMenu', 'documents.contextMenu', 'tabs.activated', 'tabs.close'] as const)('%s takes one document id', (channel) => {
     expect(accepts(channel, [ID])).toBe(true);
     for (const bad of [[], [''], ['x'.repeat(65)], [42], [null], [{ id: ID }], [ID, 'extra']]) {
       expect(accepts(channel, bad)).toBe(false);

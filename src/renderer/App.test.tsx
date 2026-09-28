@@ -73,6 +73,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       forward: vi.fn().mockResolvedValue({ kind: 'none' }),
       resolveImage: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
       pathMenu: vi.fn().mockResolvedValue(undefined),
+      contextMenu: vi.fn().mockResolvedValue(undefined),
     },
     tabs: {
       snapshot: vi.fn().mockResolvedValue({ revision: 1, active: null, tabs: documents.records ?? [] }),
@@ -595,6 +596,27 @@ describe('App', () => {
     const dismiss = [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!;
     await act(async () => dismiss.click());
     expect(shown()).toBeNull();
+  });
+
+  it("asks main for the document's menu on a right-click, and shows no menu of its own", async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'hello') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    const paragraph = await vi.waitFor(() => shadow.querySelector('article p')!);
+    const click = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, composed: true });
+    await act(async () => paragraph.dispatchEvent(click));
+    expect(click.defaultPrevented).toBe(true);
+    expect(api.documents.contextMenu).toHaveBeenCalledWith('doc-1');
+  });
+
+  it("offers a state's actions: close the tab, or main's file menu", async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/x.png' }], content: { state: 'binary', path: '/d/x.png', size: 10 } });
+    const container = await renderApp();
+    const button = (name: string) => vi.waitFor(() => [...container.querySelectorAll('button')].find((each) => each.textContent === name)!);
+    await act(async () => (await button('File actions…')).click());
+    expect(api.documents.contextMenu).toHaveBeenCalledWith('doc-1');
+    await act(async () => (await button('Close tab')).click());
+    expect(api.tabs.close).toHaveBeenCalledWith('doc-1');
   });
 
   it('shows only the sandbox choice and sends it to main', async () => {

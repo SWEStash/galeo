@@ -13,6 +13,7 @@ import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry } from '../core/tabs/registry';
 import type { OsShell } from '../core/ports';
 import type { EventName, Events } from '../shared/contracts';
+import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
 import { createPrivateDirs, resolveAppPaths } from './adapters/app-paths';
@@ -40,6 +41,7 @@ import { appResponseHeaders, hostResolverRules, networkLockdown } from './securi
 import { tabHandlers } from './tabs/handlers';
 import { createAppWindow } from './window/factory';
 import { applicationMenu } from './window/menu';
+import { keymapPlatform } from './window/policy';
 import { showNativeMenu } from './window/native-menu';
 import { ownArgs } from './window/policy';
 
@@ -104,6 +106,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   const shell = externalShell();
   const menus = new DocumentMenus({
     tabs: documents,
+    fs,
     shell,
     clipboard,
     showMenu: (windowId, items) => showNativeMenu(windowId, items, app.isPackaged),
@@ -178,7 +181,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
 
   const openMainWindow = () => {
-    const window = createAppWindow({ url: rendererUrl(runtime), sandboxed });
+    const window = createAppWindow({ url: rendererUrl(runtime), sandboxed, onCapabilityKey: recordCapabilityKey });
     const windowId = window.webContents.id;
     const opensDocument = pendingFiles.length > 0;
     for (const file of pendingFiles) documents.open(file, windowId);
@@ -220,8 +223,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
         'app.info': () => ({
           name: app.getName(),
           version: app.getVersion(),
-          // The keymap's platforms; other Unixes follow the Linux conventions.
-          platform: process.platform === 'darwin' || process.platform === 'win32' ? process.platform : 'linux',
+          platform: keymapPlatform(process.platform),
           sandboxed,
           sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
         }),
@@ -237,6 +239,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
         },
         'settings.get': () => ({ settings: settings.current, notices: settings.notices }),
         'documents.pathMenu': ([id], event) => menus.path(id, event.sender.id),
+        'documents.contextMenu': ([id], event) => menus.document(id, event.sender.id),
         ...documentHandlers({ records: documents, links, reads, fs, decode: decodeWithPlatform }),
         ...tabHandlers({
           tabs: documents,
@@ -279,6 +282,14 @@ function reportSettingsNotices(notices: readonly SettingsNotice[]): void {
   if (!app.isPackaged) (globalThis as { __galeoSettingsNotices?: readonly SettingsNotice[] }).__galeoSettingsNotices = notices;
 }
 
+/**
+ * Capability keys main took before the page saw them. Edit mode (Ctrl+E) arrives in v0.2; until
+ * then the key is only kept from the page. Unpackaged test runs read `globalThis.__galeoCapabilityKeys`.
+ */
+function recordCapabilityKey(command: Command): void {
+  if (!app.isPackaged) ((globalThis as { __galeoCapabilityKeys?: Command[] }).__galeoCapabilityKeys ??= []).push(command);
+}
+
 /** Asks, in a native dialog the page can't answer for itself, whether a burst of opens may go on. */
 async function confirmBurst(windowId: number): Promise<boolean> {
   const answer = !app.isPackaged ? process.env['GALEO_TEST_BURST_ANSWER'] : undefined;
@@ -297,14 +308,14 @@ async function confirmBurst(windowId: number): Promise<boolean> {
 }
 
 /**
- * The desktop hand-offs. Unpackaged test runs can record external opens and reveals instead of
- * starting other apps (`GALEO_TEST_EXTERNAL=record`, read as `globalThis.__galeoOpenedExternal` and
- * `globalThis.__galeoRevealed`).
+ * The desktop hand-offs. Unpackaged test runs can record them instead of starting other apps
+ * (`GALEO_TEST_EXTERNAL=record`, read as `globalThis.__galeoOpenedExternal`, `__galeoOpenedPaths` and
+ * `__galeoRevealed`).
  */
 function externalShell(): OsShell {
   if (app.isPackaged || process.env['GALEO_TEST_EXTERNAL'] !== 'record') return new ElectronOsShell();
-  const global = globalThis as { __galeoOpenedExternal?: string[]; __galeoRevealed?: string[] };
-  return new RecordingOsShell((global.__galeoOpenedExternal ??= []), (global.__galeoRevealed ??= []));
+  const global = globalThis as { __galeoOpenedExternal?: string[]; __galeoRevealed?: string[]; __galeoOpenedPaths?: string[] };
+  return new RecordingOsShell((global.__galeoOpenedExternal ??= []), (global.__galeoRevealed ??= []), (global.__galeoOpenedPaths ??= []));
 }
 
 /**

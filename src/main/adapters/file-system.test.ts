@@ -47,6 +47,16 @@ describe('NodeFileSystem.stat', () => {
     expect((await fs.stat(moved)).id).toBe(before.id);
   });
 
+  it.runIf(posix)('says whether any execute bit is set (SR-05)', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'tool', '#!/bin/sh');
+    expect((await fs.stat(target)).executable).toBe(false);
+    chmodSync(target, 0o744);
+    expect((await fs.stat(target)).executable).toBe(true);
+    chmodSync(target, 0o601);
+    expect((await fs.stat(target)).executable).toBe(true);
+  });
+
   it('gives a replaced file a new identity', async () => {
     const dir = tempDir();
     const target = file(dir, 'a.md', 'one');

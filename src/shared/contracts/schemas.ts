@@ -17,6 +17,7 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'documents.forward': z.tuple([documentId]),
   'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
   'documents.pathMenu': z.tuple([documentId]),
+  'documents.contextMenu': z.tuple([documentId]),
   'tabs.snapshot': z.tuple([]),
   'tabs.activated': z.tuple([documentId]),
   'tabs.rendered': z.tuple([documentId, z.int().min(0).max(2 ** 31)]),

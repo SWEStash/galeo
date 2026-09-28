@@ -26,6 +26,8 @@ export interface DocumentViewProps {
   onResolveImage?: (src: string) => Promise<ImageResult>;
   /** A link was clicked; main decides what following it does. */
   onLink?: (href: string, options: { background: boolean }) => void;
+  /** A right-click: main shows the document's menu (ADR-004); the page shows none of its own. */
+  onContextMenu?: (() => void) | undefined;
   /** Where to be once the content is in (a tab waking up); the view stays hidden until it's there. */
   initialPosition?: ScrollAnchor | null;
   /** Where the reader is, once scrolling settles. */
@@ -93,6 +95,7 @@ export function DocumentView({
   follow = false,
   onFollowEnded,
   onLink,
+  onContextMenu,
   onResolveImage,
   scheme,
   initialPosition = null,
@@ -108,6 +111,8 @@ export function DocumentView({
   positionListener.current = onPosition;
   const linkListener = useRef(onLink);
   linkListener.current = onLink;
+  const menuListener = useRef(onContextMenu);
+  menuListener.current = onContextMenu;
   const shownView = useRef<ViewMode | null>(null);
   const renderedFinder = useRef<Finder | null>(null);
   const host = () => mountDocumentHost(container.current!);
@@ -156,11 +161,19 @@ export function DocumentView({
         background: event.ctrlKey || event.metaKey || event.button === 1,
       });
     };
+    // On the container, which also hears right-clicks outside the document's own content.
+    const element = container.current!;
+    const onMenu = (event: Event) => {
+      event.preventDefault();
+      menuListener.current?.();
+    };
     root.addEventListener('click', onClick);
     root.addEventListener('auxclick', onClick);
+    element.addEventListener('contextmenu', onMenu);
     return () => {
       root.removeEventListener('click', onClick);
       root.removeEventListener('auxclick', onClick);
+      element.removeEventListener('contextmenu', onMenu);
     };
   }, []);
 

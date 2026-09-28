@@ -30,13 +30,34 @@ function describe(content: Unready): { title: string; detail?: string } {
   }
 }
 
-export function DocumentState({ content }: { content: Unready }) {
+export function DocumentState({
+  content,
+  onClose,
+  onFileActions,
+}: {
+  content: Unready;
+  onClose?: (() => void) | undefined;
+  /** Main's menu for the file: open with the default app, reveal it, copy its path. */
+  onFileActions?: (() => void) | undefined;
+}) {
   const { title, detail } = describe(content);
   return (
     <section className="document-state" data-testid="document-state" data-state={content.state} role="status">
       <p className="document-state-title">{title}</p>
       {detail && <p className="document-state-detail">{detail}</p>}
       <p className="document-state-path">{content.path}</p>
+      <div className="document-state-actions">
+        {onClose && (
+          <button type="button" onClick={onClose}>
+            Close tab
+          </button>
+        )}
+        {onFileActions && (
+          <button type="button" onClick={onFileActions}>
+            File actions…
+          </button>
+        )}
+      </div>
     </section>
   );
 }

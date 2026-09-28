@@ -1,3 +1,4 @@
+import { capabilityCommandFor, type Command, type Platform } from '../../shared/keymap';
 /** Every permission is denied except sanitized clipboard writes, used by copy buttons (SR-01). */
 export function isPermissionAllowed(permission: string): boolean {
   return permission === 'clipboard-sanitized-write';
@@ -45,4 +46,28 @@ export function titleBarOverlay(scheme: 'light' | 'dark') {
   return scheme === 'dark'
     ? { color: '#161b22', symbolColor: '#e6edf3', height: TAB_BAR_HEIGHT }
     : { color: '#f6f8fa', symbolColor: '#1f2328', height: TAB_BAR_HEIGHT };
+}
+
+/** The part of Electron's `Input` (from `before-input-event`) key matching needs. */
+export interface KeyInput {
+  type: string;
+  key: string;
+  control: boolean;
+  alt: boolean;
+  shift: boolean;
+  meta: boolean;
+}
+
+/** The capability command a key press is (ADR-004), which main handles before the page sees it. */
+export function capabilityKey(input: KeyInput, platform: Platform): Command | null {
+  if (input.type !== 'keyDown') return null;
+  return capabilityCommandFor(
+    { key: input.key, ctrlKey: input.control, altKey: input.alt, shiftKey: input.shift, metaKey: input.meta },
+    platform,
+  );
+}
+
+/** The keymap's platforms; other Unixes follow the Linux conventions. */
+export function keymapPlatform(platform: NodeJS.Platform): Platform {
+  return platform === 'darwin' || platform === 'win32' ? platform : 'linux';
 }

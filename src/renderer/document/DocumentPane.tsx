@@ -45,6 +45,9 @@ export interface DocumentPaneProps {
   /** What the tab bar and status bar show about this document. */
   onStatus?: (status: TabStatus) => void;
   onChooseEncoding?: (encoding: ChosenEncoding | null) => void;
+  /** Main's menu for the document (right-click, or a state's "File actions…"). */
+  onContextMenu?: () => void;
+  onClose?: () => void;
   /** The tab's zoom; it scales the document only. */
   zoom?: number;
 }
@@ -75,6 +78,8 @@ export function DocumentPane({
   onWeight,
   onStatus,
   onChooseEncoding,
+  onContextMenu,
+  onClose,
   zoom = 1,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
@@ -177,7 +182,15 @@ export function DocumentPane({
     });
   }, [onStatus, content.state, ready, view, lines, follow]);
 
-  if (!ready) return <DocumentState content={content as Exclude<DocumentContent, { state: 'ready' }>} />;
+  if (!ready) {
+    return (
+      <DocumentState
+        content={content as Exclude<DocumentContent, { state: 'ready' }>}
+        onClose={onClose}
+        onFileActions={onContextMenu}
+      />
+    );
+  }
 
   return (
     <>
@@ -203,6 +216,7 @@ export function DocumentPane({
         follow={follow}
         onFollowEnded={endFollow}
         onLink={onLink}
+        onContextMenu={onContextMenu}
         onResolveImage={onResolveImage}
         scheme={scheme}
         initialPosition={initialPosition}

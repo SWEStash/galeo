@@ -242,6 +242,12 @@ button:focus-visible {
   font-size: 0.85em;
   overflow-wrap: anywhere;
 }
+.document-state-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 1.5em;
+  font-size: 14px;
+}
 
 .document-loading {
   display: flex;

@@ -39,6 +39,7 @@ export class NodeFileSystem implements FileSystem {
         size: Number(info.size),
         mtimeMs: Number(info.mtimeMs),
         id: `${info.dev}:${info.ino}`,
+        executable: process.platform !== 'win32' && (info.mode & 0o111n) !== 0n,
       };
     } catch (error) {
       throw toFsError(error, path);

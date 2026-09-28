@@ -20,6 +20,8 @@ export interface FileStat {
   mtimeMs: number;
   /** Identity that survives renames (inode on POSIX); changes when a file is replaced. */
   id: string;
+  /** Any execute bit set (POSIX); always false on Windows, where extensions decide (SR-05). */
+  executable: boolean;
 }
 
 export interface DirEntry {

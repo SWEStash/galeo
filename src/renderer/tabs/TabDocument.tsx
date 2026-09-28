@@ -93,6 +93,8 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
   const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
   const onStatus = useCallback((status: TabStatus) => store.setStatus(id, status), [id, store]);
+  const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id), [id]);
+  const close = useCallback(() => store.close(id), [id, store]);
   const chooseEncoding = useCallback(
     (encoding: ChosenEncoding | null) => void window.galeo.documents.setEncoding(id, encoding).then(() => store.reread(id)),
     [id, store],
@@ -119,6 +121,8 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
       onWeight={onWeight}
       onStatus={onStatus}
       onChooseEncoding={chooseEncoding}
+      onContextMenu={contextMenu}
+      onClose={close}
       zoom={zoom}
     />
   );

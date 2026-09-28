@@ -34,6 +34,8 @@ const BASE = {
   fullScreen: ['F11'],
   // Ctrl+Q is left unbound to avoid accidental quits.
   quit: ['Ctrl+Shift+Q'],
+  /** Edit mode (v0.2); a capability key, so main owns it already. */
+  editMode: ['CmdOrCtrl+E'],
 } satisfies Record<string, string[]>;
 
 export type Command = keyof typeof BASE;
@@ -90,4 +92,15 @@ export function commandFor(event: KeyEventLike, platform: Platform): Command | n
 export function tabNumberFor(event: KeyEventLike, platform: Platform): number | null {
   const index = keymap(platform).goToTab.findIndex((accelerator) => matches(accelerator, event, platform));
   return index < 0 ? null : index + 1;
+}
+
+/**
+ * Commands that grant a capability (ADR-004): main handles their keys in `before-input-event`, so
+ * the page never sees them and can't fake them.
+ */
+export const CAPABILITY_COMMANDS: readonly Command[] = ['editMode'];
+
+export function capabilityCommandFor(event: KeyEventLike, platform: Platform): Command | null {
+  const command = commandFor(event, platform);
+  return command && CAPABILITY_COMMANDS.includes(command) ? command : null;
 }

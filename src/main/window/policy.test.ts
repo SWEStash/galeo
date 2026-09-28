@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hardenedWebPreferences, isPermissionAllowed, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
+import { capabilityKey, hardenedWebPreferences, isPermissionAllowed, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
 
 describe('isPermissionAllowed', () => {
   it('allows only sanitized clipboard writes (copy buttons)', () => {
@@ -60,5 +60,16 @@ describe('titleBarOverlay', () => {
   it("draws the window controls over the tab bar, in the tab bar's colours for each scheme", () => {
     expect(titleBarOverlay('light')).toEqual({ color: '#f6f8fa', symbolColor: '#1f2328', height: TAB_BAR_HEIGHT });
     expect(titleBarOverlay('dark')).toEqual({ color: '#161b22', symbolColor: '#e6edf3', height: TAB_BAR_HEIGHT });
+  });
+});
+
+describe('capabilityKey', () => {
+  const input = (key: string, control = true, type = 'keyDown') => ({ type, key, control, alt: false, shift: false, meta: false });
+
+  it("names a capability key from Electron's input, on key down only", () => {
+    expect(capabilityKey(input('e'), 'linux')).toBe('editMode');
+    expect(capabilityKey(input('e', true, 'keyUp'), 'linux')).toBeNull();
+    expect(capabilityKey(input('f'), 'linux')).toBeNull();
+    expect(capabilityKey(input('e', false), 'linux')).toBeNull();
   });
 });

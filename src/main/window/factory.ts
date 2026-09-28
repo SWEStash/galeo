@@ -1,16 +1,19 @@
 import { app, BrowserWindow, nativeTheme } from 'electron';
 import path from 'node:path';
-import { hardenedWebPreferences, titleBarOverlay, windowTitle } from './policy';
+import type { Command } from '../../shared/keymap';
+import { capabilityKey, hardenedWebPreferences, keymapPlatform, titleBarOverlay, windowTitle } from './policy';
 
 export interface WindowOptions {
   url: string;
   sandboxed: boolean;
   /** A small fixed-size window for app-level choices, such as "sandbox unavailable". */
   dialog?: boolean;
+  /** A capability key was pressed; the page never saw it (ADR-004). */
+  onCapabilityKey?: (command: Command) => void;
 }
 
 /** The only place that constructs a `BrowserWindow`. Main owns the title (never the page). */
-export function createAppWindow({ url, sandboxed, dialog = false }: WindowOptions): BrowserWindow {
+export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKey }: WindowOptions): BrowserWindow {
   const title = windowTitle('galeo', { sandboxed });
   const scheme = () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
   const window = new BrowserWindow({
@@ -25,6 +28,12 @@ export function createAppWindow({ url, sandboxed, dialog = false }: WindowOption
     }),
   });
   window.on('page-title-updated', (event) => event.preventDefault());
+  window.webContents.on('before-input-event', (event, input) => {
+    const command = capabilityKey(input, keymapPlatform(process.platform));
+    if (!command) return;
+    event.preventDefault();
+    onCapabilityKey?.(command);
+  });
   if (!dialog) {
     const followScheme = () => window.setTitleBarOverlay(titleBarOverlay(scheme()));
     nativeTheme.on('updated', followScheme);

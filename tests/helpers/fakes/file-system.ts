@@ -16,6 +16,7 @@ export class FakeFileSystem implements FileSystem {
   private readonly failures = new Map<string, FsErrorCode>();
   private readonly directories = new Set<string>();
   private readonly modes = new Map<string, number>();
+  private readonly executables = new Set<string>();
 
   constructor(files: Record<string, string | Uint8Array> = {}) {
     for (const [path, content] of Object.entries(files)) this.write(path, content);
@@ -33,6 +34,10 @@ export class FakeFileSystem implements FileSystem {
     this.links.set(path, target);
   }
 
+  makeExecutable(path: string): void {
+    this.executables.add(path);
+  }
+
   failWith(path: string, code: FsErrorCode): void {
     this.failures.set(path, code);
   }
@@ -41,8 +46,9 @@ export class FakeFileSystem implements FileSystem {
     this.throwIfFailing(path);
     const resolved = this.resolve(path);
     const content = this.files.get(resolved);
-    if (content) return { kind: 'file', size: content.byteLength, mtimeMs: 0, id: resolved };
-    if (this.isDirectory(resolved)) return { kind: 'directory', size: 0, mtimeMs: 0, id: resolved };
+    const executable = this.executables.has(resolved);
+    if (content) return { kind: 'file', size: content.byteLength, mtimeMs: 0, id: resolved, executable };
+    if (this.isDirectory(resolved)) return { kind: 'directory', size: 0, mtimeMs: 0, id: resolved, executable };
     throw new FsError('ENOENT', path);
   }
 

@@ -17,13 +17,18 @@ export class ElectronOsShell implements OsShell {
   }
 }
 
-/** For unpackaged test runs: records external opens and reveals instead of starting other apps. */
+/** For unpackaged test runs: records external opens, file opens and reveals instead of starting other apps. */
 export class RecordingOsShell extends ElectronOsShell {
   constructor(
     private readonly opened: string[],
     private readonly revealed: string[] = [],
+    private readonly openedPaths: string[] = [],
   ) {
     super();
+  }
+
+  override async openPath(path: string): Promise<void> {
+    this.openedPaths.push(path);
   }
 
   override async openExternal(url: string): Promise<void> {

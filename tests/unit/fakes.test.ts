@@ -92,6 +92,13 @@ describe('FakeFileSystem', () => {
     await expect(fs.writeFileAtomic('/cfg/s.json', text('x'), { mode: 0o600 })).rejects.toMatchObject({ code: 'EACCES' });
   });
 
+  it('marks files executable when told to', async () => {
+    const fs = new FakeFileSystem({ '/bin/tool': 'x', '/doc.md': 'y' });
+    fs.makeExecutable('/bin/tool');
+    expect((await fs.stat('/bin/tool')).executable).toBe(true);
+    expect((await fs.stat('/doc.md')).executable).toBe(false);
+  });
+
   it('resolves registered symlinks in realpath', async () => {
     const fs = new FakeFileSystem({ '/real/a.md': 'a' });
     fs.symlink('/link', '/real');

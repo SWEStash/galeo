@@ -46,6 +46,7 @@ export const CHANNELS = [
   'documents.forward',
   'documents.resolveImage',
   'documents.pathMenu',
+  'documents.contextMenu',
   'tabs.snapshot',
   'tabs.activated',
   'tabs.rendered',
@@ -74,6 +75,11 @@ export interface Requests {
   'documents.resolveImage': [id: string, src: string];
   /** Asks main for the native menu of the document's path (copy it, reveal it); main acts on the choice. */
   'documents.pathMenu': [id: string];
+  /**
+   * Asks main for the document's native menu (open with the default app, reveal, copy path). There
+   * is no channel that opens a file: only the user's choice in main's menu does (SR-05).
+   */
+  'documents.contextMenu': [id: string];
   /** The sender's tabs, as main knows them. */
   'tabs.snapshot': [];
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
@@ -101,6 +107,7 @@ export interface Responses {
   'documents.forward': HistoryResult;
   'documents.resolveImage': ImageResult;
   'documents.pathMenu': void;
+  'documents.contextMenu': void;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendered': void;
