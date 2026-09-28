@@ -47,8 +47,10 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
   const { document, reload } = useDocument();
-  // Where to scroll once the document main navigated to is shown.
-  const [pendingAnchor, setPendingAnchor] = useState<{ anchor: string; token: number } | null>(null);
+  // Where to scroll, and in which read of the document: after a navigation, the next one.
+  const [pendingAnchor, setPendingAnchor] = useState<{ anchor: string; token: number; generation: number } | null>(
+    null,
+  );
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(markFirstPaint, []);
@@ -69,18 +71,19 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
     return () => clearTimeout(timer);
   }, [message]);
 
+  const generation = document?.generation ?? 0;
   const moved = useCallback(
     (result: FollowResult | HistoryResult) => {
       if (result.kind === 'navigated') {
         reload();
-        if (result.anchor) setPendingAnchor({ anchor: result.anchor, token: Date.now() });
+        setPendingAnchor(result.anchor ? { anchor: result.anchor, token: Date.now(), generation: generation + 1 } : null);
       } else if (result.kind === 'anchor') {
-        setPendingAnchor({ anchor: result.anchor, token: Date.now() });
+        setPendingAnchor({ anchor: result.anchor, token: Date.now(), generation });
       } else if (result.kind === 'refused') {
         setMessage(REFUSALS[result.reason]);
       }
     },
-    [reload],
+    [reload, generation],
   );
 
   const followLink = useCallback(
@@ -114,7 +117,7 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
             client={client}
             platform={platform}
             scheme={scheme}
-            pendingAnchor={pendingAnchor}
+            pendingAnchor={pendingAnchor?.generation === document.generation ? pendingAnchor : null}
             onAnchorShown={() => setPendingAnchor(null)}
             onLink={followLink}
             onResolveImage={resolveImage}

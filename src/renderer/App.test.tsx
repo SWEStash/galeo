@@ -302,6 +302,23 @@ describe('App', () => {
     await vi.waitFor(() => expect(scrolled).toContain('user-content-goals'));
   });
 
+  it("lands on the anchor of a link to another file in that file, not the one it came from", async () => {
+    const first = readyContent('markdown', 'rendered', '[next](next.md#goals)');
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: first });
+    api.documents.read.mockResolvedValueOnce(first).mockResolvedValueOnce(readyContent('markdown', 'rendered', 'second'));
+    api.documents.followLink.mockResolvedValue({ kind: 'navigated', anchor: 'goals' });
+    workerMode = 'links';
+    const scrolledIn: string[] = [];
+    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function (this: Element) {
+      scrolledIn.push((this.getRootNode() as ShadowRoot).querySelector('article p')?.textContent ?? '');
+    });
+    const container = await renderApp();
+    const link = await vi.waitFor(async () => (await documentShadow(container)).querySelector<HTMLAnchorElement>('a[href="next.md#goals"]')!);
+    await act(async () => link.click());
+    await vi.waitFor(() => expect(scrolledIn).toContain('second'));
+    expect(scrolledIn).not.toContain('next');
+  });
+
   it('says so in the status bar when main refuses a link', async () => {
     const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[x](https://x.example)') });
     api.documents.followLink.mockResolvedValue({ kind: 'refused', reason: 'rate-limited' });
