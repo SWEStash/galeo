@@ -33,8 +33,10 @@ describe('tabHandlers', () => {
     handlers['tabs.move']([b, 0], from(1));
     expect(tabs.list(1).map((tab) => tab.id)).toEqual([b, a]);
     handlers['tabs.close']([a], from(1));
-    handlers['tabs.reopenClosed']([], from(1));
+    const reopened = handlers['tabs.reopenClosed']([], from(1));
     expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/b.md', '/d/a.md']);
+    expect(reopened).toBe(tabs.list(1)[1]!.id);
+    expect(handlers['tabs.reopenClosed']([], from(1))).toBeNull();
   });
 
   it('lets go of what main kept for a closed tab', () => {

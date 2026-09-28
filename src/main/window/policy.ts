@@ -33,3 +33,16 @@ export function hardenedWebPreferences({ preload, isPackaged }: { preload: strin
     devTools: !isPackaged,
   };
 }
+
+/** The tab bar's height in CSS pixels; the window controls drawn over it match (ADR-006). */
+export const TAB_BAR_HEIGHT = 36;
+
+/**
+ * The window has no title bar: the tab bar is the title bar, and Electron draws the platform's
+ * window controls over its end, in its colours (`--galeo-color-code-bg` and `--galeo-color-fg`).
+ */
+export function titleBarOverlay(scheme: 'light' | 'dark') {
+  return scheme === 'dark'
+    ? { color: '#161b22', symbolColor: '#e6edf3', height: TAB_BAR_HEIGHT }
+    : { color: '#f6f8fa', symbolColor: '#1f2328', height: TAB_BAR_HEIGHT };
+}

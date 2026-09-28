@@ -15,6 +15,8 @@ function setup(initial: TabSnapshot) {
     snapshot: vi.fn().mockResolvedValue(initial),
     activated: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
+    move: vi.fn().mockResolvedValue(undefined),
+    reopenClosed: vi.fn().mockResolvedValue(undefined),
     onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
       push = listener;
       return () => {};
@@ -100,5 +102,34 @@ describe('createTabStore', () => {
     expect(store.getSnapshot()).toBe(first);
     push(snapshot(1, ['x']));
     expect(store.getSnapshot()).toBe(first);
+  });
+
+  it("asks main to move or reopen tabs, and waits for main's snapshot to show it", async () => {
+    const { store, api } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    store.move('a', 1);
+    store.reopenClosed();
+    expect(api.move).toHaveBeenCalledWith('a', 1);
+    expect(api.reopenClosed).toHaveBeenCalled();
+    expect(store.getSnapshot().tabs.map((each) => each.id)).toEqual(['a', 'b']);
+  });
+
+  it('activates a reopened tab, whether its snapshot comes before or after the answer', async () => {
+    const { store, api, push } = setup(snapshot(1, ['a'], 'a'));
+    await store.start();
+    api.reopenClosed.mockResolvedValueOnce('b');
+    store.reopenClosed();
+    await vi.waitFor(() => expect(api.reopenClosed).toHaveBeenCalled());
+    await Promise.resolve();
+    push(snapshot(2, ['b', 'a'], 'a'));
+    expect(store.getSnapshot().active).toBe('b');
+
+    api.reopenClosed.mockImplementationOnce(async () => {
+      push(snapshot(3, ['b', 'c', 'a'], 'b'));
+      return 'c';
+    });
+    store.reopenClosed();
+    await vi.waitFor(() => expect(store.getSnapshot().active).toBe('c'));
+    expect(api.activated).toHaveBeenLastCalledWith('c');
   });
 });

@@ -86,7 +86,8 @@ export interface Responses {
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.close': void;
-  'tabs.reopenClosed': void;
+  /** The reopened tab's id, or null when none was closed. */
+  'tabs.reopenClosed': string | null;
   'tabs.move': void;
   'settings.get': SettingsState;
 }

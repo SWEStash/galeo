@@ -27,10 +27,7 @@ export interface TabDocumentProps {
   onMessage: (message: string) => void;
 }
 
-/**
- * One tab: its document, its links and history. Tabs that aren't shown stay mounted but hidden and
- * inert, so switching back to one shows it as it was.
- */
+/** One tab's content: its document, its links and history. */
 export function TabDocument({ id, active, client, platform, scheme, onMessage }: TabDocumentProps) {
   const { document, reload } = useDocument(id);
   // Where to scroll, and in which read of the document: after a navigation, the next one.
@@ -73,7 +70,7 @@ export function TabDocument({ id, active, client, platform, scheme, onMessage }:
   );
 
   return (
-    <section className="tab-panel" data-testid="tab-panel" data-active={active} inert={!active} aria-hidden={!active}>
+    <>
       {document && (
         <DocumentPane
           key={`${id}:${document.generation}`}
@@ -89,6 +86,6 @@ export function TabDocument({ id, active, client, platform, scheme, onMessage }:
           onHistory={history}
         />
       )}
-    </section>
+    </>
   );
 }

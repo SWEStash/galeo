@@ -11,9 +11,107 @@ body,
   margin: 0;
 }
 
-#root {
+#root,
+.window {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  min-height: 0;
+}
+
+/* The title bar: the tabs, then room for the window controls Electron draws over its end
+   (titlebar-area-*). Its empty space drags the window; tabs don't. */
+.tab-bar {
+  display: flex;
+  flex: none;
+  height: env(titlebar-area-height, 36px);
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+  background: var(--galeo-color-code-bg);
+  border-bottom: 1px solid var(--galeo-color-border);
+  -webkit-app-region: drag;
+  font: 13px var(--galeo-font-ui);
+  color: var(--galeo-color-fg);
+}
+
+.tab-strip {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tab-list {
+  display: flex;
+  min-width: 0;
+}
+
+/* Tabs shrink to a minimum, then the strip scrolls (UX §8). */
+.tab {
+  display: flex;
+  flex: 0 1 200px;
+  gap: 6px;
+  align-items: center;
+  min-width: 72px;
+  padding: 0 8px 0 12px;
+  border-right: 1px solid var(--galeo-color-border);
+  color: var(--galeo-color-muted);
+  cursor: default;
+  outline: none;
+  -webkit-app-region: no-drag;
+}
+
+.tab[data-selected] {
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  box-shadow: inset 0 -2px 0 var(--galeo-color-focus);
+}
+
+.tab[data-focus-visible] {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: -2px;
+}
+
+.tab[data-dragging] {
+  opacity: 0.5;
+}
+
+.tab-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-close {
+  flex: none;
+  width: 18px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.tab-close:hover {
+  background: var(--galeo-color-border);
+}
+
+.window-grip {
+  flex: none;
+  width: 48px;
+  -webkit-app-region: drag;
+}
+
+.tab-caret {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--galeo-color-focus);
+  pointer-events: none;
 }
 
 main {
@@ -33,7 +131,7 @@ main {
   min-height: 0;
 }
 
-.tab-panel[data-active='false'] {
+.tab-panel[data-inert] {
   position: absolute;
   inset: 0;
   visibility: hidden;

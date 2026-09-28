@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, nativeTheme, webContents } from 'electron';
+import { app, BrowserWindow, dialog, Menu, nativeTheme, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
@@ -33,6 +33,7 @@ import { installNetworkGuard, lockDownBackgroundNetworking } from './security/ne
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
 import { createAppWindow } from './window/factory';
+import { applicationMenu } from './window/menu';
 import { ownArgs } from './window/policy';
 
 // Node's uptime starts with the process, before any of this module runs.
@@ -150,6 +151,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
 
   void app.whenReady().then(async () => {
     perfMark('app-ready');
+    const menu = applicationMenu(process.platform);
+    Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     await settings.start();
     nativeTheme.themeSource = settings.current.themeMode;
     reportSettingsNotices(settings.notices);

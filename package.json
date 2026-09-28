@@ -60,6 +60,7 @@
     "@shikijs/rehype": "4.4.3",
     "katex": "0.18.9",
     "react": "19.3.0",
+    "react-aria-components": "1.21.1",
     "react-dom": "19.3.0",
     "rehype-katex": "7.0.1",
     "rehype-raw": "7.0.0",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandFor, keymap, type KeyEventLike } from './keymap';
+import { commandFor, keymap, tabNumberFor, type KeyEventLike } from './keymap';
 
 describe('keymap', () => {
   it('uses CmdOrCtrl so one map serves every platform', () => {
@@ -78,5 +78,28 @@ describe('commandFor', () => {
   it('returns null for keys with no command', () => {
     expect(commandFor(key({ key: 'q', ctrlKey: true }), 'linux')).toBeNull();
     expect(commandFor(key({ key: 'Shift', shiftKey: true }), 'linux')).toBeNull();
+  });
+});
+
+describe('tabNumberFor', () => {
+  const key = (key: string, mods: Partial<KeyEventLike> = {}): KeyEventLike => ({
+    key,
+    ctrlKey: false,
+    altKey: false,
+    shiftKey: false,
+    metaKey: false,
+    ...mods,
+  });
+
+  it('names the tab Ctrl+1 to Ctrl+8 go to', () => {
+    expect(tabNumberFor(key('1', { ctrlKey: true }), 'linux')).toBe(1);
+    expect(tabNumberFor(key('8', { ctrlKey: true }), 'win32')).toBe(8);
+    expect(tabNumberFor(key('3', { metaKey: true }), 'darwin')).toBe(3);
+  });
+
+  it('is null for other keys, including Ctrl+9 (the last tab)', () => {
+    expect(tabNumberFor(key('9', { ctrlKey: true }), 'linux')).toBeNull();
+    expect(tabNumberFor(key('1'), 'linux')).toBeNull();
+    expect(tabNumberFor(key('1', { ctrlKey: true, shiftKey: true }), 'linux')).toBeNull();
   });
 });

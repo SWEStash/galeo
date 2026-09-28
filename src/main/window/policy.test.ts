@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hardenedWebPreferences, isPermissionAllowed, ownArgs, windowTitle } from './policy';
+import { hardenedWebPreferences, isPermissionAllowed, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
 
 describe('isPermissionAllowed', () => {
   it('allows only sanitized clipboard writes (copy buttons)', () => {
@@ -53,5 +53,12 @@ describe('hardenedWebPreferences', () => {
 
   it('allows DevTools only in unpackaged builds', () => {
     expect(hardenedWebPreferences({ preload: '/p', isPackaged: false }).devTools).toBe(true);
+  });
+});
+
+describe('titleBarOverlay', () => {
+  it("draws the window controls over the tab bar, in the tab bar's colours for each scheme", () => {
+    expect(titleBarOverlay('light')).toEqual({ color: '#f6f8fa', symbolColor: '#1f2328', height: TAB_BAR_HEIGHT });
+    expect(titleBarOverlay('dark')).toEqual({ color: '#161b22', symbolColor: '#e6edf3', height: TAB_BAR_HEIGHT });
   });
 });

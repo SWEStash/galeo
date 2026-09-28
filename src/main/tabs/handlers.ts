@@ -24,7 +24,7 @@ export function tabHandlers(deps: {
       if (tabs.close(id, event.sender.id)) closed(id);
       else resync(event.sender.id);
     },
-    'tabs.reopenClosed': (_args, event) => void tabs.reopenClosed(event.sender.id),
+    'tabs.reopenClosed': (_args, event) => tabs.reopenClosed(event.sender.id)?.id ?? null,
     'tabs.move': ([id, position], event) => orResync(tabs.move(id, event.sender.id, position), event.sender.id),
   };
 }

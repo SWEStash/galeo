@@ -85,3 +85,9 @@ export function commandFor(event: KeyEventLike, platform: Platform): Command | n
   }
   return null;
 }
+
+/** Which tab (1 to 8) a "go to tab" press names, or null for any other key. */
+export function tabNumberFor(event: KeyEventLike, platform: Platform): number | null {
+  const index = keymap(platform).goToTab.findIndex((accelerator) => matches(accelerator, event, platform));
+  return index < 0 ? null : index + 1;
+}

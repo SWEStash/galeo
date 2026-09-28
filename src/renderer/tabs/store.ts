@@ -9,7 +9,7 @@ export interface TabsView {
   active: string | null;
 }
 
-export type TabsApi = Pick<GaleoApi['tabs'], 'snapshot' | 'activated' | 'close' | 'onChanged'>;
+export type TabsApi = Pick<GaleoApi['tabs'], 'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'onChanged'>;
 
 export interface TabStore {
   subscribe(listener: () => void): () => void;
@@ -18,6 +18,9 @@ export interface TabStore {
   start(): Promise<void>;
   activate(id: string): void;
   close(id: string): void;
+  /** Main owns the order: the new order shows once its snapshot arrives. */
+  move(id: string, position: number): void;
+  reopenClosed(): void;
 }
 
 /**
@@ -27,6 +30,8 @@ export interface TabStore {
  */
 export function createTabStore(api: TabsApi): TabStore {
   let view: TabsView = { revision: -1, tabs: [], active: null };
+  /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
+  let wanted: string | null = null;
   const listeners = new Set<() => void>();
 
   const set = (next: TabsView) => {
@@ -42,7 +47,11 @@ export function createTabStore(api: TabsApi): TabStore {
   const apply = (snapshot: TabSnapshot) => {
     if (snapshot.revision <= view.revision) return;
     const ids = snapshot.tabs.map((tab) => tab.id);
-    if (view.active && ids.includes(view.active)) {
+    if (wanted && ids.includes(wanted)) {
+      const id = wanted;
+      wanted = null;
+      activateLocally(id, snapshot.tabs, snapshot.revision);
+    } else if (view.active && ids.includes(view.active)) {
       set({ revision: snapshot.revision, tabs: snapshot.tabs, active: view.active });
     } else if (snapshot.active && ids.includes(snapshot.active)) {
       set({ revision: snapshot.revision, tabs: snapshot.tabs, active: snapshot.active });
@@ -54,7 +63,7 @@ export function createTabStore(api: TabsApi): TabStore {
     }
   };
 
-  return {
+  const store: TabStore = {
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -77,5 +86,16 @@ export function createTabStore(api: TabsApi): TabStore {
       }
       void api.close(id);
     },
+    move(id, position) {
+      void api.move(id, position);
+    },
+    reopenClosed() {
+      void api.reopenClosed().then((id) => {
+        if (!id) return;
+        if (view.tabs.some((tab) => tab.id === id)) store.activate(id);
+        else wanted = id;
+      });
+    },
   };
+  return store;
 }

@@ -344,7 +344,9 @@ this map only.
 Each is decided when the feature that needs it is built.
 
 - [ ] Which dropped file becomes active when dropping many (current spec: the first) — decide with drag and drop.
-- [ ] Tab overflow with many tabs: shrink-to-icon (Chrome) or scrollable tab strip — decide with the tab bar.
+- [x] Tab overflow with many tabs: tabs shrink to a minimum width, then the strip scrolls, keeping the
+      shown tab in view; a grip at the bar's end always drags the window (decided with the tab bar,
+      2026-09-28).
 - [ ] Profile accent palette: fixed presets only, or free colour picker (contrast risk) — decide with profiles.
 - [x] `.txt` default view: reader, with Ctrl+U for the monospace source (decided with the text/log views, 2026-09-27).
 - [ ] Zoom per tab or per window (current: per window) — decide with tab labels and the status bar.

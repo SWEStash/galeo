@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord, SettingsState, TabSnapshot } from '../shared/contracts';
 import type { Settings } from '../shared/settings';
 
@@ -124,12 +124,17 @@ async function renderApp() {
 }
 
 describe('App', () => {
+  // The first import loads the whole UI (React Aria, CodeMirror); on a busy machine that alone
+  // can outlast a test's timeout, and it isn't what any test here checks.
+  beforeAll(() => import('./App'), 30_000);
+
   afterEach(() => {
     act(() => roots.splice(0).forEach((root) => root.unmount()));
     document.body.innerHTML = '';
     renderRequests.length = 0;
     workerMode = 'answer';
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('marks the root ready once the render worker answers the handshake', async () => {
@@ -147,7 +152,8 @@ describe('App', () => {
 
   it('applies the system colour scheme to the app and follows it live', async () => {
     const query = Object.assign(new EventTarget(), { matches: true });
-    vi.stubGlobal('matchMedia', (media: string) => (media === '(prefers-color-scheme: dark)' ? query : null));
+    const other = Object.assign(new EventTarget(), { matches: false });
+    vi.stubGlobal('matchMedia', (media: string) => (media === '(prefers-color-scheme: dark)' ? query : other));
     stubBridge();
     await renderApp();
     expect(document.documentElement.dataset['scheme']).toBe('dark');
@@ -156,7 +162,6 @@ describe('App', () => {
       query.dispatchEvent(new Event('change'));
     });
     expect(document.documentElement.dataset['scheme']).toBe('light');
-    vi.unstubAllGlobals();
   });
 
   it("renders the window's first document through the worker", async () => {
