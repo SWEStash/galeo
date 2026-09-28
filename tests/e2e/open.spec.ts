@@ -42,9 +42,14 @@ test('reads documents only by the ids main handed out, never by path (SR-12)', a
         own: await attempt(record!.id),
         unknown: await attempt('00000000-0000-0000-0000-000000000000'),
         byPath: await attempt('/etc/passwd'),
+        oversized: await attempt('x'.repeat(10_000)),
+        wrongType: await (window.galeo.documents.read as unknown as (id: unknown) => Promise<unknown>)({ id: record!.id }).then(
+          () => 'read',
+          () => 'refused',
+        ),
       };
     });
-    expect(result).toEqual({ own: 'read', unknown: 'refused', byPath: 'refused' });
+    expect(result).toEqual({ own: 'read', unknown: 'refused', byPath: 'refused', oversized: 'refused', wrongType: 'refused' });
   } finally {
     await close();
   }
