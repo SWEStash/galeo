@@ -1,4 +1,5 @@
 export type { AppPaths } from './app-paths';
+export type { Clipboard } from './clipboard';
 export type { Clock } from './clock';
 export type { Unsubscribe } from './common';
 export { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from './file-system';

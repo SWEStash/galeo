@@ -1,0 +1,118 @@
+import AxeBuilder from '@axe-core/playwright';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { expect, test, type Page } from '@playwright/test';
+import { launchApp, tempHome } from '../helpers/launch';
+
+const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
+const basic = path.join(docs, 'basic.md');
+const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
+
+test('the status bar shows the path, view, read-only, encoding and line count, and passes axe', async () => {
+  const { window, close } = await launchApp(['--', basic]);
+  try {
+    const bar = window.getByTestId('status-bar');
+    await expect(bar.getByTestId('status-path')).toHaveText(basic);
+    await expect(bar.getByTestId('status-view')).toHaveText('Rendered');
+    await expect(bar.getByTestId('status-mode')).toHaveText('Read-only');
+    await expect(bar.getByTestId('status-encoding')).toHaveText('UTF-8');
+    await expect(bar.getByTestId('status-lines')).toHaveText(/^\d+ ln$/);
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(bar.getByTestId('status-view')).toHaveText('Source');
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('.status-bar').analyze();
+    expect(results.violations).toEqual([]);
+  } finally {
+    await close();
+  }
+});
+
+test("the path's menu, built by main, copies the path", async () => {
+  const { app, window, close } = await launchApp(['--', basic], { env: { GALEO_TEST_MENU_CHOICE: 'copy-path' } });
+  try {
+    await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
+    await window.getByTestId('status-path').click();
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(basic);
+    const menus = await app.evaluate(() => (globalThis as { __galeoMenus?: { label: string }[][] }).__galeoMenus);
+    expect(menus?.[0]?.map((item) => item.label)).toEqual(['Copy path', 'Reveal in Files']);
+  } finally {
+    await close();
+  }
+});
+
+test("the path's menu reveals the file in the file manager", async () => {
+  const { app, window, close } = await launchApp(['--', basic], { env: { GALEO_TEST_MENU_CHOICE: 'reveal', GALEO_TEST_EXTERNAL: 'record' } });
+  try {
+    await window.getByTestId('status-path').click();
+    await expect.poll(() => app.evaluate(() => (globalThis as { __galeoRevealed?: string[] }).__galeoRevealed)).toEqual([basic]);
+  } finally {
+    await close();
+  }
+});
+
+test('Reopen with encoding reads the file again as chosen, and the status bar says so', async () => {
+  const { window, close } = await launchApp(['--', path.join(docs, 'latin1.txt')]);
+  try {
+    const banner = window.locator('[data-banner="encoding"]');
+    await expect(banner).toContainText('Windows-1252');
+    await banner.getByRole('button', { name: 'Reopen with encoding…' }).click();
+    await window.getByRole('menuitem', { name: 'UTF-8' }).click();
+    await expect(shownDocument(window).locator('article p')).toHaveText('Caf� cr�me � fran�ais');
+    await expect(banner).toHaveCount(0);
+    await expect(window.getByTestId('status-encoding')).toHaveText('UTF-8');
+    await expect(window.getByTestId('status-view')).toHaveText('Reader');
+    await window.getByTestId('status-encoding').click();
+    await window.getByRole('menuitem', { name: 'Windows-1252' }).click();
+    await expect(shownDocument(window).locator('article p')).toHaveText('Café crème – français');
+  } finally {
+    await close();
+  }
+});
+
+test('zoom is per tab: Ctrl+= zooms this tab only, Ctrl+0 resets it', async () => {
+  const { window, close } = await launchApp(['--', basic, path.join(docs, 'gfm.md')]);
+  try {
+    await expect(shownDocument(window)).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Equal');
+    await expect(window.getByTestId('status-zoom')).toHaveText('110%');
+    await expect(shownDocument(window)).toHaveCSS('zoom', '1.1');
+    await window.keyboard.press('Control+Tab');
+    await expect(shownDocument(window)).toBeVisible();
+    await expect(window.getByTestId('status-zoom')).toHaveCount(0);
+    await window.keyboard.press('Control+Tab');
+    await expect(window.getByTestId('status-zoom')).toHaveText('110%');
+    await window.keyboard.press('ControlOrMeta+0');
+    await expect(window.getByTestId('status-zoom')).toHaveCount(0);
+  } finally {
+    await close();
+  }
+});
+
+test('tabs with the same file name show the parent that tells them apart, and the full path on hover', async () => {
+  const dir = tempHome();
+  for (const folder of ['acme', 'beta']) {
+    mkdirSync(path.join(dir, folder));
+    writeFileSync(path.join(dir, folder, 'plan.md'), `# ${folder}\n`);
+  }
+  const { window, close } = await launchApp(['--', path.join(dir, 'acme', 'plan.md'), path.join(dir, 'beta', 'plan.md')]);
+  try {
+    const labels = window.locator('.tab-label');
+    await expect(labels).toHaveText(['acme/plan.md', 'beta/plan.md']);
+    await expect(labels.first()).toHaveAttribute('title', path.join(dir, 'acme', 'plan.md'));
+  } finally {
+    await close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a log following its end says so in its tab's name; a hibernated tab is dimmed", async () => {
+  const { window, close } = await launchApp(['--', path.join(docs, 'sample.log'), basic]);
+  try {
+    await expect(shownDocument(window).locator('.cm-editor')).toBeVisible();
+    await shownDocument(window).click();
+    await window.keyboard.press('End');
+    await expect(window.getByRole('tab', { name: /sample\.log.*following the end/ })).toBeVisible();
+    await expect(window.getByRole('tab', { name: /basic\.md/ })).toHaveAttribute('data-hibernated', 'true');
+  } finally {
+    await close();
+  }
+});

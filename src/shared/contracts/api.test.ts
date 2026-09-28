@@ -29,7 +29,7 @@ describe('buildApi', () => {
 
     expect(Object.keys(api)).toEqual(['app', 'documents', 'tabs', 'settings']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable']);
-    expect(Object.keys(api.documents)).toEqual(['read', 'followLink', 'back', 'forward', 'resolveImage']);
+    expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'pathMenu']);
     expect(Object.keys(api.tabs)).toEqual([
       'snapshot',
       'activated',

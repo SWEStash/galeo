@@ -216,4 +216,18 @@ describe('TabRegistry', () => {
     expect(tabs.position(id, 1)).toEqual(at(20));
     expect(tabs.position(id, 2)).toBeNull();
   });
+
+  it("keeps a chosen encoding for the entry's file only", () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.txt', 1);
+    expect(tabs.encoding(id, 1)).toBeNull();
+    expect(tabs.setEncoding(id, 1, 'windows-1252')).toBe(true);
+    expect(tabs.setEncoding(id, 2, 'utf-8')).toBe(false);
+    expect(tabs.encoding(id, 1)).toBe('windows-1252');
+    tabs.navigate(id, 1, { path: '/d/b.txt', anchor: null });
+    expect(tabs.encoding(id, 1)).toBeNull();
+    tabs.back(id, 1);
+    expect(tabs.encoding(id, 1)).toBe('windows-1252');
+  });
 });
+

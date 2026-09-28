@@ -282,7 +282,7 @@ the native menu on the active tab.
 | Move tab left / right | Ctrl+Shift+PgUp / Ctrl+Shift+PgDn | |
 | Profile menu | Ctrl+Shift+M | |
 | Settings | Ctrl+, | |
-| Zoom in / out / reset | Ctrl+= / Ctrl+- / Ctrl+0 | Per window |
+| Zoom in / out / reset | Ctrl+= / Ctrl+- / Ctrl+0 | Per tab; scales the document, not the app |
 | Full screen | F11 | |
 | Quit | Ctrl+Shift+Q | Ctrl+Q not bound (avoid accidental quit) |
 | Edit mode (v0.2) | Ctrl+E | |
@@ -349,4 +349,5 @@ Each is decided when the feature that needs it is built.
       2026-09-28).
 - [ ] Profile accent palette: fixed presets only, or free colour picker (contrast risk) — decide with profiles.
 - [x] `.txt` default view: reader, with Ctrl+U for the monospace source (decided with the text/log views, 2026-09-27).
-- [ ] Zoom per tab or per window (current: per window) — decide with tab labels and the status bar.
+- [x] Zoom per tab: it scales the tab's document only, and the status bar shows it when not 100%
+      (owner, 2026-09-28).

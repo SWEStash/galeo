@@ -1,5 +1,6 @@
 import type { DocumentRecord } from '../../shared/documents';
 import type { ScrollAnchor, TabSnapshot } from '../../shared/tabs';
+import type { WhatwgEncoding } from '../text/decode';
 
 /**
  * A place in a tab's history: a file, where a link pointed in it (an anchor, or the top), and
@@ -9,6 +10,8 @@ export interface HistoryEntry {
   path: string;
   anchor: string | null;
   position?: ScrollAnchor;
+  /** The encoding the reader chose for this file ("Reopen with encoding…"). */
+  encoding?: WhatwgEncoding;
 }
 
 interface Stored {
@@ -127,6 +130,21 @@ export class TabRegistry {
   position(id: string, window: number): ScrollAnchor | null {
     const record = this.owned(id, window);
     return record?.entries[record.index]!.position ?? null;
+  }
+
+  /** Chooses how the entry's file is decoded; null goes back to detecting it. */
+  setEncoding(id: string, window: number, encoding: WhatwgEncoding | null): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    const entry = record.entries[record.index]!;
+    if (encoding) entry.encoding = encoding;
+    else delete entry.encoding;
+    return true;
+  }
+
+  encoding(id: string, window: number): WhatwgEncoding | null {
+    const record = this.owned(id, window);
+    return record?.entries[record.index]!.encoding ?? null;
   }
 
   back(id: string, window: number): HistoryEntry | null {

@@ -32,6 +32,8 @@ export interface DocumentViewProps {
   onPosition?: ((position: ScrollAnchor) => void) | undefined;
   /** How much the shown content weighs (UTF-16 bytes), for the warm-tab budget (ADR-002). */
   onWeight?: ((bytes: number) => void) | undefined;
+  /** Scales the document (per tab), not the app around it. */
+  zoom?: number;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
   ref?: Ref<DocumentHandle>;
 }
@@ -96,6 +98,7 @@ export function DocumentView({
   initialPosition = null,
   onPosition,
   onWeight,
+  zoom = 1,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -286,6 +289,7 @@ export function DocumentView({
       data-testid="document"
       data-follow={follow ? 'on' : 'off'}
       data-waking={waking || undefined}
+      style={zoom === 1 ? undefined : { zoom }}
       // The document area takes focus, for keyboard scrolling and for focus after find (UX §7).
       tabIndex={0}
       role="document"

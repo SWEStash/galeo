@@ -67,10 +67,12 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
     },
     documents: {
       read: vi.fn().mockResolvedValue(documents.content),
+      setEncoding: vi.fn().mockResolvedValue(undefined),
       followLink: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
       back: vi.fn().mockResolvedValue({ kind: 'none' }),
       forward: vi.fn().mockResolvedValue({ kind: 'none' }),
       resolveImage: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
+      pathMenu: vi.fn().mockResolvedValue(undefined),
     },
     tabs: {
       snapshot: vi.fn().mockResolvedValue({ revision: 1, active: null, tabs: documents.records ?? [] }),

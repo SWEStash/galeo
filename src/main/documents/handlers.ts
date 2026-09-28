@@ -4,12 +4,13 @@ import { MARKDOWN_RENDER_MAX_BYTES } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
 import type { TabRegistry } from '../../core/tabs/registry';
 import type { FileSystem } from '../../core/ports';
-import type { Decode } from '../../core/text/decode';
+import type { Decode, WhatwgEncoding } from '../../core/text/decode';
 import type { DocumentContent } from '../../shared/documents';
 import type { Handlers } from '../ipc/register';
 
 type DocumentChannels =
   | 'documents.read'
+  | 'documents.setEncoding'
   | 'documents.followLink'
   | 'documents.back'
   | 'documents.forward'
@@ -30,10 +31,10 @@ export function documentHandlers(deps: {
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
   const reading = new Map<string, Promise<DocumentContent>>();
 
-  const read = async (id: string, window: number, path: string): Promise<DocumentContent> => {
+  const read = async (id: string, window: number, path: string, encoding: WhatwgEncoding | null): Promise<DocumentContent> => {
     // The identity is taken first: a change during the read then shows as a change afterwards.
     await reads.remember(id, path);
-    const content = await readDocument(path, { fs, decode });
+    const content = await readDocument(path, { fs, decode, encoding: encoding ?? undefined });
     // Only the text main read itself defines which links the page may follow. Only rendered
     // Markdown has links; nothing else is kept.
     if (content.state === 'ready' && content.format === 'markdown' && content.size <= MARKDOWN_RENDER_MAX_BYTES) {
@@ -48,13 +49,17 @@ export function documentHandlers(deps: {
     'documents.read': ([id], event) => {
       const record = records.get(id, event.sender.id);
       if (!record) throw new Error('unknown document');
-      const key = `${id}\0${record.path}`;
+      const encoding = records.encoding(id, event.sender.id);
+      const key = `${id}\0${record.path}\0${encoding ?? ''}`;
       let pending = reading.get(key);
       if (!pending) {
-        pending = read(id, event.sender.id, record.path).finally(() => reading.delete(key));
+        pending = read(id, event.sender.id, record.path, encoding).finally(() => reading.delete(key));
         reading.set(key, pending);
       }
       return pending;
+    },
+    'documents.setEncoding': ([id, encoding], event) => {
+      if (!records.setEncoding(id, event.sender.id, encoding)) throw new Error('unknown document');
     },
     'documents.followLink': ([id, href, target], event) => links.follow(id, event.sender.id, href, target),
     'documents.back': ([id], event) => links.back(id, event.sender.id),

@@ -44,6 +44,7 @@ body,
 
 .tab-list {
   display: flex;
+  flex: 1;
   min-width: 0;
 }
 
@@ -56,7 +57,7 @@ body,
   min-width: 72px;
   padding: 0 8px 0 12px;
   border-right: 1px solid var(--galeo-color-border);
-  color: var(--galeo-color-muted);
+  color: var(--galeo-color-fg);
   cursor: default;
   outline: none;
   -webkit-app-region: no-drag;
@@ -82,6 +83,29 @@ body,
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Hibernated tabs are slightly dimmed (UX F4): muted, which still meets text contrast. */
+.tab[data-hibernated]:not([data-selected]) {
+  color: var(--galeo-color-muted);
+}
+
+.tab[data-missing] .tab-label {
+  text-decoration: line-through;
+}
+
+.tab-indicator {
+  flex: none;
+  font-size: 12px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
   white-space: nowrap;
 }
 
@@ -287,4 +311,79 @@ button:focus-visible {
 .document-view:focus-visible {
   outline: 2px solid var(--galeo-color-focus);
   outline-offset: -2px;
+}
+
+/* The status bar (UX §2): path first, then the document's facts, then the window's messages. */
+.status-bar {
+  display: flex;
+  flex: none;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+  height: 24px;
+  padding: 0 12px;
+  border-top: 1px solid var(--galeo-color-border);
+  background: var(--galeo-color-code-bg);
+  color: var(--galeo-color-muted);
+  font: 12px var(--galeo-font-ui);
+  white-space: nowrap;
+}
+
+.status-path,
+.status-encoding {
+  padding: 0 4px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+
+.status-path {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-path:hover,
+.status-encoding:hover {
+  background: var(--galeo-color-border);
+  color: var(--galeo-color-fg);
+}
+
+.status-path:focus-visible,
+.status-encoding[data-focus-visible] {
+  outline: 2px solid var(--galeo-color-focus);
+}
+
+.status-message {
+  margin-left: auto;
+}
+
+.menu-popover {
+  min-width: 180px;
+  padding: 4px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-bg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+  font: 13px var(--galeo-font-ui);
+  color: var(--galeo-color-fg);
+}
+
+.menu {
+  outline: none;
+}
+
+.menu-item {
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: default;
+  outline: none;
+}
+
+.menu-item[data-focused] {
+  background: var(--galeo-color-focus);
+  color: var(--galeo-color-bg);
 }

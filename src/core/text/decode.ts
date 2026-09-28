@@ -39,10 +39,16 @@ const BOMS: readonly { bytes: readonly number[]; encoding: TextEncoding }[] = [
 
 /**
  * Decodes a file's bytes: a byte order mark wins; otherwise NUL bytes mean binary, then strict
- * UTF-8, then a Windows-1252 fallback (every byte maps) unless the content looks binary.
+ * UTF-8, then a Windows-1252 fallback (every byte maps) unless the content looks binary. With a
+ * `chosen` encoding (the reader picked it), nothing is detected: invalid bytes become U+FFFD.
  */
-export function decodeText(bytes: Uint8Array, decode: Decode): DecodedText {
+export function decodeText(bytes: Uint8Array, decode: Decode, chosen?: WhatwgEncoding): DecodedText {
   const bom = BOMS.find((mark) => mark.bytes.every((value, i) => bytes[i] === value));
+  if (chosen) {
+    const own = bom?.encoding === chosen;
+    const text = decode(own ? bytes.subarray(bom.bytes.length) : bytes, chosen, { fatal: false });
+    return { kind: 'text', text, encoding: chosen, bom: own, guessed: false };
+  }
   if (bom) {
     const body = bytes.subarray(bom.bytes.length);
     const text =

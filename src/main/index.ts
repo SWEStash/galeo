@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, Menu, nativeTheme, webContents } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, Menu, nativeTheme, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
 import { ImageGrants } from '../core/documents/images';
 import { ReadIdentities } from '../core/documents/identities';
 import { DocumentLinks } from '../core/documents/links';
+import { DocumentMenus } from '../core/documents/menus';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import { ProfileSettings } from '../core/settings/profile-settings';
 import { WarmTabs } from '../core/tabs/lifecycle';
@@ -39,6 +40,7 @@ import { appResponseHeaders, hostResolverRules, networkLockdown } from './securi
 import { tabHandlers } from './tabs/handlers';
 import { createAppWindow } from './window/factory';
 import { applicationMenu } from './window/menu';
+import { showNativeMenu } from './window/native-menu';
 import { ownArgs } from './window/policy';
 
 const MIB = 1024 * 1024;
@@ -99,12 +101,19 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   const documents = new TabRegistry(randomUUID, pushSnapshot);
   const fs = new NodeFileSystem();
   const images = new ImageGrants(randomUUID);
+  const shell = externalShell();
+  const menus = new DocumentMenus({
+    tabs: documents,
+    shell,
+    clipboard,
+    showMenu: (windowId, items) => showNativeMenu(windowId, items, app.isPackaged),
+  });
   const links = new DocumentLinks({
     records: documents,
     fs,
     images,
     tasks: new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js')),
-    shell: externalShell(),
+    shell,
     limiter: new ExternalOpenLimiter(systemClock),
     confirmBurst,
     dirname: path.dirname,
@@ -227,6 +236,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           choiceWindow?.close();
         },
         'settings.get': () => ({ settings: settings.current, notices: settings.notices }),
+        'documents.pathMenu': ([id], event) => menus.path(id, event.sender.id),
         ...documentHandlers({ records: documents, links, reads, fs, decode: decodeWithPlatform }),
         ...tabHandlers({
           tabs: documents,
@@ -287,13 +297,14 @@ async function confirmBurst(windowId: number): Promise<boolean> {
 }
 
 /**
- * The desktop hand-offs. Unpackaged test runs can record external opens instead of starting a
- * browser (`GALEO_TEST_EXTERNAL=record`, read as `globalThis.__galeoOpenedExternal`).
+ * The desktop hand-offs. Unpackaged test runs can record external opens and reveals instead of
+ * starting other apps (`GALEO_TEST_EXTERNAL=record`, read as `globalThis.__galeoOpenedExternal` and
+ * `globalThis.__galeoRevealed`).
  */
 function externalShell(): OsShell {
   if (app.isPackaged || process.env['GALEO_TEST_EXTERNAL'] !== 'record') return new ElectronOsShell();
-  const global = globalThis as { __galeoOpenedExternal?: string[] };
-  return new RecordingOsShell((global.__galeoOpenedExternal ??= []));
+  const global = globalThis as { __galeoOpenedExternal?: string[]; __galeoRevealed?: string[] };
+  return new RecordingOsShell((global.__galeoOpenedExternal ??= []), (global.__galeoRevealed ??= []));
 }
 
 /**

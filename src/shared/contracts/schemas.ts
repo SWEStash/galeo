@@ -1,5 +1,5 @@
 import { z, type ZodType } from 'zod';
-import type { Channel, Requests } from './ipc';
+import { CHOSEN_ENCODINGS, type Channel, type Requests } from './ipc';
 
 /**
  * Argument schemas for every renderer → main channel. Imported by main only (SR-11), and kept out
@@ -11,10 +11,12 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),
   'app.resolveSandboxUnavailable': z.tuple([z.enum(['quit', 'run-unsandboxed'])]),
   'documents.read': z.tuple([documentId]),
+  'documents.setEncoding': z.tuple([documentId, z.enum(CHOSEN_ENCODINGS).nullable()]),
   'documents.followLink': z.tuple([documentId, z.string().min(1).max(8192), z.enum(['current', 'background'])]),
   'documents.back': z.tuple([documentId]),
   'documents.forward': z.tuple([documentId]),
   'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
+  'documents.pathMenu': z.tuple([documentId]),
   'tabs.snapshot': z.tuple([]),
   'tabs.activated': z.tuple([documentId]),
   'tabs.rendered': z.tuple([documentId, z.int().min(0).max(2 ** 31)]),

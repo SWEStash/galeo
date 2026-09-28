@@ -128,3 +128,17 @@ describe('decodeText', () => {
     });
   });
 });
+
+describe('decodeText with a chosen encoding (Reopen with encoding…)', () => {
+  it('decodes with that encoding, without guessing', () => {
+    const latin1 = new Uint8Array([0x43, 0x61, 0x66, 0xe9]);
+    expect(decodeText(latin1, decode, 'utf-8')).toEqual({ kind: 'text', text: 'Caf�', encoding: 'utf-8', bom: false, guessed: false });
+    expect(decodeText(latin1, decode, 'windows-1252')).toMatchObject({ text: 'Café', encoding: 'windows-1252', guessed: false });
+  });
+
+  it('drops a byte order mark of the chosen encoding, and keeps any other as text', () => {
+    const utf16 = new Uint8Array([0xff, 0xfe, 0x41, 0x00]);
+    expect(decodeText(utf16, decode, 'utf-16le')).toMatchObject({ text: 'A', bom: true });
+    expect(decodeText(utf16, decode, 'windows-1252')).toMatchObject({ text: 'ÿþA\u0000', bom: false });
+  });
+});

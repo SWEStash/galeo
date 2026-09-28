@@ -177,4 +177,29 @@ describe('createTabStore', () => {
     expect(store.positionOf('a')).toEqual(where);
     expect(api.position).toHaveBeenCalledWith('a', where);
   });
+
+  it("keeps each tab's status for the tab bar and status bar, dropping closed tabs'", async () => {
+    const { store, push } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    const status = { state: 'ready' as const, format: 'markdown' as const, view: 'rendered' as const, encoding: 'utf-8' as const, lines: 12, follow: false };
+    store.setStatus('a', status);
+    expect(store.getSnapshot().statuses.get('a')).toEqual(status);
+    const before = store.getSnapshot();
+    store.setStatus('a', { ...status });
+    expect(store.getSnapshot()).toBe(before);
+    push(snapshot(2, ['b'], 'b'));
+    expect(store.getSnapshot().statuses.has('a')).toBe(false);
+  });
+
+  it('zooms each tab on its own, in steps, and resets it', async () => {
+    const { store } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    store.zoom('a', 'in');
+    store.zoom('a', 'in');
+    expect(store.getSnapshot().zooms.get('a')).toBe(1.25);
+    expect(store.getSnapshot().zooms.get('b') ?? 1).toBe(1);
+    store.zoom('a', 'reset');
+    expect(store.getSnapshot().zooms.get('a') ?? 1).toBe(1);
+  });
 });
+

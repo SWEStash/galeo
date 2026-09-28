@@ -5,7 +5,11 @@ import type { ScrollAnchor } from '../../shared/tabs';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { commandFor, type Platform } from '../../shared/keymap';
 import type { RenderClient } from '../worker/client';
+import type { ChosenEncoding } from '../../shared/contracts';
+import type { TabStatus } from '../tabs/store';
 import { DocumentBanner, DocumentLoading, DocumentState } from './DocumentState';
+import { EncodingMenu } from './EncodingMenu';
+import { ENCODING_NAMES } from './encodings';
 import { DocumentView, type DocumentHandle, type RenderedContent } from './DocumentView';
 import { FindBar } from './FindBar';
 import type { ColorScheme } from './host';
@@ -15,14 +19,6 @@ import { useRenderedHtml } from './useRenderedHtml';
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
 
-const ENCODING_NAMES: Record<TextEncoding, string> = {
-  'utf-8': 'UTF-8',
-  'utf-16le': 'UTF-16LE',
-  'utf-16be': 'UTF-16BE',
-  'utf-32le': 'UTF-32LE',
-  'utf-32be': 'UTF-32BE',
-  'windows-1252': 'Windows-1252',
-};
 
 /** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
 const LOADING_DELAY_MS = 150;
@@ -46,6 +42,17 @@ export interface DocumentPaneProps {
   initialPosition?: ScrollAnchor | null;
   onPosition?: (position: ScrollAnchor) => void;
   onWeight?: (bytes: number) => void;
+  /** What the tab bar and status bar show about this document. */
+  onStatus?: (status: TabStatus) => void;
+  onChooseEncoding?: (encoding: ChosenEncoding | null) => void;
+  /** The tab's zoom; it scales the document only. */
+  zoom?: number;
+}
+
+function countLines(text: string): number {
+  let lines = 1;
+  for (let at = text.indexOf('\n'); at !== -1; at = text.indexOf('\n', at + 1)) lines++;
+  return lines;
 }
 
 /**
@@ -66,6 +73,9 @@ export function DocumentPane({
   initialPosition = null,
   onPosition,
   onWeight,
+  onStatus,
+  onChooseEncoding,
+  zoom = 1,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
   // The document's own opening view until the user toggles it.
@@ -155,6 +165,18 @@ export function DocumentPane({
     onAnchorShown();
   }, [pendingAnchor, view, rendered, onAnchorShown]);
 
+  const lines = useMemo(() => (ready ? countLines(ready.text) : null), [ready]);
+  useEffect(() => {
+    onStatus?.({
+      state: content.state,
+      format: ready?.format ?? null,
+      view: ready ? view : null,
+      encoding: ready?.encoding ?? null,
+      lines,
+      follow,
+    });
+  }, [onStatus, content.state, ready, view, lines, follow]);
+
   if (!ready) return <DocumentState content={content as Exclude<DocumentContent, { state: 'ready' }>} />;
 
   return (
@@ -162,7 +184,11 @@ export function DocumentPane({
       {ready.banner === 'too-large' && view === 'source' && !renderAnyway && (
         <DocumentBanner kind="too-large" onAction={showRendered} />
       )}
-      {ready.guessedEncoding && <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]} />}
+      {ready.guessedEncoding && (
+        <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]}>
+          {onChooseEncoding && <EncodingMenu onChoose={onChooseEncoding}>Reopen with encoding…</EncodingMenu>}
+        </DocumentBanner>
+      )}
       {render.status === 'failed' && <DocumentBanner kind="render-failed" onAction={render.retry} />}
       {loading && <DocumentLoading />}
       {find.open && (
@@ -182,6 +208,7 @@ export function DocumentPane({
         initialPosition={initialPosition}
         onPosition={onPosition}
         onWeight={onWeight}
+        zoom={zoom}
       />
     </>
   );

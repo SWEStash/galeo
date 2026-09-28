@@ -14,6 +14,10 @@ export interface SettingsState {
   notices: SettingsNotice[];
 }
 
+/** The encodings "Reopen with encoding…" offers. */
+export const CHOSEN_ENCODINGS = ['utf-8', 'utf-16le', 'utf-16be', 'windows-1252'] as const;
+export type ChosenEncoding = (typeof CHOSEN_ENCODINGS)[number];
+
 /** Where a followed link opens: in its own tab, or in a new tab behind it (Ctrl/middle-click). */
 export type LinkTarget = 'current' | 'background';
 
@@ -36,10 +40,12 @@ export const CHANNELS = [
   'app.info',
   'app.resolveSandboxUnavailable',
   'documents.read',
+  'documents.setEncoding',
   'documents.followLink',
   'documents.back',
   'documents.forward',
   'documents.resolveImage',
+  'documents.pathMenu',
   'tabs.snapshot',
   'tabs.activated',
   'tabs.rendered',
@@ -58,12 +64,16 @@ export interface Requests {
   'app.resolveSandboxUnavailable': [choice: SandboxChoice];
   /** Reads one of them by id; there is no way to read by path (SR-12). */
   'documents.read': [id: string];
+  /** Reads the document with this encoding from now on ("Reopen with encoding…"); null detects it again. */
+  'documents.setEncoding': [id: string, encoding: ChosenEncoding | null];
   /** Follows a link of the document, as written in it; main checks it against the file (SR-04). */
   'documents.followLink': [id: string, href: string, target: LinkTarget];
   'documents.back': [id: string];
   'documents.forward': [id: string];
   /** An image the document shows, as written in it; main answers with an opaque URL (ADR-004). */
   'documents.resolveImage': [id: string, src: string];
+  /** Asks main for the native menu of the document's path (copy it, reveal it); main acts on the choice. */
+  'documents.pathMenu': [id: string];
   /** The sender's tabs, as main knows them. */
   'tabs.snapshot': [];
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
@@ -85,10 +95,12 @@ export interface Responses {
   'app.info': AppInfo;
   'app.resolveSandboxUnavailable': void;
   'documents.read': DocumentContent;
+  'documents.setEncoding': void;
   'documents.followLink': FollowResult;
   'documents.back': HistoryResult;
   'documents.forward': HistoryResult;
   'documents.resolveImage': ImageResult;
+  'documents.pathMenu': void;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendered': void;

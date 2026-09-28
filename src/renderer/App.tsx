@@ -10,6 +10,7 @@ import { useSettings } from './settings/useSettings';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { tabAction } from './tabs/commands';
 import type { TabStore, TabsView } from './tabs/store';
+import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
 import { TabDocument } from './tabs/TabDocument';
 import { useTabs } from './tabs/useTabs';
@@ -82,6 +83,7 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
               active={tab.id === view.active}
               rendered={view.rendered.has(tab.id)}
               staleReads={view.reads.get(tab.id) ?? 0}
+              zoom={view.zooms.get(tab.id) ?? 1}
               store={store}
               client={client}
               platform={platform}
@@ -91,21 +93,29 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
           </TabPanel>
         ))}
       </main>
-      <footer className="status-bar">
-        <span data-testid="status-message" role="status">
-          {message ?? ''}
-        </span>
-        {!sandboxed && <UnsandboxedBadge />}
-      </footer>
+      {settings?.settings.statusBar !== false && (
+        <StatusBar view={view} store={store}>
+          <span className="status-message" data-testid="status-message" role="status">
+            {message ?? ''}
+          </span>
+          {!sandboxed && <UnsandboxedBadge />}
+        </StatusBar>
+      )}
     </Tabs>
   );
 }
 
-/** The tab shortcuts (UX §5), wherever the focus is. */
+/** The tab shortcuts and per-tab zoom (UX §5), wherever the focus is. */
 function useTabShortcuts(view: TabsView, store: TabStore, platform: Platform) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const command = commandFor(event, platform);
+      const zoom = command === 'zoomIn' ? 'in' : command === 'zoomOut' ? 'out' : command === 'zoomReset' ? 'reset' : null;
+      if (zoom && view.active) {
+        event.preventDefault();
+        store.zoom(view.active, zoom);
+        return;
+      }
       const action = command && tabAction(command, tabNumberFor(event, platform), view);
       if (!action) return;
       event.preventDefault();

@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
 import { isTextDropItem, Tab, TabList, useDrag, useDrop } from 'react-aria-components';
 import type { DocumentRecord } from '../../shared/documents';
-import type { TabStore, TabsView } from './store';
+import { tabLabels } from '../../shared/tab-labels';
+import type { TabStatus, TabStore, TabsView } from './store';
 
 /** A tab being dragged within the tab bar; nothing else accepts it. */
 const TAB_TYPE = 'application/x-galeo-tab';
 
-function fileName(path: string): string {
-  return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
-}
 
 /**
  * The window's tabs (UX §2): an ARIA tablist in the title bar. Its empty space, and a grip at its
@@ -18,6 +16,7 @@ function fileName(path: string): string {
  */
 export function TabBar({ view, store }: { view: TabsView; store: TabStore }) {
   const listRef = useRef<HTMLDivElement>(null);
+  const labels = tabLabels(view.tabs.map((tab) => tab.path));
   const [caret, setCaret] = useState<{ index: number; left: number } | null>(null);
 
   // When tabs overflow, the strip scrolls so the shown tab stays in view.
@@ -66,8 +65,16 @@ export function TabBar({ view, store }: { view: TabsView; store: TabStore }) {
   return (
     <div className="tab-bar" data-testid="tab-bar">
       <div className="tab-strip" ref={listRef} {...dropProps} onKeyDown={onKeyDown}>
-        <TabList aria-label="Open documents" className="tab-list" items={view.tabs}>
-          {(tab) => <TabItem tab={tab} onClose={() => store.close(tab.id)} />}
+        <TabList aria-label="Open documents" className="tab-list" items={view.tabs.map((tab, index) => ({ ...tab, label: labels[index]! }))}>
+          {(tab) => (
+            <TabItem
+              tab={tab}
+              label={tab.label}
+              status={view.statuses.get(tab.id)}
+              hibernated={!view.rendered.has(tab.id)}
+              onClose={() => store.close(tab.id)}
+            />
+          )}
         </TabList>
         {caret && <div className="tab-caret" data-testid="tab-caret" style={{ left: caret.left }} />}
       </div>
@@ -77,7 +84,27 @@ export function TabBar({ view, store }: { view: TabsView; store: TabStore }) {
   );
 }
 
-function TabItem({ tab, onClose }: { tab: DocumentRecord; onClose: () => void }) {
+/** Tab indicators (UX F4): always a glyph with words, never colour alone; the words are in the tab's name. */
+function indicators(status: TabStatus | undefined): { glyph: string; words: string }[] {
+  const shown = [];
+  if (status?.follow) shown.push({ glyph: '⇣', words: 'following the end' });
+  if (status?.state === 'missing') shown.push({ glyph: '✕', words: 'file missing' });
+  return shown;
+}
+
+function TabItem({
+  tab,
+  label,
+  status,
+  hibernated,
+  onClose,
+}: {
+  tab: DocumentRecord;
+  label: string;
+  status: TabStatus | undefined;
+  hibernated: boolean;
+  onClose: () => void;
+}) {
   const { dragProps, isDragging } = useDrag({
     getItems: () => [{ [TAB_TYPE]: tab.id }],
     // Keyboard users reorder with Ctrl+Shift+PgUp/PgDn; Enter on a tab still shows it.
@@ -87,10 +114,23 @@ function TabItem({ tab, onClose }: { tab: DocumentRecord; onClose: () => void })
     if (event.button === 1) onClose();
   };
   return (
-    <Tab id={tab.id} className="tab" data-tab-id={tab.id} data-dragging={isDragging || undefined}>
+    <Tab
+      id={tab.id}
+      className="tab"
+      data-tab-id={tab.id}
+      data-dragging={isDragging || undefined}
+      data-hibernated={hibernated || undefined}
+      data-missing={status?.state === 'missing' || undefined}
+    >
       <span className="tab-label" title={tab.path} {...dragProps} onAuxClick={onAuxClick}>
-        {fileName(tab.path)}
+        {label}
       </span>
+      {indicators(status).map(({ glyph, words }) => (
+        <span key={glyph} className="tab-indicator" title={words}>
+          <span aria-hidden="true">{glyph}</span>
+          <span className="visually-hidden">, {words}</span>
+        </span>
+      ))}
       {/* Pointer only: a tab can't hold another control, and Delete closes it from the keyboard. */}
       <span
         className="tab-close"

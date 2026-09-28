@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { DocumentContent } from '../../shared/contracts';
 import { extensionOf } from '../../shared/paths';
 import { formatBytes } from './format-bytes';
@@ -59,7 +60,18 @@ const BANNERS: Record<BannerKind, { text: (detail?: string) => string; action?: 
   'render-failed': { text: () => "This document couldn't be rendered — showing source", action: 'Try again' },
 };
 
-export function DocumentBanner({ kind, detail, onAction }: { kind: BannerKind; detail?: string; onAction?: () => void }) {
+export function DocumentBanner({
+  kind,
+  detail,
+  onAction,
+  children,
+}: {
+  kind: BannerKind;
+  detail?: string;
+  onAction?: () => void;
+  /** An action of its own (a menu), instead of the banner's button. */
+  children?: ReactNode;
+}) {
   const banner = BANNERS[kind];
   return (
     <div className="document-banner" data-testid="document-banner" data-banner={kind} role="status">
@@ -69,6 +81,7 @@ export function DocumentBanner({ kind, detail, onAction }: { kind: BannerKind; d
           {banner.action}
         </button>
       )}
+      {children}
     </div>
   );
 }

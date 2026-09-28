@@ -84,3 +84,20 @@ describe('documentHandlers', () => {
     expect(new Set(results.map((result) => result.state))).toEqual(new Set(['ready']));
   });
 });
+
+describe('documents.setEncoding', () => {
+  it('reads the document with the chosen encoding from then on, and back to detection with null', async () => {
+    const { fs, handlers, id } = setup({ '/d/a.txt': 'x' });
+    fs.write('/d/a.txt', new Uint8Array([0x43, 0x61, 0x66, 0xe9]));
+    expect(await handlers['documents.read']([id], event)).toMatchObject({ text: 'Café', encoding: 'windows-1252', guessedEncoding: true });
+    handlers['documents.setEncoding']([id, 'utf-8'], event);
+    expect(await handlers['documents.read']([id], event)).toMatchObject({ text: 'Caf�', encoding: 'utf-8', guessedEncoding: false });
+    handlers['documents.setEncoding']([id, null], event);
+    expect(await handlers['documents.read']([id], event)).toMatchObject({ encoding: 'windows-1252', guessedEncoding: true });
+  });
+
+  it("refuses another window's document", () => {
+    const { handlers, id } = setup({ '/d/a.txt': 'x' });
+    expect(() => handlers['documents.setEncoding']([id, 'utf-8'], { ...event, sender: { id: 2 } } as WindowIpcEvent)).toThrow();
+  });
+});

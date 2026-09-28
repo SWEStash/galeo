@@ -1,7 +1,7 @@
 import type { DocumentContent } from '../../shared/documents';
 import { chooseView, detectFormat } from '../formats/registry';
 import { FsError, type FileSystem } from '../ports';
-import { decodeText, type Decode } from '../text/decode';
+import { decodeText, type Decode, type WhatwgEncoding } from '../text/decode';
 
 /** Larger files aren't read at all (the too-large state); logs of 100 MB+ still open. */
 export const READ_MAX_BYTES = 256 * 1024 * 1024;
@@ -21,7 +21,12 @@ const STATE_BY_CODE = {
  */
 export async function readDocument(
   path: string,
-  { fs, decode, renderAnyway = false }: { fs: FileSystem; decode: Decode; renderAnyway?: boolean },
+  {
+    fs,
+    decode,
+    renderAnyway = false,
+    encoding,
+  }: { fs: FileSystem; decode: Decode; renderAnyway?: boolean; encoding?: WhatwgEncoding | undefined },
 ): Promise<DocumentContent> {
   let bytes: Uint8Array;
   try {
@@ -33,7 +38,7 @@ export async function readDocument(
   }
   const format = detectFormat(path);
   if (bytes.byteLength === 0) return { state: 'empty', path, format };
-  const decoded = decodeText(bytes, decode);
+  const decoded = decodeText(bytes, decode, encoding);
   if (decoded.kind === 'binary') return { state: 'binary', path, size: bytes.byteLength };
   const { view, banner } = chooseView(format, { size: bytes.byteLength, renderAnyway });
   return {

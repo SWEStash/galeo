@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { FollowResult, HistoryResult } from '../../shared/contracts';
+import type { ChosenEncoding, FollowResult, HistoryResult } from '../../shared/contracts';
 import type { ImageResult, RefusalReason } from '../../shared/documents';
 import type { Platform } from '../../shared/keymap';
 import type { ScrollAnchor } from '../../shared/tabs';
@@ -7,7 +7,7 @@ import { DocumentPane } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
 import { useDocument } from '../document/useDocument';
 import type { RenderClient } from '../worker/client';
-import type { TabStore } from './store';
+import type { TabStatus, TabStore } from './store';
 
 const REFUSALS: Record<RefusalReason, string> = {
   'not-in-document': "This link can't be opened",
@@ -27,6 +27,7 @@ export interface TabDocumentProps {
   rendered: boolean;
   /** Main's count of changes to the file; a new one reads it again. */
   staleReads: number;
+  zoom: number;
   store: TabStore;
   client: RenderClient | null;
   platform: Platform;
@@ -45,7 +46,7 @@ interface Arrival {
   position: ScrollAnchor | null;
 }
 
-function LiveTab({ id, active, staleReads, store, client, platform, scheme, onMessage }: TabDocumentProps) {
+function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme, onMessage }: TabDocumentProps) {
   const { document, reload } = useDocument(id, staleReads);
   const [arrival, setArrival] = useState<Arrival | null>(null);
   // An anchor within the current read (a link or a history step inside the document).
@@ -91,6 +92,11 @@ function LiveTab({ id, active, staleReads, store, client, platform, scheme, onMe
 
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
   const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
+  const onStatus = useCallback((status: TabStatus) => store.setStatus(id, status), [id, store]);
+  const chooseEncoding = useCallback(
+    (encoding: ChosenEncoding | null) => void window.galeo.documents.setEncoding(id, encoding).then(() => store.reread(id)),
+    [id, store],
+  );
 
   if (!document) return null;
   // A navigation lands where its entry says (or at the top); a wake or a re-read stays put.
@@ -111,6 +117,9 @@ function LiveTab({ id, active, staleReads, store, client, platform, scheme, onMe
       initialPosition={initialPosition}
       onPosition={onPosition}
       onWeight={onWeight}
+      onStatus={onStatus}
+      onChooseEncoding={chooseEncoding}
+      zoom={zoom}
     />
   );
 }
