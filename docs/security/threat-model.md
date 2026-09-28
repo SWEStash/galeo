@@ -265,7 +265,9 @@ ship an Electron major that is out of support.
 (no generic `invoke(channel, …)`, no `ipcRenderer` exposure). Main validates every message: the
 sender is the **main frame** of a galeo window with origin `galeo://app` (there are no
 subframes), and argument types, sizes and schemas are checked. Schemas run **in main only**; the
-preload and renderer carry types and channel names, not validation code.
+preload and renderer carry types and channel names, not validation code. Events from main (tab
+snapshots, settings) reach the page through fixed `on…` methods that pass the payload only, never
+Electron's event object.
 *AC*: each IPC handler has validation tests for malformed input and foreign senders.
 
 **SR-12 — Capability-scoped file access.** Main reads files only when the request follows a user

@@ -33,10 +33,12 @@ export interface DocumentPaneProps {
   client: RenderClient | null;
   platform: Platform;
   scheme: ColorScheme;
+  /** Only the shown tab's pane hears the keyboard. */
+  active: boolean;
   /** An anchor to scroll to once the document is shown; `onAnchorShown` confirms it. */
   pendingAnchor: { anchor: string; token: number } | null;
   onAnchorShown: () => void;
-  onLink: (href: string) => void;
+  onLink: (href: string, options: { background: boolean }) => void;
   onResolveImage: (src: string) => Promise<ImageResult>;
   onHistory: (direction: 'back' | 'forward') => void;
 }
@@ -50,6 +52,7 @@ export function DocumentPane({
   client,
   platform,
   scheme,
+  active,
   pendingAnchor,
   onAnchorShown,
   onLink,
@@ -98,6 +101,7 @@ export function DocumentPane({
   }, []);
 
   useEffect(() => {
+    if (!active) return;
     // Capture phase, so the source view's editor never sees these keys first.
     const onKey = (event: KeyboardEvent) => {
       const command = commandFor(event, platform);
@@ -128,7 +132,7 @@ export function DocumentPane({
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [platform, renderable, view, ready, find.open, stepFind, closeFind, onHistory]);
+  }, [active, platform, renderable, view, ready, find.open, stepFind, closeFind, onHistory]);
 
   // Switching views, or the rendered HTML arriving, repeats the search in what is now showing.
   useEffect(() => {

@@ -24,6 +24,38 @@ main {
   min-height: 0;
 }
 
+/* One per tab. Tabs not shown keep their layout but skip rendering (never display: none, so the
+   source view can still measure itself, ADR-002). */
+.tab-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tab-panel[data-active='false'] {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  content-visibility: hidden;
+}
+
+.settings-notice {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--galeo-color-border);
+  background: var(--galeo-color-code-bg);
+  color: var(--galeo-color-fg);
+  font: 13px var(--galeo-font-ui);
+}
+
+.settings-notice p {
+  flex: 1;
+  margin: 0;
+}
+
 /* The rendered view scrolls here; the source view fills it and scrolls itself. */
 .document-view {
   flex: 1;

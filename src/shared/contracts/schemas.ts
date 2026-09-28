@@ -10,10 +10,15 @@ const documentId = z.string().min(1).max(64);
 export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),
   'app.resolveSandboxUnavailable': z.tuple([z.enum(['quit', 'run-unsandboxed'])]),
-  'documents.list': z.tuple([]),
   'documents.read': z.tuple([documentId]),
-  'documents.followLink': z.tuple([documentId, z.string().min(1).max(8192)]),
+  'documents.followLink': z.tuple([documentId, z.string().min(1).max(8192), z.enum(['current', 'background'])]),
   'documents.back': z.tuple([documentId]),
   'documents.forward': z.tuple([documentId]),
   'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
+  'tabs.snapshot': z.tuple([]),
+  'tabs.activated': z.tuple([documentId]),
+  'tabs.close': z.tuple([documentId]),
+  'tabs.reopenClosed': z.tuple([]),
+  'tabs.move': z.tuple([documentId, z.int().min(0).max(9999)]),
+  'settings.get': z.tuple([]),
 };

@@ -58,9 +58,9 @@ describe('documentHandlers', () => {
     await handlers['documents.read']([id], event);
     fs.finishSlowRead();
     await slowRead;
-    expect(await handlers['documents.followLink']([id, 'y-target.md'], event)).toEqual({ kind: 'navigated', anchor: null });
+    expect(await handlers['documents.followLink']([id, 'y-target.md', 'current'], event)).toEqual({ kind: 'navigated', anchor: null });
     records.back(id, 1);
-    expect(await handlers['documents.followLink']([id, 'x-target.md'], event)).toEqual({
+    expect(await handlers['documents.followLink']([id, 'x-target.md', 'current'], event)).toEqual({
       kind: 'refused',
       reason: 'not-in-document',
     });
@@ -69,7 +69,7 @@ describe('documentHandlers', () => {
   it('keeps no text for documents without links: logs and plain text', async () => {
     const { handlers, id } = setup({ '/d/app.log': 'INFO see [x](x.md)' });
     expect(await handlers['documents.read']([id], event)).toMatchObject({ state: 'ready', format: 'log' });
-    expect(await handlers['documents.followLink']([id, 'x.md'], event)).toEqual({ kind: 'refused', reason: 'not-in-document' });
+    expect(await handlers['documents.followLink']([id, 'x.md', 'current'], event)).toEqual({ kind: 'refused', reason: 'not-in-document' });
   });
 
   it('shares one read between concurrent requests for the same document', async () => {

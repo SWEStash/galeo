@@ -38,9 +38,13 @@ export type RefusalReason =
   | 'unavailable'
   | 'open-failed';
 
-/** What following a link did. After `navigated`, the page reads the document again. */
+/**
+ * What following a link did. After `navigated`, the page reads the document again; `opened` put it
+ * in a new tab behind this one.
+ */
 export type FollowResult =
   | { kind: 'navigated'; anchor: string | null }
+  | { kind: 'opened' }
   | { kind: 'anchor'; anchor: string }
   | { kind: 'external' }
   | { kind: 'refused'; reason: RefusalReason };

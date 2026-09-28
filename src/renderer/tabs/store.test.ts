@@ -1,0 +1,104 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { TabSnapshot } from '../../shared/tabs';
+import { createTabStore } from './store';
+
+const tab = (id: string) => ({ id, path: `/d/${id}.md` });
+const snapshot = (revision: number, ids: string[], active: string | null = null): TabSnapshot => ({
+  revision,
+  active,
+  tabs: ids.map(tab),
+});
+
+function setup(initial: TabSnapshot) {
+  let push: (snapshot: TabSnapshot) => void = () => {};
+  const api = {
+    snapshot: vi.fn().mockResolvedValue(initial),
+    activated: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn().mockResolvedValue(undefined),
+    onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
+      push = listener;
+      return () => {};
+    }),
+  };
+  const store = createTabStore(api);
+  return { api, store, push: (next: TabSnapshot) => push(next) };
+}
+
+describe('createTabStore', () => {
+  it("starts from main's tabs, activating the one main last heard of", async () => {
+    const { store, api } = setup(snapshot(3, ['a', 'b'], 'b'));
+    await store.start();
+    expect(store.getSnapshot()).toMatchObject({ active: 'b', tabs: [tab('a'), tab('b')] });
+    expect(api.activated).not.toHaveBeenCalled();
+  });
+
+  it('activates the first tab when main knows of none, and says so', async () => {
+    const { store, api } = setup(snapshot(1, ['a', 'b']));
+    await store.start();
+    expect(store.getSnapshot().active).toBe('a');
+    expect(api.activated).toHaveBeenCalledWith('a');
+  });
+
+  it('applies newer snapshots only, even when one arrives before the first pull answers', async () => {
+    const { store, push, api } = setup(snapshot(2, ['a']));
+    api.snapshot.mockImplementationOnce(async () => {
+      push(snapshot(4, ['a', 'b'], 'a'));
+      return snapshot(2, ['a']);
+    });
+    await store.start();
+    expect(store.getSnapshot().tabs).toEqual([tab('a'), tab('b')]);
+    push(snapshot(3, ['x']));
+    expect(store.getSnapshot().tabs).toEqual([tab('a'), tab('b')]);
+  });
+
+  it('activates a tab at once, then reports it', async () => {
+    const { store, api } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    const listener = vi.fn();
+    store.subscribe(listener);
+    store.activate('b');
+    expect(store.getSnapshot().active).toBe('b');
+    expect(listener).toHaveBeenCalled();
+    expect(api.activated).toHaveBeenLastCalledWith('b');
+    store.activate('nope');
+    expect(store.getSnapshot().active).toBe('b');
+  });
+
+  it('closing the active tab activates its right neighbour, or the left one at the end', async () => {
+    const { store, api, push } = setup(snapshot(1, ['a', 'b', 'c'], 'b'));
+    await store.start();
+    store.close('b');
+    expect(store.getSnapshot().active).toBe('c');
+    expect(api.close).toHaveBeenCalledWith('b');
+    push(snapshot(2, ['a', 'c'], 'c'));
+    store.close('c');
+    expect(store.getSnapshot().active).toBe('a');
+  });
+
+  it('closing another tab keeps the active one', async () => {
+    const { store } = setup(snapshot(1, ['a', 'b'], 'b'));
+    await store.start();
+    store.close('a');
+    expect(store.getSnapshot().active).toBe('b');
+  });
+
+  it('follows main when the active tab disappears from a snapshot', async () => {
+    const { store, push } = setup(snapshot(1, ['a', 'b', 'c'], 'b'));
+    await store.start();
+    push(snapshot(2, ['a', 'c'], null));
+    expect(store.getSnapshot().active).toBe('c');
+    push(snapshot(3, [], null));
+    expect(store.getSnapshot().active).toBeNull();
+    push(snapshot(4, ['d'], null));
+    expect(store.getSnapshot().active).toBe('d');
+  });
+
+  it('keeps the same snapshot object until something changes', async () => {
+    const { store, push } = setup(snapshot(1, ['a'], 'a'));
+    await store.start();
+    const first = store.getSnapshot();
+    expect(store.getSnapshot()).toBe(first);
+    push(snapshot(1, ['x']));
+    expect(store.getSnapshot()).toBe(first);
+  });
+});

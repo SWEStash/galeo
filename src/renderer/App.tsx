@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { AppInfo, FollowResult, HistoryResult, SandboxChoice } from '../shared/contracts';
-import type { ImageResult, RefusalReason } from '../shared/documents';
+import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import type { Platform } from '../shared/keymap';
-import { DocumentPane } from './document/DocumentPane';
 import type { ColorScheme } from './document/host';
 import { useColorScheme } from './document/theme';
-import { useDocument } from './document/useDocument';
 import { markFirstPaint } from './perf';
+import { SettingsNotice } from './settings/SettingsNotice';
+import { useSettings } from './settings/useSettings';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
+import { TabDocument } from './tabs/TabDocument';
+import { useTabs } from './tabs/useTabs';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
 
@@ -28,30 +29,14 @@ export function App() {
   return <MainView sandboxed={info.sandboxed} scheme={scheme} platform={info.platform} />;
 }
 
-const REFUSALS: Record<RefusalReason, string> = {
-  'not-in-document': "This link can't be opened",
-  scheme: 'Only web and email links open outside galeo',
-  host: "Links to another host by '//' can't be opened",
-  malformed: 'This link is malformed',
-  'rate-limited': 'Links open at most once a second',
-  blocked: 'Links from this document are blocked',
-  unavailable: "This document's links can't be checked right now",
-  'open-failed': 'No app could open this link',
-};
-
-const NOT_SHOWN: ImageResult = { kind: 'refused', reason: 'not-in-document' };
-
 /** Status-bar messages go away on their own. */
 const MESSAGE_MS = 4000;
 
 function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme: ColorScheme; platform: Platform }) {
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
-  const { document, reload } = useDocument();
-  // Where to scroll, and in which read of the document: after a navigation, the next one.
-  const [pendingAnchor, setPendingAnchor] = useState<{ anchor: string; token: number; generation: number } | null>(
-    null,
-  );
+  const { view } = useTabs();
+  const settings = useSettings();
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(markFirstPaint, []);
@@ -72,59 +57,21 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
     return () => clearTimeout(timer);
   }, [message]);
 
-  const generation = document?.generation ?? 0;
-  const moved = useCallback(
-    (result: FollowResult | HistoryResult) => {
-      if (result.kind === 'navigated') {
-        reload();
-        setPendingAnchor(result.anchor ? { anchor: result.anchor, token: Date.now(), generation: generation + 1 } : null);
-      } else if (result.kind === 'anchor') {
-        setPendingAnchor({ anchor: result.anchor, token: Date.now(), generation });
-      } else if (result.kind === 'refused') {
-        setMessage(REFUSALS[result.reason]);
-      }
-    },
-    [reload, generation],
-  );
-
-  const followLink = useCallback(
-    (href: string) => {
-      // Background tabs arrive with the tab bar; until then a link opens in place.
-      if (document) void window.galeo.documents.followLink(document.id, href).then(moved);
-    },
-    [document, moved],
-  );
-
-  const resolveImage = useCallback(
-    (src: string): Promise<ImageResult> =>
-      document ? window.galeo.documents.resolveImage(document.id, src) : Promise.resolve(NOT_SHOWN),
-    [document],
-  );
-
-  const history = useCallback(
-    (direction: 'back' | 'forward') => {
-      if (document) void window.galeo.documents[direction](document.id).then(moved);
-    },
-    [document, moved],
-  );
-
   return (
     <>
+      {settings && <SettingsNotice notices={settings.notices} />}
       <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
-        {document && (
-          <DocumentPane
-            key={`${document.id}:${document.generation}`}
-            content={document.content}
+        {view.tabs.map((tab) => (
+          <TabDocument
+            key={tab.id}
+            id={tab.id}
+            active={tab.id === view.active}
             client={client}
             platform={platform}
             scheme={scheme}
-            pendingAnchor={pendingAnchor?.generation === document.generation ? pendingAnchor : null}
-            onAnchorShown={() => setPendingAnchor(null)}
-            onLink={followLink}
-            onResolveImage={resolveImage}
-            onHistory={history}
+            onMessage={setMessage}
           />
-        )}
+        ))}
       </main>
       <footer className="status-bar">
         <span data-testid="status-message" role="status">

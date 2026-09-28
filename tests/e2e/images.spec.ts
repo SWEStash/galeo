@@ -35,7 +35,7 @@ test('the page gets no image the document does not show, and cannot guess one (A
     await expect(granted).toHaveAttribute('src', /^galeo:\/\/file\//);
     const url = (await granted.getAttribute('src'))!;
     const results = await page.evaluate(async (grantedUrl) => {
-      const [record] = await window.galeo.documents.list();
+      const { tabs: [record] } = await window.galeo.tabs.snapshot();
       // Images may load from galeo: (the CSP's img-src); nothing else can read them.
       const load = (target: string) =>
         new Promise((resolve) => {

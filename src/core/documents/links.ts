@@ -1,3 +1,4 @@
+import type { LinkTarget } from '../../shared/contracts';
 import type { FollowResult, HistoryResult, ImageResult } from '../../shared/documents';
 import type { References } from '../../shared/markdown/references';
 import { classifyLink, type LinkContext } from '../links/classify';
@@ -46,13 +47,18 @@ export class DocumentLinks {
     if (this.deps.records.get(id, window)?.path === path) this.reads.set(id, { path, text });
   }
 
-  async follow(id: string, window: number, href: string): Promise<FollowResult> {
+  /** With `background`, a local link opens in a new tab after the active one; this tab stays put. */
+  async follow(id: string, window: number, href: string, where: LinkTarget = 'current'): Promise<FollowResult> {
     const found = await this.references(id, window);
     if (found === 'unavailable') return refused('unavailable');
     if (!found || !found.references.links.includes(href)) return refused('not-in-document');
     const { record } = found;
 
     const target = classifyLink(href, { ...this.deps, documentPath: record.path });
+    if (where === 'background' && (target.kind === 'anchor' || target.kind === 'file')) {
+      this.deps.records.open(target.kind === 'file' ? target.path : record.path, window, target.anchor);
+      return { kind: 'opened' };
+    }
     switch (target.kind) {
       case 'anchor':
         this.deps.records.navigate(id, window, { path: record.path, anchor: target.anchor });

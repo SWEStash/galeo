@@ -36,14 +36,18 @@ export class TabRegistry {
   private readonly closed = new Map<number, Closed[]>();
   private readonly revisions = new Map<number, number>();
 
-  constructor(private readonly randomId: () => string) {}
+  /** `onChange` hears the window whose tabs changed, once per change, so main can push a snapshot. */
+  constructor(
+    private readonly randomId: () => string,
+    private readonly onChange: (window: number) => void = () => {},
+  ) {}
 
-  /** Opens `path` after the window's active tab, or at the end when none is active. */
-  open(path: string, window: number): DocumentRecord {
+  /** Opens `path` (at `anchor`) after the window's active tab, or at the end when none is active. */
+  open(path: string, window: number, anchor: string | null = null): DocumentRecord {
     const order = this.orderOf(window);
     const active = this.active.get(window);
     const position = active === undefined ? order.length : order.indexOf(active) + 1;
-    return this.insert(window, [{ path, anchor: null }], 0, position);
+    return this.insert(window, [{ path, anchor }], 0, position);
   }
 
   get(id: string, window: number): DocumentRecord | undefined {
@@ -152,6 +156,7 @@ export class TabRegistry {
 
   private changed(window: number): void {
     this.revisions.set(window, (this.revisions.get(window) ?? 0) + 1);
+    this.onChange(window);
   }
 
   private owned(id: string, window: number): Stored | undefined {

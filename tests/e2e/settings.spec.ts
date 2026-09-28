@@ -35,6 +35,7 @@ test('an invalid hand edit is left untouched and reported, and the last valid se
     await expect
       .poll(() => app.evaluate(() => (globalThis as { __galeoSettingsNotices?: { path: string }[] }).__galeoSettingsNotices))
       .toEqual([expect.objectContaining({ path: file, reason: 'invalid' })]);
+    await expect(window.getByTestId('settings-notice')).toContainText(file);
     await expect(window.locator('html')).toHaveAttribute('data-scheme', 'dark');
     expect(readFileSync(file, 'utf8')).toBe(broken);
   } finally {

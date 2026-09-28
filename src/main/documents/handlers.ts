@@ -8,7 +8,6 @@ import type { DocumentContent } from '../../shared/documents';
 import type { Handlers } from '../ipc/register';
 
 type DocumentChannels =
-  | 'documents.list'
   | 'documents.read'
   | 'documents.followLink'
   | 'documents.back'
@@ -42,7 +41,6 @@ export function documentHandlers(deps: {
   };
 
   return {
-    'documents.list': (_args, event) => records.list(event.sender.id),
     'documents.read': ([id], event) => {
       const record = records.get(id, event.sender.id);
       if (!record) throw new Error('unknown document');
@@ -54,7 +52,7 @@ export function documentHandlers(deps: {
       }
       return pending;
     },
-    'documents.followLink': ([id, href], event) => links.follow(id, event.sender.id, href),
+    'documents.followLink': ([id, href, target], event) => links.follow(id, event.sender.id, href, target),
     'documents.back': ([id], event) => links.back(id, event.sender.id),
     'documents.forward': ([id], event) => links.forward(id, event.sender.id),
     'documents.resolveImage': ([id, src], event) => links.resolveImage(id, event.sender.id, src),

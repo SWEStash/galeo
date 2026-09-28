@@ -64,6 +64,28 @@ describe('DocumentLinks.follow', () => {
     expect(await links.back(id, 1)).toEqual({ kind: 'anchor', anchor: '' });
   });
 
+  it('opens a linked file in a new tab behind the current one, leaving this tab where it is', async () => {
+    const { links, records, id } = setup();
+    expect(await links.follow(id, 1, 'next.md#scope', 'background')).toEqual({ kind: 'opened' });
+    expect(records.list(1).map((tab) => tab.path)).toEqual(['/d/plan.md', '/d/next.md']);
+    expect(await links.back(id, 1)).toEqual({ kind: 'none' });
+    const opened = records.list(1)[1]!.id;
+    records.navigate(opened, 1, { path: '/d/other.md', anchor: null });
+    expect(records.back(opened, 1)).toEqual({ path: '/d/next.md', anchor: 'scope' });
+  });
+
+  it('opens an anchor of this document in a new tab too', async () => {
+    const { links, records, id } = setup();
+    expect(await links.follow(id, 1, '#intro', 'background')).toEqual({ kind: 'opened' });
+    expect(records.list(1).map((tab) => tab.path)).toEqual(['/d/plan.md', '/d/plan.md']);
+  });
+
+  it('still refuses a link not in the document when opening it in a new tab', async () => {
+    const { links, records, id } = setup();
+    expect(await links.follow(id, 1, '/etc/passwd', 'background')).toMatchObject({ kind: 'refused' });
+    expect(records.list(1)).toHaveLength(1);
+  });
+
   it('opens http, https and mailto links in the browser, normalized', async () => {
     const { links, shell, clock, id } = setup();
     expect(await links.follow(id, 1, 'https://example.org/a')).toEqual({ kind: 'external' });

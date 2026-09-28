@@ -1,7 +1,20 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord } from '../shared/contracts';
+import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord, SettingsState, TabSnapshot } from '../shared/contracts';
+import type { Settings } from '../shared/settings';
+
+const DEFAULT_SETTINGS: Settings = {
+  themeMode: 'system',
+  proseFont: 'Inter',
+  codeFont: 'JetBrains Mono',
+  fontSize: 17,
+  measure: 72,
+  statusBar: true,
+  quickOpenExclude: [],
+  warmTabs: 3,
+  warmMegabytes: 20,
+};
 
 const renderRequests: string[] = [];
 /** How the fake worker answers render requests. */
@@ -38,6 +51,9 @@ const baseInfo: AppInfo = {
   sandboxUnavailable: null,
 };
 
+/** Pushes an event to the page, as main would. */
+const events: { tabs?: (snapshot: TabSnapshot) => void; settings?: (state: SettingsState) => void } = {};
+
 function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: DocumentRecord[]; content?: DocumentContent } = {}) {
   const api = {
     app: {
@@ -45,12 +61,29 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       resolveSandboxUnavailable: vi.fn().mockResolvedValue(undefined),
     },
     documents: {
-      list: vi.fn().mockResolvedValue(documents.records ?? []),
       read: vi.fn().mockResolvedValue(documents.content),
       followLink: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
       back: vi.fn().mockResolvedValue({ kind: 'none' }),
       forward: vi.fn().mockResolvedValue({ kind: 'none' }),
       resolveImage: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
+    },
+    tabs: {
+      snapshot: vi.fn().mockResolvedValue({ revision: 1, active: null, tabs: documents.records ?? [] }),
+      activated: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+      reopenClosed: vi.fn().mockResolvedValue(undefined),
+      move: vi.fn().mockResolvedValue(undefined),
+      onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
+        events.tabs = listener;
+        return () => {};
+      }),
+    },
+    settings: {
+      get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [] }),
+      onChanged: vi.fn((listener: (state: SettingsState) => void) => {
+        events.settings = listener;
+        return () => {};
+      }),
     },
   } satisfies GaleoApi;
   Object.defineProperty(window, 'galeo', { value: api, configurable: true });
@@ -299,7 +332,7 @@ describe('App', () => {
     const click = new MouseEvent('click', { bubbles: true, cancelable: true, composed: true });
     await act(async () => link.dispatchEvent(click));
     expect(click.defaultPrevented).toBe(true);
-    expect(api.documents.followLink).toHaveBeenCalledWith('doc-1', 'next.md');
+    expect(api.documents.followLink).toHaveBeenCalledWith('doc-1', 'next.md', 'current');
     // The navigated document is a new pane, with a new document container.
     await vi.waitFor(async () => expect((await documentShadow(container)).querySelector('article')?.textContent).toContain('second'));
     expect(api.documents.read).toHaveBeenCalledTimes(2);
@@ -446,9 +479,69 @@ describe('App', () => {
   it('shows no document when the window has none', async () => {
     const api = stubBridge();
     const container = await renderApp();
-    await vi.waitFor(() => expect(api.documents.list).toHaveBeenCalled());
+    await vi.waitFor(() => expect(api.tabs.snapshot).toHaveBeenCalled());
     expect(container.querySelector('[data-testid="document"]')).toBeNull();
     expect(api.documents.read).not.toHaveBeenCalled();
+  });
+
+  it("shows each tab's document, only the active one, and hands keys to that one only", async () => {
+    const records = [
+      { id: 'doc-1', path: '/d/a.md' },
+      { id: 'doc-2', path: '/d/b.md' },
+    ];
+    const api = stubBridge({}, { records });
+    api.documents.read.mockImplementation(async (id: string) => readyContent('markdown', 'rendered', `text of ${id}`));
+    const container = await renderApp();
+    await vi.waitFor(() => expect(container.querySelectorAll('[data-testid="document"]')).toHaveLength(2));
+    const panels = () => [...container.querySelectorAll<HTMLElement>('[data-testid="tab-panel"]')];
+    expect(panels().map((panel) => panel.dataset['active'])).toEqual(['true', 'false']);
+    expect(panels()[1]!.inert).toBe(true);
+    expect(api.tabs.activated).toHaveBeenCalledWith('doc-1');
+    await press({ key: 'u', ctrlKey: true });
+    const shadows = panels().map((panel) => panel.querySelector('[data-testid="document"]')!.shadowRoot!);
+    await vi.waitFor(() => expect(shadows[0]!.querySelector('.cm-editor')).not.toBeNull());
+    expect(shadows[1]!.querySelector('.cm-editor')).toBeNull();
+  });
+
+  it("follows main's snapshots: a tab it adds appears, a tab it drops goes", async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }] });
+    api.documents.read.mockImplementation(async (id: string) => readyContent('markdown', 'rendered', `text of ${id}`));
+    const container = await renderApp();
+    await vi.waitFor(() => expect(container.querySelectorAll('[data-testid="tab-panel"]')).toHaveLength(1));
+    await act(async () =>
+      events.tabs?.({ revision: 2, active: 'doc-1', tabs: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }] }),
+    );
+    await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledWith('doc-2'));
+    await act(async () => events.tabs?.({ revision: 3, active: 'doc-1', tabs: [{ id: 'doc-1', path: '/d/a.md' }] }));
+    expect(container.querySelectorAll('[data-testid="tab-panel"]')).toHaveLength(1);
+  });
+
+  it('opens a Ctrl+clicked link in a background tab through main, staying on this document', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[next](next.md)') });
+    api.documents.followLink.mockResolvedValue({ kind: 'opened' });
+    workerMode = 'links';
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    const link = await vi.waitFor(() => shadow.querySelector<HTMLAnchorElement>('a[href="next.md"]')!);
+    await act(async () => link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true, ctrlKey: true })));
+    expect(api.documents.followLink).toHaveBeenCalledWith('doc-1', 'next.md', 'background');
+    expect(api.documents.read).toHaveBeenCalledTimes(1);
+  });
+
+  it('names a config file that was left untouched, until it is fixed or dismissed', async () => {
+    const api = stubBridge();
+    const notice = { path: '/cfg/settings.json', reason: 'invalid' as const, detail: 'Unexpected token' };
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice] });
+    const container = await renderApp();
+    const shown = () => container.querySelector('[data-testid="settings-notice"]');
+    await vi.waitFor(() => expect(shown()?.textContent).toContain('/cfg/settings.json'));
+    expect(shown()?.textContent).toContain('left untouched');
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [] }));
+    expect(shown()).toBeNull();
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [notice] }));
+    const dismiss = [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!;
+    await act(async () => dismiss.click());
+    expect(shown()).toBeNull();
   });
 
   it('shows only the sandbox choice and sends it to main', async () => {

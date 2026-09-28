@@ -181,5 +181,21 @@ describe('TabRegistry', () => {
     expect(tabs.snapshot(1)).toEqual({ revision: 2, active: null, tabs: [] });
     expect(tabs.reopenClosed(1)).toBeNull();
   });
-});
 
+  it('tells its listener which window changed, once per change', () => {
+    const changed: number[] = [];
+    const tabs = new TabRegistry(counterIds(), (window) => changed.push(window));
+    const a = tabs.open('/d/a.md', 1).id;
+    tabs.open('/d/x.md', 2);
+    tabs.activate(a, 2);
+    tabs.close(a, 1);
+    expect(changed).toEqual([1, 2, 1]);
+  });
+
+  it('opens a tab at an anchor, for a link opened in a new tab', () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.md', 1, 'intro');
+    tabs.navigate(id, 1, { path: '/d/b.md', anchor: null });
+    expect(tabs.back(id, 1)).toEqual({ path: '/d/a.md', anchor: 'intro' });
+  });
+});

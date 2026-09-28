@@ -22,6 +22,7 @@ import { decodeWithPlatform } from './adapters/text-decoder';
 import { utf8 } from './adapters/utf8';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
+import { sendEvent } from './ipc/send';
 import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
 import { parseGlobalSettings, parseProfileFile } from './settings/schemas';
@@ -30,6 +31,7 @@ import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
 import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
+import { tabHandlers } from './tabs/handlers';
 import { createAppWindow } from './window/factory';
 import { ownArgs } from './window/policy';
 
@@ -74,7 +76,12 @@ if (!parsed.ok) {
 function start(initialMode: StartupMode, files: readonly string[]): void {
   let mode = initialMode;
   let choiceWindow: BrowserWindow | undefined;
-  const documents = new TabRegistry(randomUUID);
+  // Every change to a window's tabs goes to its page as a fresh snapshot (ADR-002).
+  const pushSnapshot = (windowId: number) => {
+    const contents = webContents.fromId(windowId);
+    if (contents) sendEvent(contents, 'tabs.changed', documents.snapshot(windowId));
+  };
+  const documents = new TabRegistry(randomUUID, pushSnapshot);
   const fs = new NodeFileSystem();
   const images = new ImageGrants(randomUUID);
   const links = new DocumentLinks({
@@ -106,8 +113,19 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     parseGlobal: parseGlobalSettings,
     parseProfile: parseProfileFile,
   });
-  settings.onChange((current) => (nativeTheme.themeSource = current.themeMode));
-  settings.onNotices(reportSettingsNotices);
+  const broadcastSettings = () => {
+    for (const window of BrowserWindow.getAllWindows()) {
+      sendEvent(window.webContents, 'settings.changed', { settings: settings.current, notices: settings.notices });
+    }
+  };
+  settings.onChange((current) => {
+    nativeTheme.themeSource = current.themeMode;
+    broadcastSettings();
+  });
+  settings.onNotices((notices) => {
+    reportSettingsNotices(notices);
+    broadcastSettings();
+  });
   // The launch's files open in the first main window; files from later launches aren't opened yet.
   let pendingFiles = [...files];
 
@@ -122,6 +140,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     for (const file of pendingFiles) documents.open(file, windowId);
     pendingFiles = [];
     window.on('closed', () => {
+      for (const tab of documents.list(windowId)) links.forget(tab.id);
       documents.closeWindow(windowId);
       images.closeWindow(windowId);
     });
@@ -164,7 +183,13 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           openMainWindow();
           choiceWindow?.close();
         },
+        'settings.get': () => ({ settings: settings.current, notices: settings.notices }),
         ...documentHandlers({ records: documents, links, fs, decode: decodeWithPlatform }),
+        ...tabHandlers({
+          tabs: documents,
+          resync: pushSnapshot,
+          closed: (id) => links.forget(id),
+        }),
       },
       trustedOrigins(runtime),
     );

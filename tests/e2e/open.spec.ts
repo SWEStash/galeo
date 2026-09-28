@@ -32,7 +32,7 @@ test('reads documents only by the ids main handed out, never by path (SR-12)', a
   try {
     await expect(page.getByTestId('document').locator('h1')).toBeVisible();
     const result = await page.evaluate(async () => {
-      const [record] = await window.galeo.documents.list();
+      const { tabs: [record] } = await window.galeo.tabs.snapshot();
       const attempt = (id: string) =>
         window.galeo.documents.read(id).then(
           () => 'read',
