@@ -190,7 +190,7 @@ flowchart TB
   rw[Render Worker]
   pre[window.galeo]
 
-  pre -- registry events --> store --> tabs & status & outline
+  pre -- "tabs.changed (snapshots) · tabs.demote · tabs.stale" --> store --> tabs & status & outline
   tabs -- activate/close/move --> pre
   qo & pal & profiles & settings --> pre
   store --> cont
@@ -219,7 +219,7 @@ sequenceDiagram
   P2-->>T: exit 0 (immediately)
   M->>M: Argv parser → Router: target = last-focused window
   M->>M: Tab Registry: new Tab Record; read grant for /abs/plan.md
-  M->>R: event tabOpened(record) + focus window
+  M->>R: event tabs.changed (snapshot, next revision) + focus window
   R->>M: readDocument(tabId)
   M->>M: Capability check (grant) → FileSystem.read (size cap) → FileWatcher.watch
   M-->>R: text + file identity + format id
@@ -237,8 +237,11 @@ sequenceDiagram
    the file and compares its identity.
 3. The Worker parses. The Host inserts the HTML *hidden*, scrolls to the saved anchor, then
    reveals it (no jump). Budget: 150 ms.
-4. The lifecycle policy in Main (count + weight limits, sampled memory) may instruct the renderer
-   to demote the least recently used warm tab to *hibernated*; the renderer drops that tab's DOM.
+4. The renderer reports the tab's rendered weight (`tabs.rendered`). The lifecycle policy in Main
+   (count + weight limits, sampled memory) may then send `tabs.demote` for the least recently
+   shown warm tabs; the renderer drops their DOM and keeps their scroll anchors.
+5. Showing a *warm* tab again, Main compares the file's identity with the read it shows and sends
+   `tabs.stale` if it changed; the renderer reads it again at the same place.
 
 ### 5.3 Live reload
 
@@ -259,7 +262,7 @@ sequenceDiagram
   M->>M: Link extractor: is href in the link set of tab's document (as read by Main)?
   alt relative link to a supported file, present in the document
     M->>M: resolve against document path → read grant → navigate the tab (history push)
-    M-->>R: tabNavigated(record)
+    M-->>R: navigated (+ tabs.changed snapshot); the renderer reads the document again
   else http/https/mailto, present in the document
     M->>OS: openExternal(normalized URL)
   else not present, or other scheme
