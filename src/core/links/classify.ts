@@ -15,6 +15,12 @@ export interface LinkContext {
   parseUrl: (href: string) => { protocol: string; href: string } | null;
 }
 
+/** Two slashes or backslashes: a UNC path (\\host\share) or a device path (\\?\), never local. */
+const NETWORK_PATH = /^[\\/]{2}/;
+
+/** macOS mounts network shares on demand under these. */
+const AUTOMOUNTED = /^\/(net|Network)\//;
+
 /** The only schemes handed to the OS (SR-04); local files always open inside galeo (SR-05). */
 const EXTERNAL = new Set(['http:', 'https:', 'mailto:']);
 
@@ -47,5 +53,10 @@ export function classifyLink(href: string, context: LinkContext): LinkTarget {
   if (encodedPath === '') return { kind: 'anchor', anchor: fragment ?? '' };
   const relative = decode(encodedPath);
   if (relative === null) return { kind: 'refused', reason: 'malformed' };
-  return { kind: 'file', path: context.resolve(context.dirname(context.documentPath), relative), anchor: fragment };
+  // Decoding can spell a host too (`%5C%5Chost`): a UNC or device path would reach the network
+  // through the file system, where no network guard sees it.
+  if (NETWORK_PATH.test(relative)) return { kind: 'refused', reason: 'host' };
+  const path = context.resolve(context.dirname(context.documentPath), relative);
+  if (NETWORK_PATH.test(path) || AUTOMOUNTED.test(path)) return { kind: 'refused', reason: 'host' };
+  return { kind: 'file', path, anchor: fragment };
 }

@@ -15,6 +15,7 @@ const TARGETS = [
   'a.md', 'dir/b.md', '../up.md', '#section', 'c.md#part', 'https://x.example/p?q=1', 'http://y.example',
   'mailto:me@example.org', 'javascript:alert(1)', 'JaVaScRiPt:alert(1)', '//evil.example/x', 'file:///etc/passwd',
   'vbscript:x', 'data:text/html,x', 'with%20space.md', 'galeo://file/abc', 'irc://chat.example',
+  '%5C%5Cevil.example%5Cshare%5Cx.png', '%2F%2Fevil.example/a.md', '/%2Fevil.example/b.md',
 ];
 
 const PIECES: ((target: string, n: number) => string)[] = [

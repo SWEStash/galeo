@@ -93,3 +93,34 @@ describe('classifyLink', () => {
     expect(classify('?x=1')).toEqual({ kind: 'anchor', anchor: '' });
   });
 });
+
+describe('classifyLink never names another host through encoded separators', () => {
+  const win32 = {
+    ...context,
+    documentPath: 'C:\\Users\\u\\plans\\plan.md',
+    dirname: (path: string) => path.slice(0, Math.max(path.lastIndexOf('\\'), path.lastIndexOf('/'))),
+    // A Windows-style join: `\\host\…` and `//host/…` stay UNC paths, as Node's path.win32 keeps them.
+    resolve: (dir: string, rel: string) => (/^[\\/]{2}/.test(rel) || /^[a-z]:/i.test(rel) ? rel : `${dir}\\${rel}`),
+  };
+
+  it.each([
+    '%5C%5Cevil.example%5Cshare%5Cx.png',
+    '%2F%2Fevil.example/s/a.md',
+    '%2f%5cevil.example/s/a.md',
+    '/%2Fevil.example/a.md',
+    '%5C\\evil.example\\x',
+    '%5C%5C%3F%5CC:%5Cx',
+    '%5C%5C.%5Cpipe%5Cx',
+  ])('refuses %s as another host', (href) => {
+    expect(classifyLink(href, win32)).toEqual({ kind: 'refused', reason: 'host' });
+    expect(classifyLink(href, context)).toEqual({ kind: 'refused', reason: 'host' });
+  });
+
+  it.each(['/net/evil.example/x.png', '/Network/Servers/evil/x.md'])('refuses the automounted network path %s', (href) => {
+    expect(classifyLink(href, context)).toEqual({ kind: 'refused', reason: 'host' });
+  });
+
+  it('still resolves an encoded name inside the document folder', () => {
+    expect(classifyLink('a%5Cb.md', context)).toEqual({ kind: 'file', path: '/home/u/plans/v1/a\\b.md', anchor: null });
+  });
+});
