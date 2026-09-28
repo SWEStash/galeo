@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ConfigFile, type Parse } from '../../../src/core/settings/config-file';
+import { ConfigFile } from '../../../src/core/settings/config-file';
+import type { Parse } from '../../../src/core/settings/json-file';
 import { utf8 } from '../../../src/main/adapters/utf8';
 import { FakeFileSystem } from '../../helpers/fakes';
 

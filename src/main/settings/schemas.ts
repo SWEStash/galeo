@@ -1,5 +1,6 @@
 import { z, type ZodType } from 'zod';
-import type { Parse } from '../../core/settings/config-file';
+import type { Parse } from '../../core/settings/json-file';
+import { parserFor } from '../schemas/parse';
 import type { ProfileFile } from '../../core/settings/profile-settings';
 import type { SettingsOverrides } from '../../shared/settings';
 
@@ -25,13 +26,5 @@ const profile = z.strictObject({
   settings: overrides.optional(),
 });
 
-function parser<T>(schema: ZodType<T>): Parse<T> {
-  return (data) => {
-    const { schemaVersion: _version, ...rest } = data as Record<string, unknown>;
-    const result = schema.safeParse(rest);
-    return result.success ? { ok: true, value: result.data } : { ok: false, detail: z.prettifyError(result.error) };
-  };
-}
-
-export const parseGlobalSettings: Parse<SettingsOverrides> = parser(overrides as ZodType<SettingsOverrides>);
-export const parseProfileFile: Parse<ProfileFile> = parser(profile as ZodType<ProfileFile>);
+export const parseGlobalSettings: Parse<SettingsOverrides> = parserFor(overrides as ZodType<SettingsOverrides>);
+export const parseProfileFile: Parse<ProfileFile> = parserFor(profile as ZodType<ProfileFile>);

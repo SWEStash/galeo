@@ -1,8 +1,6 @@
 import type { SettingsNotice } from '../../shared/settings';
 import { readJsonFile, writeJsonFile, type JsonFileSpec } from './json-file';
 
-export type { Parse, Parsed, Utf8 } from './json-file';
-
 export interface ConfigFileDeps<T> extends JsonFileSpec<T> {
   path: string;
   /** The value when the file doesn't exist. */

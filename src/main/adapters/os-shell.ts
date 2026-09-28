@@ -21,8 +21,8 @@ export class ElectronOsShell implements OsShell {
 export class RecordingOsShell extends ElectronOsShell {
   constructor(
     private readonly opened: string[],
-    private readonly revealed: string[] = [],
-    private readonly openedPaths: string[] = [],
+    private readonly revealed: string[],
+    private readonly openedPaths: string[],
   ) {
     super();
   }

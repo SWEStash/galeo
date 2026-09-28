@@ -7,6 +7,17 @@ import { CHOSEN_ENCODINGS, type Channel, type Requests } from './ipc';
  */
 const documentId = z.string().min(1).max(64);
 
+/** Where a tab is scrolled (ADR-002); also stored in sessions. */
+export const scrollAnchor = z.strictObject({
+  line: z.int().min(1).max(100_000_000),
+  offset: z.number().min(-1e7).max(1e7),
+  heading: z.string().min(1).max(256).nullable(),
+  fraction: z.number().min(0).max(1),
+});
+
+/** A tab's zoom, 50 % to 300 %. */
+export const zoomLevel = z.number().min(0.5).max(3);
+
 export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),
   'app.resolveSandboxUnavailable': z.tuple([z.enum(['quit', 'run-unsandboxed'])]),
@@ -21,16 +32,8 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'tabs.snapshot': z.tuple([]),
   'tabs.activated': z.tuple([documentId]),
   'tabs.rendered': z.tuple([documentId, z.int().min(0).max(2 ** 31)]),
-  'tabs.position': z.tuple([
-    documentId,
-    z.strictObject({
-      line: z.int().min(1).max(100_000_000),
-      offset: z.number().min(-1e7).max(1e7),
-      heading: z.string().min(1).max(256).nullable(),
-      fraction: z.number().min(0).max(1),
-    }),
-  ]),
-  'tabs.zoom': z.tuple([documentId, z.number().min(0.5).max(3)]),
+  'tabs.position': z.tuple([documentId, scrollAnchor]),
+  'tabs.zoom': z.tuple([documentId, zoomLevel]),
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),
   'tabs.move': z.tuple([documentId, z.int().min(0).max(9999)]),

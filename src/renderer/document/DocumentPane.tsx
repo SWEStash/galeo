@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { DocumentContent } from '../../shared/contracts';
-import type { ImageResult, TextEncoding } from '../../shared/documents';
-import type { ScrollAnchor } from '../../shared/tabs';
+import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
+import type { ImageResult } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { commandFor, type Platform } from '../../shared/keymap';
-import type { RenderClient } from '../worker/client';
-import type { ChosenEncoding } from '../../shared/contracts';
+import type { ScrollAnchor } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
+import type { RenderClient } from '../worker/client';
 import { DocumentBanner, DocumentLoading, DocumentState } from './DocumentState';
 import { EncodingMenu } from './EncodingMenu';
 import { ENCODING_NAMES } from './encodings';
@@ -18,7 +17,6 @@ import { useDelayed } from './useDelayed';
 import { useRenderedHtml } from './useRenderedHtml';
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
-
 
 /** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
 const LOADING_DELAY_MS = 150;

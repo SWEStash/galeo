@@ -7,7 +7,7 @@ export interface RecentFile {
   openedAt: number;
 }
 
-export const RECENT_MAX = 200;
+const RECENT_MAX = 200;
 const RECENT_MAX_BYTES = 1024 * 1024;
 
 export interface RecentFilesDeps {

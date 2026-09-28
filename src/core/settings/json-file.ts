@@ -61,6 +61,6 @@ export async function writeJsonFile(spec: JsonFileSpec<unknown>, path: string, v
   await spec.fs.writeFileAtomic(path, spec.utf8.encode(json), { mode: FILE_MODE });
 }
 
-export function dirnameOf(path: string): string {
+function dirnameOf(path: string): string {
   return path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
 }

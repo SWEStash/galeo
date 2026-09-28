@@ -16,8 +16,6 @@ export interface SessionStoreDeps {
   parse: Parse<SessionFile>;
 }
 
-export type { PreviousSession };
-
 /**
  * A profile's `session.json` and its snapshots `.1` to `.3` (ADR-005). An invalid session is backed
  * up to `session.json.invalid`, then the newest valid snapshot takes its place (SR-17). The first

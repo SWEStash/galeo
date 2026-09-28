@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { PreviousSession } from '../../shared/contracts';
 import type { Platform } from '../../shared/keymap';
-
-function split(path: string): { name: string; folder: string } {
-  const at = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
-  return { name: path.slice(at + 1), folder: path.slice(0, at) };
-}
+import { fileName } from '../../shared/paths';
 
 const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -40,7 +36,8 @@ export function EmptyWindow({ platform }: { platform: Platform }) {
           <h2>Recent</h2>
           <ul className="empty-window-list">
             {recent.map(({ id, path }) => {
-              const { name, folder } = split(path);
+              const name = fileName(path);
+              const folder = path.slice(0, path.length - name.length - 1);
               return (
                 <li key={id}>
                   <button type="button" className="empty-window-item" title={path} onClick={() => void window.galeo.recent.open(id)}>

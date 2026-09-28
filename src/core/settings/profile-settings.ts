@@ -1,11 +1,12 @@
 import type { Settings, SettingsNotice, SettingsOverrides } from '../../shared/settings';
 import type { FileSystem, FileWatcher, Unsubscribe } from '../ports';
-import { ConfigFile, type Parse, type Utf8 } from './config-file';
+import { ConfigFile } from './config-file';
+import type { Parse, Utf8 } from './json-file';
 import { resolveSettings } from './model';
 
-export const SETTINGS_VERSION = 1;
+const SETTINGS_VERSION = 1;
 /** Hand-edited config is small; anything bigger is refused, not parsed (SR-17). */
-export const CONFIG_MAX_BYTES = 1024 * 1024;
+const CONFIG_MAX_BYTES = 1024 * 1024;
 const DIR_MODE = 0o700;
 
 /** `profile.json`: the profile's display name, accent colour and setting overrides. */

@@ -321,7 +321,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           reads,
           fs,
           decode: decodeWithPlatform,
-          opened: (file) => void recent.add(file).catch(() => {}),
+          opened: (file) => void recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
         }),
         ...tabHandlers({
           tabs: documents,

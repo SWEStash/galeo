@@ -7,7 +7,6 @@ import type { TabStatus, TabStore, TabsView } from './store';
 /** A tab being dragged within the tab bar; nothing else accepts it. */
 const TAB_TYPE = 'application/x-galeo-tab';
 
-
 /**
  * The window's tabs (UX §2): an ARIA tablist in the title bar. Its empty space, and a grip at its
  * end that tabs never fill, drag the window.

@@ -1,4 +1,4 @@
-import type { Utf8 } from '../../core/settings/config-file';
+import type { Utf8 } from '../../core/settings/json-file';
 
 const decoder = new TextDecoder('utf-8', { fatal: true });
 const encoder = new TextEncoder();

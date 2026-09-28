@@ -3,6 +3,8 @@ import type { RecentFile } from '../../core/session/recent';
 import type { SessionFile } from '../../core/session/model';
 import type { Parse } from '../../core/settings/json-file';
 import { CHOSEN_ENCODINGS } from '../../shared/contracts';
+import { scrollAnchor, zoomLevel } from '../../shared/contracts/schemas';
+import { parserFor } from '../schemas/parse';
 
 /**
  * Schemas for the app-written state files (SR-16, SR-17): paths, positions and view state only,
@@ -10,17 +12,10 @@ import { CHOSEN_ENCODINGS } from '../../shared/contracts';
  */
 const path = z.string().min(1).max(4096).refine((value) => value.startsWith('/') || /^[A-Za-z]:[\\/]/.test(value), 'absolute path');
 
-const position = z.strictObject({
-  line: z.int().min(1).max(100_000_000),
-  offset: z.number().min(-1e7).max(1e7),
-  heading: z.string().min(1).max(256).nullable(),
-  fraction: z.number().min(0).max(1),
-});
-
 const entry = z.strictObject({
   path,
   anchor: z.string().max(1024).nullable(),
-  position: position.optional(),
+  position: scrollAnchor.optional(),
   encoding: z.enum(CHOSEN_ENCODINGS).optional(),
 });
 
@@ -28,7 +23,7 @@ const tab = z
   .strictObject({
     entries: z.array(entry).min(1).max(50),
     index: z.int().min(0),
-    zoom: z.number().min(0.5).max(3).optional(),
+    zoom: zoomLevel.optional(),
   })
   .refine((value) => value.index < value.entries.length, 'index outside the history');
 
@@ -60,13 +55,5 @@ const recent = z.strictObject({
   files: z.array(z.strictObject({ path, openedAt: z.number().min(0) })).max(200),
 });
 
-function parser<T>(schema: ZodType<T>): Parse<T> {
-  return (data) => {
-    const { schemaVersion: _version, ...rest } = data as Record<string, unknown>;
-    const result = schema.safeParse(rest);
-    return result.success ? { ok: true, value: result.data } : { ok: false, detail: z.prettifyError(result.error) };
-  };
-}
-
-export const parseSession: Parse<SessionFile> = parser(session as ZodType<SessionFile>);
-export const parseRecentFiles: Parse<{ files: RecentFile[] }> = parser(recent as ZodType<{ files: RecentFile[] }>);
+export const parseSession: Parse<SessionFile> = parserFor(session as ZodType<SessionFile>);
+export const parseRecentFiles: Parse<{ files: RecentFile[] }> = parserFor(recent as ZodType<{ files: RecentFile[] }>);

@@ -258,6 +258,7 @@ export function DocumentView({
     let latest: ScrollAnchor | null = null;
     const report = () => {
       if (!latest) return;
+      // The last reported line, on the element: what tests wait on, and what to look at when a position looks wrong.
       element.dataset['positionLine'] = String(latest.line);
       positionListener.current?.(latest);
     };
