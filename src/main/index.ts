@@ -6,6 +6,7 @@ import { ImageGrants } from '../core/documents/images';
 import { ReadIdentities } from '../core/documents/identities';
 import { DocumentLinks } from '../core/documents/links';
 import { DocumentMenus } from '../core/documents/menus';
+import { SelectionGrants } from '../core/documents/selections';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import { ProfileSettings } from '../core/settings/profile-settings';
 import { SessionKeeper } from '../core/session/keeper';
@@ -36,6 +37,7 @@ import { registerIpc } from './ipc/register';
 import { sendEvent } from './ipc/send';
 import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
+import { recentHandlers } from './session/recent-handlers';
 import { parseRecentFiles, parseSession } from './session/schemas';
 import { parseGlobalSettings, parseProfileFile } from './settings/schemas';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
@@ -186,6 +188,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   const sessionStore = new SessionStore({ fs, utf8, dir: profileState, parse: parseSession });
   const recent = new RecentFiles({ fs, utf8, path: path.join(profileState, 'recent.json'), parse: parseRecentFiles, now: Date.now });
   // Main windows in the order they opened, and their ids with the last focused first.
+  const selections = new SelectionGrants(randomUUID);
   const mainWindows: BrowserWindow[] = [];
   let focusOrder: number[] = [];
   const sessions = new SessionKeeper({
@@ -234,6 +237,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       documents.closeWindow(windowId);
       warm.closeWindow(windowId);
       images.closeWindow(windowId);
+      selections.closeWindow(windowId);
     });
     perfMark('window-created');
     reportColdStart(window, { document: toOpen.length > 0 || Boolean(state?.tabs.length) });
@@ -329,6 +333,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           stale: (windowId, id) => sendTo(windowId, 'tabs.stale', id),
           positioned: () => sessions.changed(),
         }),
+        ...recentHandlers({ recent, selections, tabs: documents }),
       },
       trustedOrigins(runtime),
     );

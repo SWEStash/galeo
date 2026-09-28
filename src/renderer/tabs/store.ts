@@ -143,9 +143,13 @@ export function createTabStore(api: TabsApi): TabStore {
     close(id) {
       const index = view.tabs.findIndex((tab) => tab.id === id);
       if (index < 0) return;
+      // Gone at once: a quick second close acts on what is shown now. Main's snapshot confirms it.
+      const tabs = view.tabs.filter((tab) => tab.id !== id);
       if (id === view.active) {
         const next = view.tabs[index + 1] ?? view.tabs[index - 1];
-        activateLocally(next?.id ?? null, view.tabs, view.revision);
+        activateLocally(next?.id ?? null, tabs, view.revision);
+      } else {
+        set({ tabs });
       }
       void api.close(id);
     },

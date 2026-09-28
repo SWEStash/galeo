@@ -66,6 +66,9 @@ export const CHANNELS = [
   'settings.get',
   'session.previous',
   'session.restorePrevious',
+  'recent.list',
+  'recent.open',
+  'recent.clear',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -111,6 +114,10 @@ export interface Requests {
   'session.previous': [];
   /** Opens one of them again, in new windows. */
   'session.restorePrevious': [snapshot: number];
+  /** The profile's most recent files, each under an id this window may open (never a path). */
+  'recent.list': [];
+  'recent.open': [id: string];
+  'recent.clear': [];
 }
 
 /** Resolved value of each channel. */
@@ -137,6 +144,9 @@ export interface Responses {
   'settings.get': SettingsState;
   'session.previous': PreviousSession[];
   'session.restorePrevious': void;
+  'recent.list': { id: string; path: string }[];
+  'recent.open': void;
+  'recent.clear': void;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */

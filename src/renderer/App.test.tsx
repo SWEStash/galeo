@@ -97,6 +97,11 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         return () => {};
       }),
     },
+    recent: {
+      list: vi.fn().mockResolvedValue([]),
+      open: vi.fn().mockResolvedValue(undefined),
+      clear: vi.fn().mockResolvedValue(undefined),
+    },
     session: {
       previous: vi.fn().mockResolvedValue([]),
       restorePrevious: vi.fn().mockResolvedValue(undefined),
@@ -504,6 +509,27 @@ describe('App', () => {
     expect(container.querySelector('[data-testid="document-loading"]')).toBeNull();
   });
 
+  it('shows the empty window: hints, the recent files to open, and previous sessions to restore', async () => {
+    const api = stubBridge();
+    api.recent.list.mockResolvedValue([
+      { id: 'pick-1', path: '/w/acme/plan.md' },
+      { id: 'pick-2', path: '/w/beta/notes.md' },
+    ]);
+    api.session.previous.mockResolvedValue([{ snapshot: 1, savedAt: Date.UTC(2026, 8, 27, 18, 30), windows: 1, tabs: 4 }]);
+    const container = await renderApp();
+    const empty = await vi.waitFor(() => container.querySelector<HTMLElement>('[data-testid="empty-window"]')!);
+    expect(empty.textContent).toContain('Drop files here');
+    expect(empty.textContent).toContain('Ctrl+P');
+    const buttons = () => [...empty.querySelectorAll('button')];
+    await vi.waitFor(() => expect(buttons().map((button) => button.textContent)).toContain('plan.md/w/acme'));
+    await act(async () => buttons().find((button) => button.textContent?.startsWith('plan.md'))!.click());
+    expect(api.recent.open).toHaveBeenCalledWith('pick-1');
+    await act(async () => buttons().find((button) => button.textContent === 'Clear recent')!.click());
+    expect(api.recent.clear).toHaveBeenCalled();
+    await act(async () => buttons().find((button) => button.textContent?.includes('4 tabs'))!.click());
+    expect(api.session.restorePrevious).toHaveBeenCalledWith(1);
+  });
+
   it('shows no document when the window has none', async () => {
     const api = stubBridge();
     const container = await renderApp();
@@ -622,6 +648,17 @@ describe('App', () => {
     expect(api.documents.contextMenu).toHaveBeenCalledWith('doc-1');
     await act(async () => (await button('Close tab')).click());
     expect(api.tabs.close).toHaveBeenCalledWith('doc-1');
+  });
+
+  it('closes a tab per Ctrl+W, however fast they come', async () => {
+    const records = ['doc-1', 'doc-2', 'doc-3'].map((id) => ({ id, path: `/d/${id}.md` }));
+    const api = stubBridge({}, { records, content: readyContent('markdown', 'rendered', 'x') });
+    const container = await renderApp();
+    await vi.waitFor(() => expect(container.querySelectorAll('[data-testid="tab-panel"]')).toHaveLength(3));
+    await act(async () => {
+      for (let i = 0; i < 2; i++) window.dispatchEvent(new KeyboardEvent('keydown', { key: 'w', ctrlKey: true, bubbles: true, cancelable: true }));
+    });
+    expect(api.tabs.close.mock.calls).toEqual([['doc-1'], ['doc-2']]);
   });
 
   it('shows only the sandbox choice and sends it to main', async () => {

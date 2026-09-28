@@ -9,7 +9,8 @@ import { SettingsNotice } from './settings/SettingsNotice';
 import { useSettings } from './settings/useSettings';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { tabAction } from './tabs/commands';
-import type { TabStore, TabsView } from './tabs/store';
+import type { TabStore } from './tabs/store';
+import { EmptyWindow } from './tabs/EmptyWindow';
 import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
 import { TabDocument } from './tabs/TabDocument';
@@ -56,7 +57,7 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
     return () => worker.terminate();
   }, []);
 
-  useTabShortcuts(view, store, platform);
+  useTabShortcuts(store, platform);
 
   useEffect(() => {
     if (!message) return;
@@ -75,6 +76,7 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
       <TabBar view={view} store={store} />
       {settings && <SettingsNotice notices={settings.notices} />}
       <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
+        {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}
         {view.tabs.map((tab) => (
           // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
           <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
@@ -106,9 +108,11 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
 }
 
 /** The tab shortcuts and per-tab zoom (UX §5), wherever the focus is. */
-function useTabShortcuts(view: TabsView, store: TabStore, platform: Platform) {
+function useTabShortcuts(store: TabStore, platform: Platform) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // The store's state as of this key, not of the last render: keys can come faster than renders.
+      const view = store.getSnapshot();
       const command = commandFor(event, platform);
       const zoom = command === 'zoomIn' ? 'in' : command === 'zoomOut' ? 'out' : command === 'zoomReset' ? 'reset' : null;
       if (zoom && view.active) {
@@ -126,5 +130,5 @@ function useTabShortcuts(view: TabsView, store: TabStore, platform: Platform) {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [view, store, platform]);
+  }, [store, platform]);
 }

@@ -37,4 +37,7 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'settings.get': z.tuple([]),
   'session.previous': z.tuple([]),
   'session.restorePrevious': z.tuple([z.int().min(1).max(3)]),
+  'recent.list': z.tuple([]),
+  'recent.open': z.tuple([documentId]),
+  'recent.clear': z.tuple([]),
 };

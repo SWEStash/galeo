@@ -214,5 +214,16 @@ describe('createTabStore', () => {
     store.moved('a', here);
     expect(store.positionOf('a')).toEqual(here);
   });
+
+  it('drops a closed tab at once, so a quick second close closes the next tab, not the same one', async () => {
+    const { store, api } = setup(snapshot(1, ['a', 'b', 'c'], 'a'));
+    await store.start();
+    store.close('a');
+    store.close(store.getSnapshot().active!);
+    expect(api.close.mock.calls).toEqual([['a'], ['b']]);
+    expect(store.getSnapshot()).toMatchObject({ active: 'c', tabs: [tab('c')] });
+    store.close('a');
+    expect(api.close).toHaveBeenCalledTimes(2);
+  });
 });
 

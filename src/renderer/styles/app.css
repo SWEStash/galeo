@@ -393,3 +393,63 @@ button:focus-visible {
   background: var(--galeo-color-focus);
   color: var(--galeo-color-bg);
 }
+
+/* A window without tabs (UX §4). */
+.empty-window {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 36rem;
+  margin: 12vh auto 0;
+  padding: 0 1.5rem;
+  color: var(--galeo-color-fg);
+  font: 14px var(--galeo-font-ui);
+}
+
+.empty-window h1 {
+  margin: 0 0 0.25em;
+  font-size: 1.4em;
+  font-weight: 600;
+}
+
+.empty-window h2 {
+  margin: 2em 0 0.5em;
+  color: var(--galeo-color-muted);
+  font-size: 0.85em;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.empty-window-hint {
+  margin: 0;
+  color: var(--galeo-color-muted);
+}
+
+.empty-window-list {
+  margin: 0 0 0.75em;
+  padding: 0;
+  list-style: none;
+}
+
+.empty-window-item {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  text-align: left;
+}
+
+.empty-window-item:hover {
+  background: var(--galeo-color-code-bg);
+}
+
+.empty-window-folder {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--galeo-color-muted);
+  font-size: 0.9em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
