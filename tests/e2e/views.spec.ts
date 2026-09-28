@@ -33,11 +33,11 @@ test('Ctrl+U switches to the source at the same place, and back', async () => {
     expect(line).toBeGreaterThan(100);
     await heading.evaluate((element) => element.scrollIntoView({ block: 'start' }));
 
-    await window.keyboard.press('Control+U');
+    await window.keyboard.press('ControlOrMeta+U');
     await expect(document.locator('.cm-editor')).toBeVisible();
     await expect.poll(() => sourceTopLine(window)).toBe(line);
 
-    await window.keyboard.press('Control+U');
+    await window.keyboard.press('ControlOrMeta+U');
     await expect(heading).toBeVisible();
     await expect.poll(() => renderedTopLine(window)).toBe(line);
   } finally {
@@ -50,7 +50,7 @@ test('Alt+Z wraps long lines in the source view', async () => {
   try {
     const document = window.getByTestId('document');
     await expect(document.locator('h1')).toBeVisible();
-    await window.keyboard.press('Control+U');
+    await window.keyboard.press('ControlOrMeta+U');
     const content = document.locator('.cm-content');
     await expect(content).not.toHaveClass(/cm-lineWrapping/);
     await window.keyboard.press('Alt+Z');

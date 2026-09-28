@@ -19,6 +19,9 @@ test('the colour scheme follows the system theme live, without a reload', async 
 test('the vendored fonts load from the app itself', async () => {
   const { window, close } = await launchApp();
   try {
+    // The fonts are declared by the app's stylesheet; the page's script, which renders the app root,
+    // runs only once that stylesheet has loaded.
+    await expect(window.getByTestId('app-root')).toBeVisible();
     const loaded = await window.evaluate(async () => {
       await Promise.all(['Inter', 'Source Serif 4', 'JetBrains Mono'].map((family) => document.fonts.load(`16px "${family}"`)));
       return [...document.fonts].filter((face) => face.status === 'loaded').map((face) => face.family.replaceAll('"', ''));

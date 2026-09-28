@@ -12,7 +12,7 @@ test('.txt opens in the reader view, with its source on Ctrl+U', async () => {
     await expect(paragraphs).toHaveCount(2);
     await expect(paragraphs.first()).toHaveText('Plain notes, kept as written.\nA second line of the same paragraph.');
     await expect(paragraphs.nth(1)).toHaveText('A new paragraph <b>not markup</b>.');
-    await window.keyboard.press('Control+U');
+    await window.keyboard.press('ControlOrMeta+U');
     await expect(document.locator('.cm-editor')).toBeVisible();
   } finally {
     await close();

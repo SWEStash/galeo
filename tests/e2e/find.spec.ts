@@ -6,7 +6,7 @@ import { launchApp } from '../helpers/launch';
 const plan = path.resolve(import.meta.dirname, '../fixtures/docs/plan-50k.md');
 
 async function openFind(window: Page, query: string) {
-  await window.keyboard.press('Control+F');
+  await window.keyboard.press('ControlOrMeta+F');
   const input = window.getByRole('searchbox', { name: 'Find in document' });
   await expect(input).toBeFocused();
   await input.fill(query);
@@ -52,7 +52,7 @@ test('finds in the source view with the same bar, and matching case narrows it',
   const { window, close } = await launchApp(['--', plan]);
   try {
     await expect(window.getByTestId('document').locator('h1')).toBeVisible();
-    await window.keyboard.press('Control+U');
+    await window.keyboard.press('ControlOrMeta+U');
     await expect(window.getByTestId('document').locator('.cm-editor')).toBeVisible();
     await openFind(window, 'mermaid');
     await expect(status(window)).toHaveText(/^1 of \d+$/);
