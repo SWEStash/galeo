@@ -86,6 +86,9 @@ jobs:
             os: windows-2025
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    # Releases are Linux-only for now: a preview failure shows on its job but leaves the run green.
+    # It is still fixed in the next commit, so the previews don't drift.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
