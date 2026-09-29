@@ -110,3 +110,48 @@ describe('profile channel arguments', () => {
     }
   });
 });
+
+describe('settings, profile and app channel arguments (SR-11)', () => {
+  it('settings.set takes a scope and known settings in range, nothing else', () => {
+    expect(accepts('settings.set', ['profile', { fontSize: 20 }])).toBe(true);
+    expect(accepts('settings.set', ['global', { themeMode: 'dark', quickOpenExclude: ['dist'] }])).toBe(true);
+    for (const bad of [
+      ['profile', { fontSize: 9 }],
+      ['profile', { fontSize: 41 }],
+      ['profile', { themeMode: 'blue' }],
+      ['profile', { unknown: 1 }],
+      // An own `__proto__` key, as parsed JSON (and IPC data) can carry.
+      ['profile', JSON.parse('{"__proto__": {"fontSize": 20}}')],
+      ['everyone', { fontSize: 20 }],
+      ['profile'],
+      ['profile', { fontSize: 20 }, 'extra'],
+    ]) {
+      expect(accepts('settings.set', bad)).toBe(false);
+    }
+  });
+
+  it('settings.reset takes the name of a setting only', () => {
+    expect(accepts('settings.reset', ['fontSize'])).toBe(true);
+    for (const bad of [['toString'], ['__proto__'], [''], [1], []]) expect(accepts('settings.reset', bad)).toBe(false);
+  });
+
+  it('settings.openCustomCss takes a scope, settings.openNoticeFile a small index: never a path', () => {
+    expect(accepts('settings.openCustomCss', ['profile'])).toBe(true);
+    expect(accepts('settings.openCustomCss', ['/etc/passwd'])).toBe(false);
+    expect(accepts('settings.openNoticeFile', [0])).toBe(true);
+    for (const bad of [[-1], [1.5], [101], ['/cfg/settings.json'], []]) expect(accepts('settings.openNoticeFile', bad)).toBe(false);
+  });
+
+  it('profiles.open and profiles.undoCreate take a bounded id or token', () => {
+    expect(accepts('profiles.open', ['acme'])).toBe(true);
+    expect(accepts('profiles.undoCreate', [ID])).toBe(true);
+    for (const channel of ['profiles.open', 'profiles.undoCreate'] as const) {
+      for (const bad of [[''], ['x'.repeat(65)], [7], []]) expect(accepts(channel, bad)).toBe(false);
+    }
+  });
+
+  it.each(['profiles.list', 'profiles.delete', 'profiles.created', 'tabs.openSettings', 'app.installLauncher'] as const)('%s takes nothing', (channel) => {
+    expect(accepts(channel, [])).toBe(true);
+    expect(accepts(channel, ['acme'])).toBe(false);
+  });
+});

@@ -9,7 +9,7 @@ export interface SchemeQuery extends EventTarget {
 
 /**
  * Follows `(prefers-color-scheme: dark)`. Chromium keeps it in sync with the desktop's dark-style
- * setting (and with main's `nativeTheme.themeSource`), so a system change applies live.
+ * setting, so a system change applies live.
  */
 export function watchColorScheme(query: SchemeQuery, onChange: (scheme: ColorScheme) => void): () => void {
   const report = () => onChange(query.matches ? 'dark' : 'light');
