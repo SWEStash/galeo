@@ -4,6 +4,8 @@ import { kindOf, type Utf8 } from '../settings/json-file';
 
 /** The line every installed launcher carries, so galeo only ever replaces its own. */
 export const LAUNCHER_MARK = '# Installed by galeo: the command-line launcher for its AppImage.';
+/** The same, for the desktop entry. */
+const ENTRY_MARK = 'X-galeo-Launcher=true';
 
 export type LauncherFiles =
   | { ok: true; bin: { path: string; content: string }; desktop: { path: string; content: string } }
@@ -32,7 +34,7 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
   const [shebang, ...rest] = galeoScript.split('\n');
   const script = rest.join('\n');
   if (!/^GALEO_BIN=.*$/m.test(script)) throw new Error('galeo has no GALEO_BIN line');
-  const bin = [shebang, LAUNCHER_MARK, script.replace(/^GALEO_BIN=.*$/m, `GALEO_BIN=${shellQuote(appImage)}`)].join('\n');
+  const bin = [shebang, LAUNCHER_MARK, script.replace(/^GALEO_BIN=.*$/m, () => `GALEO_BIN=${shellQuote(appImage)}`)].join('\n');
   const exec = execArgument(appImage);
   const desktop = [
     '[Desktop Entry]',
@@ -46,7 +48,7 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
     'MimeType=text/markdown;text/x-markdown;text/plain;text/x-log;',
     'Categories=Utility;',
     'Actions=NewWindow;',
-    'X-galeo-Launcher=true',
+    ENTRY_MARK,
     '',
     '[Desktop Action NewWindow]',
     'Name=New Window',
@@ -69,11 +71,11 @@ export async function installLauncher(
   files: Extract<LauncherFiles, { ok: true }>,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const { fs, utf8 } = deps;
-  try {
-    const existing = utf8.decode(await fs.readFile(files.bin.path, { maxBytes: 64 * 1024 }));
-    if (!existing.includes(LAUNCHER_MARK)) return { ok: false, reason: `${files.bin.path} exists and is not galeo's` };
-  } catch (error) {
-    if (!(error instanceof FsError && error.code === 'ENOENT')) return { ok: false, reason: `${files.bin.path} exists and is not galeo's` };
+  for (const [file, mark] of [
+    [files.bin, LAUNCHER_MARK],
+    [files.desktop, ENTRY_MARK],
+  ] as const) {
+    if (!(await ownedOrAbsent(deps, file.path, mark))) return { ok: false, reason: `${file.path} exists and is not galeo's` };
   }
   for (const [file, mode] of [
     [files.bin, 0o755],
@@ -84,4 +86,13 @@ export async function installLauncher(
     await fs.writeFileAtomic(file.path, utf8.encode(file.content), { mode });
   }
   return { ok: true };
+}
+
+/** Nothing is at `path`, or what is there carries galeo's `mark`. */
+async function ownedOrAbsent(deps: { fs: FileSystem; utf8: Utf8 }, path: string, mark: string): Promise<boolean> {
+  try {
+    return deps.utf8.decode(await deps.fs.readFile(path, { maxBytes: 64 * 1024 })).includes(mark);
+  } catch (error) {
+    return error instanceof FsError && error.code === 'ENOENT';
+  }
 }

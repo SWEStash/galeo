@@ -37,6 +37,13 @@ describe('appImageLauncher ("Install command-line launcher", ADR-008)', () => {
     expect(files.bin.content).toContain(String.raw`GALEO_BIN='/home/u/My Apps/it'\''s $HOME "100%" \galeo.AppImage'`);
   });
 
+  it("keeps replacement patterns in the path as they are ($& and $' are just characters)", () => {
+    const files = appImageLauncher("/home/u/a$&b$'c.AppImage", DIRS, GALEO);
+    if (!files.ok) throw new Error(files.reason);
+    expect(files.bin.content).toContain(String.raw`GALEO_BIN='/home/u/a$&b$'\''c.AppImage'` + '\n');
+    expect(files.bin.content.match(/GALEO_BIN=/g)).toHaveLength(1);
+  });
+
   it('refuses a path no desktop entry can hold', () => {
     expect(appImageLauncher('/home/u/a\nb.AppImage', DIRS, GALEO)).toEqual({ ok: false, reason: 'the AppImage path has a control character' });
     expect(appImageLauncher('relative.AppImage', DIRS, GALEO)).toEqual({ ok: false, reason: 'the AppImage path is not absolute' });
@@ -66,5 +73,13 @@ describe('installLauncher', () => {
     const foreign = new FakeFileSystem({ '/home/u/.local/bin/galeo': '#!/bin/sh\necho mine' });
     expect(await installLauncher({ fs: foreign, utf8 }, files())).toEqual({ ok: false, reason: '/home/u/.local/bin/galeo exists and is not galeo\'s' });
     expect(await text(foreign, '/home/u/.local/bin/galeo')).toBe('#!/bin/sh\necho mine');
+  });
+
+  it("never replaces a desktop entry galeo didn't write", async () => {
+    const entry = '/home/u/.local/share/applications/galeo.desktop';
+    const fs = new FakeFileSystem({ [entry]: '[Desktop Entry]\nName=mine\n' });
+    expect(await installLauncher({ fs, utf8 }, files())).toEqual({ ok: false, reason: `${entry} exists and is not galeo's` });
+    expect(await text(fs, entry)).toBe('[Desktop Entry]\nName=mine\n');
+    await expect(fs.stat('/home/u/.local/bin/galeo')).rejects.toThrow(/ENOENT/);
   });
 });

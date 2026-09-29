@@ -3,7 +3,7 @@
 // its arguments. Playwright can't drive the packaged app: its fuses refuse --inspect.
 import { FuseV1Options, FuseVersion, flipFuses, getCurrentFuseWire } from '@electron/fuses';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs';
+import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FUSES } from '../packaging/fuses.mjs';
@@ -59,7 +59,10 @@ if (process.platform === 'linux') {
 
 // The .deb's desktop entry: files after `--`, the MIME types, the window class, the New Window action.
 if (process.platform === 'linux') {
-  const deb = readdirSync(RELEASE).find((name) => name.endsWith('.deb'));
+  // The newest .deb: release/ can still hold older builds.
+  const deb = readdirSync(RELEASE)
+    .filter((name) => name.endsWith('.deb'))
+    .sort((a, b) => statSync(path.join(RELEASE, b)).mtimeMs - statSync(path.join(RELEASE, a)).mtimeMs)[0];
   if (!deb) failures.push('desktop entry: no .deb in release/ (is the deb target built?)');
   else {
     const extracted = spawnSync('sh', ['-c', `dpkg-deb --fsys-tarfile "$1" | tar -xO ./usr/share/applications/galeo.desktop`, 'sh', path.join(RELEASE, deb)], { encoding: 'utf8' });
