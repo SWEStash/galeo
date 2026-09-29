@@ -97,4 +97,61 @@ describe('ProfileSettings', () => {
     await flush();
     expect(changes).toEqual([]);
   });
+
+  describe('custom CSS (ADR-005: global, then the profile, applied live)', () => {
+    const GLOBAL_CSS = '/cfg/custom.css';
+    const PROFILE_CSS = '/cfg/profiles/default/custom.css';
+
+    it('reads both files, empty when missing', async () => {
+      const { settings } = setup({ [GLOBAL_CSS]: 'p { color: red }' });
+      await settings.start();
+      expect(settings.css).toEqual({ global: 'p { color: red }', profile: '' });
+    });
+
+    it('applies a hand edit of either file live', async () => {
+      const { fs, watcher, settings } = setup();
+      const css: { global: string; profile: string }[] = [];
+      settings.onCss((next) => css.push(next));
+      await settings.start();
+      fs.write(PROFILE_CSS, 'h1 { color: blue }');
+      watcher.emit({ path: PROFILE_CSS, kind: 'change' });
+      await flush();
+      expect(css).toEqual([{ global: '', profile: 'h1 { color: blue }' }]);
+    });
+
+    it('keeps the last good CSS and names the file when one is too large or not UTF-8', async () => {
+      const { fs, watcher, settings, notices } = setup({ [GLOBAL_CSS]: 'p {}' });
+      await settings.start();
+      fs.write(GLOBAL_CSS, 'x'.repeat(1024 * 1024 + 1));
+      watcher.emit({ path: GLOBAL_CSS, kind: 'change' });
+      await flush();
+      expect(settings.css.global).toBe('p {}');
+      expect(settings.notices).toEqual([{ path: GLOBAL_CSS, reason: 'too-large', detail: expect.any(String) }]);
+      fs.write(GLOBAL_CSS, new Uint8Array([0x70, 0xff, 0xfe]));
+      watcher.emit({ path: GLOBAL_CSS, kind: 'change' });
+      await flush();
+      expect(settings.css.global).toBe('p {}');
+      expect(settings.notices[0]).toMatchObject({ path: GLOBAL_CSS, reason: 'invalid' });
+      fs.write(GLOBAL_CSS, 'p { margin: 0 }');
+      watcher.emit({ path: GLOBAL_CSS, kind: 'change' });
+      await flush();
+      expect(settings.css.global).toBe('p { margin: 0 }');
+      expect(notices.at(-1)).toEqual([]);
+    });
+  });
+
+  it("reports a hand edit of the profile's name or accent", async () => {
+    const { fs, watcher, settings } = setup({ [PROFILE]: '{"name":"Acme"}' });
+    const seen: { name?: string; accent?: string }[] = [];
+    settings.onIdentity((identity) => seen.push(identity));
+    await settings.start();
+    expect(settings.identity).toEqual({ name: 'Acme' });
+    fs.write(PROFILE, '{"name":"Acme EU","accent":"#2f9e44","settings":{"fontSize":20}}');
+    watcher.emit({ path: PROFILE, kind: 'change' });
+    await flush();
+    fs.write(PROFILE, '{"name":"Acme EU","accent":"#2f9e44","settings":{"fontSize":21}}');
+    watcher.emit({ path: PROFILE, kind: 'change' });
+    await flush();
+    expect(seen).toEqual([{ name: 'Acme EU', accent: '#2f9e44' }]);
+  });
 });

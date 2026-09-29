@@ -31,13 +31,26 @@ const policy = (globalThis as { trustedTypes?: TrustedTypePolicyFactory }).trust
 
 let sharedSheets: CSSStyleSheet[] | undefined;
 
-/** Constructable sheets shared by every document: KaTeX's layout, then the document theme. */
+/**
+ * Constructable sheets shared by every document: KaTeX's layout, the document theme, then the
+ * user's global and profile CSS (ADR-006), so changing one sheet restyles every tab at once.
+ */
 function documentSheets(): CSSStyleSheet[] {
-  return (sharedSheets ??= [katexCss, documentCss].map((css) => {
+  return (sharedSheets ??= [katexCss, documentCss, '', ''].map((css) => {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(css);
     return sheet;
   }));
+}
+
+/**
+ * The user's `custom.css` files, applied inside documents only: app chrome keeps its own styles
+ * (SR-17). `replaceSync` ignores `@import`, so custom CSS can't pull in other files.
+ */
+export function setCustomCss(css: { global: string; profile: string }): void {
+  const sheets = documentSheets();
+  sheets.at(-2)!.replaceSync(css.global);
+  sheets.at(-1)!.replaceSync(css.profile);
 }
 
 const hosts = new WeakMap<HTMLElement, DocumentHost>();

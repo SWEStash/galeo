@@ -1,11 +1,11 @@
 import { spawnSync } from 'node:child_process';
-import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import electronBinary from 'electron';
-import { launchApp } from '../../helpers/launch';
+import { appDirs, launchApp, removeTempHome, tempHome } from '../../helpers/launch';
 import { networkConnects } from './strace';
 
 // Playwright injects this loader itself only when it starts Electron directly.
@@ -107,6 +107,7 @@ async function connectsWhile(
   args: string[] | ((dir: string) => string[]),
   env: Record<string, string>,
   action: (app: Awaited<ReturnType<typeof launchApp>>['app'], page: Awaited<ReturnType<typeof launchApp>>['window']) => Promise<void>,
+  home?: string,
 ): Promise<string[]> {
   const dir = mkdtempSync(path.join(tmpdir(), 'galeo-no-network-'));
   try {
@@ -120,6 +121,7 @@ async function connectsWhile(
     const { app, window: page, close } = await launchApp(typeof args === 'function' ? args(dir) : args, {
       executablePath: traced,
       env,
+      ...(home ? { home } : {}),
     });
     try {
       await action(app, page);
@@ -155,6 +157,38 @@ test('rendering the whole payload corpus opens no connection (SR-07)', async () 
     },
   );
   expect(connects).toEqual([]);
+});
+
+test('a custom.css that loads remote files opens no connection (SR-06, SR-07)', async () => {
+  const home = tempHome();
+  try {
+    mkdirSync(appDirs(home).config, { recursive: true });
+    writeFileSync(
+      path.join(appDirs(home).config, 'custom.css'),
+      [
+        '@import url("https://example.com/import.css");',
+        'article { background-image: url("https://example.com/background.png"); }',
+        '@font-face { font-family: Remote; src: url("https://example.com/font.woff2"); }',
+        'article p { font-family: Remote; }',
+      ].join('\n'),
+    );
+    const doc = path.resolve(import.meta.dirname, '../../fixtures/docs/basic.md');
+    const connects = await connectsWhile(
+      ['--', doc],
+      {},
+      async (_app, page) => {
+        const article = page.getByTestId('document').locator('article');
+        await expect(article.locator('p').first()).toBeVisible();
+        // The CSS is applied: its remote background is what the document asks for (and the page's CSP refuses).
+        await expect.poll(() => article.evaluate((element) => getComputedStyle(element).backgroundImage)).toContain('https://example.com/background.png');
+        await page.waitForTimeout(2_000);
+      },
+      home,
+    );
+    expect(connects).toEqual([]);
+  } finally {
+    removeTempHome(home);
+  }
 });
 
 test('the resolver lockdown alone keeps the app off the network', async () => {

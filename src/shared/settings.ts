@@ -27,3 +27,9 @@ export interface SettingsNotice {
   reason: 'invalid' | 'too-large' | 'newer-version' | 'unreadable';
   detail: string | null;
 }
+
+/** A window's colour scheme: its profile's choice, or the desktop's in system mode. */
+export function schemeFor(mode: ThemeMode, systemDark: boolean): 'light' | 'dark' {
+  if (mode === 'system') return systemDark ? 'dark' : 'light';
+  return mode;
+}

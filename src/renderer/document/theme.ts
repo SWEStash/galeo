@@ -1,4 +1,5 @@
 import { useLayoutEffect, useState } from 'react';
+import { schemeFor, type ThemeMode } from '../../shared/settings';
 import type { ColorScheme } from './host';
 
 /** The part of `MediaQueryList` the watcher needs. */
@@ -20,12 +21,13 @@ export function watchColorScheme(query: SchemeQuery, onChange: (scheme: ColorSch
 const DARK = '(prefers-color-scheme: dark)';
 
 /**
- * The app's colour scheme, applied to the root element (the tokens switch on it) before paint,
- * so a dark desktop never sees a light first frame.
+ * The window's colour scheme (`mode` from its profile's settings), applied to the root element
+ * (the tokens switch on it) before paint, so a dark desktop never sees a light first frame.
  */
-export function useColorScheme(): ColorScheme {
-  const [scheme, setScheme] = useState<ColorScheme>(() => (matchMedia(DARK).matches ? 'dark' : 'light'));
-  useLayoutEffect(() => watchColorScheme(matchMedia(DARK), setScheme), []);
+export function useColorScheme(mode: ThemeMode): ColorScheme {
+  const [systemDark, setSystemDark] = useState(() => matchMedia(DARK).matches);
+  useLayoutEffect(() => watchColorScheme(matchMedia(DARK), (scheme) => setSystemDark(scheme === 'dark')), []);
+  const scheme = schemeFor(mode, systemDark);
   useLayoutEffect(() => {
     document.documentElement.dataset['scheme'] = scheme;
   }, [scheme]);

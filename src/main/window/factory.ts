@@ -3,6 +3,7 @@ import path from 'node:path';
 import { visibleBounds } from '../../core/session/bounds';
 import type { WindowBounds } from '../../core/session/model';
 import type { Command } from '../../shared/keymap';
+import { schemeFor, type ThemeMode } from '../../shared/settings';
 import { hardenedWebPreferences, keymapPlatform, mainKey, titleBarOverlay, windowTitle } from './policy';
 
 export interface WindowOptions {
@@ -16,12 +17,22 @@ export interface WindowOptions {
   title?: readonly (string | null)[];
   /** Where the window was last time (a restored session); the platform may place it itself. */
   bounds?: WindowBounds | null;
+  /** The window's profile's theme mode, which colours its title-bar controls (see `followScheme`). */
+  themeMode?: () => ThemeMode;
+}
+
+/** Recolours each window's title-bar controls from its own scheme (they sit on the tab bar). */
+const schemeFollowers = new WeakMap<BrowserWindow, () => void>();
+
+/** The window's theme mode changed: its title-bar controls follow. */
+export function followScheme(window: BrowserWindow): void {
+  schemeFollowers.get(window)?.();
 }
 
 /** The only place that constructs a `BrowserWindow`. Main owns the title (never the page). */
-export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bounds, title: parts = [] }: WindowOptions): BrowserWindow {
+export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bounds, title: parts = [], themeMode }: WindowOptions): BrowserWindow {
   const title = windowTitle(parts, { sandboxed });
-  const scheme = () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
+  const scheme = () => schemeFor(themeMode?.() ?? 'system', nativeTheme.shouldUseDarkColors);
   // A place on a display that's gone isn't restored; the size is.
   const placed = bounds ? visibleBounds(bounds, screen.getAllDisplays().map((display) => display.workArea)) : null;
   const window = new BrowserWindow({
@@ -52,6 +63,7 @@ export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bou
     const followScheme = () => window.setTitleBarOverlay(titleBarOverlay(scheme()));
     nativeTheme.on('updated', followScheme);
     window.on('closed', () => nativeTheme.off('updated', followScheme));
+    schemeFollowers.set(window, followScheme);
   }
   window.once('ready-to-show', () => {
     if (bounds?.maximized) window.maximize();

@@ -14,6 +14,8 @@ export interface SettingsState {
   notices: SettingsNotice[];
   /** The profile's session file was invalid; it was set aside and the newest valid snapshot restored (SR-17). */
   session: SettingsNotice | null;
+  /** The user's CSS for documents: the global `custom.css`, then the profile's (ADR-005). */
+  css: { global: string; profile: string };
 }
 
 /** A profile as the profile menu shows it; `running` while it has a window (ADR-005). */

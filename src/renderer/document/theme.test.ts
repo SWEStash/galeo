@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { schemeFor } from '../../shared/settings';
 import { watchColorScheme, type SchemeQuery } from './theme';
 
 class FakeQuery extends EventTarget implements SchemeQuery {
@@ -34,5 +35,14 @@ describe('watchColorScheme', () => {
     stop();
     query.flip(true);
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('schemeFor', () => {
+  it("follows the desktop in system mode, and the profile's choice otherwise", () => {
+    expect(schemeFor('system', true)).toBe('dark');
+    expect(schemeFor('system', false)).toBe('light');
+    expect(schemeFor('light', true)).toBe('light');
+    expect(schemeFor('dark', false)).toBe('dark');
   });
 });

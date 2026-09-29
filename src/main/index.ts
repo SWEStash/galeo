@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, Menu, nativeTheme, webContents } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, Menu, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
@@ -49,7 +49,7 @@ import { hardenWebContents } from './security/harden';
 import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
-import { createAppWindow, windowBounds } from './window/factory';
+import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { applicationMenu } from './window/menu';
 import { keymapPlatform } from './window/policy';
 import { showNativeMenu } from './window/native-menu';
@@ -163,6 +163,7 @@ function start(initialMode: StartupMode): void {
     settings: profile.settings.current,
     notices: profile.settings.notices,
     session: profile.sessionNotice,
+    css: profile.settings.css,
   });
   const broadcastSettings = (profile: ProfileRuntime) => {
     for (const window of profile.windows) sendEvent(window.webContents, 'settings.changed', settingsState(profile));
@@ -228,6 +229,7 @@ function start(initialMode: StartupMode): void {
       onMainKey: (command) => mainKey(command, profile, window),
       bounds,
       title: [null, profile.name],
+      themeMode: () => profile.settings.current.themeMode,
     });
     const windowId = window.webContents.id;
     profile.windows.push(window);
@@ -296,7 +298,7 @@ function start(initialMode: StartupMode): void {
     const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder });
     running.set(id, profile);
     profile.settings.onChange((current) => {
-      nativeTheme.themeSource = current.themeMode;
+      for (const window of profile.windows) followScheme(window);
       for (const [windowId, ids] of warm.setLimits(warmLimits(current), idsOf(profile))) demote(windowId, ids);
       broadcastSettings(profile);
     });
@@ -304,9 +306,15 @@ function start(initialMode: StartupMode): void {
       reportSettingsNotices(notices);
       broadcastSettings(profile);
     });
+    profile.settings.onCss(() => broadcastSettings(profile));
+    // A hand edit of profile.json's name or accent shows at once, like a rename in the menu.
+    profile.settings.onIdentity((identity) => {
+      profile.name = identity.name ?? profile.id;
+      for (const windowId of idsOf(profile)) updateTitle(profile, windowId);
+      void broadcastProfiles();
+    });
     await profile.settings.start();
     reportSettingsNotices(profile.settings.notices);
-    nativeTheme.themeSource = profile.settings.current.themeMode;
     // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
     void profile.recent.load().catch((error: unknown) => console.warn('galeo: recent files not loaded', error));
     return profile;
@@ -498,7 +506,7 @@ function start(initialMode: StartupMode): void {
         },
         'settings.get': (_args, event) => {
           const profile = profileOf(event.sender.id);
-          return profile ? settingsState(profile) : { settings: DEFAULT_SETTINGS, notices: [], session: null };
+          return profile ? settingsState(profile) : { settings: DEFAULT_SETTINGS, notices: [], session: null, css: { global: '', profile: '' } };
         },
         'profiles.list': (_args, event) => profilesState(profileOf(event.sender.id)?.id ?? DEFAULT_PROFILE),
         'profiles.open': async ([id]) => {

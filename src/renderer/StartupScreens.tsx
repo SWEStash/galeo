@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { SandboxCause, SandboxChoice } from '../shared/contracts';
+import { useColorScheme } from './document/theme';
 
 export function UnsandboxedBadge() {
   return (
@@ -37,6 +38,8 @@ export function SandboxUnavailable({
   onChoose: (choice: SandboxChoice) => void;
 }) {
   const quit = useRef<HTMLButtonElement>(null);
+  // No profile is running yet: the choice follows the desktop's scheme.
+  useColorScheme('system');
   useEffect(() => {
     quit.current?.focus();
     const onKey = (event: KeyboardEvent) => {

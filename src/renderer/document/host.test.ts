@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountDocumentHost } from './host';
+import { mountDocumentHost, setCustomCss } from './host';
 
 function container(): HTMLElement {
   const element = document.createElement('div');
@@ -34,6 +34,20 @@ describe('mountDocumentHost', () => {
     expect(a.root.adoptedStyleSheets.length).toBeGreaterThan(0);
     expect(b.root.adoptedStyleSheets).toEqual(a.root.adoptedStyleSheets);
     expect(a.root.adoptedStyleSheets[0]).toBe(b.root.adoptedStyleSheets[0]);
+  });
+
+  it("adopts the user's CSS after the document theme, global then profile, and updates every document live", () => {
+    const a = mountDocumentHost(container());
+    setCustomCss({ global: 'p { color: red; }', profile: 'p { color: blue; }' });
+    const b = mountDocumentHost(container());
+    const text = (sheet: CSSStyleSheet) => [...sheet.cssRules].map((rule) => rule.cssText).join(' ');
+    const sheets = a.root.adoptedStyleSheets;
+    expect(text(sheets.at(-2)!)).toContain('red');
+    expect(text(sheets.at(-1)!)).toContain('blue');
+    expect(b.root.adoptedStyleSheets).toEqual(sheets);
+    setCustomCss({ global: '', profile: 'h1 { margin: 0px; }' });
+    expect(text(a.root.adoptedStyleSheets.at(-2)!)).toBe('');
+    expect(text(b.root.adoptedStyleSheets.at(-1)!)).toContain('margin');
   });
 
   it('replaces the content on each update', () => {

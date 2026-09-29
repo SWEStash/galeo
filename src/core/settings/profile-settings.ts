@@ -1,6 +1,6 @@
 import { joinPath } from '../../shared/paths';
 import type { Settings, SettingsNotice, SettingsOverrides } from '../../shared/settings';
-import type { FileSystem, FileWatcher, Unsubscribe } from '../ports';
+import { FsError, type FileSystem, type FileWatcher, type Unsubscribe } from '../ports';
 import { isProfileId } from '../profiles/names';
 import { ConfigFile } from './config-file';
 import type { Parse, Utf8 } from './json-file';
@@ -10,6 +10,20 @@ export const SETTINGS_VERSION = 1;
 /** Hand-edited config is small; anything bigger is refused, not parsed (SR-17). */
 export const CONFIG_MAX_BYTES = 1024 * 1024;
 const DIR_MODE = 0o700;
+
+type File = 'global' | 'profile' | 'global-css' | 'profile-css';
+
+/** The user's CSS for documents (ADR-005): the global file, then the profile's. */
+export interface CustomCss {
+  global: string;
+  profile: string;
+}
+
+/** The profile's own name and accent colour, as `profile.json` says. */
+export interface ProfileIdentity {
+  name?: string;
+  accent?: string;
+}
 
 /** `profile.json`: the profile's display name, accent colour and setting overrides. */
 export interface ProfileFile {
@@ -36,6 +50,8 @@ export interface ProfileSettingsDeps {
 export class ProfileSettings {
   current: Settings = resolveSettings({}, {});
   notices: SettingsNotice[] = [];
+  css: CustomCss = { global: '', profile: '' };
+  identity: ProfileIdentity = {};
 
   private readonly global: ConfigFile<SettingsOverrides>;
   private readonly profile: ConfigFile<ProfileFile>;
@@ -45,6 +61,10 @@ export class ProfileSettings {
   private readonly fileNotices = new Map<string, SettingsNotice>();
   private readonly changeListeners: ((settings: Settings) => void)[] = [];
   private readonly noticeListeners: ((notices: SettingsNotice[]) => void)[] = [];
+  private readonly cssListeners: ((css: CustomCss) => void)[] = [];
+  private readonly identityListeners: ((identity: ProfileIdentity) => void)[] = [];
+  private readonly paths: Record<File, string>;
+  private cssValue: CustomCss = { global: '', profile: '' };
   private unwatch: Unsubscribe[] = [];
   private reloading: Promise<void> = Promise.resolve();
 
@@ -53,8 +73,22 @@ export class ProfileSettings {
     const profileDir = joinPath(deps.configDir, 'profiles', deps.profile);
     this.dirs = [deps.configDir, profileDir];
     const common = { fs: deps.fs, utf8: deps.utf8, empty: {}, version: SETTINGS_VERSION, migrations: {}, maxBytes: CONFIG_MAX_BYTES };
-    this.global = new ConfigFile({ ...common, path: joinPath(deps.configDir, 'settings.json'), parse: deps.parseGlobal });
-    this.profile = new ConfigFile({ ...common, path: joinPath(profileDir, 'profile.json'), parse: deps.parseProfile });
+    this.paths = {
+      global: joinPath(deps.configDir, 'settings.json'),
+      profile: joinPath(profileDir, 'profile.json'),
+      'global-css': joinPath(deps.configDir, 'custom.css'),
+      'profile-css': joinPath(profileDir, 'custom.css'),
+    };
+    this.global = new ConfigFile({ ...common, path: this.paths.global, parse: deps.parseGlobal });
+    this.profile = new ConfigFile({ ...common, path: this.paths.profile, parse: deps.parseProfile });
+  }
+
+  onCss(listener: (css: CustomCss) => void): void {
+    this.cssListeners.push(listener);
+  }
+
+  onIdentity(listener: (identity: ProfileIdentity) => void): void {
+    this.identityListeners.push(listener);
   }
 
   onChange(listener: (settings: Settings) => void): void {
@@ -67,13 +101,10 @@ export class ProfileSettings {
 
   async start(): Promise<void> {
     for (const dir of this.dirs) await this.deps.fs.mkdir(dir, { mode: DIR_MODE });
-    await this.reload('global');
-    await this.reload('profile');
+    const files: File[] = ['global', 'profile', 'global-css', 'profile-css'];
+    for (const file of files) await this.reload(file);
     this.apply(false);
-    this.unwatch = [
-      this.deps.watcher.watch(joinPath(this.deps.configDir, 'settings.json'), () => this.queue('global')),
-      this.deps.watcher.watch(joinPath(this.dirs[1]!, 'profile.json'), () => this.queue('profile')),
-    ];
+    this.unwatch = files.map((file) => this.deps.watcher.watch(this.paths[file], () => this.queue(file)));
   }
 
   stop(): void {
@@ -81,7 +112,7 @@ export class ProfileSettings {
     this.unwatch = [];
   }
 
-  private queue(file: 'global' | 'profile'): void {
+  private queue(file: File): void {
     this.reloading = this.reloading.then(async () => {
       if (this.unwatch.length === 0) return;
       await this.reload(file);
@@ -89,9 +120,11 @@ export class ProfileSettings {
     });
   }
 
-  private async reload(file: 'global' | 'profile'): Promise<void> {
+  private async reload(file: File): Promise<void> {
     let notice;
-    if (file === 'global') {
+    if (file === 'global-css' || file === 'profile-css') {
+      notice = await this.reloadCss(file);
+    } else if (file === 'global') {
       const loaded = await this.global.load();
       this.globalValue = loaded.value;
       notice = loaded.notice;
@@ -104,15 +137,41 @@ export class ProfileSettings {
     if (notice) this.fileNotices.set(file, notice);
   }
 
+  /** A CSS file that is too large or not UTF-8 is left as it is, and its last good text stays (SR-17). */
+  private async reloadCss(file: 'global-css' | 'profile-css'): Promise<SettingsNotice | null> {
+    const key = file === 'global-css' ? 'global' : 'profile';
+    const path = this.paths[file];
+    try {
+      this.cssValue = { ...this.cssValue, [key]: this.deps.utf8.decode(await this.deps.fs.readFile(path, { maxBytes: CONFIG_MAX_BYTES })) };
+      return null;
+    } catch (error) {
+      if (error instanceof FsError && error.code === 'ENOENT') {
+        this.cssValue = { ...this.cssValue, [key]: '' };
+        return null;
+      }
+      if (error instanceof FsError && error.code === 'ETOOBIG') return { path, reason: 'too-large', detail: `larger than ${CONFIG_MAX_BYTES} bytes` };
+      if (error instanceof FsError) return { path, reason: 'unreadable', detail: error.code };
+      return { path, reason: 'invalid', detail: 'not UTF-8' };
+    }
+  }
+
   private apply(emit: boolean): void {
     const settings = resolveSettings(this.globalValue, this.profileValue.settings ?? {});
     const notices = [...this.fileNotices.values()];
+    const { name, accent } = this.profileValue;
+    const identity: ProfileIdentity = { ...(name === undefined ? {} : { name }), ...(accent === undefined ? {} : { accent }) };
     const settingsChanged = JSON.stringify(settings) !== JSON.stringify(this.current);
     const noticesChanged = JSON.stringify(notices) !== JSON.stringify(this.notices);
+    const cssChanged = JSON.stringify(this.cssValue) !== JSON.stringify(this.css);
+    const identityChanged = JSON.stringify(identity) !== JSON.stringify(this.identity);
     this.current = settings;
     this.notices = notices;
+    this.css = this.cssValue;
+    this.identity = identity;
     if (!emit) return;
     if (settingsChanged) for (const listener of this.changeListeners) listener(settings);
     if (noticesChanged) for (const listener of this.noticeListeners) listener(notices);
+    if (cssChanged) for (const listener of this.cssListeners) listener(this.css);
+    if (identityChanged) for (const listener of this.identityListeners) listener(identity);
   }
 }

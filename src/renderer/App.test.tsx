@@ -108,7 +108,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       restorePrevious: vi.fn().mockResolvedValue(undefined),
     },
     settings: {
-      get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null }),
+      get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null, css: { global: '', profile: '' } }),
       onChanged: vi.fn((listener: (state: SettingsState) => void) => {
         events.settings = listener;
         return () => {};
@@ -204,6 +204,38 @@ describe('App', () => {
       query.dispatchEvent(new Event('change'));
     });
     expect(document.documentElement.dataset['scheme']).toBe('light');
+  });
+
+  it("uses its profile's theme mode over the desktop's, and the desktop's in system mode", async () => {
+    const query = Object.assign(new EventTarget(), { matches: true });
+    const other = Object.assign(new EventTarget(), { matches: false });
+    vi.stubGlobal('matchMedia', (media: string) => (media === '(prefers-color-scheme: dark)' ? query : other));
+    const api = stubBridge();
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS, themeMode: 'light' }, notices: [], session: null, css: { global: '', profile: '' } });
+    await renderApp();
+    await vi.waitFor(() => expect(document.documentElement.dataset['scheme']).toBe('light'));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS, themeMode: 'system' }, notices: [], session: null, css: { global: '', profile: '' } }));
+    expect(document.documentElement.dataset['scheme']).toBe('dark');
+  });
+
+  it("applies the profile's reading settings as tokens and its custom CSS inside documents", async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'hello') });
+    api.settings.get.mockResolvedValue({
+      settings: { ...DEFAULT_SETTINGS, fontSize: 20, measure: 90, proseFont: 'Source Serif 4' },
+      notices: [],
+      session: null,
+      css: { global: 'article { color: red; }', profile: 'article { color: blue; }' },
+    });
+    const container = await renderApp();
+    const root = document.documentElement.style;
+    await vi.waitFor(() => expect(root.getPropertyValue('--galeo-font-size')).toBe('20px'));
+    expect(root.getPropertyValue('--galeo-measure')).toBe('90ch');
+    expect(root.getPropertyValue('--galeo-font-prose')).toContain('Source Serif 4');
+    const shadow = await documentShadow(container);
+    const rules = shadow.adoptedStyleSheets.map((sheet) => [...sheet.cssRules].map((rule) => rule.cssText).join(' '));
+    expect(rules.at(-2)).toContain('red');
+    expect(rules.at(-1)).toContain('blue');
+    expect(document.adoptedStyleSheets.some((sheet) => [...sheet.cssRules].some((rule) => rule.cssText.includes('blue')))).toBe(false);
   });
 
   it("renders the window's first document through the worker", async () => {
@@ -630,14 +662,14 @@ describe('App', () => {
   it('names a config file that was left untouched, until it is fixed or dismissed', async () => {
     const api = stubBridge();
     const notice = { path: '/cfg/settings.json', reason: 'invalid' as const, detail: 'Unexpected token' };
-    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null });
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null, css: { global: '', profile: '' } });
     const container = await renderApp();
     const shown = () => container.querySelector('[data-testid="settings-notice"]');
     await vi.waitFor(() => expect(shown()?.textContent).toContain('/cfg/settings.json'));
     expect(shown()?.textContent).toContain('left untouched');
-    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null }));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null, css: { global: '', profile: '' } }));
     expect(shown()).toBeNull();
-    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null }));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null, css: { global: '', profile: '' } }));
     const dismiss = [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!;
     await act(async () => dismiss.click());
     expect(shown()).toBeNull();
@@ -657,7 +689,7 @@ describe('App', () => {
   it('says when the saved session was invalid and an earlier one was restored', async () => {
     const api = stubBridge();
     const session = { path: '/state/profiles/default/session.json', reason: 'invalid' as const, detail: null };
-    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session });
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session, css: { global: '', profile: '' } });
     const container = await renderApp();
     const shown = () => container.querySelector('[data-testid="session-notice"]');
     await vi.waitFor(() => expect(shown()?.textContent).toContain("couldn't be read"));

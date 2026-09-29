@@ -7,6 +7,8 @@ import { useColorScheme } from './document/theme';
 import { markFirstPaint } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
 import { SessionNotice, SettingsNotice } from './settings/SettingsNotice';
+import { settingsTokens } from './settings/tokens';
+import { setCustomCss } from './document/host';
 import { ProfileChip } from './profiles/ProfileChip';
 import { useProfiles } from './profiles/useProfiles';
 import { accentOf } from '../shared/accents';
@@ -24,7 +26,6 @@ import { spawnRenderWorker } from './worker/spawn';
 
 export function App() {
   const [info, setInfo] = useState<AppInfo | null>(null);
-  const scheme = useColorScheme();
 
   useEffect(() => {
     void window.galeo.app.info().then((next) => {
@@ -39,17 +40,25 @@ export function App() {
 
   if (!info) return null;
   if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
-  return <MainView sandboxed={info.sandboxed} scheme={scheme} platform={info.platform} />;
+  return <MainView sandboxed={info.sandboxed} platform={info.platform} />;
 }
 
 /** Status-bar messages go away on their own. */
 const MESSAGE_MS = 4000;
 
-function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme: ColorScheme; platform: Platform }) {
+function MainView({ sandboxed, platform }: { sandboxed: boolean; platform: Platform }) {
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
   const { view, store } = useTabs();
   const settings = useSettings();
+  const scheme = useColorScheme(settings?.settings.themeMode ?? 'system');
+
+  // The reading settings reach documents as tokens they inherit; custom CSS only inside them (SR-17).
+  useEffect(() => {
+    if (!settings) return;
+    for (const [token, value] of Object.entries(settingsTokens(settings.settings))) document.documentElement.style.setProperty(token, value);
+    setCustomCss(settings.css);
+  }, [settings]);
   const profiles = useProfiles();
   const accent = accentOf(profiles?.profiles.find((profile) => profile.id === profiles.current)?.accent ?? null);
 
