@@ -8,6 +8,7 @@ import { markFirstPaint } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
 import { SessionNotice, SettingsNotice } from './settings/SettingsNotice';
 import { settingsTokens } from './settings/tokens';
+import { SettingsView } from './settings/SettingsView';
 import { setCustomCss } from './document/host';
 import { ProfileChip } from './profiles/ProfileChip';
 import { useProfiles } from './profiles/useProfiles';
@@ -60,7 +61,8 @@ function MainView({ sandboxed, platform }: { sandboxed: boolean; platform: Platf
     setCustomCss(settings.css);
   }, [settings]);
   const profiles = useProfiles();
-  const accent = accentOf(profiles?.profiles.find((profile) => profile.id === profiles.current)?.accent ?? null);
+  const profile = profiles?.profiles.find((each) => each.id === profiles.current);
+  const accent = accentOf(profile?.accent ?? null);
 
   // The profile's accent colours the app chrome (the chip, the shown tab's line), never documents.
   useEffect(() => {
@@ -105,18 +107,22 @@ function MainView({ sandboxed, platform }: { sandboxed: boolean; platform: Platf
         {view.tabs.map((tab) => (
           // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
           <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
-            <TabDocument
-              id={tab.id}
-              active={tab.id === view.active}
-              rendered={view.rendered.has(tab.id)}
-              staleReads={view.reads.get(tab.id) ?? 0}
-              zoom={view.zooms.get(tab.id) ?? 1}
-              store={store}
-              client={client}
-              platform={platform}
-              scheme={scheme}
-              onMessage={setMessage}
-            />
+            {tab.kind === 'settings' ? (
+              settings && profile && <SettingsView state={settings} profile={profile} />
+            ) : (
+              <TabDocument
+                id={tab.id}
+                active={tab.id === view.active}
+                rendered={view.rendered.has(tab.id)}
+                staleReads={view.reads.get(tab.id) ?? 0}
+                zoom={view.zooms.get(tab.id) ?? 1}
+                store={store}
+                client={client}
+                platform={platform}
+                scheme={scheme}
+                onMessage={setMessage}
+              />
+            )}
           </TabPanel>
         ))}
       </main>
@@ -143,6 +149,11 @@ function useTabShortcuts(store: TabStore, platform: Platform) {
       if (zoom && view.active) {
         event.preventDefault();
         store.zoom(view.active, zoom);
+        return;
+      }
+      if (command === 'settings') {
+        event.preventDefault();
+        void window.galeo.tabs.openSettings();
         return;
       }
       const action = command && tabAction(command, tabNumberFor(event, platform), view);

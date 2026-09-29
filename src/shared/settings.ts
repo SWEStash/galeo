@@ -33,3 +33,6 @@ export function schemeFor(mode: ThemeMode, systemDark: boolean): 'light' | 'dark
   if (mode === 'system') return systemDark ? 'dark' : 'light';
   return mode;
 }
+
+/** Where a setting's value comes from: the built-in default, all profiles (`settings.json`), or this profile. */
+export type SettingSource = 'default' | 'global' | 'profile';

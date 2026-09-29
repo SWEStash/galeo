@@ -16,6 +16,8 @@ const DEFAULT_SETTINGS: Settings = {
   warmMegabytes: 20,
 };
 
+const SOURCES = Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, 'default'])) as SettingsState['sources'];
+
 const renderRequests: string[] = [];
 /** How the fake worker answers render requests. */
 let workerMode: 'answer' | 'hang' | 'fail' | 'links' = 'answer';
@@ -85,6 +87,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       rendered: vi.fn().mockResolvedValue(undefined),
       position: vi.fn().mockResolvedValue(undefined),
       zoom: vi.fn().mockResolvedValue(undefined),
+      openSettings: vi.fn().mockResolvedValue('settings-1'),
       onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
         events.tabs = listener;
         return () => {};
@@ -108,7 +111,11 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       restorePrevious: vi.fn().mockResolvedValue(undefined),
     },
     settings: {
-      get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null, css: { global: '', profile: '' } }),
+      set: vi.fn().mockResolvedValue({ ok: true }),
+      reset: vi.fn().mockResolvedValue({ ok: true }),
+      openCustomCss: vi.fn().mockResolvedValue(undefined),
+      openNoticeFile: vi.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES }),
       onChanged: vi.fn((listener: (state: SettingsState) => void) => {
         events.settings = listener;
         return () => {};
@@ -211,10 +218,10 @@ describe('App', () => {
     const other = Object.assign(new EventTarget(), { matches: false });
     vi.stubGlobal('matchMedia', (media: string) => (media === '(prefers-color-scheme: dark)' ? query : other));
     const api = stubBridge();
-    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS, themeMode: 'light' }, notices: [], session: null, css: { global: '', profile: '' } });
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS, themeMode: 'light' }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
     await renderApp();
     await vi.waitFor(() => expect(document.documentElement.dataset['scheme']).toBe('light'));
-    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS, themeMode: 'system' }, notices: [], session: null, css: { global: '', profile: '' } }));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS, themeMode: 'system' }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES }));
     expect(document.documentElement.dataset['scheme']).toBe('dark');
   });
 
@@ -225,6 +232,8 @@ describe('App', () => {
       notices: [],
       session: null,
       css: { global: 'article { color: red; }', profile: 'article { color: blue; }' },
+      shared: { ...DEFAULT_SETTINGS },
+      sources: SOURCES,
     });
     const container = await renderApp();
     const root = document.documentElement.style;
@@ -662,14 +671,14 @@ describe('App', () => {
   it('names a config file that was left untouched, until it is fixed or dismissed', async () => {
     const api = stubBridge();
     const notice = { path: '/cfg/settings.json', reason: 'invalid' as const, detail: 'Unexpected token' };
-    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null, css: { global: '', profile: '' } });
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
     const container = await renderApp();
     const shown = () => container.querySelector('[data-testid="settings-notice"]');
     await vi.waitFor(() => expect(shown()?.textContent).toContain('/cfg/settings.json'));
     expect(shown()?.textContent).toContain('left untouched');
-    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null, css: { global: '', profile: '' } }));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES }));
     expect(shown()).toBeNull();
-    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null, css: { global: '', profile: '' } }));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES }));
     const dismiss = [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!;
     await act(async () => dismiss.click());
     expect(shown()).toBeNull();
@@ -689,13 +698,37 @@ describe('App', () => {
   it('says when the saved session was invalid and an earlier one was restored', async () => {
     const api = stubBridge();
     const session = { path: '/state/profiles/default/session.json', reason: 'invalid' as const, detail: null };
-    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session, css: { global: '', profile: '' } });
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
     const container = await renderApp();
     const shown = () => container.querySelector('[data-testid="session-notice"]');
     await vi.waitFor(() => expect(shown()?.textContent).toContain("couldn't be read"));
     expect(shown()?.textContent).toContain('the last saved one before it');
     await act(async () => [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!.click());
     expect(shown()).toBeNull();
+  });
+
+  it('opens the settings tab on Ctrl+, and shows it as a tab named Settings, with no path below', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'hello') });
+    const container = await renderApp();
+    await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: ',', ctrlKey: true, bubbles: true })));
+    expect(api.tabs.openSettings).toHaveBeenCalled();
+    await act(async () =>
+      events.tabs?.({ revision: 5, active: 'settings-1', tabs: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'settings-1', path: '', kind: 'settings' }] }),
+    );
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="settings-view"]')).not.toBeNull());
+    expect([...container.querySelectorAll('[role="tab"] .tab-label')].map((label) => label.textContent)).toContain('Settings');
+    expect(container.querySelector('[data-testid="status-path"]')).toBeNull();
+    expect(api.documents.read).not.toHaveBeenCalledWith('settings-1');
+  });
+
+  it("opens the file a settings notice names, by the notice's place, never its path", async () => {
+    const api = stubBridge();
+    const notice = { path: '/cfg/settings.json', reason: 'invalid' as const, detail: null };
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
+    const container = await renderApp();
+    const open = await vi.waitFor(() => [...container.querySelectorAll('[data-testid="settings-notice"] button')].find((button) => button.textContent === 'Open file')!);
+    await act(async () => (open as HTMLButtonElement).click());
+    expect(api.settings.openNoticeFile).toHaveBeenCalledWith(0);
   });
 
   it('offers Undo for a profile --profile just created', async () => {

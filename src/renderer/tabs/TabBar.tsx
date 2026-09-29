@@ -65,7 +65,7 @@ export function TabBar({ view, store, start }: { view: TabsView; store: TabStore
     <div className="tab-bar" data-testid="tab-bar">
       {start}
       <div className="tab-strip" ref={listRef} {...dropProps} onKeyDown={onKeyDown}>
-        <TabList aria-label="Open documents" className="tab-list" items={view.tabs.map((tab, index) => ({ ...tab, label: labels[index]! }))}>
+        <TabList aria-label="Open documents" className="tab-list" items={view.tabs.map((tab, index) => ({ ...tab, label: tab.kind === 'settings' ? 'Settings' : labels[index]! }))}>
           {(tab) => (
             <TabItem
               tab={tab}

@@ -57,6 +57,7 @@ export function documentHandlers(deps: {
     'documents.read': ([id], event) => {
       const record = records.get(id, event.sender.id);
       if (!record) throw new Error('unknown document');
+      if (record.kind === 'settings') throw new Error('not a document');
       const encoding = records.encoding(id, event.sender.id);
       const key = `${id}\0${record.path}\0${encoding ?? ''}`;
       let pending = reading.get(key);

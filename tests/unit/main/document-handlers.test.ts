@@ -55,6 +55,12 @@ function setup(files: Record<string, string>, slow = '') {
 }
 
 describe('documentHandlers', () => {
+  it('refuses to read the settings tab as a file', async () => {
+    const { records, handlers } = setup({ '/d/a.md': '# a' });
+    const settings = records.openSettings(1);
+    expect(() => handlers['documents.read']([settings.id], event)).toThrow(/not a document/);
+  });
+
   it('keeps the links of the document it read, not of one read earlier that finished later', async () => {
     const { fs, records, handlers, id } = setup({ '/d/x.md': '[from x](x-target.md)', '/d/y.md': '[from y](y-target.md)' }, '/d/x.md');
     const slowRead = handlers['documents.read']([id], event);

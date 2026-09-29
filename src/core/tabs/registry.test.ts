@@ -329,4 +329,50 @@ describe('TabRegistry', () => {
     tabs.reopenClosed(1);
     expect(tabs.closedAt(1)).toBe(closed);
   });
+
+  describe('the settings tab (UX: a special tab, one per window)', () => {
+    it('opens after the shown tab, shown, and is a tab like the others', () => {
+      const tabs = new TabRegistry(counterIds());
+      const a = tabs.open('/d/a.md', 1);
+      tabs.open('/d/b.md', 1);
+      tabs.activate(a.id, 1);
+      const settings = tabs.openSettings(1);
+      expect(settings).toEqual({ id: settings.id, path: '', kind: 'settings' });
+      expect(tabs.list(1).map((tab) => tab.kind ?? tab.path)).toEqual(['/d/a.md', 'settings', '/d/b.md']);
+      expect(tabs.snapshot(1).active).toBe(settings.id);
+    });
+
+    it('is a settings tab in every snapshot the window gets, the first included', () => {
+      const snapshots: string[][] = [];
+      const tabs: TabRegistry = new TabRegistry(counterIds(), (window) => snapshots.push(tabs.snapshot(window).tabs.map((tab) => tab.kind ?? tab.path)));
+      tabs.openSettings(1);
+      expect(snapshots.every((tabsSeen) => tabsSeen.every((kind) => kind === 'settings'))).toBe(true);
+    });
+
+    it('is shown again rather than opened twice', () => {
+      const tabs = new TabRegistry(counterIds());
+      const first = tabs.openSettings(1);
+      const other = tabs.open('/d/a.md', 1);
+      tabs.activate(other.id, 1);
+      expect(tabs.openSettings(1).id).toBe(first.id);
+      expect(tabs.list(1)).toHaveLength(2);
+      expect(tabs.snapshot(1).active).toBe(first.id);
+    });
+
+    it('stays out of the session, which keeps the shown document instead', () => {
+      const tabs = new TabRegistry(counterIds());
+      tabs.open('/d/a.md', 1);
+      tabs.openSettings(1);
+      expect(tabs.exportWindow(1)).toEqual({ tabs: [{ entries: [{ path: '/d/a.md', anchor: null }], index: 0 }], active: null });
+    });
+
+    it('is never found by path, nor reopened with Ctrl+Shift+T', () => {
+      const tabs = new TabRegistry(counterIds());
+      const settings = tabs.openSettings(1);
+      expect(tabs.find('', 1)).toBeUndefined();
+      tabs.close(settings.id, 1);
+      expect(tabs.closedAt(1)).toBeNull();
+      expect(tabs.reopenClosed(1)).toBeNull();
+    });
+  });
 });

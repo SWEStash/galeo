@@ -638,3 +638,155 @@ button:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The Settings tab (UX §6): one column of settings, each with where its value comes from. */
+.settings-view {
+  height: 100%;
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 24px 32px 48px;
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  font: 14px var(--galeo-font-ui);
+}
+
+.settings-view > * {
+  max-width: 640px;
+}
+
+.settings-view h1 {
+  margin: 0 0 16px;
+  font-size: 22px;
+}
+
+.settings-view h2 {
+  margin: 28px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--galeo-color-border);
+  font-size: 15px;
+}
+
+.settings-scope,
+.setting .react-aria-RadioGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  align-items: center;
+}
+
+.settings-scope .react-aria-Label,
+.setting .react-aria-RadioGroup .react-aria-Label {
+  flex-basis: 100%;
+}
+
+.setting {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: flex-end;
+  padding: 10px 0;
+}
+
+.setting > .field,
+.setting > .react-aria-RadioGroup {
+  flex: 1 1 320px;
+}
+
+.field-label {
+  flex-basis: 100%;
+}
+
+.field-hint {
+  color: var(--galeo-color-muted);
+  font-size: 13px;
+}
+
+.field textarea {
+  padding: 5px 8px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: 4px;
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  font: 13px var(--galeo-font-code);
+}
+
+.setting-source {
+  color: var(--galeo-color-muted);
+  font-size: 12px;
+}
+
+.settings-refused {
+  padding: 8px 12px;
+  border: 1px solid var(--galeo-color-log-error);
+  border-radius: var(--galeo-radius);
+}
+
+.settings-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.react-aria-RadioButton,
+.react-aria-SwitchButton {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.react-aria-RadioButton::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--galeo-color-muted);
+  border-radius: 50%;
+}
+
+.react-aria-RadioButton[data-selected]::before {
+  border-color: var(--galeo-color-accent);
+  background: radial-gradient(var(--galeo-color-accent) 45%, transparent 50%);
+}
+
+.react-aria-RadioButton[data-focus-visible]::before,
+.react-aria-SwitchButton[data-focus-visible] .switch-track {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 2px;
+}
+
+.switch-track {
+  position: relative;
+  width: 30px;
+  height: 16px;
+  border: 2px solid var(--galeo-color-muted);
+  border-radius: 10px;
+}
+
+.switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--galeo-color-muted);
+}
+
+.react-aria-SwitchButton[data-selected] .switch-track {
+  border-color: var(--galeo-color-accent);
+}
+
+.react-aria-SwitchButton[data-selected] .switch-track::after {
+  left: 16px;
+  background: var(--galeo-color-accent);
+}
+
+.settings-view button,
+.dialog-buttons button,
+.notice button {
+  padding: 4px 10px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: 4px;
+  background: var(--galeo-color-code-bg);
+  color: var(--galeo-color-fg);
+  font: inherit;
+}

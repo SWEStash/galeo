@@ -1,24 +1,15 @@
 import { z, type ZodType } from 'zod';
 import type { Parse } from '../../core/settings/json-file';
+import { settingsOverrides as overrides } from '../../shared/contracts/schemas';
 import { parserFor } from '../schemas/parse';
 import type { ProfileFile } from '../../core/settings/profile-settings';
 import type { SettingsOverrides } from '../../shared/settings';
 
 /**
  * Schemas for the hand-editable config files (SR-17). Strict: an unknown key is most likely a typo,
- * and saying so beats ignoring it.
+ * and saying so beats ignoring it. The settings themselves are the Settings tab's schema too.
  */
-const overrides = z.strictObject({
-  themeMode: z.enum(['system', 'light', 'dark']),
-  proseFont: z.string().min(1).max(100),
-  codeFont: z.string().min(1).max(100),
-  fontSize: z.int().min(10).max(40),
-  measure: z.int().min(40).max(200),
-  statusBar: z.boolean(),
-  quickOpenExclude: z.array(z.string().min(1).max(255)).max(1000),
-  warmTabs: z.int().min(0).max(20),
-  warmMegabytes: z.int().min(1).max(1024),
-}).partial();
+
 
 const profile = z.strictObject({
   name: z.string().min(1).max(64).optional(),

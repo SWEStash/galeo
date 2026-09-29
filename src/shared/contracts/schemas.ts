@@ -1,5 +1,6 @@
 import { z, type ZodType } from 'zod';
 import { ACCENTS } from '../accents';
+import type { SettingsOverrides } from '../settings';
 import { CHOSEN_ENCODINGS, type Channel, type Requests } from './ipc';
 
 /**
@@ -19,6 +20,19 @@ export const scrollAnchor = z.strictObject({
 const profileId = z.string().min(1).max(32);
 const profileName = z.string().max(256);
 const accent = z.enum(ACCENTS.map((each) => each.color) as [string, ...string[]]).nullable();
+
+/** Every setting a file or the Settings tab may set (SR-17), each optional. */
+export const settingsOverrides = z.strictObject({
+  themeMode: z.enum(['system', 'light', 'dark']),
+  proseFont: z.string().min(1).max(100),
+  codeFont: z.string().min(1).max(100),
+  fontSize: z.int().min(10).max(40),
+  measure: z.int().min(40).max(200),
+  statusBar: z.boolean(),
+  quickOpenExclude: z.array(z.string().min(1).max(255)).max(1000),
+  warmTabs: z.int().min(0).max(20),
+  warmMegabytes: z.int().min(1).max(1024),
+}).partial();
 
 /** A tab's zoom, 50 % to 300 %. */
 export const zoomLevel = z.number().min(0.5).max(3);
@@ -56,4 +70,9 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'profiles.create': z.tuple([profileName, accent]),
   'profiles.update': z.tuple([profileName, accent]),
   'profiles.delete': z.tuple([]),
+  'settings.set': z.tuple([z.enum(['global', 'profile']), settingsOverrides as ZodType<SettingsOverrides>]),
+  'settings.reset': z.tuple([z.enum(Object.keys(settingsOverrides.shape) as [keyof typeof settingsOverrides.shape, ...(keyof typeof settingsOverrides.shape)[]])]),
+  'settings.openCustomCss': z.tuple([z.enum(['global', 'profile'])]),
+  'settings.openNoticeFile': z.tuple([z.int().min(0).max(100)]),
+  'tabs.openSettings': z.tuple([]),
 };

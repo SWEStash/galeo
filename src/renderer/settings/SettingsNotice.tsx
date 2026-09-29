@@ -7,9 +7,12 @@ export function SettingsNotice({ notices }: { notices: readonly Notice[] }) {
   if (notices.length === 0 || dismissed === notices) return null;
   return (
     <div className="notice" role="status" data-testid="settings-notice">
-      {notices.map((notice) => (
+      {notices.map((notice, index) => (
         <p key={notice.path}>
-          <code>{notice.path}</code> can't be used. Your file was left untouched; using the last valid settings.
+          <code>{notice.path}</code> can't be used. Your file was left untouched; using the last valid settings.{' '}
+          <button type="button" onClick={() => void window.galeo.settings.openNoticeFile(index)}>
+            Open file
+          </button>
         </p>
       ))}
       <button type="button" onClick={() => setDismissed(notices)}>

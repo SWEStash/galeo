@@ -20,6 +20,8 @@ interface Stored {
   entries: HistoryEntry[];
   index: number;
   zoom?: number;
+  /** The window's settings tab: no file, never in the session. */
+  settings?: true;
 }
 
 /** A tab as a session keeps it: its history, where in it, and its zoom (absent at 100 %). */
@@ -86,7 +88,7 @@ export class TabRegistry {
   find(path: string, window: number): DocumentRecord | undefined {
     const id = (this.order.get(window) ?? []).find((each) => {
       const record = this.records.get(each)!;
-      return record.entries[record.index]!.path === path;
+      return !record.settings && record.entries[record.index]!.path === path;
     });
     return id === undefined ? undefined : recordOf(this.records.get(id)!);
   }
@@ -106,15 +108,29 @@ export class TabRegistry {
 
   /** The window's tabs for the session file: history, positions, encodings, zoom (ADR-005). */
   exportWindow(window: number): WindowState {
-    const order = this.order.get(window) ?? [];
+    const order = (this.order.get(window) ?? []).filter((id) => !this.records.get(id)!.settings);
     const active = this.active.get(window);
+    const shown = active === undefined ? -1 : order.indexOf(active);
     return {
-      active: active === undefined ? null : order.indexOf(active),
+      active: shown < 0 ? null : shown,
       tabs: order.map((id) => {
         const { entries, index, zoom } = this.records.get(id)!;
         return { entries: entries.map((entry) => ({ ...entry })), index, ...(zoom ? { zoom } : {}) };
       }),
     };
+  }
+
+  /** Shows the window's settings tab, opening it after the shown tab if it isn't open yet. */
+  openSettings(window: number): DocumentRecord {
+    const order = this.orderOf(window);
+    const existing = order.find((id) => this.records.get(id)!.settings);
+    const active = this.active.get(window);
+    const record =
+      existing === undefined
+        ? this.insert(window, [{ path: '', anchor: null }], 0, active === undefined ? order.length : order.indexOf(active) + 1, true)
+        : recordOf(this.records.get(existing)!);
+    this.activate(record.id, window);
+    return record;
   }
 
   /** Opens a session's tabs in a window, after any it has, under new ids; the saved active one is active. */
@@ -155,6 +171,10 @@ export class TabRegistry {
     order.splice(position, 1);
     this.records.delete(id);
     if (this.active.get(window) === id) this.active.delete(window);
+    if (record.settings) {
+      this.changed(window);
+      return true;
+    }
     const closed = this.closed.get(window) ?? [];
     closed.push({ entries: record.entries, index: record.index, position, ...(record.zoom ? { zoom: record.zoom } : {}), at: this.stamp() });
     this.closed.set(window, closed.slice(-CLOSED_DEPTH));
@@ -249,10 +269,10 @@ export class TabRegistry {
     this.changed(window);
   }
 
-  private insert(window: number, entries: HistoryEntry[], index: number, position: number): DocumentRecord {
+  private insert(window: number, entries: HistoryEntry[], index: number, position: number, settings = false): DocumentRecord {
     let id = this.randomId();
     while (this.records.has(id)) id = this.randomId();
-    const record = { id, window, entries, index };
+    const record: Stored = { id, window, entries, index, ...(settings ? { settings: true as const } : {}) };
     this.records.set(id, record);
     const order = this.orderOf(window);
     order.splice(Math.min(position, order.length), 0, id);
@@ -287,5 +307,5 @@ export class TabRegistry {
 }
 
 function recordOf(record: Stored): DocumentRecord {
-  return { id: record.id, path: record.entries[record.index]!.path };
+  return { id: record.id, path: record.entries[record.index]!.path, ...(record.settings ? { kind: 'settings' as const } : {}) };
 }

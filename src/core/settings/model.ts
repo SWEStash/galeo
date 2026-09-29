@@ -1,4 +1,4 @@
-import type { Settings, SettingsOverrides } from '../../shared/settings';
+import type { SettingSource, Settings, SettingsOverrides } from '../../shared/settings';
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   themeMode: 'system',
@@ -51,4 +51,13 @@ export function migrate(data: unknown, current: number, migrations: Readonly<Rec
     object = step(object);
   }
   return { kind: 'ok', data: { ...object, schemaVersion: current } };
+}
+
+/** Where each setting's value comes from, given the global file's and the profile's overrides. */
+export function settingSources(global: SettingsOverrides, profile: SettingsOverrides): Record<keyof Settings, SettingSource> {
+  const keys = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[];
+  return Object.fromEntries(keys.map((key) => [key, key in profile ? 'profile' : key in global ? 'global' : 'default'])) as Record<
+    keyof Settings,
+    SettingSource
+  >;
 }

@@ -3,7 +3,7 @@
 // `window.galeo` from `CHANNELS` and `EVENTS`, one fixed method per channel or event.
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult } from '../documents';
 import type { Platform } from '../keymap';
-import type { Settings, SettingsNotice } from '../settings';
+import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
 import type { ScrollAnchor, TabSnapshot } from '../tabs';
 
 export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
@@ -16,7 +16,15 @@ export interface SettingsState {
   session: SettingsNotice | null;
   /** The user's CSS for documents: the global `custom.css`, then the profile's (ADR-005). */
   css: { global: string; profile: string };
+  /** What every profile gets (defaults, then `settings.json`), and where each resolved value comes from. */
+  shared: Settings;
+  sources: Record<keyof Settings, SettingSource>;
 }
+
+/** Where a Settings tab change goes: all profiles (`settings.json`) or this one (`profile.json`). */
+export type SettingsScope = 'global' | 'profile';
+/** A change was written, or its file holds an invalid hand edit and was left untouched (SR-17). */
+export type SettingsResult = { ok: true } | { ok: false; path: string };
 
 /** A profile as the profile menu shows it; `running` while it has a window (ADR-005). */
 export interface ProfileView {
@@ -98,6 +106,11 @@ export const CHANNELS = [
   'profiles.create',
   'profiles.update',
   'profiles.delete',
+  'settings.set',
+  'settings.reset',
+  'settings.openCustomCss',
+  'settings.openNoticeFile',
+  'tabs.openSettings',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -160,6 +173,15 @@ export interface Requests {
   'profiles.update': [name: string, accent: string | null];
   /** Deletes the sender's own profile: its windows close, its session and settings go (never `default`). */
   'profiles.delete': [];
+  'settings.set': [scope: SettingsScope, change: SettingsOverrides];
+  /** Drops this profile's own value of a setting ("Reset to global"). */
+  'settings.reset': [key: keyof Settings];
+  /** Opens the global or this profile's `custom.css` in the user's editor, creating it first. */
+  'settings.openCustomCss': [scope: SettingsScope];
+  /** Opens the file a settings notice names (by its place in the window's notices, never a path). */
+  'settings.openNoticeFile': [index: number];
+  /** Shows the window's settings tab (Ctrl+,), opening it if needed. */
+  'tabs.openSettings': [];
 }
 
 /** Resolved value of each channel. */
@@ -196,6 +218,11 @@ export interface Responses {
   'profiles.create': ProfileResult;
   'profiles.update': ProfileResult;
   'profiles.delete': void;
+  'settings.set': SettingsResult;
+  'settings.reset': SettingsResult;
+  'settings.openCustomCss': void;
+  'settings.openNoticeFile': void;
+  'tabs.openSettings': string;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */

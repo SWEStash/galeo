@@ -39,11 +39,12 @@ describe('buildApi', () => {
       'close',
       'reopenClosed',
       'move',
+      'openSettings',
       'onChanged',
       'onDemote',
       'onStale',
     ]);
-    expect(Object.keys(api.settings)).toEqual(['get', 'onChanged']);
+    expect(Object.keys(api.settings)).toEqual(['get', 'set', 'reset', 'openCustomCss', 'openNoticeFile', 'onChanged']);
     expect(Object.keys(api.profiles)).toEqual(['created', 'undoCreate', 'list', 'open', 'create', 'update', 'delete', 'onChanged']);
   });
 });

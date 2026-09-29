@@ -23,7 +23,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
   };
   return (
     <footer className="status-bar" data-testid="status-bar">
-      {tab && (
+      {tab && tab.kind !== 'settings' && (
         <button
           type="button"
           className="status-path"

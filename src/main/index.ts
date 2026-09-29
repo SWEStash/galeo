@@ -14,12 +14,13 @@ import { profileIdFor } from '../core/profiles/names';
 import { openFiles } from '../core/routing/open-files';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds } from '../core/session/model';
-import { DEFAULT_SETTINGS } from '../core/settings/model';
+import { DEFAULT_SETTINGS, settingSources } from '../core/settings/model';
+import { openConfigFile } from '../core/settings/open-config';
 import { WarmTabs } from '../core/tabs/lifecycle';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
 import type { OpenRequest, OsShell } from '../core/ports';
-import type { EventName, Events, ProfileResult, ProfilesState, SettingsState } from '../shared/contracts';
+import type { EventName, Events, ProfileResult, ProfilesState, SettingsResult, SettingsState } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
@@ -164,6 +165,8 @@ function start(initialMode: StartupMode): void {
     notices: profile.settings.notices,
     session: profile.sessionNotice,
     css: profile.settings.css,
+    shared: profile.settings.shared,
+    sources: profile.settings.sources,
   });
   const broadcastSettings = (profile: ProfileRuntime) => {
     for (const window of profile.windows) sendEvent(window.webContents, 'settings.changed', settingsState(profile));
@@ -211,7 +214,8 @@ function start(initialMode: StartupMode): void {
     const window = profile.windows.find((each) => each.webContents.id === windowId);
     const { tabs, active } = documents.snapshot(windowId);
     const shown = tabs.find((tab) => tab.id === active);
-    window?.setTitle(windowTitle([shown ? path.basename(shown.path) : null, profile.name], { sandboxed }));
+    const file = !shown ? null : shown.kind === 'settings' ? 'Settings' : path.basename(shown.path);
+    window?.setTitle(windowTitle([file, profile.name], { sandboxed }));
   };
 
   /** Keys main takes before the page (ADR-004 capabilities; window keys work even when the page is busy). */
@@ -345,6 +349,13 @@ function start(initialMode: StartupMode): void {
       .finally(() => stopping.delete(stop));
     void broadcastProfiles();
     stopping.add(stop);
+  };
+
+  /** The profile of the window a request came from; a window always belongs to one. */
+  const ownProfile = (event: { sender: { id: number } }) => {
+    const profile = profileOf(event.sender.id);
+    if (!profile) throw new Error('no profile');
+    return profile;
   };
 
   /** What routing sees; `without` leaves a profile out (an undone creation). */
@@ -506,7 +517,7 @@ function start(initialMode: StartupMode): void {
         },
         'settings.get': (_args, event) => {
           const profile = profileOf(event.sender.id);
-          return profile ? settingsState(profile) : { settings: DEFAULT_SETTINGS, notices: [], session: null, css: { global: '', profile: '' } };
+          return profile ? settingsState(profile) : { settings: DEFAULT_SETTINGS, notices: [], session: null, css: { global: '', profile: '' }, shared: DEFAULT_SETTINGS, sources: settingSources({}, {}) };
         },
         'profiles.list': (_args, event) => profilesState(profileOf(event.sender.id)?.id ?? DEFAULT_PROFILE),
         'profiles.open': async ([id]) => {
@@ -549,8 +560,27 @@ function start(initialMode: StartupMode): void {
           if (undoable.get(token)?.window !== event.sender.id) throw new Error('not offered');
           return enqueue(() => undoCreate(token));
         },
-        'documents.pathMenu': ([id], event) => menus.path(id, event.sender.id),
-        'documents.contextMenu': ([id], event) => menus.document(id, event.sender.id),
+        'settings.set': async ([scope, change], event) => written(await ownProfile(event).settings.set(scope, change)),
+        'settings.reset': async ([key], event) => written(await ownProfile(event).settings.reset(key)),
+        'settings.openCustomCss': ([scope], event) => {
+          const profile = ownProfile(event);
+          const dir = scope === 'global' ? paths.configDir : path.join(paths.configDir, 'profiles', profile.id);
+          return openConfigFile({ fs, shell, utf8 }, path.join(dir, 'custom.css'), customCssTemplate(scope));
+        },
+        'settings.openNoticeFile': ([index], event) => {
+          const notice = ownProfile(event).settings.notices[index];
+          if (!notice) throw new Error('no such notice');
+          return openConfigFile({ fs, shell, utf8 }, notice.path);
+        },
+        'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
+        'documents.pathMenu': ([id], event) => {
+          if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
+          return menus.path(id, event.sender.id);
+        },
+        'documents.contextMenu': ([id], event) => {
+          if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
+          return menus.document(id, event.sender.id);
+        },
         ...documentHandlers({
           records: documents,
           links,
@@ -666,4 +696,18 @@ function recordBlockedRequest(url: string): void {
   if (app.isPackaged) return;
   const global = globalThis as { __galeoBlockedRequests?: string[] };
   (global.__galeoBlockedRequests ??= []).push(url);
+}
+
+function written(notice: SettingsNotice | null): SettingsResult {
+  return notice ? { ok: false, path: notice.path } : { ok: true };
+}
+
+/** The first text of a new `custom.css`, so the file says what it is for. */
+function customCssTemplate(scope: 'global' | 'profile'): string {
+  return [
+    `/* galeo: CSS for documents in ${scope === 'global' ? 'every profile' : 'this profile'}.`,
+    '   It applies inside documents only, after the bundled theme; saving applies it at once.',
+    '   The --galeo-* variables (fonts, sizes, colours) are the stable way to restyle. */',
+    '',
+  ].join('\n');
 }

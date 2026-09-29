@@ -6,7 +6,10 @@ export type TextEncoding = 'utf-8' | 'utf-16le' | 'utf-16be' | 'utf-32le' | 'utf
 /** A document open in a window. The renderer names it by `id` only (SR-12). */
 export interface DocumentRecord {
   id: string;
+  /** Empty for the settings tab. */
   path: string;
+  /** Set on the window's settings tab (UX: a special tab); every other tab shows a file. */
+  kind?: 'settings';
 }
 
 /** A document's text and how to show it, or the state to show instead (UX §4). */

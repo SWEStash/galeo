@@ -154,4 +154,50 @@ describe('ProfileSettings', () => {
     await flush();
     expect(seen).toEqual([{ name: 'Acme EU', accent: '#2f9e44' }]);
   });
+
+  describe('changes from the Settings tab (read-modify-write, SR-17)', () => {
+    const saved = async (fs: FakeFileSystem, path: string) => JSON.parse(new TextDecoder().decode(await fs.readFile(path, { maxBytes: 1e6 })));
+
+    it('says where each value comes from: the defaults, all profiles, or this one', async () => {
+      const { settings } = setup({ [GLOBAL]: '{"fontSize":18}', [PROFILE]: '{"settings":{"measure":90}}' });
+      await settings.start();
+      expect(settings.sources).toMatchObject({ fontSize: 'global', measure: 'profile', themeMode: 'default' });
+      expect(settings.shared).toEqual({ ...DEFAULT_SETTINGS, fontSize: 18 });
+    });
+
+    it("writes a profile setting into profile.json, keeping the rest of the file, and applies it", async () => {
+      const { fs, settings, changes } = setup({ [PROFILE]: '{"name":"Acme","settings":{"measure":90}}' });
+      await settings.start();
+      expect(await settings.set('profile', { fontSize: 21 })).toBeNull();
+      expect(await saved(fs, PROFILE)).toEqual({ schemaVersion: 1, name: 'Acme', settings: { measure: 90, fontSize: 21 } });
+      expect(settings.current.fontSize).toBe(21);
+      expect(settings.sources.fontSize).toBe('profile');
+      expect(changes).toEqual([21]);
+    });
+
+    it('writes a setting for all profiles into settings.json', async () => {
+      const { fs, settings } = setup({ [GLOBAL]: '{"measure":80}' });
+      await settings.start();
+      await settings.set('global', { themeMode: 'dark' });
+      expect(await saved(fs, GLOBAL)).toEqual({ schemaVersion: 1, measure: 80, themeMode: 'dark' });
+      expect(settings.current.themeMode).toBe('dark');
+      expect(settings.sources.themeMode).toBe('global');
+    });
+
+    it('resets a setting to the one all profiles use', async () => {
+      const { fs, settings } = setup({ [GLOBAL]: '{"fontSize":18}', [PROFILE]: '{"settings":{"fontSize":21,"measure":90}}' });
+      await settings.start();
+      await settings.reset('fontSize');
+      expect(await saved(fs, PROFILE)).toEqual({ schemaVersion: 1, settings: { measure: 90 } });
+      expect(settings.current.fontSize).toBe(18);
+      expect(settings.sources.fontSize).toBe('global');
+    });
+
+    it('never writes over an invalid hand edit, and says which file', async () => {
+      const { fs, settings } = setup({ [PROFILE]: '{ broken' });
+      await settings.start();
+      expect(await settings.set('profile', { fontSize: 21 })).toMatchObject({ path: PROFILE, reason: 'invalid' });
+      expect(new TextDecoder().decode(await fs.readFile(PROFILE, { maxBytes: 1e6 }))).toBe('{ broken');
+    });
+  });
 });

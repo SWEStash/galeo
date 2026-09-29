@@ -4,7 +4,7 @@ import { FsError, type FileSystem, type FileWatcher, type Unsubscribe } from '..
 import { isProfileId } from '../profiles/names';
 import { ConfigFile } from './config-file';
 import type { Parse, Utf8 } from './json-file';
-import { resolveSettings } from './model';
+import { resolveSettings, settingSources } from './model';
 
 export const SETTINGS_VERSION = 1;
 /** Hand-edited config is small; anything bigger is refused, not parsed (SR-17). */
@@ -49,6 +49,9 @@ export interface ProfileSettingsDeps {
  */
 export class ProfileSettings {
   current: Settings = resolveSettings({}, {});
+  /** Defaults, then `settings.json`: what every profile gets unless it overrides it. */
+  shared: Settings = resolveSettings({}, {});
+  sources = settingSources({}, {});
   notices: SettingsNotice[] = [];
   css: CustomCss = { global: '', profile: '' };
   identity: ProfileIdentity = {};
@@ -81,6 +84,37 @@ export class ProfileSettings {
     };
     this.global = new ConfigFile({ ...common, path: this.paths.global, parse: deps.parseGlobal });
     this.profile = new ConfigFile({ ...common, path: this.paths.profile, parse: deps.parseProfile });
+  }
+
+  /**
+   * A change made in the Settings tab, to this profile or to all of them. The file is read again
+   * right before writing, and never written while a hand edit left it invalid: its notice says so.
+   */
+  async set(scope: 'global' | 'profile', change: SettingsOverrides): Promise<SettingsNotice | null> {
+    const written =
+      scope === 'global'
+        ? await this.global.update((value) => ({ ...value, ...change }))
+        : await this.profile.update((value) => ({ ...value, settings: { ...value.settings, ...change } }));
+    return this.written(scope, written.notice);
+  }
+
+  /** Drops this profile's own value, so it uses the one all profiles have. */
+  async reset(key: keyof Settings): Promise<SettingsNotice | null> {
+    const written = await this.profile.update((value) => {
+      const { [key]: _dropped, ...rest } = value.settings ?? {};
+      return { ...value, settings: rest };
+    });
+    return this.written('profile', written.notice);
+  }
+
+  private written(scope: 'global' | 'profile', notice: SettingsNotice | null): Promise<SettingsNotice | null> {
+    const done = this.reloading.then(async () => {
+      if (!notice) await this.reload(scope);
+      this.apply(true);
+      return notice;
+    });
+    this.reloading = done.then(() => {});
+    return done;
   }
 
   onCss(listener: (css: CustomCss) => void): void {
@@ -157,6 +191,8 @@ export class ProfileSettings {
 
   private apply(emit: boolean): void {
     const settings = resolveSettings(this.globalValue, this.profileValue.settings ?? {});
+    this.shared = resolveSettings(this.globalValue, {});
+    this.sources = settingSources(this.globalValue, this.profileValue.settings ?? {});
     const notices = [...this.fileNotices.values()];
     const { name, accent } = this.profileValue;
     const identity: ProfileIdentity = { ...(name === undefined ? {} : { name }), ...(accent === undefined ? {} : { accent }) };
@@ -175,3 +211,4 @@ export class ProfileSettings {
     if (identityChanged) for (const listener of this.identityListeners) listener(identity);
   }
 }
+
