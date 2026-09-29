@@ -333,11 +333,15 @@ main {
 
 /* One per tab. Tabs not shown keep their layout but skip rendering (never display: none, so the
    source view can still measure itself, ADR-002). */
+/* Containment keeps whatever a document's CSS positions (custom.css included, even on `:host`)
+   inside its panel: nothing inside a shadow root can style this element, so no document can
+   cover the app chrome (SR-17). */
 .tab-panel {
   display: flex;
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  contain: layout paint;
 }
 
 .tab-panel[data-inert] {

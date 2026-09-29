@@ -71,6 +71,31 @@ test('custom CSS cannot hide the tab bar or the status bar (SR-17)', async () =>
   }
 });
 
+test('custom CSS cannot cover the tab bar or the status bar with a fixed overlay (SR-17)', async () => {
+  const home = tempHome();
+  writeConfig(
+    home,
+    'custom.css',
+    ':host, .galeo-document { position: fixed !important; inset: 0 !important; z-index: 2147483647 !important; background: rgb(255, 0, 0) !important; }',
+  );
+  const { window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect(window.locator('[data-testid="document"] article')).toBeAttached();
+    await expect.poll(() => articleStyle(window, 'color')).not.toBe('');
+    for (const testId of ['tab-bar', 'status-bar']) {
+      const box = (await window.getByTestId(testId).boundingBox())!;
+      const topmost = await window.evaluate(
+        ([x, y, id]) => Boolean(document.elementFromPoint(x!, y!)?.closest(`[data-testid="${id}"]`)),
+        [box.x + box.width / 2, box.y + box.height / 2, testId] as const,
+      );
+      expect(topmost, `${testId} is covered`).toBe(true);
+    }
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
 test('an oversized custom.css is left untouched and reported; the last good CSS stays', async () => {
   const home = tempHome();
   const file = writeConfig(home, 'custom.css', 'article { color: rgb(200, 0, 0) !important; }');
