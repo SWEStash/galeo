@@ -28,7 +28,8 @@
     "check": "npm run typecheck && npm run boundaries && npm test",
     "test:e2e": "playwright test --project=e2e",
     "test:no-network": "playwright test --project=no-network",
-    "test:perf": "playwright test --project=perf"
+    "test:perf": "playwright test --project=perf",
+    "headless": "sh scripts/headless.sh"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
