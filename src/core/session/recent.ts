@@ -1,5 +1,5 @@
-import { FsError, type FileSystem } from '../ports';
-import { readJsonFile, writeJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
+import type { FileSystem } from '../ports';
+import { moveIfPresent, readJsonFile, writeJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
 
 /** A file the profile opened: its path and when, nothing of its content (SR-16). */
 export interface RecentFile {
@@ -39,7 +39,7 @@ export class RecentFiles {
   private async read(): Promise<void> {
     const read = await readJsonFile(this.spec, this.deps.path);
     // An invalid file is set aside, so the next write doesn't silently replace it (SR-17).
-    if (read.kind === 'failed') await this.setAside();
+    if (read.kind === 'failed') await moveIfPresent(this.deps.fs, this.deps.path, `${this.deps.path}.invalid`);
     const stored = read.kind === 'ok' ? read.value.files : [];
     const present = await Promise.all(stored.map((file) => this.exists(file.path)));
     this.files = stored.filter((_, index) => present[index]).slice(0, RECENT_MAX);
@@ -65,14 +65,6 @@ export class RecentFiles {
     const write = this.writing.then(() => writeJsonFile(this.spec as JsonFileSpec<unknown>, this.deps.path, { files: this.files }));
     this.writing = write.catch(() => {});
     return write;
-  }
-
-  private async setAside(): Promise<void> {
-    try {
-      await this.deps.fs.rename(this.deps.path, `${this.deps.path}.invalid`);
-    } catch (error) {
-      if (!(error instanceof FsError && error.code === 'ENOENT')) throw error;
-    }
   }
 
   private async exists(path: string): Promise<boolean> {

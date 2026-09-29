@@ -114,6 +114,13 @@ export class FakeFileSystem implements FileSystem {
     if (mode !== undefined) this.modes.set(to, mode);
   }
 
+  async remove(path: string): Promise<void> {
+    this.throwIfFailing(path);
+    const inside = (entry: string) => entry === path || entry.startsWith(`${path}/`);
+    for (const store of [this.files, this.links, this.modes]) for (const entry of [...store.keys()]) if (inside(entry)) store.delete(entry);
+    for (const dir of [...this.directories]) if (inside(dir)) this.directories.delete(dir);
+  }
+
   /** The mode a directory or file was last created or written with. */
   modeOf(path: string): number | undefined {
     return this.modes.get(path);

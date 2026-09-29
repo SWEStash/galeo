@@ -231,3 +231,30 @@ describe('NodeFileSystem.rename', () => {
     expect(await codeOf(fs.rename(path.join(dir, 'no'), path.join(dir, 'x')))).toBe('ENOENT');
   });
 });
+
+describe('NodeFileSystem.remove', () => {
+  it('removes a folder and everything in it', async () => {
+    const dir = tempDir();
+    mkdirSync(path.join(dir, 'profile', 'nested'), { recursive: true });
+    file(path.join(dir, 'profile'), 'session.json', '{}');
+    file(path.join(dir, 'profile', 'nested'), 'x', 'x');
+    await fs.remove(path.join(dir, 'profile'));
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it('does nothing when the path is already gone', async () => {
+    const dir = tempDir();
+    await fs.remove(path.join(dir, 'no'));
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it.runIf(posix)('removes a symlink inside, never what it points at', async () => {
+    const dir = tempDir();
+    const outside = file(dir, 'keep.md', 'mine');
+    mkdirSync(path.join(dir, 'profile'));
+    symlinkSync(dir, path.join(dir, 'profile', 'link'));
+    await fs.remove(path.join(dir, 'profile'));
+    expect(readdirSync(dir)).toEqual(['keep.md']);
+    expect(readFileSync(outside, 'utf8')).toBe('mine');
+  });
+});

@@ -34,6 +34,14 @@ function setup(files: Record<string, string> = {}) {
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 describe('ProfileSettings', () => {
+  it('refuses a profile that is not a plain id, so no path leaves profiles/', () => {
+    for (const profile of ['../x', 'a/b', '']) {
+      expect(
+        () => new ProfileSettings({ fs: new FakeFileSystem(), utf8, watcher: new FakeFileWatcher(), configDir: '/cfg', profile, parseGlobal, parseProfile }),
+      ).toThrow(/profile id/);
+    }
+  });
+
   it('resolves defaults, then the global file, then the profile', async () => {
     const { settings } = setup({
       [GLOBAL]: '{"fontSize":18,"measure":80}',

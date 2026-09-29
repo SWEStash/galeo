@@ -116,6 +116,14 @@ export class NodeFileSystem implements FileSystem {
     }
   }
 
+  async remove(path: string): Promise<void> {
+    try {
+      await rm(path, { recursive: true, force: true });
+    } catch (error) {
+      throw toFsError(error, path);
+    }
+  }
+
   async writeFileAtomic(path: string, data: Uint8Array, { mode }: { mode: number }): Promise<void> {
     const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`);
     try {

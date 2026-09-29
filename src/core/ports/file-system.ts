@@ -43,4 +43,6 @@ export interface FileSystem {
   writeFileAtomic(path: string, data: Uint8Array, options: { mode: number }): Promise<void>;
   /** Moves a file, replacing whatever is at `to` (same file system). */
   rename(from: string, to: string): Promise<void>;
+  /** Deletes a file or a folder with everything in it, symlinks as links; a missing path is fine. */
+  remove(path: string): Promise<void>;
 }

@@ -61,6 +61,15 @@ export async function writeJsonFile(spec: JsonFileSpec<unknown>, path: string, v
   await spec.fs.writeFileAtomic(path, spec.utf8.encode(json), { mode: FILE_MODE });
 }
 
+/** Moves `from` to `to`; a `from` that doesn't exist is fine (nothing to keep). */
+export async function moveIfPresent(fs: FileSystem, from: string, to: string): Promise<void> {
+  try {
+    await fs.rename(from, to);
+  } catch (error) {
+    if (!(error instanceof FsError && error.code === 'ENOENT')) throw error;
+  }
+}
+
 function dirnameOf(path: string): string {
   return path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
 }

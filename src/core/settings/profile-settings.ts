@@ -1,13 +1,14 @@
 import { joinPath } from '../../shared/paths';
 import type { Settings, SettingsNotice, SettingsOverrides } from '../../shared/settings';
 import type { FileSystem, FileWatcher, Unsubscribe } from '../ports';
+import { isProfileId } from '../profiles/names';
 import { ConfigFile } from './config-file';
 import type { Parse, Utf8 } from './json-file';
 import { resolveSettings } from './model';
 
-const SETTINGS_VERSION = 1;
+export const SETTINGS_VERSION = 1;
 /** Hand-edited config is small; anything bigger is refused, not parsed (SR-17). */
-const CONFIG_MAX_BYTES = 1024 * 1024;
+export const CONFIG_MAX_BYTES = 1024 * 1024;
 const DIR_MODE = 0o700;
 
 /** `profile.json`: the profile's display name, accent colour and setting overrides. */
@@ -48,6 +49,7 @@ export class ProfileSettings {
   private reloading: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: ProfileSettingsDeps) {
+    if (!isProfileId(deps.profile)) throw new Error(`not a profile id: ${JSON.stringify(deps.profile)}`);
     const profileDir = joinPath(deps.configDir, 'profiles', deps.profile);
     this.dirs = [deps.configDir, profileDir];
     const common = { fs: deps.fs, utf8: deps.utf8, empty: {}, version: SETTINGS_VERSION, migrations: {}, maxBytes: CONFIG_MAX_BYTES };
