@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The same mark for 16–32 px: the page and one line, with strokes that stay legible. -->
+  <rect width="512" height="512" rx="112" fill="#0d1117"/>
+  <g fill="none" stroke="#a5f5d9" stroke-width="44" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 88 H310 L398 176 V400 Q398 424 374 424 H150 Q126 424 126 400 V112 Q126 88 150 88 Z"/>
+    <path d="M310 88 V152 Q310 176 334 176 H398"/>
+    <path d="M190 300 H334"/>
+  </g>
+</svg>
