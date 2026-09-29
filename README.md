@@ -14,6 +14,7 @@ integration with the Files app, live reload, quick open, and **zero network acce
 - [UX specification](docs/design/ux.md)
 - [Threat model](docs/security/threat-model.md)
 - [Dependencies](docs/dependencies.md)
+- [Development](docs/development.md)
 - [Contributing](CONTRIBUTING.md)
 
 ## Licence
