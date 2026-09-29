@@ -11,6 +11,24 @@ function tempDir(): string {
   return dir;
 }
 
+/**
+ * Repeats `act` until `check` holds. macOS delivers folder events late (FSEvents) and can miss a
+ * change made just after watching starts, so a single write can go unreported there.
+ */
+async function until(act: () => void, check: () => void) {
+  await vi.waitFor(
+    () => {
+      try {
+        check();
+      } catch (error) {
+        act();
+        throw error;
+      }
+    },
+    { timeout: 5_000, interval: 250 },
+  );
+}
+
 function watch(target: string) {
   const events: WatchEvent[] = [];
   const unwatch = new NodeFileWatcher().watch(target, (event) => events.push(event));
@@ -24,8 +42,10 @@ describe('NodeFileWatcher', () => {
     const target = path.join(dir, 'settings.json');
     writeFileSync(target, '{}');
     const { events } = watch(target);
-    writeFileSync(target, '{"fontSize":18}');
-    await vi.waitFor(() => expect(events).toContainEqual({ path: target, kind: 'change' }));
+    await until(
+      () => writeFileSync(target, '{"fontSize":18}'),
+      () => expect(events).toContainEqual({ path: target, kind: 'change' }),
+    );
   });
 
   it('reports a file replaced by a rename, as editors and agents save', async () => {
