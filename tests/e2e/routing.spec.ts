@@ -84,7 +84,8 @@ test('--profile with a new name creates it in its own window; Undo sends the fil
     await expect.poll(() => paths(window)).toEqual([basic, gfm]);
     expect(app.windows()).toHaveLength(1);
     await expect.poll(() => existsSync(profileDir)).toBe(false);
-    expect(existsSync(path.join(appDirs(home).state, 'profiles', 'acme-corp'))).toBe(false);
+    // Its session goes after its settings.
+    await expect.poll(() => existsSync(path.join(appDirs(home).state, 'profiles', 'acme-corp'))).toBe(false);
   } finally {
     await close();
     removeTempHome(home);
@@ -101,7 +102,8 @@ test('a profile name that looks like a path stays a profile folder under profile
     await opened;
     const { config, state } = appDirs(home);
     await expect.poll(() => existsSync(path.join(config, 'profiles', 'escape', 'profile.json'))).toBe(true);
-    expect(readdirSync(config).sort()).toEqual(['profiles']);
+    // On macOS and Windows the state folder sits inside the config folder.
+    expect(readdirSync(config).filter((name) => path.join(config, name) !== state)).toEqual(['profiles']);
     expect(readdirSync(state).filter((name) => name.includes('escape'))).toEqual([]);
     expect(existsSync(path.join(home, 'escape'))).toBe(false);
   } finally {

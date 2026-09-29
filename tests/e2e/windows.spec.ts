@@ -83,7 +83,8 @@ test('Ctrl+Shift+Q quits, saving every running profile; each comes back with all
     }
     await expect.poll(async () => (await Promise.all(app.windows().map(paths))).flat().sort()).toEqual([basic, frontmatter, gfm, math].sort());
     const exited = app.waitForEvent('close');
-    await pressInMain(app, window, 'Q', true);
+    // macOS quits on Cmd+Q.
+    await pressInMain(app, window, 'Q', process.platform !== 'darwin');
     await exited;
     quit = true;
   } finally {
