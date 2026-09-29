@@ -217,7 +217,11 @@ non-executable, non-launcher files: not `.desktop`, `.AppImage`, `.sh` or `.run`
 the executable bit, not directories, and only when the user chooses it in a **native context
 menu built by main**. Otherwise only "Reveal in Files" is offered. Links to local
 files always open inside galeo.
-*AC*: tests for each blocked category.
+One clarification: galeo's own config files may also be opened from a page control, namely
+"Open CSS" in the Settings tab (the global or the profile's `custom.css`) and "Open file" on a
+settings notice. There, main picks the path itself; the page sends only a scope or the notice's
+place in main's own list, never a path. The same checks apply before `shell.openPath`.
+*AC*: tests for each blocked category; the config-file channels take no path.
 
 **SR-06 — Zero network, enforced in main.** The default session cancels every request whose
 scheme is not `galeo:`, `data:` or the app's own bundle (`onBeforeRequest`, which also covers
