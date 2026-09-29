@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
@@ -102,7 +102,10 @@ test('an oversized custom.css is left untouched and reported; the last good CSS 
   const { window, close } = await launchApp(['--', basic], { home });
   try {
     await expect.poll(() => articleStyle(window, 'color')).toBe('rgb(200, 0, 0)');
-    writeFileSync(file, `/* ${'x'.repeat(1024 * 1024)} */ article { color: rgb(0, 0, 200) !important; }`);
+    // Replaced in one step: a plain write empties the file first, and the watcher may apply that
+    // valid, empty CSS before the oversized one arrives.
+    writeFileSync(`${file}.new`, `/* ${'x'.repeat(1024 * 1024)} */ article { color: rgb(0, 0, 200) !important; }`);
+    renameSync(`${file}.new`, file);
     await expect(window.getByTestId('settings-notice')).toContainText(file);
     expect(await articleStyle(window, 'color')).toBe('rgb(200, 0, 0)');
   } finally {
