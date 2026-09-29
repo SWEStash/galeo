@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import { commandFor, tabNumberFor, type Platform } from '../shared/keymap';
-import type { ColorScheme } from './document/host';
 import { useColorScheme } from './document/theme';
 import { markFirstPaint } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';

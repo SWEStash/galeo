@@ -1,6 +1,6 @@
-import { joinPath } from '../../shared/paths';
+import { folderOf, joinPath } from '../../shared/paths';
 import { FsError, type FileSystem } from '../ports';
-import type { Utf8 } from '../settings/json-file';
+import { kindOf, type Utf8 } from '../settings/json-file';
 
 /** The line every installed launcher carries, so galeo only ever replaces its own. */
 export const LAUNCHER_MARK = '# Installed by galeo: the command-line launcher for its AppImage.';
@@ -79,19 +79,9 @@ export async function installLauncher(
     [files.bin, 0o755],
     [files.desktop, 0o644],
   ] as const) {
-    const dir = file.path.slice(0, file.path.lastIndexOf('/'));
-    if (!(await isDirectory(fs, dir))) await fs.mkdir(dir, { mode: 0o755 });
+    const dir = folderOf(file.path);
+    if ((await kindOf(fs, dir)) !== 'directory') await fs.mkdir(dir, { mode: 0o755 });
     await fs.writeFileAtomic(file.path, utf8.encode(file.content), { mode });
   }
   return { ok: true };
 }
-
-async function isDirectory(fs: FileSystem, path: string): Promise<boolean> {
-  try {
-    return (await fs.stat(path)).kind === 'directory';
-  } catch (error) {
-    if (error instanceof FsError && error.code === 'ENOENT') return false;
-    throw error;
-  }
-}
-

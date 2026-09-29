@@ -1,5 +1,6 @@
 import type { SettingsNotice } from '../../shared/settings';
-import { FsError, type FileSystem } from '../ports';
+import { folderOf } from '../../shared/paths';
+import { FsError, type EntryKind, type FileSystem } from '../ports';
 import { migrate, type Migration } from './model';
 
 export type Parsed<T> = { ok: true; value: T } | { ok: false; detail: string };
@@ -56,7 +57,7 @@ export async function readJsonFile<T>(spec: JsonFileSpec<T>, path: string): Prom
 
 /** Writes `value` with its `schemaVersion`, atomically, owner-only (SR-16), creating its folder. */
 export async function writeJsonFile(spec: JsonFileSpec<unknown>, path: string, value: object): Promise<void> {
-  await spec.fs.mkdir(dirnameOf(path), { mode: DIR_MODE });
+  await spec.fs.mkdir(folderOf(path), { mode: DIR_MODE });
   const json = `${JSON.stringify({ schemaVersion: spec.version, ...value }, null, 2)}\n`;
   await spec.fs.writeFileAtomic(path, spec.utf8.encode(json), { mode: FILE_MODE });
 }
@@ -70,6 +71,12 @@ export async function moveIfPresent(fs: FileSystem, from: string, to: string): P
   }
 }
 
-function dirnameOf(path: string): string {
-  return path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
+/** What is at `path` (following symlinks), or null when nothing is. */
+export async function kindOf(fs: FileSystem, path: string): Promise<EntryKind | null> {
+  try {
+    return (await fs.stat(path)).kind;
+  } catch (error) {
+    if (error instanceof FsError && error.code === 'ENOENT') return null;
+    throw error;
+  }
 }

@@ -100,11 +100,6 @@ export function tabNumberFor(event: KeyEventLike, platform: Platform): number | 
  */
 export const CAPABILITY_COMMANDS: readonly Command[] = ['editMode'];
 
-export function capabilityCommandFor(event: KeyEventLike, platform: Platform): Command | null {
-  const command = commandFor(event, platform);
-  return command && CAPABILITY_COMMANDS.includes(command) ? command : null;
-}
-
 /**
  * Window commands main handles in `before-input-event` too: they work while the page is busy or
  * hung, and need no channel from the page.

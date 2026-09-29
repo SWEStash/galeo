@@ -211,4 +211,3 @@ export class ProfileSettings {
     if (identityChanged) for (const listener of this.identityListeners) listener(identity);
   }
 }
-

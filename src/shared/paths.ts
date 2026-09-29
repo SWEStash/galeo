@@ -3,6 +3,11 @@ export function fileName(path: string): string {
   return path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1);
 }
 
+/** The folder a path is in: all but its last segment, with `/` or `\` separators. */
+export function folderOf(path: string): string {
+  return path.slice(0, Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')));
+}
+
 /** A file's extension, lower-case and with its dot (`.md`); '' when it has none. */
 export function extensionOf(path: string): string {
   const name = fileName(path).toLowerCase();

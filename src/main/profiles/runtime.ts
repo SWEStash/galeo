@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron';
 import path from 'node:path';
-import type { Clock, FileSystem, FileWatcher } from '../../core/ports';
+import type { AppPaths, Clock, FileSystem, FileWatcher } from '../../core/ports';
 import { SessionKeeper } from '../../core/session/keeper';
 import { RecentFiles } from '../../core/session/recent';
 import { SessionStore } from '../../core/session/store';
@@ -9,7 +9,6 @@ import { ProfileSettings } from '../../core/settings/profile-settings';
 import type { WindowBounds } from '../../core/session/model';
 import type { SettingsNotice } from '../../shared/settings';
 import type { TabRegistry, WindowState } from '../../core/tabs/registry';
-import type { AppPaths } from '../../core/ports';
 import { parseRecentFiles, parseSession } from '../session/schemas';
 import { parseGlobalSettings, parseProfileFile } from '../settings/schemas';
 import { windowBounds } from '../window/factory';

@@ -21,7 +21,7 @@ export interface WindowOptions {
   themeMode?: () => ThemeMode;
 }
 
-/** Recolours each window's title-bar controls from its own scheme (they sit on the tab bar). */
+/** How each window recolours its title-bar controls, which sit on the tab bar, from its own scheme. */
 const schemeFollowers = new WeakMap<BrowserWindow, () => void>();
 
 /** The window's theme mode changed: its title-bar controls follow. */
@@ -60,10 +60,10 @@ export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bou
     onMainKey?.(command);
   });
   if (!dialog && process.platform !== 'darwin') {
-    const followScheme = () => window.setTitleBarOverlay(titleBarOverlay(scheme()));
-    nativeTheme.on('updated', followScheme);
-    window.on('closed', () => nativeTheme.off('updated', followScheme));
-    schemeFollowers.set(window, followScheme);
+    const recolour = () => window.setTitleBarOverlay(titleBarOverlay(scheme()));
+    nativeTheme.on('updated', recolour);
+    window.on('closed', () => nativeTheme.off('updated', recolour));
+    schemeFollowers.set(window, recolour);
   }
   window.once('ready-to-show', () => {
     if (bounds?.maximized) window.maximize();

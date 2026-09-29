@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { capabilityCommandFor, commandFor, keymap, tabNumberFor, type KeyEventLike } from './keymap';
+import { commandFor, keymap, mainCommandFor, tabNumberFor, type KeyEventLike } from './keymap';
 
 describe('keymap', () => {
   it('uses CmdOrCtrl so one map serves every platform', () => {
@@ -104,7 +104,7 @@ describe('tabNumberFor', () => {
   });
 });
 
-describe('capabilityCommandFor', () => {
+describe('mainCommandFor', () => {
   const key = (key: string, mods: Partial<KeyEventLike> = {}): KeyEventLike => ({
     key,
     ctrlKey: false,
@@ -114,14 +114,17 @@ describe('capabilityCommandFor', () => {
     ...mods,
   });
 
-  it('names the keys main keeps for itself: Ctrl+E (edit mode, v0.2)', () => {
-    expect(capabilityCommandFor(key('e', { ctrlKey: true }), 'linux')).toBe('editMode');
-    expect(capabilityCommandFor(key('E', { metaKey: true }), 'darwin')).toBe('editMode');
+  it('names the keys main keeps for itself: Ctrl+E (edit mode, v0.2) and the window keys', () => {
+    expect(mainCommandFor(key('e', { ctrlKey: true }), 'linux')).toBe('editMode');
+    expect(mainCommandFor(key('E', { metaKey: true }), 'darwin')).toBe('editMode');
+    expect(mainCommandFor(key('n', { metaKey: true }), 'darwin')).toBe('newWindow');
+    expect(mainCommandFor(key('q', { metaKey: true }), 'darwin')).toBe('quit');
   });
 
   it('leaves every other shortcut to the page', () => {
-    expect(capabilityCommandFor(key('f', { ctrlKey: true }), 'linux')).toBeNull();
-    expect(capabilityCommandFor(key('e'), 'linux')).toBeNull();
+    expect(mainCommandFor(key('f', { ctrlKey: true }), 'linux')).toBeNull();
+    expect(mainCommandFor(key('w', { ctrlKey: true }), 'linux')).toBeNull();
+    expect(mainCommandFor(key('e'), 'linux')).toBeNull();
     expect(commandFor(key('e', { ctrlKey: true }), 'linux')).toBe('editMode');
   });
 });
