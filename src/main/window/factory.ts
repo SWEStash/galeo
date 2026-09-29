@@ -28,8 +28,10 @@ export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKe
       ? { width: 560, height: 340, resizable: false }
       : {
           ...(placed ? { ...(placed.x === undefined ? {} : { x: placed.x, y: placed.y }), width: placed.width, height: placed.height } : { width: 1100, height: 800 }),
-          titleBarStyle: 'hidden',
-          titleBarOverlay: titleBarOverlay(scheme()),
+          // macOS draws its own window buttons inset in the bar; the overlay is for Windows and Linux.
+          ...(process.platform === 'darwin'
+            ? { titleBarStyle: 'hiddenInset' as const }
+            : { titleBarStyle: 'hidden' as const, titleBarOverlay: titleBarOverlay(scheme()) }),
         }),
     show: false,
     webPreferences: hardenedWebPreferences({
@@ -44,7 +46,7 @@ export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKe
     event.preventDefault();
     onCapabilityKey?.(command);
   });
-  if (!dialog) {
+  if (!dialog && process.platform !== 'darwin') {
     const followScheme = () => window.setTitleBarOverlay(titleBarOverlay(scheme()));
     nativeTheme.on('updated', followScheme);
     window.on('closed', () => nativeTheme.off('updated', followScheme));

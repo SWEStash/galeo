@@ -33,6 +33,11 @@ body,
   color: var(--galeo-color-fg);
 }
 
+/* macOS puts its window buttons at the bar's start. */
+:root[data-platform='darwin'] .tab-bar {
+  padding-left: 78px;
+}
+
 .tab-strip {
   position: relative;
   display: flex;

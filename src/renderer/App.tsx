@@ -23,7 +23,10 @@ export function App() {
   const scheme = useColorScheme();
 
   useEffect(() => {
-    void window.galeo.app.info().then(setInfo);
+    void window.galeo.app.info().then((next) => {
+      document.documentElement.dataset['platform'] = next.platform;
+      setInfo(next);
+    });
   }, []);
 
   const choose = useCallback((choice: SandboxChoice) => {
