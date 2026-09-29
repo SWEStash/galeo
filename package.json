@@ -29,7 +29,8 @@
     "test:e2e": "playwright test --project=e2e",
     "test:no-network": "playwright test --project=no-network",
     "test:perf": "playwright test --project=perf",
-    "headless": "sh scripts/headless.sh"
+    "headless": "sh scripts/headless.sh",
+    "preflight": "sh scripts/preflight.sh"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

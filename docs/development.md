@@ -24,6 +24,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop |
 | `npm run boundaries` | Check the import rules below (`scripts/check-boundaries.mjs`) |
 | `npm run check` | Typecheck, boundaries and tests: run it before every commit |
+| `npm run preflight` | CI's Linux job on this machine (audit, check, e2e, no-network, perf, package, verify), then the e2e specs changed since the last push, 5 times each: run it before every push |
 | `sh scripts/render-icons.sh` | Render the app icon PNGs from `packaging/icons/*.svg` after changing them (needs `rsvg-convert`: `librsvg2-bin`) |
 
 On Ubuntu 24.04+, unprivileged user namespaces are restricted, so the development Electron binary
@@ -37,6 +38,25 @@ To try the `.deb` on your desktop, install it with `sudo apt install ./release/g
 remove it with `sudo apt remove galeo`. apt may print "Download is performed unsandboxed as
 root": its `_apt` user can't read your home folder, so apt reads the file as root. The notice is
 harmless. Copy the `.deb` to `/tmp` first to avoid it.
+
+## Before pushing
+
+Run `npm run preflight` and push only when it ends with "all green". On a busy machine it may end
+with "all green except the performance smoke": push then only if its medians are close to the ones
+recorded before, since CI's runner is faster. CI also runs macOS and Windows
+on every push. They don't block, but a failure there is fixed in the next commit. Tests must hold on
+all three, and these differences have broken them before:
+
+- **Folders**: on macOS and Windows the state folder sits inside the config folder (`appDirs`).
+  Paths use `\` on Windows; build them with `path.join`, never with `/`.
+- **Keys**: Cmd stands in for Ctrl on macOS, and some commands have their own macOS keys
+  (`MACOS` in `src/shared/keymap.ts`), such as Cmd+Q to quit.
+- **Watched files**: macOS can miss or delay a change made just after watching starts, so repeat the
+  change until it's seen (`until` in the watcher tests). Change a file the app watches with
+  `saveFile` (`tests/helpers/save.ts`): a plain write empties it first, and the app may read that.
+- **Cleanup**: on Windows an app's child processes can hold its files for a moment after it exits.
+  Remove a home the app ran on with `removeTempHome`.
+- **POSIX-only checks** (modes, symlinks, FIFOs, shell scripts) are skipped on Windows.
 
 ## Architecture
 
