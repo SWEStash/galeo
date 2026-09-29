@@ -11,22 +11,25 @@ const SHOWN = 8;
  * offered it, and opens one by id only; main opens the path it offered (ADR-004).
  */
 export function recentHandlers(deps: {
-  recent: RecentFiles;
+  /** The recent files of the window's profile. */
+  recent: (window: number) => RecentFiles | undefined;
   selections: SelectionGrants;
   tabs: TabRegistry;
 }): Pick<Handlers, 'recent.list' | 'recent.open' | 'recent.clear'> {
   const { recent, selections, tabs } = deps;
   return {
     'recent.list': (_args, event) =>
-      selections.offer(event.sender.id, 'recent', recent.list().slice(0, SHOWN).map((file) => file.path)),
+      selections.offer(event.sender.id, 'recent', (recent(event.sender.id)?.list() ?? []).slice(0, SHOWN).map((file) => file.path)),
     'recent.open': ([id], event) => {
       const path = selections.choose(event.sender.id, 'recent', id);
       if (!path) throw new Error('not offered');
       tabs.open(path, event.sender.id);
     },
-    'recent.clear': () => {
+    'recent.clear': async (_args, event) => {
+      const list = recent(event.sender.id);
+      if (!list) return;
       selections.withdraw('recent');
-      return recent.clear();
+      await list.clear();
     },
   };
 }

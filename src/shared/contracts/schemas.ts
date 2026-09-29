@@ -43,4 +43,6 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'recent.list': z.tuple([]),
   'recent.open': z.tuple([documentId]),
   'recent.clear': z.tuple([]),
+  'profiles.created': z.tuple([]),
+  'profiles.undoCreate': z.tuple([documentId]),
 };

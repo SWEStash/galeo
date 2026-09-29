@@ -2,6 +2,7 @@ import { z, type ZodType } from 'zod';
 import type { RecentFile } from '../../core/session/recent';
 import type { SessionFile } from '../../core/session/model';
 import { HISTORY_DEPTH } from '../../core/tabs/registry';
+import { isProfileId } from '../../core/profiles/names';
 import type { Parse } from '../../core/settings/json-file';
 import { CHOSEN_ENCODINGS } from '../../shared/contracts';
 import { scrollAnchor, zoomLevel } from '../../shared/contracts/schemas';
@@ -64,3 +65,9 @@ const recent = z.strictObject({
 
 export const parseSession: Parse<SessionFile> = parserFor(session as ZodType<SessionFile>);
 export const parseRecentFiles: Parse<{ files: RecentFile[] }> = parserFor(recent as ZodType<{ files: RecentFile[] }>);
+
+const appState = z.strictObject({
+  lastProfile: z.string().refine(isProfileId, 'profile id').nullable(),
+});
+
+export const parseAppState: Parse<{ lastProfile: string | null }> = parserFor(appState);

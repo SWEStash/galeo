@@ -20,9 +20,9 @@ function setup() {
   const closed: string[] = [];
   const demoted: [number, string[]][] = [];
   const stale: [number, string][] = [];
-  let positioned = 0;
+  const positioned: number[] = [];
   const handlers = tabHandlers({
-    positioned: () => positioned++,
+    positioned: (window) => positioned.push(window),
     tabs,
     warm: new WarmTabs({ count: 1, bytes: 10 * MB }),
     reads,
@@ -96,9 +96,9 @@ describe('tabHandlers', () => {
     const where = { line: 3, offset: 0, heading: null, fraction: 0.1 };
     handlers['tabs.position']([a, where], from(1));
     expect(tabs.position(a, 1)).toEqual(where);
-    expect(positioned()).toBe(1);
+    expect(positioned()).toEqual([1]);
     handlers['tabs.position']([a, where], from(2));
-    expect(positioned()).toBe(1);
+    expect(positioned()).toEqual([1]);
   });
 
   it("re-syncs a window that names a tab it doesn't have, and changes nothing", async () => {

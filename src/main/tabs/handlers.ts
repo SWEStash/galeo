@@ -26,7 +26,7 @@ export interface TabHandlerDeps {
   /** Tells the window a tab's file changed since the read it shows. */
   stale: (window: number, id: string) => void;
   /** A tab's position changed (the session keeps it). */
-  positioned: () => void;
+  positioned: (window: number) => void;
 }
 
 /**
@@ -53,7 +53,7 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
       demoteAll(window, warm.rendered(window, id, weight));
     },
     'tabs.position': ([id, position], event) => {
-      if (tabs.setPosition(id, event.sender.id, position)) positioned();
+      if (tabs.setPosition(id, event.sender.id, position)) positioned(event.sender.id);
       else resync(event.sender.id);
     },
     'tabs.zoom': ([id, zoom], event) => {

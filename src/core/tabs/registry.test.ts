@@ -292,4 +292,26 @@ describe('TabRegistry', () => {
     tabs.reopenClosed(1);
     expect(tabs.snapshot(1).tabs[0]!.zoom).toBe(1.5);
   });
+
+  it('finds the tab showing a path in a window, by its current entry only', () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1);
+    tabs.open('/d/a.md', 2);
+    const b = tabs.open('/d/b.md', 1);
+    tabs.navigate(b.id, 1, { path: '/d/c.md', anchor: null });
+    expect(tabs.find('/d/a.md', 1)).toEqual(a);
+    expect(tabs.find('/d/c.md', 1)?.id).toBe(b.id);
+    expect(tabs.find('/d/b.md', 1)).toBeUndefined();
+    expect(tabs.find('/d/a.md', 3)).toBeUndefined();
+  });
+
+  it('opens a tab right after a given one', () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1);
+    tabs.open('/d/b.md', 1);
+    tabs.activate(a.id, 1);
+    const c = tabs.open('/d/c.md', 1, null, a.id);
+    tabs.open('/d/d.md', 1, null, c.id);
+    expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/a.md', '/d/c.md', '/d/d.md', '/d/b.md']);
+  });
 });

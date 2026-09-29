@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRecentFiles, parseSession } from './schemas';
+import { parseAppState, parseRecentFiles, parseSession } from './schemas';
 
 const tab = { entries: [{ path: '/d/a.md', anchor: null }], index: 0 };
 const valid = {
@@ -60,5 +60,14 @@ describe('parseRecentFiles', () => {
     expect(parseRecentFiles({ schemaVersion: 1, files: [{ path: '/d/a.md', openedAt: 1 }] }).ok).toBe(true);
     expect(parseRecentFiles({ schemaVersion: 1, files: [{ path: '/d/a.md', openedAt: 1, text: 'x' }] }).ok).toBe(false);
     expect(parseRecentFiles({ schemaVersion: 1, files: Array.from({ length: 201 }, (_, n) => ({ path: `/d/${n}`, openedAt: n })) }).ok).toBe(false);
+  });
+});
+
+describe('parseAppState', () => {
+  it('accepts the last profile, an id or null, and nothing else', () => {
+    expect(parseAppState({ schemaVersion: 1, lastProfile: 'acme' })).toEqual({ ok: true, value: { lastProfile: 'acme' } });
+    expect(parseAppState({ schemaVersion: 1, lastProfile: null }).ok).toBe(true);
+    expect(parseAppState({ schemaVersion: 1, lastProfile: '../x' }).ok).toBe(false);
+    expect(parseAppState({ schemaVersion: 1, lastProfile: 'acme', extra: 1 }).ok).toBe(false);
   });
 });

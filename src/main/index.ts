@@ -8,15 +8,16 @@ import { DocumentLinks } from '../core/documents/links';
 import { DocumentMenus } from '../core/documents/menus';
 import { SelectionGrants } from '../core/documents/selections';
 import { ExternalOpenLimiter } from '../core/links/limiter';
-import { ProfileSettings } from '../core/settings/profile-settings';
-import { SessionKeeper } from '../core/session/keeper';
+import { AppState } from '../core/profiles/app-state';
+import { ProfileCatalog } from '../core/profiles/catalog';
+import { openFiles } from '../core/routing/open-files';
+import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds } from '../core/session/model';
-import { RecentFiles } from '../core/session/recent';
-import { SessionStore } from '../core/session/store';
+import { DEFAULT_SETTINGS } from '../core/settings/model';
 import { WarmTabs } from '../core/tabs/lifecycle';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
-import type { OsShell } from '../core/ports';
+import type { OpenRequest, OsShell } from '../core/ports';
 import type { EventName, Events } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
@@ -38,15 +39,16 @@ import { sendEvent } from './ipc/send';
 import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
 import { recentHandlers } from './session/recent-handlers';
-import { parseRecentFiles, parseSession } from './session/schemas';
-import { parseGlobalSettings, parseProfileFile } from './settings/schemas';
+import { ProfileRuntime } from './profiles/runtime';
+import { parseAppState } from './session/schemas';
+import { parseProfileFile } from './settings/schemas';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
 import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
-import { createAppWindow, windowBounds } from './window/factory';
+import { createAppWindow } from './window/factory';
 import { applicationMenu } from './window/menu';
 import { keymapPlatform } from './window/policy';
 import { showNativeMenu } from './window/native-menu';
@@ -96,10 +98,10 @@ if (!parsed.ok) {
   // Another instance runs: it received these arguments with the lock request.
   app.quit();
 } else {
-  start(startupMode(parsed.args, { sandboxed }), parsed.args.files);
+  start(startupMode(parsed.args, { sandboxed }));
 }
 
-function start(initialMode: StartupMode, files: readonly string[]): void {
+function start(initialMode: StartupMode): void {
   let mode = initialMode;
   let choiceWindow: BrowserWindow | undefined;
   // Every change to a window's tabs goes to its page as a fresh snapshot (ADR-002).
@@ -109,9 +111,10 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
   };
   const documents = new TabRegistry(randomUUID, (windowId) => {
     pushSnapshot(windowId);
-    sessions.changed();
+    profileOf(windowId)?.keeper.changed();
   });
   const fs = new NodeFileSystem();
+  const watcher = new NodeFileWatcher();
   const images = new ImageGrants(randomUUID);
   const shell = externalShell();
   const menus = new DocumentMenus({
@@ -140,23 +143,24 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       }
     },
   });
-  // Profiles arrive with the router; until then every window uses the default one.
-  const settings = new ProfileSettings({
-    fs,
-    utf8,
-    watcher: new NodeFileWatcher(),
-    configDir: paths.configDir,
-    profile: 'default',
-    parseGlobal: parseGlobalSettings,
-    parseProfile: parseProfileFile,
-  });
-  const broadcastSettings = () => {
-    for (const window of BrowserWindow.getAllWindows()) {
-      sendEvent(window.webContents, 'settings.changed', { settings: settings.current, notices: settings.notices });
+  const catalog = new ProfileCatalog({ fs, utf8, configDir: paths.configDir, stateDir: paths.stateDir, parse: parseProfileFile });
+  const appState = new AppState({ fs, utf8, path: path.join(paths.stateDir, 'app-state.json'), parse: parseAppState });
+  // Running profiles by id: a profile runs while it has a window (ADR-005).
+  const running = new Map<string, ProfileRuntime>();
+  // Saves of profiles whose last window just closed; a quit waits for them.
+  const stopping = new Set<Promise<void>>();
+  // Window ids, the last focused first, across all profiles.
+  let focusOrder: number[] = [];
+  let quitting = false;
+  const profileOf = (windowId: number) => [...running.values()].find((runtime) => runtime.has(windowId));
+  const idsOf = (runtime: ProfileRuntime) => runtime.windows.map((window) => window.webContents.id);
+  const broadcastSettings = (runtime: ProfileRuntime) => {
+    for (const window of runtime.windows) {
+      sendEvent(window.webContents, 'settings.changed', { settings: runtime.settings.current, notices: runtime.settings.notices });
     }
   };
   const warmLimits = (current: Settings) => ({ count: current.warmTabs, bytes: current.warmMegabytes * MIB });
-  const warm = new WarmTabs(warmLimits(settings.current));
+  const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
   const reads = new ReadIdentities(fs);
   const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
     const contents = webContents.fromId(windowId);
@@ -174,46 +178,23 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       if (ids.length > 0) demote(windowId, ids);
     },
   });
-  settings.onChange((current) => {
-    nativeTheme.themeSource = current.themeMode;
-    for (const [windowId, ids] of warm.setLimits(warmLimits(current))) demote(windowId, ids);
-    broadcastSettings();
-  });
-  settings.onNotices((notices) => {
-    reportSettingsNotices(notices);
-    broadcastSettings();
-  });
-  // Profiles arrive with the router; until then the session and recent files are the default profile's.
-  const profileState = path.join(paths.stateDir, 'profiles', 'default');
-  const sessionStore = new SessionStore({ fs, utf8, dir: profileState, parse: parseSession });
-  const recent = new RecentFiles({ fs, utf8, path: path.join(profileState, 'recent.json'), parse: parseRecentFiles, now: Date.now });
-  // Main windows in the order they opened, and their ids with the last focused first.
   const selections = new SelectionGrants(randomUUID);
-  const mainWindows: BrowserWindow[] = [];
-  let focusOrder: number[] = [];
-  const sessions = new SessionKeeper({
-    tabs: documents,
-    clock: systemClock,
-    save: (session) => sessionStore.save(session).catch((error: unknown) => console.warn('galeo: session not saved', error)),
-    windows: () => mainWindows.map((window) => ({ id: window.webContents.id, bounds: windowBounds(window) })),
-    focusOrder: () => focusOrder,
-    // Nothing is saved before the session is restored: a quit at the sandbox prompt keeps the last one.
-    running: false,
-  });
-  // The launch's files open in the last focused window; files from later launches aren't opened yet.
-  let pendingFiles = [...files];
+  // Profiles `--profile` created, by the token their window's notice carries, until Undo or the window goes.
+  const undoable = new Map<string, { profile: string; name: string; files: readonly string[]; window: number }>();
 
   const lockdown = networkLockdown(runtime);
   registerSchemes();
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
 
-  const openMainWindow = ({ bounds = null, state, files: toOpen = [] }: { bounds?: WindowBounds | null; state?: WindowState; files?: readonly string[] } = {}) => {
+  const openMainWindow = (profile: ProfileRuntime, { bounds = null, state }: { bounds?: WindowBounds | null; state?: WindowState } = {}) => {
     const window = createAppWindow({ url: rendererUrl(runtime), sandboxed, onCapabilityKey: recordCapabilityKey, bounds });
     const windowId = window.webContents.id;
-    mainWindows.push(window);
-    // A new window comes to the front; after the last one closed (macOS runs on), saving resumes.
+    profile.windows.push(window);
+    // A new window comes to the front; after the profile's last one closed (macOS runs on), saving resumes.
     focusOrder = [windowId, ...focusOrder];
-    sessions.resume();
+    rememberProfile(profile.id);
+    warm.setLimits(warmLimits(profile.settings.current), [windowId]);
+    profile.keeper.resume();
     // A restored session's tabs come back hibernated: the page renders each when shown, the active first.
     if (state) {
       documents.restoreWindow(windowId, state);
@@ -221,13 +202,13 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       const active = documents.snapshot(windowId).active;
       if (active) warm.activated(windowId, active);
     }
-    for (const file of toOpen) documents.open(file, windowId);
-    const followBounds = () => sessions.changed();
+    const followBounds = () => profile.keeper.changed();
     window.on('move', followBounds);
     window.on('resize', followBounds);
     window.on('focus', () => {
       focusOrder = [windowId, ...focusOrder.filter((id) => id !== windowId)];
-      sessions.changed();
+      rememberProfile(profile.id);
+      profile.keeper.changed();
       // A shown file that came back (or changed) is read again (UX: missing recovers). Hibernated
       // tabs read when they wake anyway.
       for (const id of warm.warm(windowId)) {
@@ -236,10 +217,11 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       }
     });
     window.on('close', () => {
-      if (mainWindows.length === 1) sessions.holdForQuit();
+      // The profile's last window: what it holds now is what the save keeps, not the empty aftermath.
+      if (!quitting && profile.windows.length === 1) profile.keeper.holdForQuit();
     });
     window.on('closed', () => {
-      mainWindows.splice(mainWindows.indexOf(window), 1);
+      profile.windows.splice(profile.windows.indexOf(window), 1);
       focusOrder = focusOrder.filter((id) => id !== windowId);
       for (const tab of documents.list(windowId)) {
         links.forget(tab.id);
@@ -249,28 +231,156 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
       warm.closeWindow(windowId);
       images.closeWindow(windowId);
       selections.closeWindow(windowId);
+      for (const [token, created] of undoable) if (created.window === windowId) undoable.delete(token);
+      // A quit saves every running profile itself, before its windows close.
+      if (quitting) return;
+      if (profile.windows.length > 0) profile.keeper.changed();
+      else stopProfile(profile);
     });
     perfMark('window-created');
-    reportColdStart(window, { document: toOpen.length > 0 || Boolean(state?.tabs.length) });
+    // Asked once the page has loaded: a launch's files are in the window by then.
+    reportColdStart(window, { document: () => documents.list(windowId).length > 0 });
     return window;
   };
 
-  /** A session's windows, the last focused opened last so it ends up in front. */
-  const openSession = (session: SessionFile | null, launchFiles: readonly string[]) => {
-    if (!session || session.windows.length === 0) return void openMainWindow({ files: launchFiles });
-    const order = [...session.windows.keys()].sort((a, b) => rank(session, b) - rank(session, a));
-    const opened = new Map(order.map((index) => [index, openMainWindow({ bounds: session.windows[index]!.bounds, state: session.windows[index]! })]));
-    const front = opened.get(session.focusOrder[0] ?? order.at(-1)!)!;
-    for (const file of launchFiles) documents.open(file, front.webContents.id);
+  /** The profile last worked in, where launches go when no window is open (ADR-005). */
+  const rememberProfile = (id: string) => void appState.setLastProfile(id).catch((error: unknown) => console.warn('galeo: app state not saved', error));
+
+  const startRuntime = async (id: string): Promise<ProfileRuntime> => {
+    const profile = new ProfileRuntime(id, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder });
+    running.set(id, profile);
+    profile.settings.onChange((current) => {
+      nativeTheme.themeSource = current.themeMode;
+      for (const [windowId, ids] of warm.setLimits(warmLimits(current), idsOf(profile))) demote(windowId, ids);
+      broadcastSettings(profile);
+    });
+    profile.settings.onNotices((notices) => {
+      reportSettingsNotices(notices);
+      broadcastSettings(profile);
+    });
+    await profile.settings.start();
+    reportSettingsNotices(profile.settings.notices);
+    nativeTheme.themeSource = profile.settings.current.themeMode;
+    // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
+    void profile.recent.load().catch((error: unknown) => console.warn('galeo: recent files not loaded', error));
+    return profile;
   };
 
-  let restoring = false;
+  /** Starts a profile with its session's windows, the last focused opened last so it ends up in front. */
+  const startProfile = async (id: string): Promise<BrowserWindow | null> => {
+    const profile = await startRuntime(id);
+    const { session, notice } = await profile.sessions.load();
+    if (notice) reportSessionNotice(notice);
+    let front: BrowserWindow | null = null;
+    if (session && session.windows.length > 0) {
+      const order = [...session.windows.keys()].sort((a, b) => rank(session, b) - rank(session, a));
+      const opened = new Map(order.map((index) => [index, openMainWindow(profile, { bounds: session.windows[index]!.bounds, state: session.windows[index]! })]));
+      front = opened.get(session.focusOrder[0] ?? order.at(-1)!)!;
+    }
+    profile.keeper.start();
+    return front;
+  };
+
+  const stopProfile = (profile: ProfileRuntime) => {
+    running.delete(profile.id);
+    const stop = profile
+      .stop()
+      .catch((error: unknown) => console.warn(`galeo: profile ${profile.id} not saved`, error))
+      .finally(() => stopping.delete(stop));
+    stopping.add(stop);
+  };
+
+  /** What routing sees; `without` leaves a profile out (an undone creation). */
+  const world = async (without?: string): Promise<RouteWorld> => ({
+    profiles: (await catalog.list()).filter((profile) => profile.id !== without),
+    windows: [...running.values()]
+      .filter((profile) => profile.id !== without)
+      .flatMap((profile) => idsOf(profile).map((id) => ({ id, profile: profile.id }))),
+    focusOrder,
+    lastProfile: appState.lastProfile === without ? null : appState.lastProfile,
+  });
+
+  /**
+   * Opens files where ADR-005 says. An existing window gets the tabs without being raised (no
+   * focus stealing); a request without files asks for the window itself, so that one is focused.
+   */
+  const openRouted = async (request: RouteRequest, files: readonly string[], without?: string): Promise<Route> => {
+    const decision = route(request, await world(without));
+    if (decision.kind === 'invalid') return decision;
+    if (decision.create !== null) await catalog.create(decision.profile, decision.create, null);
+    let window = decision.start ? await startProfile(decision.profile) : null;
+    let fresh = decision.start;
+    const profile = running.get(decision.profile)!;
+    if (typeof decision.window === 'number') window = profile.windows.find((each) => each.webContents.id === decision.window)!;
+    else if (decision.window === 'new' || !window) {
+      window = openMainWindow(profile);
+      fresh = true;
+    }
+    const windowId = window.webContents.id;
+    openFiles(documents, windowId, files);
+    // Main showed the tab itself, so the page won't report it: the warm set hears it here.
+    const shown = documents.snapshot(windowId).active;
+    if (files.length > 0 && shown) {
+      const ids = warm.activated(windowId, shown);
+      if (ids.length > 0) demote(windowId, ids);
+    }
+    if (!fresh && files.length === 0) window.focus();
+    if (decision.create !== null) {
+      undoable.set(randomUUID(), { profile: decision.profile, name: decision.create, files, window: windowId });
+    }
+    return decision;
+  };
+
+  const openRequest = async (request: OpenRequest) => {
+    const parsedRequest = parseArgv(request.argv, { cwd: request.cwd, forwarded: request.source !== 'launch', resolve: path.resolve });
+    if (!parsedRequest.ok) return void console.warn(`galeo: open request ignored: ${parsedRequest.error}`);
+    const { profile, newWindow, files } = parsedRequest.args;
+    const routed = await openRouted({ profile, newWindow }, files);
+    if (routed.kind === 'invalid') console.warn(`galeo: open request ignored: --profile name ${routed.reason}`);
+  };
+
+  // Requests are handled one at a time: each sees the windows and profiles the one before left.
+  let routing: Promise<void> = Promise.resolve();
+  const enqueue = (task: () => Promise<unknown>) => {
+    routing = routing.then(task).then(
+      () => {},
+      (error: unknown) => console.warn('galeo: open request failed', error),
+    );
+    return routing;
+  };
+  const acceptOpenRequests = () => instance.onOpenRequest((request) => void enqueue(() => openRequest(request)));
+
+  /** Undo of a created profile: its files go where they would have gone, then it is deleted unsaved. */
+  const undoCreate = async (token: string) => {
+    const created = undoable.get(token);
+    if (!created) return;
+    undoable.delete(token);
+    // Routed first: closing the app's last window would quit it.
+    await openRouted({ profile: null, newWindow: false }, created.files, created.profile);
+    const profile = running.get(created.profile);
+    if (profile) {
+      profile.discard = true;
+      const closing = [...profile.windows].map(
+        (window) =>
+          new Promise<void>((resolve) => {
+            window.once('closed', () => resolve());
+            window.close();
+          }),
+      );
+      await Promise.all(closing);
+      await Promise.all([...stopping]);
+    }
+    await catalog.delete(created.profile);
+  };
+
   // Saving is async; the quit waits for it once.
   let savedOnQuit = false;
   app.on('before-quit', (event) => {
     if (savedOnQuit) return;
     event.preventDefault();
-    void sessions.flushOnQuit().finally(() => {
+    quitting = true;
+    const saves = [...running.values()].map((profile) => profile.keeper.flushOnQuit());
+    void Promise.allSettled([...saves, ...stopping]).finally(() => {
       savedOnQuit = true;
       app.quit();
     });
@@ -280,15 +390,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     perfMark('app-ready');
     const menu = applicationMenu(process.platform);
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
-    await settings.start();
-    const loaded = await sessionStore.load();
-    if (loaded.notice) reportSessionNotice(loaded.notice);
-    // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
-    void recent.load().catch((error: unknown) => console.warn('galeo: recent files not loaded', error));
-    nativeTheme.themeSource = settings.current.themeMode;
-    warm.setLimits(warmLimits(settings.current));
+    await appState.load();
     pressure.start();
-    reportSettingsNotices(settings.notices);
     hardenWebContents();
     if (lockdown.guard) {
       installNetworkGuard(
@@ -299,6 +402,7 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
     registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(runtime), (url) =>
       serveImage(url, { lookup: (id) => images.lookup(id), fs }),
     );
+    let restoring = false;
     registerIpc(
       {
         'app.info': () => ({
@@ -315,27 +419,38 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
             return;
           }
           mode = { kind: 'normal' };
-          openSession(loaded.session, pendingFiles);
-          pendingFiles = [];
-          sessions.start();
-          choiceWindow?.close();
+          acceptOpenRequests();
+          // Closed once the launch's window is open: the app quits when its last window closes.
+          void enqueue(async () => choiceWindow?.close());
         },
-        'settings.get': () => ({ settings: settings.current, notices: settings.notices }),
-        'session.previous': () => sessionStore.previous(),
+        'settings.get': (_args, event) => {
+          const profile = profileOf(event.sender.id);
+          return profile ? { settings: profile.settings.current, notices: profile.settings.notices } : { settings: DEFAULT_SETTINGS, notices: [] };
+        },
+        'session.previous': (_args, event) => profileOf(event.sender.id)?.sessions.previous() ?? [],
         'session.restorePrevious': async ([snapshot], event) => {
-          if (mode.kind !== 'normal' || restoring) throw new Error('not now');
+          const profile = profileOf(event.sender.id);
+          if (mode.kind !== 'normal' || restoring || !profile) throw new Error('not now');
           restoring = true;
           try {
-            const previous = await sessionStore.readPrevious(snapshot);
+            const previous = await profile.sessions.readPrevious(snapshot);
             if (!previous) throw new Error('no such session');
             // The asking window, empty, takes the first window's tabs; the others open new windows.
             const [first, ...rest] = previous.windows;
             if (first && documents.list(event.sender.id).length === 0) documents.restoreWindow(event.sender.id, first);
             else if (first) rest.unshift(first);
-            for (const window of rest) openMainWindow({ bounds: window.bounds, state: window });
+            for (const window of rest) openMainWindow(profile, { bounds: window.bounds, state: window });
           } finally {
             restoring = false;
           }
+        },
+        'profiles.created': (_args, event) => {
+          for (const [token, created] of undoable) if (created.window === event.sender.id) return { name: created.name, token };
+          return null;
+        },
+        'profiles.undoCreate': ([token], event) => {
+          if (undoable.get(token)?.window !== event.sender.id) throw new Error('not offered');
+          return enqueue(() => undoCreate(token));
         },
         'documents.pathMenu': ([id], event) => menus.path(id, event.sender.id),
         'documents.contextMenu': ([id], event) => menus.document(id, event.sender.id),
@@ -345,7 +460,8 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           reads,
           fs,
           decode: decodeWithPlatform,
-          opened: (file) => void recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
+          opened: (file, windowId) =>
+            void profileOf(windowId)?.recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
         }),
         ...tabHandlers({
           tabs: documents,
@@ -355,30 +471,24 @@ function start(initialMode: StartupMode, files: readonly string[]): void {
           closed: (id) => links.forget(id),
           demote,
           stale: (windowId, id) => sendTo(windowId, 'tabs.stale', id),
-          positioned: () => sessions.changed(),
+          positioned: (windowId) => profileOf(windowId)?.keeper.changed(),
         }),
-        ...recentHandlers({ recent, selections, tabs: documents }),
+        ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, selections, tabs: documents }),
       },
       trustedOrigins(runtime),
     );
     if (mode.kind === 'sandbox-unavailable') {
       choiceWindow = createAppWindow({ url: rendererUrl(runtime), sandboxed, dialog: true });
     } else {
-      openSession(loaded.session, pendingFiles);
-      pendingFiles = [];
-      sessions.start();
+      acceptOpenRequests();
     }
-
-    const openMainWindowIfNone = () => {
-      if (mode.kind === 'normal' && BrowserWindow.getAllWindows().length === 0) openMainWindow();
-    };
-    // Routing files to profiles and windows arrives with the router; until then a later launch
-    // only brings back a window when none is open (macOS keeps running without one).
-    instance.onOpenRequest(openMainWindowIfNone);
     installAppLifecycle(app, {
       platform: process.platform,
       windowCount: () => BrowserWindow.getAllWindows().length,
-      openWindow: openMainWindowIfNone,
+      // macOS without windows: the dock icon brings back the last profile, as a launch would.
+      openWindow: () => {
+        if (mode.kind === 'normal') void enqueue(() => openRouted({ profile: null, newWindow: false }, []));
+      },
     });
   });
 }

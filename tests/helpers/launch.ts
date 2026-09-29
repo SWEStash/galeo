@@ -1,7 +1,11 @@
+import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import electronBinary from 'electron';
+
+const ROOT = path.resolve(import.meta.dirname, '../..');
 
 export interface LaunchedApp {
   app: ElectronApplication;
@@ -61,15 +65,8 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
       // Playwright emulates a light `prefers-color-scheme` by default; the app must see the real one.
       colorScheme: null,
       ...(options.executablePath ? { executablePath: options.executablePath } : {}),
-      cwd: path.resolve(import.meta.dirname, '../..'),
-      env: {
-        ...process.env,
-        XDG_CONFIG_HOME: path.join(home, 'config'),
-        XDG_STATE_HOME: path.join(home, 'state'),
-        XDG_CACHE_HOME: path.join(home, 'cache'),
-        GALEO_TEST_HOME: home,
-        ...options.env,
-      },
+      cwd: ROOT,
+      env: { ...homeEnv(home), ...options.env },
     });
     window = await app.firstWindow();
   } catch (error) {
@@ -87,5 +84,23 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
         removeHome();
       }
     },
+  };
+}
+
+/**
+ * Launches the app again on `home` while it runs there, as `galeo` would from a terminal in `cwd`:
+ * it hands its arguments to the running instance and exits. Returns once it has.
+ */
+export function launchSecond(home: string, args: string[], options: { cwd?: string } = {}): SpawnSyncReturns<Buffer> {
+  return spawnSync(electronBinary as unknown as string, [ROOT, ...args], { cwd: options.cwd ?? ROOT, timeout: 15_000, env: homeEnv(home) });
+}
+
+function homeEnv(home: string): Record<string, string> {
+  return {
+    ...(process.env as Record<string, string>),
+    XDG_CONFIG_HOME: path.join(home, 'config'),
+    XDG_STATE_HOME: path.join(home, 'state'),
+    XDG_CACHE_HOME: path.join(home, 'cache'),
+    GALEO_TEST_HOME: home,
   };
 }

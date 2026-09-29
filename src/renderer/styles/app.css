@@ -167,7 +167,7 @@ main {
   content-visibility: hidden;
 }
 
-.settings-notice {
+.notice {
   display: flex;
   gap: 12px;
   align-items: center;
@@ -178,7 +178,7 @@ main {
   font: 13px var(--galeo-font-ui);
 }
 
-.settings-notice p {
+.notice p {
   flex: 1;
   margin: 0;
 }

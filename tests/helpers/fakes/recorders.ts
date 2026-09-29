@@ -70,7 +70,7 @@ export class FakeWindowHost implements WindowHost {
   private readonly capabilityKeys = new Emitter<[WindowId, string]>();
 
   create({ title }: { title: string }): WindowId {
-    const id = `window-${this.nextId++}` as WindowId;
+    const id: WindowId = this.nextId++;
     this.windows.set(id, { title });
     return id;
   }

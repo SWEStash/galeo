@@ -113,6 +113,10 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         return () => {};
       }),
     },
+    profiles: {
+      created: vi.fn().mockResolvedValue(null),
+      undoCreate: vi.fn().mockResolvedValue(undefined),
+    },
   } satisfies GaleoApi;
   Object.defineProperty(window, 'galeo', { value: api, configurable: true });
   return api;
@@ -627,6 +631,37 @@ describe('App', () => {
     const dismiss = [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!;
     await act(async () => dismiss.click());
     expect(shown()).toBeNull();
+  });
+
+  it('offers Undo for a profile --profile just created', async () => {
+    const api = stubBridge();
+    api.profiles.created.mockResolvedValue({ name: 'Acme', token: 'undo-1' });
+    const container = await renderApp();
+    const shown = () => container.querySelector('[data-testid="profile-created"]');
+    await vi.waitFor(() => expect(shown()?.textContent).toContain("Created profile 'Acme'"));
+    expect(shown()?.getAttribute('role')).toBe('status');
+    const undo = [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Undo')!;
+    await act(async () => undo.click());
+    expect(api.profiles.undoCreate).toHaveBeenCalledWith('undo-1');
+    expect(shown()).toBeNull();
+  });
+
+  it('shows no profile notice for a window whose profile already existed', async () => {
+    const api = stubBridge();
+    const container = await renderApp();
+    await vi.waitFor(() => expect(api.profiles.created).toHaveBeenCalled());
+    expect(container.querySelector('[data-testid="profile-created"]')).toBeNull();
+  });
+
+  it('dismisses the created-profile notice without undoing it', async () => {
+    const api = stubBridge();
+    api.profiles.created.mockResolvedValue({ name: 'Acme', token: 'undo-1' });
+    const container = await renderApp();
+    const shown = () => container.querySelector('[data-testid="profile-created"]');
+    const dismiss = await vi.waitFor(() => [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!);
+    await act(async () => dismiss.click());
+    expect(shown()).toBeNull();
+    expect(api.profiles.undoCreate).not.toHaveBeenCalled();
   });
 
   it("asks main for the document's menu on a right-click, and shows no menu of its own", async () => {

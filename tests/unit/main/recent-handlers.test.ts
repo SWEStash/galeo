@@ -15,7 +15,7 @@ async function setup(count = 3) {
   const recent = new RecentFiles({ fs, utf8, path: '/s/recent.json', parse: (data) => ({ ok: true, value: data as never }), now: () => n++ });
   for (let i = 0; i < count; i++) await recent.add(`/d/f${i}.md`);
   const tabs = new TabRegistry(() => `tab-${++n}`);
-  const handlers = recentHandlers({ recent, selections: new SelectionGrants(() => `pick-${++n}`), tabs });
+  const handlers = recentHandlers({ recent: () => recent, selections: new SelectionGrants(() => `pick-${++n}`), tabs });
   return { recent, tabs, handlers };
 }
 
@@ -50,5 +50,24 @@ describe('recentHandlers', () => {
     expect(() => handlers['recent.open']([offered!.id], from(2))).toThrow();
     expect(recent.list()).toEqual([]);
     expect(await handlers['recent.list']([], from(1))).toEqual([]);
+  });
+
+  it("uses the list of the sender's profile, and none for a window without one", async () => {
+    const fs = new FakeFileSystem();
+    let n = 0;
+    const listOf = async (name: string) => {
+      const list = new RecentFiles({ fs, utf8, path: `/s/${name}.json`, parse: (data) => ({ ok: true, value: data as never }), now: () => n++ });
+      await list.add(`/d/${name}.md`);
+      return list;
+    };
+    const [a, b] = [await listOf('a'), await listOf('b')];
+    const tabs = new TabRegistry(() => `tab-${++n}`);
+    const handlers = recentHandlers({ recent: (window) => ({ 1: a, 2: b })[window], selections: new SelectionGrants(() => `pick-${++n}`), tabs });
+    expect((await handlers['recent.list']([], from(2))).map((file) => file.path)).toEqual(['/d/b.md']);
+    await handlers['recent.clear']([], from(1));
+    expect(a.list()).toEqual([]);
+    expect(b.list()).toHaveLength(1);
+    expect(await handlers['recent.list']([], from(3))).toEqual([]);
+    await handlers['recent.clear']([], from(3));
   });
 });

@@ -1,6 +1,7 @@
 import type { Unsubscribe } from './common';
 
-export type WindowId = string & { readonly __brand: 'WindowId' };
+/** A window's id: its page's id (Electron's `webContents.id`), the key tabs, grants and metrics use. */
+export type WindowId = number;
 
 export interface MenuItem {
   id: string;

@@ -81,6 +81,18 @@ describe('parseArgv', () => {
     },
   );
 
+  it.each([
+    ['a\u0007b', 'control-character'],
+    ['   ', 'empty'],
+    ['x'.repeat(65), 'too-long'],
+  ])('rejects an unusable profile name %j', (name, reason) => {
+    expect(parse(['--profile', name])).toEqual({ ok: false, error: `--profile name: ${reason}` });
+  });
+
+  it('keeps a profile name as given, spaces included', () => {
+    expect(parse(['--profile', ' Acme Corp '])).toMatchObject({ ok: true, args: { profile: ' Acme Corp ' } });
+  });
+
   it('rejects a repeated --profile', () => {
     expect(parse(['--profile', 'a', '--profile', 'b'])).toEqual({ ok: false, error: '--profile given twice' });
   });

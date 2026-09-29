@@ -93,4 +93,23 @@ describe('WarmTabs', () => {
     );
     expect(warm.warm(1)).toEqual(['d', 'c']);
   });
+
+  it('can limit only some windows (each profile has its own limits)', () => {
+    const warm = warmTabs({ count: 3, bytes: 20 * MB });
+    for (const id of ['a', 'b', 'c']) warm.activated(1, id, MB);
+    for (const id of ['x', 'y', 'z']) warm.activated(2, id, MB);
+    expect(warm.setLimits({ count: 1, bytes: 20 * MB }, [2])).toEqual(new Map([[2, ['x']]]));
+    expect(warm.activated(1, 'd', MB)).toEqual([]);
+    expect(warm.activated(2, 'w', MB)).toEqual(['y']);
+  });
+
+  it('gives a window its own limits before its first tab', () => {
+    const warm = warmTabs({ count: 3, bytes: 20 * MB });
+    warm.setLimits({ count: 0, bytes: 0 }, [5]);
+    warm.activated(5, 'a', MB);
+    expect(warm.activated(5, 'b', MB)).toEqual(['a']);
+    warm.closeWindow(5);
+    warm.activated(5, 'a', MB);
+    expect(warm.activated(5, 'b', MB)).toEqual([]);
+  });
 });

@@ -6,7 +6,7 @@ export function SettingsNotice({ notices }: { notices: readonly Notice[] }) {
   const [dismissed, setDismissed] = useState<readonly Notice[] | null>(null);
   if (notices.length === 0 || dismissed === notices) return null;
   return (
-    <div className="settings-notice" role="status" data-testid="settings-notice">
+    <div className="notice" role="status" data-testid="settings-notice">
       {notices.map((notice) => (
         <p key={notice.path}>
           <code>{notice.path}</code> can't be used. Your file was left untouched; using the last valid settings.

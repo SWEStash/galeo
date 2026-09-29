@@ -27,7 +27,7 @@ describe('buildApi', () => {
   it('exposes no generic invoke, subscription or channel access', () => {
     const api = buildApi(vi.fn(), noSubscribe);
 
-    expect(Object.keys(api)).toEqual(['app', 'documents', 'tabs', 'settings', 'session', 'recent']);
+    expect(Object.keys(api)).toEqual(['app', 'documents', 'tabs', 'settings', 'session', 'recent', 'profiles']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable']);
     expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'pathMenu', 'contextMenu']);
     expect(Object.keys(api.tabs)).toEqual([
@@ -44,5 +44,6 @@ describe('buildApi', () => {
       'onStale',
     ]);
     expect(Object.keys(api.settings)).toEqual(['get', 'onChanged']);
+    expect(Object.keys(api.profiles)).toEqual(['created', 'undoCreate']);
   });
 });

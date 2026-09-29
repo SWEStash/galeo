@@ -66,17 +66,26 @@ export class TabRegistry {
     private readonly onChange: (window: number) => void = () => {},
   ) {}
 
-  /** Opens `path` (at `anchor`) after the window's active tab, or at the end when none is active. */
-  open(path: string, window: number, anchor: string | null = null): DocumentRecord {
+  /** Opens `path` (at `anchor`) after the tab `after`, else the active one, else at the end. */
+  open(path: string, window: number, anchor: string | null = null, after?: string): DocumentRecord {
     const order = this.orderOf(window);
-    const active = this.active.get(window);
-    const position = active === undefined ? order.length : order.indexOf(active) + 1;
+    const next = (after !== undefined && order.includes(after) ? after : undefined) ?? this.active.get(window);
+    const position = next === undefined ? order.length : order.indexOf(next) + 1;
     return this.insert(window, [{ path, anchor }], 0, position);
   }
 
   get(id: string, window: number): DocumentRecord | undefined {
     const record = this.owned(id, window);
     return record && recordOf(record);
+  }
+
+  /** The window's tab showing `path` now (its current history entry), if any. */
+  find(path: string, window: number): DocumentRecord | undefined {
+    const id = (this.order.get(window) ?? []).find((each) => {
+      const record = this.records.get(each)!;
+      return record.entries[record.index]!.path === path;
+    });
+    return id === undefined ? undefined : recordOf(this.records.get(id)!);
   }
 
   list(window: number): DocumentRecord[] {

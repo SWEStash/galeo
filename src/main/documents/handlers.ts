@@ -27,7 +27,7 @@ export function documentHandlers(deps: {
   fs: FileSystem;
   decode: Decode;
   /** A file was read (the profile's recent files keep it). */
-  opened: (path: string) => void;
+  opened: (path: string, window: number) => void;
 }): Pick<Handlers, DocumentChannels> {
   const { records, links, reads, fs, decode, opened } = deps;
   // The file each tab last counted as opened: re-reads of it (a wake, a changed file) aren't opens.
@@ -41,7 +41,7 @@ export function documentHandlers(deps: {
     const content = await readDocument(path, { fs, decode, encoding: encoding ?? undefined });
     if ((content.state === 'ready' || content.state === 'empty') && counted.get(id) !== path) {
       counted.set(id, path);
-      opened(path);
+      opened(path, window);
     }
     // Only the text main read itself defines which links the page may follow. Only rendered
     // Markdown has links; nothing else is kept.

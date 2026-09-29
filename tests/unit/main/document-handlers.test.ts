@@ -50,7 +50,7 @@ function setup(files: Record<string, string>, slow = '') {
     parseUrl: () => null,
   });
   const opened: string[] = [];
-  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode, opened: (path) => opened.push(path) });
+  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode, opened: (path, window) => opened.push(`${window}:${path}`) });
   return { fs, records, handlers, opened, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
@@ -92,7 +92,7 @@ describe('recent files', () => {
     await handlers['documents.read']([id], event);
     fs.delete('/d/a.md');
     await handlers['documents.read']([id], event);
-    expect(opened).toEqual(['/d/a.md']);
+    expect(opened).toEqual(['1:/d/a.md']);
   });
 
   it("count a tab's file once, not again on every re-read (a wake, a changed file)", async () => {
@@ -101,7 +101,7 @@ describe('recent files', () => {
     await handlers['documents.read']([id], event);
     records.navigate(id, 1, { path: '/d/b.md', anchor: null });
     await handlers['documents.read']([id], event);
-    expect(opened).toEqual(['/d/a.md', '/d/b.md']);
+    expect(opened).toEqual(['1:/d/a.md', '1:/d/b.md']);
   });
 });
 

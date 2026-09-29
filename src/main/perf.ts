@@ -27,14 +27,14 @@ const markTime = (name: string) => `new Promise((resolve) => {
  * opened one), writes the marks and the app's memory to the file named by `GALEO_PERF_OUT` and
  * quits. Only `GALEO_PERF=1` builds contain it.
  */
-export function reportColdStart(window: BrowserWindow, options: { document: boolean }): void {
+export function reportColdStart(window: BrowserWindow, options: { document: () => boolean }): void {
   if (!__GALEO_PERF__) return;
   const out = process.env['GALEO_PERF_OUT'];
   if (!out) return;
   window.webContents.once('did-finish-load', async () => {
     const firstPaint = (await window.webContents.executeJavaScript(markTime('galeo:first-paint'))) as number;
     const paints: Record<string, number> = { 'first-paint': firstPaint };
-    if (options.document) paints['document-paint'] = (await window.webContents.executeJavaScript(markTime('galeo:document-paint'))) as number;
+    if (options.document()) paints['document-paint'] = (await window.webContents.executeJavaScript(markTime('galeo:document-paint'))) as number;
     const memoryKB = app.getAppMetrics().reduce((sum, metric) => sum + metric.memory.workingSetSize, 0);
     await writeFile(out, JSON.stringify({ marks: { ...marks, ...paints }, memoryKB }));
     app.quit();

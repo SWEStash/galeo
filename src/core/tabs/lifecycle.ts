@@ -19,6 +19,8 @@ interface Rendered {
 export class WarmTabs {
   /** Per window, most recently shown first; the first one is the active tab. */
   private readonly windows = new Map<number, Rendered[]>();
+  /** Windows whose profile set its own limits; the others use the default ones. */
+  private readonly own = new Map<number, WarmLimits>();
 
   constructor(private limits: WarmLimits) {}
 
@@ -29,7 +31,7 @@ export class WarmTabs {
     const tabs = previous.filter((tab) => tab.id !== id);
     tabs.unshift({ id, weight: weight ?? known });
     this.windows.set(window, tabs);
-    return this.fit(tabs);
+    return this.fit(window, tabs);
   }
 
   rendered(window: number, id: string, weight: number): string[] {
@@ -37,7 +39,7 @@ export class WarmTabs {
     const tab = tabs.find((each) => each.id === id);
     if (!tab) return [];
     tab.weight = weight;
-    return this.fit(tabs);
+    return this.fit(window, tabs);
   }
 
   /** Memory is short: the least recently shown warm tab goes, even under the limits. */
@@ -46,12 +48,17 @@ export class WarmTabs {
     return tabs.length > 1 ? [tabs.pop()!.id] : [];
   }
 
-  /** New limits (a settings change); returns, per window, the tabs to hibernate now. */
-  setLimits(limits: WarmLimits): Map<number, string[]> {
-    this.limits = limits;
+  /**
+   * New limits (a settings change), for `windows` only or as the default for the rest; returns,
+   * per window, the tabs to hibernate now.
+   */
+  setLimits(limits: WarmLimits, windows?: readonly number[]): Map<number, string[]> {
+    if (windows) for (const window of windows) this.own.set(window, limits);
+    else this.limits = limits;
     const demoted = new Map<number, string[]>();
     for (const [window, tabs] of this.windows) {
-      const ids = this.fit(tabs);
+      if (windows && !windows.includes(window)) continue;
+      const ids = this.fit(window, tabs);
       if (ids.length > 0) demoted.set(window, ids);
     }
     return demoted;
@@ -64,6 +71,7 @@ export class WarmTabs {
 
   closeWindow(window: number): void {
     this.windows.delete(window);
+    this.own.delete(window);
   }
 
   /** The window's rendered tabs, active first. */
@@ -71,10 +79,11 @@ export class WarmTabs {
     return (this.windows.get(window) ?? []).map((tab) => tab.id);
   }
 
-  private fit(tabs: Rendered[]): string[] {
+  private fit(window: number, tabs: Rendered[]): string[] {
+    const { count, bytes } = this.own.get(window) ?? this.limits;
     const demoted: string[] = [];
     const warmBytes = () => tabs.slice(1).reduce((sum, tab) => sum + tab.weight, 0);
-    while (tabs.length > 1 && (tabs.length - 1 > this.limits.count || warmBytes() > this.limits.bytes)) {
+    while (tabs.length > 1 && (tabs.length - 1 > count || warmBytes() > bytes)) {
       demoted.push(tabs.pop()!.id);
     }
     return demoted;

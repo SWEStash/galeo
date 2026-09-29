@@ -5,6 +5,7 @@ import { commandFor, tabNumberFor, type Platform } from '../shared/keymap';
 import type { ColorScheme } from './document/host';
 import { useColorScheme } from './document/theme';
 import { markFirstPaint } from './perf';
+import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
 import { SettingsNotice } from './settings/SettingsNotice';
 import { useSettings } from './settings/useSettings';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
@@ -77,6 +78,7 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
       keyboardActivation="manual"
     >
       <TabBar view={view} store={store} />
+      <ProfileCreatedNotice />
       {settings && <SettingsNotice notices={settings.notices} />}
       <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
         {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}

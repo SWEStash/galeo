@@ -159,7 +159,8 @@ test('dragging a tab moves it to where it is dropped', async () => {
 });
 
 test('when tabs overflow, they shrink, then the strip scrolls with the shown tab in view', async () => {
-  const many = Array.from({ length: 30 }, () => path.join(docs, 'basic.md'));
+  // Distinct paths: a launch naming one file twice gets one tab. Missing files are tabs all the same.
+  const many = Array.from({ length: 30 }, (_, n) => path.join(docs, `overflow-${n}.md`));
   const { window, close } = await launchApp(['--', ...many]);
   try {
     await expect(window.getByRole('tab')).toHaveCount(30);

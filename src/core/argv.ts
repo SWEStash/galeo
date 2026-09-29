@@ -1,4 +1,5 @@
 import type { SandboxCause } from '../shared/contracts';
+import { validateName } from './profiles/names';
 
 const SANDBOX_CAUSES: readonly string[] = ['apparmor-userns', 'suid-helper'] satisfies SandboxCause[];
 const SANDBOX_UNAVAILABLE = '--galeo-sandbox-unavailable=';
@@ -60,6 +61,8 @@ export function parseArgv(argv: readonly string[], context: ParseContext): Parse
       const value = arg === '--profile' ? argv[++i] : arg.slice('--profile='.length);
       if (!value || value.startsWith('-')) return { ok: false, error: '--profile needs a value' };
       if (args.profile !== null) return { ok: false, error: '--profile given twice' };
+      const name = validateName(value);
+      if (!name.ok) return { ok: false, error: `--profile name: ${name.reason}` };
       args.profile = value;
     } else {
       return { ok: false, error: `unknown option: ${arg}` };

@@ -69,6 +69,8 @@ export const CHANNELS = [
   'recent.list',
   'recent.open',
   'recent.clear',
+  'profiles.created',
+  'profiles.undoCreate',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -118,6 +120,10 @@ export interface Requests {
   'recent.list': [];
   'recent.open': [id: string];
   'recent.clear': [];
+  /** `--profile` created the sender's profile for it: the notice to show, with the token Undo takes (ADR-005). */
+  'profiles.created': [];
+  /** Undoes a profile `--profile` just created (by the token its notice carried): its files go where they would have without it. */
+  'profiles.undoCreate': [token: string];
 }
 
 /** Resolved value of each channel. */
@@ -147,6 +153,8 @@ export interface Responses {
   'recent.list': { id: string; path: string }[];
   'recent.open': void;
   'recent.clear': void;
+  'profiles.created': { name: string; token: string } | null;
+  'profiles.undoCreate': void;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
