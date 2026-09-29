@@ -1,0 +1,2 @@
+# Every checkout gets LF line endings, on Windows too, so fixtures and scripts match Linux.
+* text=auto eol=lf
