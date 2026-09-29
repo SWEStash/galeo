@@ -115,3 +115,12 @@ describe('ConfigFile.update', () => {
     expect(fs.modeOf('/cfg/galeo')).toBe(0o700);
   });
 });
+
+describe('ConfigFile.update, several at once', () => {
+  it("applies every change, even from different instances of one file (main's profiles share settings.json)", async () => {
+    const { fs, file } = setup();
+    const other = new ConfigFile({ fs, utf8, path: PATH, parse, empty: {}, version: 1, migrations: {}, maxBytes: 64 });
+    await Promise.all([file.update((value) => ({ ...value, a: 1 })), other.update((value) => ({ ...value, b: 2 })), file.update((value) => ({ ...value, c: 3 }))]);
+    expect(JSON.parse(await contents(fs))).toEqual({ schemaVersion: 1, a: 1, b: 2, c: 3 });
+  });
+});

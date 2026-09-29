@@ -13,6 +13,12 @@ export interface Loaded<T> {
 }
 
 /**
+ * Updates in progress by path. Several profiles' settings share `settings.json`, and a profile's
+ * file is also written by renames: each read-modify-write waits for the one before.
+ */
+const updates = new Map<string, Promise<void>>();
+
+/**
  * A config file the user may edit by hand (ADR-005, SR-17). An invalid file is left untouched and
  * the last valid value stays in use; galeo writes the file only on a settings change, re-reading
  * it right before, and never over an invalid hand edit.
@@ -31,12 +37,23 @@ export class ConfigFile<T> {
     return { value: this.last, notice: null };
   }
 
-  async update(change: (value: T) => T): Promise<Loaded<T>> {
-    const loaded = await this.load();
-    if (loaded.notice) return loaded;
-    const value = change(loaded.value);
-    await writeJsonFile(this.deps as JsonFileSpec<unknown>, this.deps.path, value as object);
-    this.last = value;
-    return { value, notice: null };
+  /** Read, change, write: one at a time per file, across every instance for that path. */
+  update(change: (value: T) => T): Promise<Loaded<T>> {
+    const path = this.deps.path;
+    const done = (updates.get(path) ?? Promise.resolve()).then(async () => {
+      const loaded = await this.load();
+      if (loaded.notice) return loaded;
+      const value = change(loaded.value);
+      await writeJsonFile(this.deps as JsonFileSpec<unknown>, path, value as object);
+      this.last = value;
+      return { value, notice: null };
+    });
+    const queued = done.then(
+      () => {},
+      () => {},
+    );
+    updates.set(path, queued);
+    void queued.then(() => updates.get(path) === queued && updates.delete(path));
+    return done;
   }
 }

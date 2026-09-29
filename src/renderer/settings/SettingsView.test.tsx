@@ -59,7 +59,8 @@ async function render(state: SettingsState = STATE, appImage = false) {
   const root = createRoot(container);
   roots.push(root);
   await act(async () => root.render(<SettingsView state={state} profile={PROFILE} appImage={appImage} />));
-  return container;
+  const update = (next: SettingsState) => act(async () => root.render(<SettingsView state={next} profile={PROFILE} appImage={appImage} />));
+  return Object.assign(container, { update });
 }
 
 /** The row of one setting, found by its visible label. */
@@ -173,5 +174,29 @@ describe('SettingsView (UX §6)', () => {
     const container = await render(STATE, true);
     await act(async () => button(container, 'Install command-line launcher').click());
     await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('Not installed'));
+  });
+
+  it("keeps focus on a control when main sends back the change it made (keyboard use, WCAG 2.4.3)", async () => {
+    stubBridge();
+    const container = await render();
+    const size = row(container, 'Font size').querySelector('input')!;
+    const prose = row(container, 'Prose font').querySelector('input')!;
+    await act(async () => size.focus());
+    await container.update({ ...STATE, settings: { ...STATE.settings, fontSize: 21 } });
+    expect(document.activeElement).toBe(size);
+    expect(size.value).toBe('21');
+    await act(async () => prose.focus());
+    await container.update({ ...STATE, settings: { ...STATE.settings, proseFont: 'Source Serif 4' } });
+    expect(document.activeElement).toBe(prose);
+    expect(prose.value).toBe('Source Serif 4');
+  });
+
+  it("says when the accent wasn't saved because profile.json holds an invalid hand edit", async () => {
+    const { profiles } = stubBridge();
+    profiles.update.mockResolvedValue({ ok: false, reason: 'invalid-file' });
+    const container = await render();
+    const purple = [...container.querySelectorAll<HTMLElement>('[role="option"]')].find((each) => each.querySelector('[aria-label="Purple"]'))!;
+    await act(async () => purple.click());
+    await vi.waitFor(() => expect(container.querySelector('[role="alert"]')?.textContent).toContain('profile.json'));
   });
 });

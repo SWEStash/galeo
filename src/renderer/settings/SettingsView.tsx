@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Button,
   ColorSwatch,
@@ -29,6 +29,7 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
   const [scope, setScope] = useState<SettingsScope>('profile');
   const [refused, setRefused] = useState<string | null>(null);
   const [launcher, setLauncher] = useState<string | null>(null);
+  const [accentRefused, setAccentRefused] = useState(false);
   const values = scope === 'profile' ? state.settings : state.shared;
 
   const done = (result: SettingsResult) => setRefused(result.ok ? null : result.path);
@@ -37,7 +38,7 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
 
   /** One setting: its control, where its value comes from, and "Reset to global" when this profile overrides it. */
   const setting = (key: keyof Settings, control: ReactNode) => (
-    <div className="setting" data-setting={key} key={`${scope}:${key}:${JSON.stringify(values[key])}`}>
+    <div className="setting" data-setting={key} key={`${scope}:${key}`}>
       {control}
       {scope === 'profile' && <span className="setting-source">{SOURCE_NAMES[state.sources[key]]}</span>}
       {scope === 'profile' && state.sources[key] === 'profile' && (
@@ -90,7 +91,9 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
           aria-labelledby="settings-accent"
           className="swatches"
           value={accentOf(profile.accent)}
-          onChange={(color) => void window.galeo.profiles.update(profile.name, color.toString('hex').toLowerCase())}
+          onChange={(color) =>
+            void window.galeo.profiles.update(profile.name, color.toString('hex').toLowerCase()).then((result) => setAccentRefused(!result.ok))
+          }
         >
           {ACCENTS.map((each) => (
             <ColorSwatchPickerItem key={each.color} color={each.color} className="swatch-item">
@@ -99,6 +102,11 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
           ))}
         </ColorSwatchPicker>
         <span className="setting-source">This profile</span>
+        {accentRefused && (
+          <p className="settings-refused" role="alert">
+            The accent wasn't saved: this profile's profile.json has an error from a hand edit. Fix it, then pick again.
+          </p>
+        )}
       </div>
 
       <h2>Reading</h2>
@@ -174,6 +182,8 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
 /** A text setting, written when the field is left or Enter is pressed. */
 function TextSetting({ label, value, onCommit }: { label: string; value: string; onCommit: (value: string) => void }) {
   const [draft, setDraft] = useState(value);
+  // A value from main (this change, a hand edit, the other scope) replaces the draft in place, keeping focus.
+  useEffect(() => setDraft(value), [value]);
   const commit = () => {
     const next = draft.trim();
     if (next && next !== value) onCommit(next);
@@ -188,7 +198,9 @@ function TextSetting({ label, value, onCommit }: { label: string; value: string;
 
 /** A list setting, one entry per line, written when the field is left. */
 function ListSetting({ label, hint, value, onCommit }: { label: string; hint: string; value: readonly string[]; onCommit: (value: string[]) => void }) {
-  const [draft, setDraft] = useState(value.join('\n'));
+  const text = value.join('\n');
+  const [draft, setDraft] = useState(text);
+  useEffect(() => setDraft(text), [text]);
   const commit = () => {
     const next = draft
       .split('\n')
