@@ -1,8 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
-import { readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { appDirs, launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, removeTempHome, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const basic = path.join(docs, 'basic.md');
@@ -26,7 +26,7 @@ test('a window without tabs shows how to open files and the recent ones, and pas
     await expect(shownDocument(first.window).locator('h1')).toBeVisible();
     await first.close();
   } finally {
-    rmSync(home, { recursive: true, force: true });
+    removeTempHome(home);
   }
 });
 
@@ -49,7 +49,7 @@ test('the page can only open a recent file by the id main offered it', async () 
       await app.close();
     }
   } finally {
-    rmSync(home, { recursive: true, force: true });
+    removeTempHome(home);
   }
 });
 
@@ -69,6 +69,6 @@ test('Clear recent empties the list, on disk too', async () => {
       await app.close();
     }
   } finally {
-    rmSync(home, { recursive: true, force: true });
+    removeTempHome(home);
   }
 });

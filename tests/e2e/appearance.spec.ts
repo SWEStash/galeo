@@ -1,7 +1,8 @@
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
+import { saveFile } from '../helpers/save';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const basic = path.join(docs, 'basic.md');
@@ -15,7 +16,7 @@ const articleStyle = (page: Page, property: 'color' | 'fontSize') =>
 function writeConfig(home: string, file: string, content: string) {
   const target = path.join(appDirs(home).config, file);
   mkdirSync(path.dirname(target), { recursive: true });
-  writeFileSync(target, content);
+  saveFile(target, content);
   return target;
 }
 
@@ -47,7 +48,7 @@ test("custom CSS restyles open documents live, the profile's over the global one
     await expect.poll(() => articleStyle(window, 'color')).toBe('rgb(200, 0, 0)');
     writeConfig(home, 'profiles/default/custom.css', 'article { color: rgb(0, 0, 200) !important; }');
     await expect.poll(() => articleStyle(window, 'color')).toBe('rgb(0, 0, 200)');
-    writeFileSync(global, 'article { color: rgb(0, 150, 0) !important; }');
+    saveFile(global, 'article { color: rgb(0, 150, 0) !important; }');
     // The profile's file still wins.
     await expect.poll(() => articleStyle(window, 'color')).toBe('rgb(0, 0, 200)');
   } finally {
@@ -102,10 +103,7 @@ test('an oversized custom.css is left untouched and reported; the last good CSS 
   const { window, close } = await launchApp(['--', basic], { home });
   try {
     await expect.poll(() => articleStyle(window, 'color')).toBe('rgb(200, 0, 0)');
-    // Replaced in one step: a plain write empties the file first, and the watcher may apply that
-    // valid, empty CSS before the oversized one arrives.
-    writeFileSync(`${file}.new`, `/* ${'x'.repeat(1024 * 1024)} */ article { color: rgb(0, 0, 200) !important; }`);
-    renameSync(`${file}.new`, file);
+    saveFile(file, `/* ${'x'.repeat(1024 * 1024)} */ article { color: rgb(0, 0, 200) !important; }`);
     await expect(window.getByTestId('settings-notice')).toContainText(file);
     expect(await articleStyle(window, 'color')).toBe('rgb(200, 0, 0)');
   } finally {
@@ -120,7 +118,7 @@ test("a hand edit of profile.json's name shows in the chip and the title at once
   const { app, window, close } = await launchApp(['--', basic], { home });
   try {
     await expect(window.getByTestId('profile-chip')).toHaveAccessibleName('Profile: default');
-    writeFileSync(file, '{"schemaVersion":1,"name":"Home"}');
+    saveFile(file, '{"schemaVersion":1,"name":"Home"}');
     await expect(window.getByTestId('profile-chip')).toHaveAccessibleName('Profile: Home');
     await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe('basic.md — Home — galeo');
   } finally {

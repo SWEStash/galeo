@@ -1,14 +1,15 @@
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { appDirs, launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { saveFile } from '../helpers/save';
 
 function withSettings(content: string) {
   const home = tempHome();
   const file = path.join(appDirs(home).config, 'settings.json');
   mkdirSync(path.dirname(file), { recursive: true });
   writeFileSync(file, content);
-  return { home, file, remove: () => rmSync(home, { recursive: true, force: true }) };
+  return { home, file, remove: () => removeTempHome(home) };
 }
 
 test('a hand edit to settings.json applies live', async () => {
@@ -17,7 +18,7 @@ test('a hand edit to settings.json applies live', async () => {
   try {
     const root = window.locator('html');
     await expect(root).toHaveAttribute('data-scheme', 'dark');
-    writeFileSync(file, '{"schemaVersion":1,"themeMode":"light"}');
+    saveFile(file, '{"schemaVersion":1,"themeMode":"light"}');
     await expect(root).toHaveAttribute('data-scheme', 'light');
   } finally {
     await close();
@@ -31,7 +32,7 @@ test('an invalid hand edit is left untouched and reported, and the last valid se
   try {
     await expect(window.locator('html')).toHaveAttribute('data-scheme', 'dark');
     const broken = '{"schemaVersion":1,"themeMode":"light",}';
-    writeFileSync(file, broken);
+    saveFile(file, broken);
     await expect
       .poll(() => app.evaluate(() => (globalThis as { __galeoSettingsNotices?: { path: string }[] }).__galeoSettingsNotices))
       .toEqual([expect.objectContaining({ path: file, reason: 'invalid' })]);

@@ -53,17 +53,23 @@ describe('NodeFileWatcher', () => {
     const target = path.join(dir, 'settings.json');
     writeFileSync(target, '{}');
     const { events } = watch(target);
-    writeFileSync(path.join(dir, 'settings.json.tmp'), '{"a":1}');
-    renameSync(path.join(dir, 'settings.json.tmp'), target);
-    await vi.waitFor(() => expect(events).toContainEqual({ path: target, kind: 'change' }));
+    await until(
+      () => {
+        writeFileSync(path.join(dir, 'settings.json.tmp'), '{"a":1}');
+        renameSync(path.join(dir, 'settings.json.tmp'), target);
+      },
+      () => expect(events).toContainEqual({ path: target, kind: 'change' }),
+    );
   });
 
   it('reports a file created after watching started, then deleted', async () => {
     const dir = tempDir();
     const target = path.join(dir, 'profile.json');
     const { events } = watch(target);
-    writeFileSync(target, '{}');
-    await vi.waitFor(() => expect(events).toContainEqual({ path: target, kind: 'change' }));
+    await until(
+      () => writeFileSync(target, '{}'),
+      () => expect(events).toContainEqual({ path: target, kind: 'change' }),
+    );
     unlinkSync(target);
     await vi.waitFor(() => expect(events.at(-1)).toEqual({ path: target, kind: 'delete' }));
   });
@@ -74,14 +80,23 @@ describe('NodeFileWatcher', () => {
     const sentinel = path.join(dir, 'sentinel');
     const { events, unwatch } = watch(target);
     const control = watch(sentinel);
-    writeFileSync(path.join(dir, 'other.json'), '{}');
-    writeFileSync(sentinel, '1');
-    await vi.waitFor(() => expect(control.events.length).toBeGreaterThan(0));
+    await until(
+      () => {
+        writeFileSync(path.join(dir, 'other.json'), '{}');
+        writeFileSync(sentinel, '1');
+      },
+      () => expect(control.events.length).toBeGreaterThan(0),
+    );
     expect(events).toEqual([]);
     unwatch();
-    writeFileSync(target, '{}');
-    writeFileSync(sentinel, '2');
-    await vi.waitFor(() => expect(control.events.length).toBeGreaterThan(1));
+    const seen = control.events.length;
+    await until(
+      () => {
+        writeFileSync(target, '{}');
+        writeFileSync(sentinel, '2');
+      },
+      () => expect(control.events.length).toBeGreaterThan(seen),
+    );
     expect(events).toEqual([]);
   });
 

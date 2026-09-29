@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { appDirs, launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, removeTempHome, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
@@ -63,7 +63,7 @@ test('a hibernated tab wakes where the reader left it, with no visible jump', as
     expect(Math.abs((await view.evaluate((element) => element.scrollTop)) - left)).toBeLessThanOrEqual(2);
   } finally {
     await close();
-    rmSync(home, { recursive: true, force: true });
+    removeTempHome(home);
   }
 });
 
