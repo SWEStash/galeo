@@ -51,6 +51,7 @@ const baseInfo: AppInfo = {
   platform: 'linux',
   sandboxed: true,
   sandboxUnavailable: null,
+  appImage: false,
 };
 
 /** Pushes an event to the page, as main would. */
@@ -67,6 +68,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
     app: {
       info: vi.fn().mockResolvedValue({ ...baseInfo, ...info }),
       resolveSandboxUnavailable: vi.fn().mockResolvedValue(undefined),
+      installLauncher: vi.fn().mockResolvedValue({ ok: false, reason: 'not an AppImage' }),
     },
     documents: {
       read: vi.fn().mockResolvedValue(documents.content),

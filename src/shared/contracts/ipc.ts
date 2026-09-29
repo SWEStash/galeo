@@ -71,12 +71,15 @@ export interface AppInfo {
   sandboxed: boolean;
   /** Set while the app shows only the sandbox-unavailable choice (ADR-009). */
   sandboxUnavailable: SandboxCause | null;
+  /** Running as an AppImage, which can install its own command-line launcher (ADR-008). */
+  appImage: boolean;
 }
 
 /** Renderer → main request/response channels, named `<group>.<method>`. */
 export const CHANNELS = [
   'app.info',
   'app.resolveSandboxUnavailable',
+  'app.installLauncher',
   'documents.read',
   'documents.setEncoding',
   'documents.followLink',
@@ -119,6 +122,8 @@ export type Channel = (typeof CHANNELS)[number];
 export interface Requests {
   'app.info': [];
   'app.resolveSandboxUnavailable': [choice: SandboxChoice];
+  /** AppImage only: writes `~/.local/bin/galeo` and a desktop entry for this AppImage. */
+  'app.installLauncher': [];
   /** Reads one of them by id; there is no way to read by path (SR-12). */
   'documents.read': [id: string];
   /** Reads the document with this encoding from now on ("Reopen with encoding…"); null detects it again. */
@@ -188,6 +193,8 @@ export interface Requests {
 export interface Responses {
   'app.info': AppInfo;
   'app.resolveSandboxUnavailable': void;
+  /** Where `galeo` was written, or why it wasn't. */
+  'app.installLauncher': { ok: true; bin: string } | { ok: false; reason: string };
   'documents.read': DocumentContent;
   'documents.setEncoding': void;
   'documents.followLink': FollowResult;

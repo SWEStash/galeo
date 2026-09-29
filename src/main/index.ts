@@ -11,6 +11,7 @@ import { ExternalOpenLimiter } from '../core/links/limiter';
 import { AppState } from '../core/profiles/app-state';
 import { DEFAULT_PROFILE, ProfileCatalog } from '../core/profiles/catalog';
 import { profileIdFor } from '../core/profiles/names';
+import { appImageLauncher, installLauncher } from '../core/desktop/launcher';
 import { openFiles } from '../core/routing/open-files';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds } from '../core/session/model';
@@ -503,7 +504,25 @@ function start(initialMode: StartupMode): void {
           platform: keymapPlatform(process.platform),
           sandboxed,
           sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
+          appImage: appImagePath() !== null,
         }),
+        'app.installLauncher': async () => {
+          const appImage = appImagePath();
+          if (!appImage) throw new Error('not an AppImage');
+          const home = app.getPath('home');
+          const galeo = utf8.decode(await fs.readFile(path.join(path.dirname(process.execPath), 'gal'), { maxBytes: 64 * 1024 }));
+          const files = appImageLauncher(
+            appImage,
+            {
+              binDir: path.join(home, '.local', 'bin'),
+              applicationsDir: path.join(process.env['XDG_DATA_HOME'] || path.join(home, '.local', 'share'), 'applications'),
+            },
+            galeo,
+          );
+          if (!files.ok) return files;
+          const installed = await installLauncher({ fs, utf8 }, files);
+          return installed.ok ? { ok: true, bin: files.bin.path } : installed;
+        },
         'app.resolveSandboxUnavailable': ([choice]) => {
           if (mode.kind !== 'sandbox-unavailable') throw new Error('sandbox choice not offered');
           if (choice === 'quit') {
@@ -710,4 +729,10 @@ function customCssTemplate(scope: 'global' | 'profile'): string {
     '   The --galeo-* variables (fonts, sizes, colours) are the stable way to restyle. */',
     '',
   ].join('\n');
+}
+
+/** The AppImage this packaged run came from (its runtime sets APPIMAGE), or null. */
+function appImagePath(): string | null {
+  const appImage = app.isPackaged ? process.env['APPIMAGE'] : undefined;
+  return appImage && path.isAbsolute(appImage) ? appImage : null;
 }

@@ -40,6 +40,7 @@ export const zoomLevel = z.number().min(0.5).max(3);
 export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),
   'app.resolveSandboxUnavailable': z.tuple([z.enum(['quit', 'run-unsandboxed'])]),
+  'app.installLauncher': z.tuple([]),
   'documents.read': z.tuple([documentId]),
   'documents.setEncoding': z.tuple([documentId, z.enum(CHOSEN_ENCODINGS).nullable()]),
   'documents.followLink': z.tuple([documentId, z.string().min(1).max(8192), z.enum(['current', 'background'])]),

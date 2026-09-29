@@ -48,16 +48,17 @@ function stubBridge() {
     openCustomCss: vi.fn().mockResolvedValue(undefined),
   };
   const profiles = { update: vi.fn().mockResolvedValue({ ok: true }) };
-  Object.defineProperty(window, 'galeo', { value: { settings, profiles }, configurable: true });
-  return { settings, profiles };
+  const app = { installLauncher: vi.fn().mockResolvedValue({ ok: true, bin: '/home/u/.local/bin/galeo' }) };
+  Object.defineProperty(window, 'galeo', { value: { settings, profiles, app }, configurable: true });
+  return { settings, profiles, app };
 }
 
-async function render(state: SettingsState = STATE) {
+async function render(state: SettingsState = STATE, appImage = false) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
   roots.push(root);
-  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} />));
+  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} appImage={appImage} />));
   return container;
 }
 
@@ -146,5 +147,23 @@ describe('SettingsView (UX §6)', () => {
     await act(async () => button(container, 'Open CSS for this profile').click());
     await act(async () => button(container, 'Open CSS for all profiles').click());
     expect(settings.openCustomCss.mock.calls).toEqual([['profile'], ['global']]);
+  });
+
+  it('offers the command-line launcher to an AppImage only, and says where galeo went', async () => {
+    const { app } = stubBridge();
+    const plain = await render();
+    expect(button(plain, 'Install command-line launcher')).toBeUndefined();
+    const container = await render(STATE, true);
+    await act(async () => button(container, 'Install command-line launcher').click());
+    expect(app.installLauncher).toHaveBeenCalled();
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('/home/u/.local/bin/galeo'));
+  });
+
+  it('says why the launcher was not installed', async () => {
+    const { app } = stubBridge();
+    app.installLauncher.mockResolvedValue({ ok: false, reason: "/home/u/.local/bin/galeo exists and is not galeo's" });
+    const container = await render(STATE, true);
+    await act(async () => button(container, 'Install command-line launcher').click());
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('is not galeo'));
   });
 });

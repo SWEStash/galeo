@@ -41,13 +41,13 @@ export function App() {
 
   if (!info) return null;
   if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
-  return <MainView sandboxed={info.sandboxed} platform={info.platform} />;
+  return <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} />;
 }
 
 /** Status-bar messages go away on their own. */
 const MESSAGE_MS = 4000;
 
-function MainView({ sandboxed, platform }: { sandboxed: boolean; platform: Platform }) {
+function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platform: Platform; appImage: boolean }) {
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
   const { view, store } = useTabs();
@@ -108,7 +108,7 @@ function MainView({ sandboxed, platform }: { sandboxed: boolean; platform: Platf
           // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
           <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
             {tab.kind === 'settings' ? (
-              settings && profile && <SettingsView state={settings} profile={profile} />
+              settings && profile && <SettingsView state={settings} profile={profile} appImage={appImage} />
             ) : (
               <TabDocument
                 id={tab.id}

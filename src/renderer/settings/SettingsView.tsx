@@ -25,9 +25,10 @@ const SOURCE_NAMES = { default: 'Default', global: 'All profiles', profile: 'Thi
  * The Settings tab (UX §6): the v0.1 settings, for this profile or for all of them. Each shows
  * where its value comes from, and this profile's own values can go back to the shared one.
  */
-export function SettingsView({ state, profile }: { state: SettingsState; profile: ProfileView }) {
+export function SettingsView({ state, profile, appImage = false }: { state: SettingsState; profile: ProfileView; appImage?: boolean }) {
   const [scope, setScope] = useState<SettingsScope>('profile');
   const [refused, setRefused] = useState<string | null>(null);
+  const [launcher, setLauncher] = useState<string | null>(null);
   const values = scope === 'profile' ? state.settings : state.shared;
 
   const done = (result: SettingsResult) => setRefused(result.ok ? null : result.path);
@@ -144,6 +145,27 @@ export function SettingsView({ state, profile }: { state: SettingsState; profile
         <Button onPress={() => void window.galeo.settings.openCustomCss('profile')}>Open CSS for this profile</Button>
         <Button onPress={() => void window.galeo.settings.openCustomCss('global')}>Open CSS for all profiles</Button>
       </div>
+
+      {appImage && (
+        <>
+          <h2>Command line</h2>
+          <p className="field-hint">Adds galeo to ~/.local/bin and galeo to your applications, for this AppImage.</p>
+          <div className="settings-buttons">
+            <Button
+              onPress={() =>
+                void window.galeo.app
+                  .installLauncher()
+                  .then((result) => setLauncher(result.ok ? `Installed ${result.bin}. Open a new terminal to use galeo.` : `Not installed: ${result.reason}.`))
+              }
+            >
+              Install command-line launcher
+            </Button>
+          </div>
+          <p className="field-hint" role="status" data-testid="launcher-result">
+            {launcher}
+          </p>
+        </>
+      )}
     </section>
   );
 }
