@@ -1,4 +1,5 @@
 import type { PreviousSession } from '../../shared/contracts';
+import { joinPath } from '../../shared/paths';
 import type { SettingsNotice } from '../../shared/settings';
 import { FsError, type FileSystem } from '../ports';
 import { readJsonFile, writeJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
@@ -30,7 +31,7 @@ export class SessionStore {
 
   constructor(private readonly deps: SessionStoreDeps) {
     this.spec = { fs: deps.fs, utf8: deps.utf8, parse: deps.parse, version: SESSION_VERSION, migrations: {}, maxBytes: SESSION_MAX_BYTES };
-    this.file = `${deps.dir}/session.json`;
+    this.file = joinPath(deps.dir, 'session.json');
   }
 
   async load(): Promise<{ session: SessionFile | null; notice: SettingsNotice | null }> {

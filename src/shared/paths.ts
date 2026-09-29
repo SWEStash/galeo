@@ -9,3 +9,12 @@ export function extensionOf(path: string): string {
   const dot = name.lastIndexOf('.');
   return dot === -1 ? '' : name.slice(dot);
 }
+
+/**
+ * Joins names onto a folder with the separator the folder already uses, so a Windows path stays
+ * one (`C:\…\settings.json`), without a platform module.
+ */
+export function joinPath(dir: string, ...names: string[]): string {
+  const separator = dir.includes('\\') && !dir.includes('/') ? '\\' : '/';
+  return [dir, ...names].join(separator);
+}

@@ -1,3 +1,4 @@
+import { joinPath } from '../../shared/paths';
 import type { Settings, SettingsNotice, SettingsOverrides } from '../../shared/settings';
 import type { FileSystem, FileWatcher, Unsubscribe } from '../ports';
 import { ConfigFile } from './config-file';
@@ -47,11 +48,11 @@ export class ProfileSettings {
   private reloading: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: ProfileSettingsDeps) {
-    const profileDir = `${deps.configDir}/profiles/${deps.profile}`;
+    const profileDir = joinPath(deps.configDir, 'profiles', deps.profile);
     this.dirs = [deps.configDir, profileDir];
     const common = { fs: deps.fs, utf8: deps.utf8, empty: {}, version: SETTINGS_VERSION, migrations: {}, maxBytes: CONFIG_MAX_BYTES };
-    this.global = new ConfigFile({ ...common, path: `${deps.configDir}/settings.json`, parse: deps.parseGlobal });
-    this.profile = new ConfigFile({ ...common, path: `${profileDir}/profile.json`, parse: deps.parseProfile });
+    this.global = new ConfigFile({ ...common, path: joinPath(deps.configDir, 'settings.json'), parse: deps.parseGlobal });
+    this.profile = new ConfigFile({ ...common, path: joinPath(profileDir, 'profile.json'), parse: deps.parseProfile });
   }
 
   onChange(listener: (settings: Settings) => void): void {
@@ -68,8 +69,8 @@ export class ProfileSettings {
     await this.reload('profile');
     this.apply(false);
     this.unwatch = [
-      this.deps.watcher.watch(`${this.deps.configDir}/settings.json`, () => this.queue('global')),
-      this.deps.watcher.watch(`${this.dirs[1]}/profile.json`, () => this.queue('profile')),
+      this.deps.watcher.watch(joinPath(this.deps.configDir, 'settings.json'), () => this.queue('global')),
+      this.deps.watcher.watch(joinPath(this.dirs[1]!, 'profile.json'), () => this.queue('profile')),
     ];
   }
 
