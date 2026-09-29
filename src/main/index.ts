@@ -533,11 +533,13 @@ function start(initialMode: StartupMode): void {
             {
               binDir: path.join(home, '.local', 'bin'),
               applicationsDir: path.join(xdgDataHome(home), 'applications'),
+              iconsDir: path.join(xdgDataHome(home), 'icons'),
             },
             galeo,
           );
           if (!files.ok) return files;
-          const installed = await installLauncher({ fs, utf8 }, files);
+          const icon = await fs.readFile(path.join(process.resourcesPath, 'icon.png'), { maxBytes: 1024 * 1024 }).catch(() => null);
+          const installed = await installLauncher({ fs, utf8 }, files, icon);
           return installed.ok ? { ok: true, bin: files.bin.path } : installed;
         },
         'app.resolveSandboxUnavailable': ([choice]) => {

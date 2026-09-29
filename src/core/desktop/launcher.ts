@@ -8,7 +8,7 @@ export const LAUNCHER_MARK = '# Installed by galeo: the command-line launcher fo
 const ENTRY_MARK = 'X-galeo-Launcher=true';
 
 export type LauncherFiles =
-  | { ok: true; bin: { path: string; content: string }; desktop: { path: string; content: string } }
+  | { ok: true; bin: { path: string; content: string }; desktop: { path: string; content: string }; icon: { path: string } }
   | { ok: false; reason: string };
 
 // Characters the Desktop Entry spec reserves in an Exec argument, which must then be quoted.
@@ -26,9 +26,10 @@ function shellQuote(value: string): string {
 
 /**
  * What "Install command-line launcher" writes for an AppImage (ADR-008): a copy of `galeo` pointed
- * at the AppImage, and a desktop entry that opens files with it, after `--` (SR-13).
+ * at the AppImage, a desktop entry that opens files with it, after `--` (SR-13), and the icon
+ * that entry names.
  */
-export function appImageLauncher(appImage: string, dirs: { binDir: string; applicationsDir: string }, galeoScript: string): LauncherFiles {
+export function appImageLauncher(appImage: string, dirs: { binDir: string; applicationsDir: string; iconsDir: string }, galeoScript: string): LauncherFiles {
   if (/\p{Cc}/u.test(appImage)) return { ok: false, reason: 'the AppImage path has a control character' };
   if (!appImage.startsWith('/')) return { ok: false, reason: 'the AppImage path is not absolute' };
   const [shebang, ...rest] = galeoScript.split('\n');
@@ -60,16 +61,19 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
     ok: true,
     bin: { path: joinPath(dirs.binDir, 'galeo'), content: bin },
     desktop: { path: joinPath(dirs.applicationsDir, 'galeo.desktop'), content: desktop },
+    icon: { path: joinPath(dirs.iconsDir, 'hicolor', '256x256', 'apps', 'galeo.png') },
   };
 }
 
 /**
- * Writes the launcher files: `galeo` runnable, the desktop entry readable. A `galeo` that isn't
- * galeo's stays as it is; folders that exist keep their modes.
+ * Writes the launcher files: `galeo` runnable, the desktop entry and the `icon` readable. A `galeo` that
+ * isn't galeo's stays as it is; folders that exist keep their modes. The icon is only looks: one
+ * already there with other bytes stays, and the launcher still installs.
  */
 export async function installLauncher(
   deps: { fs: FileSystem; utf8: Utf8 },
   files: Extract<LauncherFiles, { ok: true }>,
+  icon: Uint8Array | null,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const { fs, utf8 } = deps;
   for (const [file, mark] of [
@@ -86,7 +90,22 @@ export async function installLauncher(
     if ((await kindOf(fs, dir)) !== 'directory') await fs.mkdir(dir, { mode: 0o755 });
     await fs.writeFileAtomic(file.path, utf8.encode(file.content), { mode });
   }
+  if (icon && (await iconFree(fs, files.icon.path, icon))) {
+    const dir = folderOf(files.icon.path);
+    if ((await kindOf(fs, dir)) !== 'directory') await fs.mkdir(dir, { mode: 0o755 });
+    await fs.writeFileAtomic(files.icon.path, icon, { mode: 0o644 });
+  }
   return { ok: true };
+}
+
+/** Nothing is at `path`, or the same icon already is (the icon carries no mark). */
+async function iconFree(fs: FileSystem, path: string, icon: Uint8Array): Promise<boolean> {
+  try {
+    const existing = await fs.readFile(path, { maxBytes: icon.length });
+    return existing.length === icon.length && existing.every((byte, at) => byte === icon[at]);
+  } catch (error) {
+    return error instanceof FsError && error.code === 'ENOENT';
+  }
 }
 
 /** Nothing is at `path`, or what is there carries galeo's `mark`. */

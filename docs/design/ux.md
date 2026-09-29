@@ -321,7 +321,8 @@ this map only.
   top says where changes go: this profile, or all profiles. Each setting shows whether its value
   is the default, all profiles' or this profile's own, with "reset to global" for the last. A
   change to a file left invalid by a hand edit is refused and names the file. The AppImage adds
-  "Install command-line launcher" (`galeo` in `~/.local/bin` and a desktop entry for that AppImage).
+  "Install command-line launcher" (`galeo` in `~/.local/bin`, and a desktop entry for that AppImage
+  with its icon).
 
 ## 7. Accessibility (target: WCAG 2.2 AA)
 

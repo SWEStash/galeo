@@ -6,7 +6,9 @@ import { FakeFileSystem } from '../../helpers/fakes';
 import { desktopEntryProblems } from '../../../scripts/lib/desktop-entry.mjs';
 
 const GALEO = ['#!/bin/sh', 'set -eu', '', 'GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"', 'exec "$GALEO_BIN" "$@"', ''].join('\n');
-const DIRS = { binDir: '/home/u/.local/bin', applicationsDir: '/home/u/.local/share/applications' };
+const DIRS = { binDir: '/home/u/.local/bin', applicationsDir: '/home/u/.local/share/applications', iconsDir: '/home/u/.local/share/icons' };
+const ICON = '/home/u/.local/share/icons/hicolor/256x256/apps/galeo.png';
+const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 
 describe('appImageLauncher ("Install command-line launcher", ADR-008)', () => {
   it("points a copy of galeo at the AppImage, marked as galeo's", () => {
@@ -60,7 +62,7 @@ describe('installLauncher', () => {
 
   it('writes galeo runnable and the desktop entry readable, leaving an existing bin folder as it is', async () => {
     const fs = new FakeFileSystem({ '/home/u/.local/bin/other': '' });
-    expect(await installLauncher({ fs, utf8 }, files())).toEqual({ ok: true });
+    expect(await installLauncher({ fs, utf8 }, files(), PNG)).toEqual({ ok: true });
     expect(await text(fs, '/home/u/.local/bin/galeo')).toContain(LAUNCHER_MARK);
     expect(fs.modeOf('/home/u/.local/bin/galeo')).toBe(0o755);
     expect(fs.modeOf('/home/u/.local/share/applications/galeo.desktop')).toBe(0o644);
@@ -69,17 +71,38 @@ describe('installLauncher', () => {
 
   it('replaces its own earlier launcher, never a galeo that is not galeo\'s', async () => {
     const fs = new FakeFileSystem({ '/home/u/.local/bin/galeo': `#!/bin/sh\n${LAUNCHER_MARK}\nold` });
-    expect(await installLauncher({ fs, utf8 }, files())).toEqual({ ok: true });
+    expect(await installLauncher({ fs, utf8 }, files(), PNG)).toEqual({ ok: true });
     const foreign = new FakeFileSystem({ '/home/u/.local/bin/galeo': '#!/bin/sh\necho mine' });
-    expect(await installLauncher({ fs: foreign, utf8 }, files())).toEqual({ ok: false, reason: '/home/u/.local/bin/galeo exists and is not galeo\'s' });
+    expect(await installLauncher({ fs: foreign, utf8 }, files(), PNG)).toEqual({ ok: false, reason: '/home/u/.local/bin/galeo exists and is not galeo\'s' });
     expect(await text(foreign, '/home/u/.local/bin/galeo')).toBe('#!/bin/sh\necho mine');
   });
 
   it("never replaces a desktop entry galeo didn't write", async () => {
     const entry = '/home/u/.local/share/applications/galeo.desktop';
     const fs = new FakeFileSystem({ [entry]: '[Desktop Entry]\nName=mine\n' });
-    expect(await installLauncher({ fs, utf8 }, files())).toEqual({ ok: false, reason: `${entry} exists and is not galeo's` });
+    expect(await installLauncher({ fs, utf8 }, files(), PNG)).toEqual({ ok: false, reason: `${entry} exists and is not galeo's` });
     expect(await text(fs, entry)).toBe('[Desktop Entry]\nName=mine\n');
     await expect(fs.stat('/home/u/.local/bin/galeo')).rejects.toThrow(/ENOENT/);
+  });
+
+  it('installs the icon its desktop entry names, where the desktop looks for it', async () => {
+    const fs = new FakeFileSystem({});
+    expect(files().icon.path).toBe(ICON);
+    expect(await installLauncher({ fs, utf8 }, files(), PNG)).toEqual({ ok: true });
+    expect(await fs.readFile(ICON, { maxBytes: 1e6 })).toEqual(PNG);
+    expect(fs.modeOf(ICON)).toBe(0o644);
+  });
+
+  it('leaves an icon that is not its own as it is, and still installs the launcher', async () => {
+    const fs = new FakeFileSystem({ [ICON]: 'theirs' });
+    expect(await installLauncher({ fs, utf8 }, files(), PNG)).toEqual({ ok: true });
+    expect(await text(fs, ICON)).toBe('theirs');
+    expect(await text(fs, '/home/u/.local/bin/galeo')).toContain(LAUNCHER_MARK);
+  });
+
+  it('installs no icon when the app has none to give', async () => {
+    const fs = new FakeFileSystem({});
+    expect(await installLauncher({ fs, utf8 }, files(), null)).toEqual({ ok: true });
+    await expect(fs.stat(ICON)).rejects.toThrow(/ENOENT/);
   });
 });
