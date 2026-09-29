@@ -68,14 +68,20 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
 /**
  * Writes the launcher files: `galeo` runnable, the desktop entry and the `icon` readable. A `galeo` that
  * isn't galeo's stays as it is; folders that exist keep their modes. The icon is only looks: one
- * already there with other bytes stays, and the launcher still installs.
+ * already there with other bytes stays, and the launcher still installs. Nothing is written while the
+ * galeo package's desktop entry is at one of `packageEntries`.
  */
 export async function installLauncher(
   deps: { fs: FileSystem; utf8: Utf8 },
   files: Extract<LauncherFiles, { ok: true }>,
   icon: Uint8Array | null,
+  packageEntries: readonly string[],
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const { fs, utf8 } = deps;
+  // The user entry would hide the package's own one (same desktop id), so the package stays in charge.
+  for (const entry of packageEntries) {
+    if ((await kindOf(fs, entry)) !== null) return { ok: false, reason: 'the galeo package is installed and already provides galeo' };
+  }
   for (const [file, mark] of [
     [files.bin, LAUNCHER_MARK],
     [files.desktop, ENTRY_MARK],

@@ -539,7 +539,8 @@ function start(initialMode: StartupMode): void {
           );
           if (!files.ok) return files;
           const icon = await fs.readFile(path.join(process.resourcesPath, 'icon.png'), { maxBytes: 1024 * 1024 }).catch(() => null);
-          const installed = await installLauncher({ fs, utf8 }, files, icon);
+          const packageEntries = xdgDataDirs().map((dir) => path.join(dir, 'applications', 'galeo.desktop'));
+          const installed = await installLauncher({ fs, utf8 }, files, icon, packageEntries);
           return installed.ok ? { ok: true, bin: files.bin.path } : installed;
         },
         'app.resolveSandboxUnavailable': ([choice]) => {
@@ -753,6 +754,12 @@ function customCssTemplate(scope: 'global' | 'profile'): string {
 function appImagePath(): string | null {
   const appImage = app.isPackaged ? process.env['APPIMAGE'] : undefined;
   return appImage && path.isAbsolute(appImage) ? appImage : null;
+}
+
+/** `$XDG_DATA_DIRS`, keeping only absolute entries, else the XDG spec's default. */
+function xdgDataDirs(): string[] {
+  const dirs = (process.env['XDG_DATA_DIRS'] ?? '').split(':').filter((dir) => path.isAbsolute(dir));
+  return dirs.length ? dirs : ['/usr/local/share', '/usr/share'];
 }
 
 /** `$XDG_DATA_HOME`, which the XDG spec says to ignore unless absolute, else `~/.local/share`. */

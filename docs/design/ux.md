@@ -322,7 +322,8 @@ this map only.
   is the default, all profiles' or this profile's own, with "reset to global" for the last. A
   change to a file left invalid by a hand edit is refused and names the file. The AppImage adds
   "Install command-line launcher" (`galeo` in `~/.local/bin`, and a desktop entry for that AppImage
-  with its icon).
+  with its icon). It installs nothing while the galeo package is installed: that one already
+  provides `galeo`, and a user entry with the same id would hide it.
 
 ## 7. Accessibility (target: WCAG 2.2 AA)
 
