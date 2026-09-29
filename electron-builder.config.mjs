@@ -25,6 +25,8 @@ export default {
       entry: {
         Name: 'galeo',
         Comment: 'Read Markdown, text and log files',
+        // electron-builder writes the action's group but not this key, without which no desktop shows it.
+        Actions: 'NewWindow;',
       },
       desktopActions: {
         NewWindow: { Name: 'New Window', Exec: '/opt/galeo/galeo --new-window' },

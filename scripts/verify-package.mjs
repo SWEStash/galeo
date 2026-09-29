@@ -7,6 +7,7 @@ import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FUSES } from '../packaging/fuses.mjs';
+import { desktopEntryProblems } from './lib/desktop-entry.mjs';
 import { fuseMismatches } from './lib/fuses.mjs';
 
 const RELEASE = path.resolve(import.meta.dirname, '../release');
@@ -54,6 +55,18 @@ if (process.platform === 'linux') {
   }
   if (profile.includes('"/opt/galeo/galeo-bin"')) console.log('apparmor: profile names galeo-bin');
   else if (profile) failures.push('apparmor: the profile does not name /opt/galeo/galeo-bin');
+}
+
+// The .deb's desktop entry: files after `--`, the MIME types, the window class, the New Window action.
+if (process.platform === 'linux') {
+  const deb = readdirSync(RELEASE).find((name) => name.endsWith('.deb'));
+  if (!deb) failures.push('desktop entry: no .deb in release/ (is the deb target built?)');
+  else {
+    const extracted = spawnSync('sh', ['-c', `dpkg-deb --fsys-tarfile "$1" | tar -xO ./usr/share/applications/galeo.desktop`, 'sh', path.join(RELEASE, deb)], { encoding: 'utf8' });
+    const problems = extracted.status === 0 ? desktopEntryProblems(extracted.stdout) : [`not readable (${extracted.stderr.trim()})`];
+    if (problems.length) failures.push(...problems.map((problem) => `desktop entry: ${problem}`));
+    else console.log('desktop entry: files after --, MIME types, window class, icon, New Window');
+  }
 }
 
 const mismatches = fuseMismatches(await getCurrentFuseWire(fuses), FUSES);
