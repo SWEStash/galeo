@@ -100,7 +100,6 @@ installed as npm packages. They are plain assets with no code and change rarely.
 | `vitest` | 5.0.x | MIT | 2026-09-25 | Unit and renderer tests (Node ≥ 22.12; the project pins Node 24) |
 | `@playwright/test` | 1.63.x | Apache-2.0 | 2026-09-25 | End-to-end tests via Playwright's Electron support (`_electron`, which Playwright labels experimental) |
 | `@axe-core/playwright` | 4.13.x | MPL-2.0 (dev only) | 2026-09-02 | Accessibility checks in end-to-end tests |
-| `semantic-release` | 25.0.x | MIT | 2026-09-25 | Releases (sibling-project convention) |
 | `husky`, `@commitlint/cli`, `@commitlint/config-conventional` | 9.1 / 21.2 / 21.2 | MIT | 2026-09 | Commit hooks + Conventional Commits |
 
 ## Own modules and built-ins
@@ -154,6 +153,11 @@ The about/licences view and the packages must include:
 
 ## Watch list and revisit triggers
 
+- **semantic-release** (vetted 2026-09-25, removed 2026-09-29): it always installs
+  `@semantic-release/npm`, which bundles `npm` and its `undici`. That `undici` had a high-severity
+  advisory with no fixed npm 11 release, and a bundled copy can't be overridden, so the audit gate
+  failed. Nothing ran it yet. Re-add it with the release workflow, once `npm audit` is clean on
+  it; `.releaserc.json` stays for that.
 - **Mermaid 12.x vs 11.17.x**: decide when Mermaid is integrated (see the adopted table).
 - **TypeScript 7** friction with any tool: fall back to 6.0.3 for that tool.
 - **Maintainer health**: any adopted package with no release for over 12 months is re-vetted;
