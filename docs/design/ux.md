@@ -75,6 +75,8 @@ $ galeo [--profile P] [--new-window] [--no-sandbox] file…
                                      └─ no profile          → last-focused galeo window (any profile)
 ```
 
+- Flags may come before or after file names. After `--` everything is a file
+  (`galeo -- -notes.md`), and an unknown option is refused before anything starts.
 - Files already open in the target window are **focused, not duplicated**.
 - A path that does not exist opens a tab in the *missing* state (so typos are visible, and the tab
   recovers if the file is created — useful when an agent is about to write it).

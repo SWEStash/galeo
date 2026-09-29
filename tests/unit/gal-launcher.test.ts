@@ -42,6 +42,18 @@ describe.skipIf(process.platform === 'win32')('bin/gal', () => {
     expect(gal('--profile=acme').argv).toEqual(['--profile=acme', '--']);
   });
 
+  it('reads its flags after file names too, until the separator', () => {
+    expect(gal('a.md', '--new-window', 'b.md', '--profile', 'acme').argv).toEqual([
+      '--new-window',
+      '--profile',
+      'acme',
+      '--',
+      path.join(dir, 'a.md'),
+      path.join(dir, 'b.md'),
+    ]);
+    expect(gal('a.md', '--', '--new-window').argv).toEqual(['--', path.join(dir, 'a.md'), path.join(dir, '--new-window')]);
+  });
+
   it("passes the launcher wrapper's relaunch flag through", () => {
     expect(gal('--no-sandbox', '--galeo-sandbox-unavailable=suid-helper', 'a.md').argv).toEqual([
       '--no-sandbox',
@@ -63,7 +75,7 @@ describe.skipIf(process.platform === 'win32')('bin/gal', () => {
     expect(gal().argv).toEqual(['--']);
   });
 
-  it.each([[['--inspect', 'a.md']], [['--profile']], [['--profile=']]])('refuses %j without starting the app', (args) => {
+  it.each([[['--inspect', 'a.md']], [['a.md', '--inspect']], [['a.md', '--profile']], [['--profile']], [['--profile=']]])('refuses %j without starting the app', (args) => {
     const result = gal(...args);
     expect(result.status).toBe(2);
     expect(result.argv).toEqual([]);

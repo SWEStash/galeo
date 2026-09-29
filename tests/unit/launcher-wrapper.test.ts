@@ -60,11 +60,16 @@ describe.skipIf(process.platform !== 'linux')('Linux launcher wrapper', () => {
     expect(result.stderr).toContain('warn');
   });
 
-  it('keeps a switch-like name after a file name as a file, so Chromium never sees it', () => {
+  it('refuses a switch after a file name too, so Chromium never sees it', () => {
+    const { wrapper } = install(printArgs);
+    const result = run(wrapper, ['notes.md', '--remote-debugging-port=9222']);
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe('');
+  });
+
+  it("reads galeo's flags after a file name", () => {
     const { wrapper, dir } = install(printArgs);
-    expect(run(wrapper, ['notes.md', '--remote-debugging-port=9222']).stdout).toBe(
-      `--\n${dir}/notes.md\n${dir}/--remote-debugging-port=9222\n`,
-    );
+    expect(run(wrapper, ['notes.md', '--new-window']).stdout).toBe(`--new-window\n--\n${dir}/notes.md\n`);
   });
 
   it('refuses an unknown switch without starting the app', () => {

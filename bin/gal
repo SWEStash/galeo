@@ -1,13 +1,14 @@
 #!/bin/sh
-# galeo command-line launcher. Passes galeo's own flags first, then `--`, then every file as
-# an absolute path, so no file name can be read as an Electron or Chromium switch (SR-13).
+# galeo command-line launcher. Reads galeo's own flags anywhere before `--`, then passes them
+# first, then `--`, then every file as an absolute path, so no file name can be read as an Electron
+# or Chromium switch (SR-13).
 set -eu
 
 GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"
 
 die() {
   printf 'galeo: %s\n' "$1" >&2
-  printf 'usage: galeo [--profile NAME] [--new-window] [--no-sandbox] [--] [file...]\n' >&2
+  printf 'usage: galeo [--profile NAME] [--new-window] [--no-sandbox] [file...] [-- file...]\n' >&2
   exit 2
 }
 
@@ -16,7 +17,7 @@ remaining=$#
 reading_flags=1
 
 # Rebuild "$@" in place: each original argument is shifted off the front and its translation
-# appended at the back.
+# appended at the back, tagged `o` (a flag) or `f` (a file, made absolute).
 while [ "$remaining" -gt 0 ]; do
   arg=$1
   shift
@@ -25,18 +26,17 @@ while [ "$remaining" -gt 0 ]; do
     case $arg in
       --)
         reading_flags=0
-        set -- "$@" --
         continue
         ;;
       --new-window | --no-sandbox | --galeo-sandbox-unavailable=*)
-        set -- "$@" "$arg"
+        set -- "$@" "o$arg"
         continue
         ;;
       --profile=)
         die '--profile needs a value'
         ;;
       --profile=*)
-        set -- "$@" "$arg"
+        set -- "$@" "o$arg"
         continue
         ;;
       --profile)
@@ -45,23 +45,35 @@ while [ "$remaining" -gt 0 ]; do
         shift
         remaining=$((remaining - 1))
         case $value in -* | '') die '--profile needs a value' ;; esac
-        set -- "$@" --profile "$value"
+        set -- "$@" o--profile "o$value"
         continue
         ;;
       -*)
         die "unknown option: $arg"
         ;;
-      *)
-        reading_flags=0
-        set -- "$@" --
-        ;;
     esac
   fi
   case $arg in
-    /*) set -- "$@" "$arg" ;;
-    *) set -- "$@" "$cwd/$arg" ;;
+    /*) set -- "$@" "f$arg" ;;
+    *) set -- "$@" "f$cwd/$arg" ;;
   esac
 done
 
-[ "$reading_flags" -eq 0 ] || set -- "$@" --
+# Two copies of the tagged list: the flags come from the first, the files from the second.
+count=$#
+set -- "$@" "$@"
+index=0
+while [ "$index" -lt $((count * 2)) ]; do
+  arg=$1
+  shift
+  index=$((index + 1))
+  [ "$index" -eq $((count + 1)) ] && set -- "$@" --
+  if [ "$index" -le "$count" ]; then
+    case $arg in o*) set -- "$@" "${arg#o}" ;; esac
+  else
+    case $arg in f*) set -- "$@" "${arg#f}" ;; esac
+  fi
+done
+
+[ "$count" -gt 0 ] || set -- --
 exec "$GALEO_BIN" "$@"
