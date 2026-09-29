@@ -66,7 +66,7 @@ ADR-002…007).
 $ galeo [--profile P] [--new-window] [--no-sandbox] file…
         │
         ├─ galeo not running ─→ start → profile P (or last-used, else default)
-        │                            → restore P's session (hibernated) → open files as new tabs, focus last
+        │                            → restore P's session (hibernated) → open files as new tabs, the first one shown
         │
         └─ galeo running ──────→ forward args to running instance, command exits immediately
                                      ├─ --new-window        → new window in target profile
@@ -297,9 +297,12 @@ this map only.
 ## 6. Theming and typography
 
 - **Theme modes**: Light, Dark, Follow system (default; tracks GNOME's dark-style preference
-  live). Per-profile override allowed.
+  live). Per-profile override allowed: each window follows its own profile's mode, so two
+  profiles can sit side by side in different modes. Native menus and dialogs follow the desktop.
 - **Profile accent**: a colour chip at the tab bar's left edge and the active-tab underline.
-  Accent is never the only cue (the profile name is always shown).
+  Accent is never the only cue (the profile name is always shown). It is one of 8 presets, each
+  checked to stand out 3:1 on the tab bar in light and dark; a colour hand-edited into
+  `profile.json` is used as it is.
 - **Reading defaults** (overridable per profile): body 17 px, line-height 1.6, measure ~72ch
   centred, paragraph spacing ≥ 1em, proportional font for prose, monospace for code at 0.9em,
   modular heading scale; fonts vendored in the app (no web fonts), system font as fallback.
@@ -312,8 +315,11 @@ this map only.
   first version: [document-styling.md](document-styling.md)). v0.1 edits
   custom CSS in the user's external editor ("Open custom CSS" in Settings).
 - **Settings tab (v0.1 scope)**: theme mode, accent colour, prose font, code font, font size,
-  measure, status bar visibility, quick-open exclusions, open-custom-CSS buttons. Each setting
-  shows whether it is global or overridden in this profile, with "reset to global".
+  measure, status bar visibility, quick-open exclusions, open-custom-CSS buttons. A switch at the
+  top says where changes go: this profile, or all profiles. Each setting shows whether its value
+  is the default, all profiles' or this profile's own, with "reset to global" for the last. A
+  change to a file left invalid by a hand edit is refused and names the file. The AppImage adds
+  "Install command-line launcher" (`galeo` in `~/.local/bin` and a desktop entry for that AppImage).
 
 ## 7. Accessibility (target: WCAG 2.2 AA)
 
@@ -347,7 +353,8 @@ Each is decided when the feature that needs it is built.
 - [x] Tab overflow with many tabs: tabs shrink to a minimum width, then the strip scrolls, keeping the
       shown tab in view; a grip at the bar's end always drags the window (decided with the tab bar,
       2026-09-28).
-- [ ] Profile accent palette: fixed presets only, or free colour picker (contrast risk) — decide with profiles.
+- [x] Profile accent palette: 8 fixed presets, each 3:1 on the tab bar in both schemes; no free picker
+      (decided with profiles, 2026-09-29).
 - [x] `.txt` default view: reader, with Ctrl+U for the monospace source (decided with the text/log views, 2026-09-27).
 - [x] Zoom per tab: it scales the tab's document only, and the status bar shows it when not 100%
       (owner, 2026-09-28).

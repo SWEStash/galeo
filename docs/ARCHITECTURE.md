@@ -1,6 +1,6 @@
 # galeo — Architecture
 
-- **Status**: Current — design of record for v0.1–v0.2, matching the accepted ADRs (no code yet)
+- **Status**: Current — design of record for v0.1–v0.2, matching the accepted ADRs and kept in step with the code
 - **Date**: 2026-09-25 (updated 2026-09-26)
 - **Sources**: [PRD](PRD.md) · [UX](design/ux.md) · [Threat model](security/threat-model.md) ·
   ADRs [001](decisions/ADR-001-app-shell-stack.md) ·
@@ -163,6 +163,14 @@ flowchart LR
 - Capability-granting user actions (edit mode, "open with default app") come from **WindowHost
   `before-input-event` keys or native menus built by Main**, which Main observes directly
   (ADR-004). Drop grants come from the preload's isolated world (trusted drop events only).
+  The window keys (new window, close window, quit) are taken there too, so they work while a
+  page is busy.
+- Main runs one **profile runtime** per running profile: its settings (watching `settings.json`,
+  `profile.json` and both `custom.css`), session, recent files and windows. Every open request
+  (first launch, a forwarded launch, the macOS dock) goes through one queue: argv parser →
+  Router (running profiles, the global focus order, `app-state.json`'s last profile) → the
+  target window, starting a profile first when needed. A profile's last window closing saves
+  and stops it. Window ids are the page's `webContents` id, which tabs, grants and metrics share.
 
 ### 4.2 Window Renderer
 
@@ -200,6 +208,13 @@ flowchart TB
   anchor -- debounced anchors --> pre
 ```
 
+- Each window takes its colour scheme from its own profile's theme mode (the desktop's in
+  system mode). Main leaves Electron's process-wide theme on system and recolours each window's
+  title-bar controls, so native menus and dialogs follow the desktop.
+- The profile's reading settings reach documents as `--galeo-*` tokens they inherit. The global and
+  profile `custom.css`, sent by Main, are constructable sheets adopted by every document's shadow
+  root after the bundled theme, and nowhere else: app chrome keeps its own styles (SR-17).
+
 ## 5. Runtime views
 
 ### 5.1 `galeo plan.md` while galeo is running
@@ -219,7 +234,7 @@ sequenceDiagram
   P2-->>T: exit 0 (immediately)
   M->>M: Argv parser → Router: target = last-focused window
   M->>M: Tab Registry: new Tab Record; read grant for /abs/plan.md
-  M->>R: event tabs.changed (snapshot, next revision) + focus window
+  M->>R: event tabs.changed (snapshot, next revision); the window is not raised (ADR-005)
   R->>M: readDocument(tabId)
   M->>M: Capability check (grant) → FileSystem.read (size cap) → FileWatcher.watch
   M-->>R: text + file identity + format id
@@ -336,13 +351,15 @@ src/
   shared/     contracts (IPC schemas + types), domain types, keymap,
               markdown/ (sanitize schema, link and image rules and extraction: the page and main
               find a document's links the same way)
-  core/       routing, registry, lifecycle, sessions, settings, capabilities, links, formats
-  main/       adapters, IPC handlers, network guard, window host, app entry,
+  core/       routing, profiles, registry, lifecycle, sessions, settings, capabilities, links,
+              formats, desktop (the AppImage's launcher files)
+  main/       adapters, IPC handlers, network guard, window factory, profile runtimes, app entry,
               tasks/ (the worker thread for parsing main's checks need)
   preload/    window.galeo bridge
-  renderer/   document/ (host, rendered/source/text/log views, find, states) · styles/ (tokens,
-              fonts) · worker/ (render pipeline); later features/{tabs,quick-open,palette,outline,
-              profiles,settings}
+  renderer/   document/ (host, rendered/source/text/log views, find, states) · tabs/ (tab bar,
+              store, status bar, empty window) · profiles/ (chip, menu, dialogs) · settings/
+              (Settings tab, notices, tokens) · styles/ (tokens, fonts) · worker/ (render pipeline);
+              later quick-open, palette, outline
 tests/
   unit/       core + shared (vitest, node)
   renderer/   pipeline, sanitizer corpus, format registry (vitest)

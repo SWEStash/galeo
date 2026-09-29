@@ -1,6 +1,6 @@
 # galeo — Document styling contract
 
-- **Status**: First version (2026-09-27), built with the document view
+- **Status**: First version (2026-09-27), built with the document view; custom CSS loads since 2026-09-29
 - **Related**: [UX](ux.md) §6 · [ADR-006](../decisions/ADR-006-renderer-ui-framework.md) ·
   [Threat model](../security/threat-model.md) SR-17
 
@@ -8,6 +8,16 @@ Documents render inside a shadow root, isolated from the app's own styles. They 
 set of CSS custom properties from the app, and those properties, plus the classes below, are the
 stable surface a `custom.css` can rely on. Anything else in the markup may change between
 releases.
+
+## Where custom CSS applies
+
+- `custom.css` in the config folder applies to every profile; `profiles/<id>/custom.css` to one
+  profile, after the global file. "Open CSS" in the Settings tab creates either and opens it in
+  your editor; saving applies it to every open document at once.
+- It styles documents only: the tab bar, status bar and other app chrome keep their own styles.
+- `@import` is ignored, and the page's policy refuses remote files, so custom CSS can't load
+  anything from the network (use `data:` URLs for small images). A file over 1 MiB, or not UTF-8,
+  is left as it is: the last good CSS stays and a notice names the file.
 
 ## Tokens
 

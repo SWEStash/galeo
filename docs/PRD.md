@@ -267,9 +267,9 @@ live in the [UX specification](design/ux.md).
 - [x] **GNOME Wayland workspace awareness.** Decided in ADR-005: accepted limitation; route to the
       last-focused window without stealing focus.
 - [x] **Flatpak.** Deferred (ADR-008): its sandbox conflicts with "open any file" and the `galeo` CLI.
-- [ ] **Custom CSS contract.** Mechanism decided (ADR-006: `--galeo-*` variables and a few `galeo-*`
-      classes, adopted into every document's shadow root); the first list is in
-      [document-styling.md](design/document-styling.md), confirmed when custom CSS is loaded.
+- [x] **Custom CSS contract.** `--galeo-*` variables and a few `galeo-*` classes (ADR-006), listed in
+      [document-styling.md](design/document-styling.md); the global and profile `custom.css` are
+      adopted into every document's shadow root, live (confirmed with profiles, 2026-09-29).
 - [ ] **Quick-open exclusions**: default list, and whether to honour a galeo-specific ignore
       file (decided when quick open is built).
 - [x] **Log level patterns**: a fixed set in v0.1 (level words, `key=value` and JSON level fields, one-letter tags, syslog priorities), decided with the log view (2026-09-27). User-configurable patterns can come later.
