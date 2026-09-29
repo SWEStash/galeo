@@ -7,6 +7,7 @@ const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const basic = path.join(docs, 'basic.md');
 const gfm = path.join(docs, 'gfm.md');
 const math = path.join(docs, 'math.md');
+const frontmatter = path.join(docs, 'frontmatter.md');
 
 const snapshot = (page: Page) => page.evaluate(() => window.galeo.tabs.snapshot());
 const paths = async (page: Page) => (await snapshot(page)).tabs.map((tab) => tab.path);
@@ -103,6 +104,75 @@ test('a profile name that looks like a path stays a profile folder under profile
     expect(readdirSync(config).sort()).toEqual(['profiles']);
     expect(readdirSync(state).filter((name) => name.includes('escape'))).toEqual([]);
     expect(existsSync(path.join(home, 'escape'))).toBe(false);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
+test('relative paths resolve against the directory each launch ran in', async () => {
+  const home = tempHome();
+  // The first launch runs in the repository root.
+  const { window, close } = await launchApp(['--', path.relative(path.resolve(import.meta.dirname, '../..'), basic)], { home });
+  try {
+    await expect.poll(() => paths(window)).toEqual([basic]);
+    expect(launchSecond(home, ['--', 'gfm.md'], { cwd: docs }).status).toBe(0);
+    await expect.poll(() => paths(window)).toEqual([basic, gfm]);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
+test('--profile of a running profile adds to its window, whichever window was focused last', async () => {
+  const home = tempHome();
+  const { app, window, close } = await launchApp(['--', basic], { home });
+  try {
+    const opened = app.waitForEvent('window');
+    expect(launchSecond(home, ['--profile', 'Work', '--', gfm]).status).toBe(0);
+    const work = await opened;
+    await expect.poll(() => paths(work)).toEqual([gfm]);
+    expect(launchSecond(home, ['--profile', 'work', '--', math]).status).toBe(0);
+    await expect.poll(() => paths(work)).toEqual([gfm, math]);
+    expect(await paths(window)).toEqual([basic]);
+    // --profile default reaches the other profile's window, although work's was focused last.
+    expect(launchSecond(home, ['--profile', 'default', '--', frontmatter]).status).toBe(0);
+    await expect.poll(() => paths(window)).toEqual([basic, frontmatter]);
+    expect(await paths(work)).toEqual([gfm, math]);
+    expect(app.windows()).toHaveLength(2);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
+test('--new-window opens a new window in the target profile, with the files', async () => {
+  const home = tempHome();
+  const { app, window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect.poll(() => paths(window)).toEqual([basic]);
+    const opened = app.waitForEvent('window');
+    expect(launchSecond(home, ['--new-window', '--', gfm, math]).status).toBe(0);
+    const second = await opened;
+    await expect.poll(() => paths(second)).toEqual([gfm, math]);
+    await expect(second.getByTestId('profile-chip')).toHaveAccessibleName('Profile: default');
+    expect(await paths(window)).toEqual([basic]);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
+test('a launch without files opens nothing new: it asks for the running window', async () => {
+  const home = tempHome();
+  const { app, window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect.poll(() => paths(window)).toEqual([basic]);
+    for (const args of [[], ['--']]) expect(launchSecond(home, args).status).toBe(0);
+    // Both requests are handled in order; a later one proves the earlier ones are done.
+    expect(launchSecond(home, ['--', gfm]).status).toBe(0);
+    await expect.poll(() => paths(window)).toEqual([basic, gfm]);
+    expect(app.windows()).toHaveLength(1);
   } finally {
     await close();
     removeTempHome(home);
