@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -256,5 +256,21 @@ describe('NodeFileSystem.remove', () => {
     await fs.remove(path.join(dir, 'profile'));
     expect(readdirSync(dir)).toEqual(['keep.md']);
     expect(readFileSync(outside, 'utf8')).toBe('mine');
+  });
+});
+
+describe('NodeFileSystem.touch', () => {
+  it("sets a folder's modification time to now, as desktops watch their icon themes", async () => {
+    const dir = tempDir();
+    const theme = path.join(dir, 'hicolor');
+    mkdirSync(theme);
+    const past = new Date('2020-01-01T00:00:00Z');
+    utimesSync(theme, past, past);
+    await fs.touch(theme);
+    expect(statSync(theme).mtimeMs).toBeGreaterThan(past.getTime() + 1000);
+  });
+
+  it('rejects a missing path with ENOENT', async () => {
+    expect(await codeOf(fs.touch(path.join(tempDir(), 'missing')))).toBe('ENOENT');
   });
 });

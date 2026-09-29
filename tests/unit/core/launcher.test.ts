@@ -91,12 +91,15 @@ describe('installLauncher', () => {
     expect(await installLauncher({ fs, utf8 }, files(), PNG, [])).toEqual({ ok: true });
     expect(await fs.readFile(ICON, { maxBytes: 1e6 })).toEqual(PNG);
     expect(fs.modeOf(ICON)).toBe(0o644);
+    // Desktops rescan an icon theme only when its folder changes, not a size folder inside it.
+    expect(fs.touched).toEqual(['/home/u/.local/share/icons/hicolor']);
   });
 
   it('leaves an icon that is not its own as it is, and still installs the launcher', async () => {
     const fs = new FakeFileSystem({ [ICON]: 'theirs' });
     expect(await installLauncher({ fs, utf8 }, files(), PNG, [])).toEqual({ ok: true });
     expect(await text(fs, ICON)).toBe('theirs');
+    expect(fs.touched).toEqual([]);
     expect(await text(fs, '/home/u/.local/bin/galeo')).toContain(LAUNCHER_MARK);
   });
 

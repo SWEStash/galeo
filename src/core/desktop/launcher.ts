@@ -8,7 +8,7 @@ export const LAUNCHER_MARK = '# Installed by galeo: the command-line launcher fo
 const ENTRY_MARK = 'X-galeo-Launcher=true';
 
 export type LauncherFiles =
-  | { ok: true; bin: { path: string; content: string }; desktop: { path: string; content: string }; icon: { path: string } }
+  | { ok: true; bin: { path: string; content: string }; desktop: { path: string; content: string }; icon: { path: string; theme: string } }
   | { ok: false; reason: string };
 
 // Characters the Desktop Entry spec reserves in an Exec argument, which must then be quoted.
@@ -61,7 +61,7 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
     ok: true,
     bin: { path: joinPath(dirs.binDir, 'galeo'), content: bin },
     desktop: { path: joinPath(dirs.applicationsDir, 'galeo.desktop'), content: desktop },
-    icon: { path: joinPath(dirs.iconsDir, 'hicolor', '256x256', 'apps', 'galeo.png') },
+    icon: { path: joinPath(dirs.iconsDir, 'hicolor', '256x256', 'apps', 'galeo.png'), theme: joinPath(dirs.iconsDir, 'hicolor') },
   };
 }
 
@@ -100,6 +100,8 @@ export async function installLauncher(
     const dir = folderOf(files.icon.path);
     if ((await kindOf(fs, dir)) !== 'directory') await fs.mkdir(dir, { mode: 0o755 });
     await fs.writeFileAtomic(files.icon.path, icon, { mode: 0o644 });
+    // Desktops rescan an icon theme only when its own folder changes, not a size folder inside it.
+    await fs.touch(files.icon.theme);
   }
   return { ok: true };
 }

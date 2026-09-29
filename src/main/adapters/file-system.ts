@@ -1,6 +1,6 @@
 import { constants, type Dirent, type Stats } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { chmod, mkdir, open, opendir, realpath, rename, rm, stat } from 'node:fs/promises';
+import { chmod, mkdir, open, opendir, realpath, rename, rm, stat, utimes } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from '../../core/ports';
 
@@ -119,6 +119,15 @@ export class NodeFileSystem implements FileSystem {
   async remove(path: string): Promise<void> {
     try {
       await rm(path, { recursive: true, force: true });
+    } catch (error) {
+      throw toFsError(error, path);
+    }
+  }
+
+  async touch(path: string): Promise<void> {
+    try {
+      const now = new Date();
+      await utimes(path, now, now);
     } catch (error) {
       throw toFsError(error, path);
     }

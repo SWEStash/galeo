@@ -121,6 +121,15 @@ export class FakeFileSystem implements FileSystem {
     for (const dir of [...this.directories]) if (inside(dir)) this.directories.delete(dir);
   }
 
+  /** Paths passed to `touch`, in order. */
+  readonly touched: string[] = [];
+
+  async touch(path: string): Promise<void> {
+    this.throwIfFailing(path);
+    if (!this.files.has(path) && !this.isDirectory(path)) throw new FsError('ENOENT', path);
+    this.touched.push(path);
+  }
+
   /** The mode a directory or file was last created or written with. */
   modeOf(path: string): number | undefined {
     return this.modes.get(path);

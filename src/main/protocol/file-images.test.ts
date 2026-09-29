@@ -40,6 +40,9 @@ describe('serveImage', () => {
     remove: async () => {
       throw new Error('unused');
     },
+    touch: async () => {
+      throw new Error('unused');
+    },
     readFile: async (path, { maxBytes }) => {
       const file = files[path];
       if (file === 'toobig') throw new FsError('ETOOBIG', path);
