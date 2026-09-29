@@ -4,7 +4,7 @@ import { visibleBounds } from '../../core/session/bounds';
 import type { WindowBounds } from '../../core/session/model';
 import type { Command } from '../../shared/keymap';
 import { schemeFor, type ThemeMode } from '../../shared/settings';
-import { hardenedWebPreferences, keymapPlatform, mainKey, titleBarOverlay, windowTitle } from './policy';
+import { appIcon, hardenedWebPreferences, keymapPlatform, mainKey, titleBarOverlay, windowTitle } from './policy';
 
 export interface WindowOptions {
   url: string;
@@ -35,8 +35,10 @@ export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bou
   const scheme = () => schemeFor(themeMode?.() ?? 'system', nativeTheme.shouldUseDarkColors);
   // A place on a display that's gone isn't restored; the size is.
   const placed = bounds ? visibleBounds(bounds, screen.getAllDisplays().map((display) => display.workArea)) : null;
+  const icon = appIcon({ platform: process.platform, isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() });
   const window = new BrowserWindow({
     title,
+    ...(icon ? { icon } : {}),
     ...(dialog
       ? { width: 560, height: 340, resizable: false }
       : {

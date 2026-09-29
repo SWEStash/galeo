@@ -13,6 +13,9 @@ export default {
 
   linux: {
     target: ['deb', 'AppImage'],
+    // The hicolor sizes, named <size>x<size>.png; the window and the AppImage launcher use resources/icon.png.
+    icon: 'packaging/icons/png',
+    extraResources: [{ from: 'packaging/icons/png/256x256.png', to: 'icon.png' }],
     category: 'Utility',
     maintainer: 'SWEStash <swestash.admin@gmail.com>',
     executableName: 'galeo',
@@ -45,9 +48,10 @@ export default {
       { target: 'zip', arch: ['x64', 'arm64'] },
     ],
     category: 'public.app-category.developer-tools',
+    icon: 'packaging/icons/png/1024x1024.png',
     identity: null,
   },
-  win: { target: ['nsis'] },
+  win: { target: ['nsis'], icon: 'packaging/icons/png/1024x1024.png' },
   nsis: { oneClick: false, perMachine: false },
   publish: null,
 };

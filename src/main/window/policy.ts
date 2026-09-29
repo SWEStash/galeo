@@ -19,6 +19,15 @@ export function ownArgs(argv: readonly string[], { defaultApp }: { defaultApp: b
   return argv.slice(defaultApp ? 2 : 1);
 }
 
+/**
+ * The window icon: Linux only, where X11 and a checkout take it from the window. macOS and Windows
+ * take theirs from the app bundle.
+ */
+export function appIcon({ platform, isPackaged, resourcesPath, appPath }: { platform: NodeJS.Platform; isPackaged: boolean; resourcesPath: string; appPath: string }): string | undefined {
+  if (platform !== 'linux') return undefined;
+  return isPackaged ? `${resourcesPath}/icon.png` : `${appPath}/packaging/icons/png/256x256.png`;
+}
+
 /** The only `webPreferences` any galeo window gets (SR-01). */
 export function hardenedWebPreferences({ preload, isPackaged }: { preload: string; isPackaged: boolean }) {
   return {

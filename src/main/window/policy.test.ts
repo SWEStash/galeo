@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hardenedWebPreferences, isPermissionAllowed, mainKey, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
+import { appIcon, hardenedWebPreferences, isPermissionAllowed, mainKey, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
 
 describe('isPermissionAllowed', () => {
   it('allows only sanitized clipboard writes (copy buttons)', () => {
@@ -90,5 +90,19 @@ describe('mainKey', () => {
   it('ignores a held key repeating: a capability is granted once per press', () => {
     expect(mainKey({ ...input('e'), isAutoRepeat: true }, 'linux')).toBeNull();
     expect(mainKey({ ...input('n'), isAutoRepeat: true }, 'linux')).toBeNull();
+  });
+});
+
+describe('appIcon', () => {
+  it('is the icon shipped in resources, on Linux, once packaged', () => {
+    expect(appIcon({ platform: 'linux', isPackaged: true, resourcesPath: '/opt/galeo/resources', appPath: '/x' })).toBe('/opt/galeo/resources/icon.png');
+  });
+
+  it("is the repo's icon when running from a checkout", () => {
+    expect(appIcon({ platform: 'linux', isPackaged: false, resourcesPath: '/x', appPath: '/src/galeo' })).toBe('/src/galeo/packaging/icons/png/256x256.png');
+  });
+
+  it.each(['darwin', 'win32'] as const)('is left to the app bundle on %s', (platform) => {
+    expect(appIcon({ platform, isPackaged: true, resourcesPath: '/r', appPath: '/a' })).toBeUndefined();
   });
 });

@@ -69,6 +69,20 @@ if (process.platform === 'linux') {
     const problems = extracted.status === 0 ? desktopEntryProblems(extracted.stdout) : [`not readable (${extracted.stderr.trim()})`];
     if (problems.length) failures.push(...problems.map((problem) => `desktop entry: ${problem}`));
     else console.log('desktop entry: files after --, MIME types, window class, icon, New Window');
+
+    // galeo's own icon, not electron-builder's default: in the hicolor theme, and the one the
+    // window and the AppImage launcher use.
+    const icon = readFileSync(path.resolve(import.meta.dirname, '../packaging/icons/png/256x256.png'));
+    const themed = spawnSync('sh', ['-c', `dpkg-deb --fsys-tarfile "$1" | tar -xO ./usr/share/icons/hicolor/256x256/apps/galeo.png`, 'sh', path.join(RELEASE, deb)]);
+    let resourceIcon = null;
+    try {
+      resourceIcon = readFileSync(path.join(resources, 'icon.png'));
+    } catch {
+      // Reported below.
+    }
+    if (themed.status !== 0 || !icon.equals(themed.stdout)) failures.push("icon: the .deb's 256x256 hicolor icon is not packaging/icons/png/256x256.png");
+    else if (!resourceIcon?.equals(icon)) failures.push('icon: resources/icon.png is not packaging/icons/png/256x256.png');
+    else console.log("icon: galeo's own, in the hicolor theme and in resources");
   }
 }
 
