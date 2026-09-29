@@ -35,6 +35,7 @@ test('a second launch hands over to the running instance and exits', async () =>
         XDG_CONFIG_HOME: path.join(home, 'config'),
         XDG_STATE_HOME: path.join(home, 'state'),
         XDG_CACHE_HOME: path.join(home, 'cache'),
+        GALEO_TEST_HOME: home,
       },
     });
     expect(second.status).toBe(0);

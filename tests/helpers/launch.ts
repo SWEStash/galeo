@@ -33,6 +33,11 @@ export function appDirs(home: string): { config: string; state: string; cache: s
   return { config, state: path.join(config, 'State'), cache };
 }
 
+/** Removes a test home; on Windows, a killed app's child processes can hold its files for a moment. */
+export function removeTempHome(home: string): void {
+  rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
+}
+
 /** A fresh isolated home, for tests that write config first or restart the app on the same one. */
 export function tempHome(): string {
   return mkdtempSync(path.join(tmpdir(), 'galeo-e2e-'));
@@ -45,7 +50,7 @@ export function tempHome(): string {
 export async function launchApp(args: string[] = [], options: LaunchOptions = {}): Promise<LaunchedApp> {
   const home = options.home ?? tempHome();
   const removeHome = () => {
-    if (!options.home) rmSync(home, { recursive: true, force: true });
+    if (!options.home) removeTempHome(home);
   };
   let app: ElectronApplication;
   let window: Page;

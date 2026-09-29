@@ -49,6 +49,8 @@ test("a right-click shows main's menu, whose Open with default app opens a plain
 });
 
 test('an executable is never opened with the default app, and the page has no way to ask', async () => {
+  // The execute bit is POSIX; on Windows the extension decides, which the unit tests cover.
+  test.skip(process.platform === 'win32', 'POSIX execute bit');
   const dir = tempHome();
   const tool = path.join(dir, 'tool.txt');
   writeFileSync(tool, 'not really text\n');

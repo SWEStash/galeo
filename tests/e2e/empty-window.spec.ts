@@ -16,7 +16,7 @@ test('a window without tabs shows how to open files and the recent ones, and pas
     await first.window.keyboard.press('ControlOrMeta+W');
     const empty = first.window.getByTestId('empty-window');
     await expect(empty).toContainText('Drop files here');
-    await expect(empty).toContainText('Ctrl+P');
+    await expect(empty).toContainText(process.platform === 'darwin' ? '⌘P' : 'Ctrl+P');
     await expect(empty.getByRole('button', { name: /basic\.md/ })).toBeVisible();
     const results = await new AxeBuilder({ page: first.window }).setLegacyMode(true).include('.empty-window').analyze();
     expect(results.violations).toEqual([]);

@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { appDirs, launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, removeTempHome, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
@@ -25,7 +25,7 @@ async function withHome(run: (home: string) => Promise<void>) {
   try {
     await run(home);
   } finally {
-    rmSync(home, { recursive: true, force: true });
+    removeTempHome(home);
   }
 }
 
@@ -68,6 +68,8 @@ test('closing the last window keeps its tabs for next time', async () => {
     await expect(shownDocument(first.window)).toBeVisible();
     const exited = new Promise((resolve) => first.app.process().once('exit', resolve));
     await first.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+    // macOS keeps an app running without windows; quitting then must still save what the window held.
+    if (process.platform === 'darwin') await first.app.evaluate(({ app }) => app.quit()).catch(() => undefined);
     await exited;
     const second = await launchApp([], { home });
     try {
