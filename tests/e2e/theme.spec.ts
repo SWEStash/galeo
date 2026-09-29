@@ -22,11 +22,18 @@ test('the vendored fonts load from the app itself', async () => {
     // The fonts are declared by the app's stylesheet; the page's script, which renders the app root,
     // runs only once that stylesheet has loaded.
     await expect(window.getByTestId('app-root')).toBeVisible();
-    const loaded = await window.evaluate(async () => {
-      await Promise.all(['Inter', 'Source Serif 4', 'JetBrains Mono'].map((family) => document.fonts.load(`16px "${family}"`)));
-      return [...document.fonts].filter((face) => face.status === 'loaded').map((face) => face.family.replaceAll('"', ''));
-    });
-    expect(new Set(loaded)).toEqual(new Set(['Inter', 'Source Serif 4', 'JetBrains Mono']));
+    // `fonts.load` can resolve with nothing loaded while the font rules aren't registered yet (seen on
+    // Windows CI), so it's asked again until every family is in. Every face's status is reported, so a
+    // family that never loads shows why.
+    await expect
+      .poll(() =>
+        window.evaluate(async () => {
+          await Promise.all(['Inter', 'Source Serif 4', 'JetBrains Mono'].map((family) => document.fonts.load(`16px "${family}"`)));
+          const faces = [...document.fonts].map((face) => ({ family: face.family.replaceAll('"', ''), style: face.style, status: face.status }));
+          return { loaded: [...new Set(faces.filter((face) => face.status === 'loaded').map((face) => face.family))].sort(), faces };
+        }),
+      )
+      .toMatchObject({ loaded: ['Inter', 'JetBrains Mono', 'Source Serif 4'] });
   } finally {
     await close();
   }
