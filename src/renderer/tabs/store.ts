@@ -73,6 +73,8 @@ export function createTabStore(api: TabsApi): TabStore {
   let unsubscribe: (() => void)[] = [];
   /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
   let wanted: string | null = null;
+  /** Activations reported to main that it hasn't answered yet; until then its snapshots may predate them. */
+  let reporting = 0;
   const listeners = new Set<() => void>();
 
   const set = (next: Partial<TabsView>) => {
@@ -89,7 +91,9 @@ export function createTabStore(api: TabsApi): TabStore {
 
   const activateLocally = (active: string | null, tabs: DocumentRecord[], revision: number) => {
     set({ revision, tabs, active });
-    if (active) void api.activated(active);
+    if (!active) return;
+    reporting++;
+    void api.activated(active).finally(() => reporting--);
   };
 
   const demote = (ids: string[]) => {
@@ -114,6 +118,9 @@ export function createTabStore(api: TabsApi): TabStore {
       const id = wanted;
       wanted = null;
       activateLocally(id, snapshot.tabs, snapshot.revision);
+    } else if (reporting === 0 && snapshot.active && snapshot.active !== view.active && ids.includes(snapshot.active)) {
+      // Main showed a tab itself (a launch's file, the settings tab), and has heard every choice made here.
+      set({ revision: snapshot.revision, tabs: snapshot.tabs, active: snapshot.active });
     } else if (view.active && ids.includes(view.active)) {
       set({ revision: snapshot.revision, tabs: snapshot.tabs });
     } else if (snapshot.active && ids.includes(snapshot.active)) {

@@ -78,6 +78,28 @@ describe('createTabStore', () => {
     expect(store.getSnapshot().active).toBe('b');
   });
 
+  it('shows a tab main showed itself (a launch into this window, the settings tab)', async () => {
+    const { store, push } = setup(snapshot(1, ['a'], 'a'));
+    await store.start();
+    push(snapshot(2, ['a', 'b'], 'b'));
+    expect(store.getSnapshot().active).toBe('b');
+  });
+
+  it("keeps its own choice while main hasn't heard of it yet", async () => {
+    const { store, api, push } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    let heard: () => void = () => {};
+    api.activated.mockImplementationOnce(() => new Promise<void>((resolve) => (heard = resolve)));
+    store.activate('b');
+    // A snapshot main sent before it heard of b still says a.
+    push(snapshot(2, ['a', 'b', 'c'], 'a'));
+    expect(store.getSnapshot().active).toBe('b');
+    heard();
+    await Promise.resolve();
+    push(snapshot(3, ['a', 'b', 'c'], 'c'));
+    expect(store.getSnapshot().active).toBe('c');
+  });
+
   it('closing the active tab activates its right neighbour, or the left one at the end', async () => {
     const { store, api, push } = setup(snapshot(1, ['a', 'b', 'c'], 'b'));
     await store.start();

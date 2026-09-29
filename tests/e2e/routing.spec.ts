@@ -10,16 +10,16 @@ const math = path.join(docs, 'math.md');
 
 const snapshot = (page: Page) => page.evaluate(() => window.galeo.tabs.snapshot());
 const paths = async (page: Page) => (await snapshot(page)).tabs.map((tab) => tab.path);
-const shownPath = async (page: Page) => {
-  const { tabs, active } = await snapshot(page);
-  return tabs.find((tab) => tab.id === active)?.path;
-};
+/** The file the page itself shows (its selected tab's tooltip is the path), not only what main says. */
+const shownPath = (page: Page) => page.getByRole('tab', { selected: true }).locator('.tab-label').getAttribute('title');
 
 test('a later launch adds its files to the running window as tabs, shows the first, and exits', async () => {
   const home = tempHome();
   const { app, window, close } = await launchApp(['--', basic], { home });
   try {
     await expect.poll(() => paths(window)).toEqual([basic]);
+    // The page shows its tab first, so what follows tests a window already showing one.
+    await expect.poll(() => shownPath(window)).toBe(basic);
     const second = launchSecond(home, ['--', gfm, math]);
     expect(second.status).toBe(0);
     await expect.poll(() => paths(window)).toEqual([basic, gfm, math]);
@@ -36,6 +36,7 @@ test('a file the window already has is shown, not opened twice', async () => {
   const { window, close } = await launchApp(['--', basic, gfm], { home });
   try {
     await expect.poll(() => paths(window)).toEqual([basic, gfm]);
+    await expect.poll(() => shownPath(window)).toBe(basic);
     expect(launchSecond(home, ['--', gfm]).status).toBe(0);
     await expect.poll(() => shownPath(window)).toBe(gfm);
     expect(await paths(window)).toEqual([basic, gfm]);
