@@ -2,7 +2,7 @@ import { joinPath } from '../../shared/paths';
 import type { SettingsNotice } from '../../shared/settings';
 import { FsError, type FileSystem } from '../ports';
 import { ConfigFile } from '../settings/config-file';
-import { readJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
+import { kindOf, readJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
 import { CONFIG_MAX_BYTES, SETTINGS_VERSION, type ProfileFile } from '../settings/profile-settings';
 import { isProfileId, validateName, type NameProblem } from './names';
 
@@ -49,9 +49,13 @@ export class ProfileCatalog {
 
   async create(id: string, name: string, accent: string | null): Promise<Created> {
     requireId(id);
-    if (id === DEFAULT_PROFILE || (await this.folders()).includes(id)) throw new Error(`profile ${id} exists`);
+    // Anything at the folder counts, a symlink included: a new profile never writes through one.
+    const folder = joinPath(this.deps.configDir, 'profiles', id);
+    if (id === DEFAULT_PROFILE || (await kindOf(this.deps.fs, folder)) !== null) throw new Error(`profile ${id} exists`);
     const valid = await this.usable(name, null);
     if (!valid.ok) return valid;
+    // A deleted profile's session can outlive it; a new profile with its id starts afresh.
+    await this.deps.fs.remove(joinPath(this.deps.stateDir, 'profiles', id));
     const value: ProfileFile = accent === null ? { name: valid.name } : { name: valid.name, accent };
     await this.file(id).update(() => value);
     return { ok: true, profile: { id, name: valid.name, accent } };

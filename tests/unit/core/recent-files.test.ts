@@ -81,3 +81,12 @@ describe('RecentFiles (ADR-005, SR-16)', () => {
   });
 });
 
+
+describe('RecentFiles.idle', () => {
+  it('settles once every write asked for so far has landed', async () => {
+    const { fs, recent } = setup();
+    void recent.add('/d/a.md');
+    await recent.idle();
+    await expect(fs.stat(PATH)).resolves.toBeDefined();
+  });
+});

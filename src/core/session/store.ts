@@ -49,6 +49,11 @@ export class SessionStore {
     return write;
   }
 
+  /** Settles once every save asked for so far has landed (or failed). */
+  idle(): Promise<void> {
+    return this.writing;
+  }
+
   private async write(session: SessionFile): Promise<void> {
     if (!this.rotated) {
       this.rotated = true;

@@ -24,6 +24,7 @@ export class RecentFiles {
   private readonly spec: JsonFileSpec<{ files: RecentFile[] }>;
   /** Writes run one after another, each with the list as it is by then. */
   private writing: Promise<void> = Promise.resolve();
+  private changes: Promise<void> = Promise.resolve();
   /** Changes wait for the load (it stats every file, so it runs off the startup path). */
   private loaded: Promise<void> = Promise.resolve();
 
@@ -49,16 +50,31 @@ export class RecentFiles {
     return this.files;
   }
 
-  async add(path: string): Promise<void> {
-    await this.loaded;
-    this.files = [{ path, openedAt: this.deps.now() }, ...this.files.filter((file) => file.path !== path)].slice(0, RECENT_MAX);
-    await this.save();
+  add(path: string): Promise<void> {
+    return this.track(async () => {
+      await this.loaded;
+      this.files = [{ path, openedAt: this.deps.now() }, ...this.files.filter((file) => file.path !== path)].slice(0, RECENT_MAX);
+      await this.save();
+    });
   }
 
-  async clear(): Promise<void> {
-    await this.loaded;
-    this.files = [];
-    await this.save();
+  clear(): Promise<void> {
+    return this.track(async () => {
+      await this.loaded;
+      this.files = [];
+      await this.save();
+    });
+  }
+
+  /** Settles once every change asked for so far has been written (or failed). */
+  idle(): Promise<void> {
+    return this.changes;
+  }
+
+  private track(change: () => Promise<void>): Promise<void> {
+    const done = change();
+    this.changes = Promise.all([this.changes, done.catch(() => {})]).then(() => {});
+    return done;
   }
 
   private save(): Promise<void> {

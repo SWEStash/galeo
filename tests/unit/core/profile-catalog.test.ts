@@ -85,6 +85,21 @@ describe('ProfileCatalog.create', () => {
   });
 });
 
+describe('ProfileCatalog.create over leftovers', () => {
+  it('starts a profile afresh: a session left behind under its id is removed', async () => {
+    const { fs, catalog } = setup({ [`${STATE}/profiles/acme/session.json`]: '{}' });
+    expect(await catalog.create('acme', 'Acme', null)).toMatchObject({ ok: true });
+    await expect(fs.stat(`${STATE}/profiles/acme`)).rejects.toThrow(/ENOENT/);
+  });
+
+  it('refuses an id with anything at its folder, a symlink included', async () => {
+    const { fs, catalog } = setup();
+    fs.symlink(`${CONFIG}/profiles/acme`, '/elsewhere');
+    fs.write('/elsewhere/x', '');
+    await expect(catalog.create('acme', 'Acme', null)).rejects.toThrow(/exists/);
+  });
+});
+
 describe('ProfileCatalog.update', () => {
   it('renames and recolours, keeping the setting overrides', async () => {
     const path = `${CONFIG}/profiles/acme/profile.json`;

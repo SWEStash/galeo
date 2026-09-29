@@ -155,7 +155,8 @@ function start(initialMode: StartupMode): void {
   // Running profiles by id: a profile runs while it has a window (ADR-005).
   const running = new Map<string, ProfileRuntime>();
   // Saves of profiles whose last window just closed; a quit waits for them.
-  const stopping = new Set<Promise<void>>();
+  // Saves of profiles whose last window just closed, by id: a quit, a restart and a delete wait for them.
+  const stopping = new Map<string, Promise<void>>();
   // Window ids, the last focused first, across all profiles.
   let focusOrder: number[] = [];
   let quitting = false;
@@ -221,7 +222,10 @@ function start(initialMode: StartupMode): void {
 
   /** Keys main takes before the page (ADR-004 capabilities; window keys work even when the page is busy). */
   const mainKey = (command: Command, profile: ProfileRuntime, window: BrowserWindow) => {
-    if (command === 'newWindow') openMainWindow(profile);
+    // A profile being deleted gets no new windows: its folders are about to go.
+    if (command === 'newWindow') {
+      if (!profile.discard) openMainWindow(profile);
+    }
     else if (command === 'closeWindow') window.close();
     else if (command === 'quit') app.quit();
     else recordCapabilityKey(command);
@@ -299,6 +303,8 @@ function start(initialMode: StartupMode): void {
   const rememberProfile = (id: string) => void appState.setLastProfile(id).catch((error: unknown) => console.warn('galeo: app state not saved', error));
 
   const startRuntime = async (id: string): Promise<ProfileRuntime> => {
+    // A profile starting again reads its session only once its last save has landed.
+    await stopping.get(id);
     const name = (await catalog.list()).find((each) => each.id === id)?.name ?? id;
     const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder });
     running.set(id, profile);
@@ -318,7 +324,13 @@ function start(initialMode: StartupMode): void {
       for (const windowId of idsOf(profile)) updateTitle(profile, windowId);
       void broadcastProfiles();
     });
-    await profile.settings.start();
+    try {
+      await profile.settings.start();
+    } catch (error) {
+      running.delete(id);
+      profile.settings.stop();
+      throw error;
+    }
     reportSettingsNotices(profile.settings.notices);
     // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
     void profile.recent.load().catch((error: unknown) => console.warn('galeo: recent files not loaded', error));
@@ -347,9 +359,9 @@ function start(initialMode: StartupMode): void {
     const stop = profile
       .stop()
       .catch((error: unknown) => console.warn(`galeo: profile ${profile.id} not saved`, error))
-      .finally(() => stopping.delete(stop));
+      .finally(() => stopping.get(profile.id) === stop && stopping.delete(profile.id));
     void broadcastProfiles();
-    stopping.add(stop);
+    stopping.set(profile.id, stop);
   };
 
   /** The profile of the window a request came from; a window always belongs to one. */
@@ -447,7 +459,7 @@ function start(initialMode: StartupMode): void {
           }),
       );
       await Promise.all(closing);
-      await Promise.all([...stopping]);
+      await stopping.get(id);
     }
     await catalog.delete(id);
     await broadcastProfiles();
@@ -476,8 +488,9 @@ function start(initialMode: StartupMode): void {
     if (savedOnQuit) return;
     event.preventDefault();
     quitting = true;
-    const saves = [...running.values()].map((profile) => profile.keeper.flushOnQuit());
-    void Promise.allSettled([...saves, ...stopping]).finally(() => {
+    // `stop` saves each running profile, and leaves one being deleted unsaved.
+    const saves = [...running.values()].map((profile) => profile.stop());
+    void Promise.allSettled([...saves, ...stopping.values()]).finally(() => {
       savedOnQuit = true;
       app.quit();
     });
@@ -519,7 +532,7 @@ function start(initialMode: StartupMode): void {
             appImage,
             {
               binDir: path.join(home, '.local', 'bin'),
-              applicationsDir: path.join(process.env['XDG_DATA_HOME'] || path.join(home, '.local', 'share'), 'applications'),
+              applicationsDir: path.join(xdgDataHome(home), 'applications'),
             },
             galeo,
           );
@@ -738,4 +751,10 @@ function customCssTemplate(scope: 'global' | 'profile'): string {
 function appImagePath(): string | null {
   const appImage = app.isPackaged ? process.env['APPIMAGE'] : undefined;
   return appImage && path.isAbsolute(appImage) ? appImage : null;
+}
+
+/** `$XDG_DATA_HOME`, which the XDG spec says to ignore unless absolute, else `~/.local/share`. */
+function xdgDataHome(home: string): string {
+  const configured = process.env['XDG_DATA_HOME'];
+  return configured && path.isAbsolute(configured) ? configured : path.join(home, '.local', 'share');
 }

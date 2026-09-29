@@ -83,11 +83,13 @@ export class ProfileRuntime {
     return this.windows.some((window) => window.webContents.id === windowId);
   }
 
-  /** Saves what the profile holds (unless discarded) and stops watching its files. */
+  /** Saves what the profile holds (unless discarded), stops watching its files, and waits for its writes. */
   async stop(): Promise<void> {
     // A discarded profile's pending save must not write its folder back after it is deleted.
     if (this.discard) this.keeper.holdForQuit();
     else await this.keeper.flushOnQuit();
     this.settings.stop();
+    // Writes already under way land before anyone deletes, restarts or quits past this profile.
+    await Promise.all([this.sessions.idle(), this.recent.idle()]);
   }
 }

@@ -88,3 +88,13 @@ describe('SessionStore writes', () => {
     expect((await read(fs, FILE)).savedAt).toBe(11);
   });
 });
+
+describe('SessionStore.idle', () => {
+  it('settles once every save asked for so far has landed', async () => {
+    const fs = new FakeFileSystem();
+    const store = new SessionStore({ fs, utf8, dir: '/s/profiles/p', parse: (data) => ({ ok: true, value: data as never }) });
+    void store.save({ savedAt: 1, windows: [], focusOrder: [] });
+    await store.idle();
+    await expect(fs.stat('/s/profiles/p/session.json')).resolves.toBeDefined();
+  });
+});
