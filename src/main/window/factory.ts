@@ -3,22 +3,24 @@ import path from 'node:path';
 import { visibleBounds } from '../../core/session/bounds';
 import type { WindowBounds } from '../../core/session/model';
 import type { Command } from '../../shared/keymap';
-import { capabilityKey, hardenedWebPreferences, keymapPlatform, titleBarOverlay, windowTitle } from './policy';
+import { hardenedWebPreferences, keymapPlatform, mainKey, titleBarOverlay, windowTitle } from './policy';
 
 export interface WindowOptions {
   url: string;
   sandboxed: boolean;
   /** A small fixed-size window for app-level choices, such as "sandbox unavailable". */
   dialog?: boolean;
-  /** A capability key was pressed; the page never saw it (ADR-004). */
-  onCapabilityKey?: (command: Command) => void;
+  /** A key main handles was pressed (a capability, ADR-004, or a window key); the page never saw it. */
+  onMainKey?: (command: Command) => void;
+  /** The parts of the title before "galeo" (see `windowTitle`); main updates it later with `setTitle`. */
+  title?: readonly (string | null)[];
   /** Where the window was last time (a restored session); the platform may place it itself. */
   bounds?: WindowBounds | null;
 }
 
 /** The only place that constructs a `BrowserWindow`. Main owns the title (never the page). */
-export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKey, bounds }: WindowOptions): BrowserWindow {
-  const title = windowTitle('galeo', { sandboxed });
+export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bounds, title: parts = [] }: WindowOptions): BrowserWindow {
+  const title = windowTitle(parts, { sandboxed });
   const scheme = () => (nativeTheme.shouldUseDarkColors ? 'dark' : 'light');
   // A place on a display that's gone isn't restored; the size is.
   const placed = bounds ? visibleBounds(bounds, screen.getAllDisplays().map((display) => display.workArea)) : null;
@@ -41,10 +43,10 @@ export function createAppWindow({ url, sandboxed, dialog = false, onCapabilityKe
   });
   window.on('page-title-updated', (event) => event.preventDefault());
   window.webContents.on('before-input-event', (event, input) => {
-    const command = capabilityKey(input, keymapPlatform(process.platform));
+    const command = mainKey(input, keymapPlatform(process.platform));
     if (!command) return;
     event.preventDefault();
-    onCapabilityKey?.(command);
+    onMainKey?.(command);
   });
   if (!dialog && process.platform !== 'darwin') {
     const followScheme = () => window.setTitleBarOverlay(titleBarOverlay(scheme()));

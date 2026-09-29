@@ -314,4 +314,19 @@ describe('TabRegistry', () => {
     tabs.open('/d/d.md', 1, null, c.id);
     expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/a.md', '/d/c.md', '/d/d.md', '/d/b.md']);
   });
+
+  it('says when the window last closed a tab, on a clock it shares with stamp()', () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1);
+    expect(tabs.closedAt(1)).toBeNull();
+    tabs.close(a.id, 1);
+    const closed = tabs.closedAt(1)!;
+    const later = tabs.stamp();
+    expect(later).toBeGreaterThan(closed);
+    const b = tabs.open('/d/b.md', 1);
+    tabs.close(b.id, 1);
+    expect(tabs.closedAt(1)).toBeGreaterThan(later);
+    tabs.reopenClosed(1);
+    expect(tabs.closedAt(1)).toBe(closed);
+  });
 });

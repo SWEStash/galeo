@@ -11,7 +11,7 @@ const from = (id: number) => ({ sender: { id } }) as WindowIpcEvent;
 const tabPaths = (snapshot: TabSnapshot) => snapshot.tabs.map((tab) => tab.path);
 const MB = 1024 * 1024;
 
-function setup() {
+function setup(closedWindows: { at: number | null; reopened: number[] } = { at: null, reopened: [] }) {
   let n = 0;
   const tabs = new TabRegistry(() => `id-${++n}`);
   const fs = new FakeFileSystem({ '/d/a.md': 'a', '/d/b.md': 'b' });
@@ -30,6 +30,7 @@ function setup() {
     closed: (id) => closed.push(id),
     demote: (window, ids) => demoted.push([window, ids]),
     stale: (window, id) => stale.push([window, id]),
+    closedWindows: { at: () => closedWindows.at, reopen: (window) => closedWindows.reopened.push(window) },
   });
   const a = tabs.open('/d/a.md', 1).id;
   const b = tabs.open('/d/b.md', 1).id;
@@ -55,6 +56,32 @@ describe('tabHandlers', () => {
     expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/b.md', '/d/a.md']);
     expect(reopened).toBe(tabs.list(1)[1]!.id);
     expect(handlers['tabs.reopenClosed']([], from(1))).toBeNull();
+  });
+
+  it('Ctrl+Shift+T brings back a window of the profile when it closed after the last closed tab', () => {
+    const closedWindows = { at: null as number | null, reopened: [] as number[] };
+    const { handlers, tabs, a } = setup(closedWindows);
+    handlers['tabs.close']([a], from(1));
+    closedWindows.at = tabs.stamp();
+    expect(handlers['tabs.reopenClosed']([], from(1))).toBeNull();
+    expect(closedWindows.reopened).toEqual([1]);
+    expect(tabs.list(1)).toHaveLength(1);
+  });
+
+  it('Ctrl+Shift+T brings back a tab that closed after the last closed window', () => {
+    const closedWindows = { at: null as number | null, reopened: [] as number[] };
+    const { handlers, tabs, a } = setup(closedWindows);
+    closedWindows.at = tabs.stamp();
+    handlers['tabs.close']([a], from(1));
+    expect(handlers['tabs.reopenClosed']([], from(1))).toBe(tabs.list(1)[0]!.id);
+    expect(closedWindows.reopened).toEqual([]);
+  });
+
+  it('Ctrl+Shift+T brings back a closed window when the window closed no tab', () => {
+    const closedWindows = { at: 1, reopened: [] as number[] };
+    const { handlers } = setup(closedWindows);
+    expect(handlers['tabs.reopenClosed']([], from(1))).toBeNull();
+    expect(closedWindows.reopened).toEqual([1]);
   });
 
   it('lets go of what main kept for a closed tab', () => {

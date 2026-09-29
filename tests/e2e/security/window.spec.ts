@@ -104,7 +104,7 @@ test.describe('sandbox state', () => {
       await expect(page.getByTestId('app-root')).toHaveAttribute('data-worker', 'ready');
       await expect(page.getByTestId('unsandboxed-badge')).toHaveCount(0);
       expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe(
-        'galeo',
+        'default — galeo',
       );
     } finally {
       await close();
@@ -116,7 +116,7 @@ test.describe('sandbox state', () => {
     try {
       await expect(page.getByTestId('unsandboxed-badge')).toBeVisible();
       expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe(
-        'galeo — unsandboxed',
+        'default — galeo — unsandboxed',
       );
     } finally {
       await close();

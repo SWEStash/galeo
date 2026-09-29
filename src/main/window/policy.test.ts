@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { capabilityKey, hardenedWebPreferences, isPermissionAllowed, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
+import { hardenedWebPreferences, isPermissionAllowed, mainKey, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
 
 describe('isPermissionAllowed', () => {
   it('allows only sanitized clipboard writes (copy buttons)', () => {
@@ -15,12 +15,17 @@ describe('isPermissionAllowed', () => {
 });
 
 describe('windowTitle', () => {
-  it('uses the title as is when sandboxed', () => {
-    expect(windowTitle('galeo', { sandboxed: true })).toBe('galeo');
+  it('names the shown file and the profile before the app (UX: GNOME overview, Alt+Tab)', () => {
+    expect(windowTitle(['plan.md', 'acme'], { sandboxed: true })).toBe('plan.md — acme — galeo');
+  });
+
+  it('leaves out a part that is missing, such as the file of an empty window', () => {
+    expect(windowTitle([null, 'default'], { sandboxed: true })).toBe('default — galeo');
+    expect(windowTitle([], { sandboxed: true })).toBe('galeo');
   });
 
   it('marks every title while unsandboxed', () => {
-    expect(windowTitle('galeo', { sandboxed: false })).toBe('galeo — unsandboxed');
+    expect(windowTitle(['a.md', 'default'], { sandboxed: false })).toBe('a.md — default — galeo — unsandboxed');
   });
 });
 
@@ -63,17 +68,27 @@ describe('titleBarOverlay', () => {
   });
 });
 
-describe('capabilityKey', () => {
-  const input = (key: string, control = true, type = 'keyDown') => ({ type, key, control, alt: false, shift: false, meta: false });
+describe('mainKey', () => {
+  const input = (key: string, control = true, type = 'keyDown', shift = false) => ({ type, key, control, alt: false, shift, meta: false });
 
   it("names a capability key from Electron's input, on key down only", () => {
-    expect(capabilityKey(input('e'), 'linux')).toBe('editMode');
-    expect(capabilityKey(input('e', true, 'keyUp'), 'linux')).toBeNull();
-    expect(capabilityKey(input('f'), 'linux')).toBeNull();
-    expect(capabilityKey(input('e', false), 'linux')).toBeNull();
+    expect(mainKey(input('e'), 'linux')).toBe('editMode');
+    expect(mainKey(input('e', true, 'keyUp'), 'linux')).toBeNull();
+    expect(mainKey(input('f'), 'linux')).toBeNull();
+    expect(mainKey(input('e', false), 'linux')).toBeNull();
+  });
+
+  it('names the window keys main handles itself, and leaves tab keys to the page', () => {
+    expect(mainKey(input('n'), 'linux')).toBe('newWindow');
+    expect(mainKey(input('W', true, 'keyDown', true), 'linux')).toBe('closeWindow');
+    expect(mainKey(input('Q', true, 'keyDown', true), 'linux')).toBe('quit');
+    expect(mainKey(input('q'), 'linux')).toBeNull();
+    expect(mainKey(input('w'), 'linux')).toBeNull();
+    expect(mainKey(input('T', true, 'keyDown', true), 'linux')).toBeNull();
   });
 
   it('ignores a held key repeating: a capability is granted once per press', () => {
-    expect(capabilityKey({ ...input('e'), isAutoRepeat: true }, 'linux')).toBeNull();
+    expect(mainKey({ ...input('e'), isAutoRepeat: true }, 'linux')).toBeNull();
+    expect(mainKey({ ...input('n'), isAutoRepeat: true }, 'linux')).toBeNull();
   });
 });

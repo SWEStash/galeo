@@ -40,6 +40,8 @@ interface Closed {
   index: number;
   position: number;
   zoom?: number;
+  /** When it closed, on the registry's own clock (`stamp`). */
+  at: number;
 }
 
 /** How many closed tabs per window Ctrl+Shift+T can bring back. */
@@ -59,6 +61,7 @@ export class TabRegistry {
   private readonly active = new Map<number, string>();
   private readonly closed = new Map<number, Closed[]>();
   private readonly revisions = new Map<number, number>();
+  private clock = 0;
 
   /** `onChange` hears the window whose tabs changed, once per change, so main can push a snapshot. */
   constructor(
@@ -153,10 +156,23 @@ export class TabRegistry {
     this.records.delete(id);
     if (this.active.get(window) === id) this.active.delete(window);
     const closed = this.closed.get(window) ?? [];
-    closed.push({ entries: record.entries, index: record.index, position, ...(record.zoom ? { zoom: record.zoom } : {}) });
+    closed.push({ entries: record.entries, index: record.index, position, ...(record.zoom ? { zoom: record.zoom } : {}), at: this.stamp() });
     this.closed.set(window, closed.slice(-CLOSED_DEPTH));
     this.changed(window);
     return true;
+  }
+
+  /**
+   * A point on the clock closed tabs are stamped with, increasing with every call: main stamps
+   * closed windows with it, so Ctrl+Shift+T can tell which closed last.
+   */
+  stamp(): number {
+    return ++this.clock;
+  }
+
+  /** When the window last closed a tab it can still reopen, or null. */
+  closedAt(window: number): number | null {
+    return this.closed.get(window)?.at(-1)?.at ?? null;
   }
 
   /** Brings back the window's most recently closed tab, where it was, under a new id. */

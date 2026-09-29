@@ -1,11 +1,13 @@
-import { capabilityCommandFor, type Command, type Platform } from '../../shared/keymap';
+import { mainCommandFor, type Command, type Platform } from '../../shared/keymap';
 /** Every permission is denied except sanitized clipboard writes, used by copy buttons (SR-01). */
 export function isPermissionAllowed(permission: string): boolean {
   return permission === 'clipboard-sanitized-write';
 }
 
 /** Window titles carry a non-dismissable warning while the process runs unsandboxed (ADR-008). */
-export function windowTitle(title: string, { sandboxed }: { sandboxed: boolean }): string {
+/** `<file> — <profile> — galeo` (UX), leaving out missing parts; every title says when unsandboxed. */
+export function windowTitle(parts: readonly (string | null)[], { sandboxed }: { sandboxed: boolean }): string {
+  const title = [...parts.filter((part) => part !== null), 'galeo'].join(' — ');
   return sandboxed ? title : `${title} — unsandboxed`;
 }
 
@@ -59,10 +61,10 @@ export interface KeyInput {
   isAutoRepeat?: boolean;
 }
 
-/** The capability command a key press is (ADR-004), which main handles before the page sees it. */
-export function capabilityKey(input: KeyInput, platform: Platform): Command | null {
+/** The command a key press is that main handles before the page sees it (capabilities, ADR-004; window keys). */
+export function mainKey(input: KeyInput, platform: Platform): Command | null {
   if (input.type !== 'keyDown' || input.isAutoRepeat) return null;
-  return capabilityCommandFor(
+  return mainCommandFor(
     { key: input.key, ctrlKey: input.control, altKey: input.alt, shiftKey: input.shift, metaKey: input.meta },
     platform,
   );

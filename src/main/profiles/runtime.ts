@@ -6,11 +6,14 @@ import { RecentFiles } from '../../core/session/recent';
 import { SessionStore } from '../../core/session/store';
 import type { Utf8 } from '../../core/settings/json-file';
 import { ProfileSettings } from '../../core/settings/profile-settings';
-import type { TabRegistry } from '../../core/tabs/registry';
+import type { WindowBounds } from '../../core/session/model';
+import type { TabRegistry, WindowState } from '../../core/tabs/registry';
 import type { AppPaths } from '../../core/ports';
 import { parseRecentFiles, parseSession } from '../session/schemas';
 import { parseGlobalSettings, parseProfileFile } from '../settings/schemas';
 import { windowBounds } from '../window/factory';
+
+const CLOSED_WINDOWS = 10;
 
 export interface RuntimeDeps {
   fs: FileSystem;
@@ -33,11 +36,15 @@ export class ProfileRuntime {
   readonly recent: RecentFiles;
   readonly keeper: SessionKeeper;
   readonly windows: BrowserWindow[] = [];
+  /** Windows closed while others stayed open, newest last, until the profile stops (UX F5: Ctrl+Shift+T). */
+  readonly closedWindows: { state: WindowState; bounds: WindowBounds; at: number }[] = [];
   /** Set when the profile is going away unsaved (Undo of a profile `--profile` created). */
   discard = false;
 
   constructor(
     readonly id: string,
+    /** The display name, for window titles and the profile chip. */
+    public name: string,
     deps: RuntimeDeps,
   ) {
     const { fs, utf8, paths } = deps;
@@ -62,6 +69,12 @@ export class ProfileRuntime {
       // Nothing is saved before the session is restored and its windows are open.
       running: false,
     });
+  }
+
+  /** Keeps a closing window's tabs for Ctrl+Shift+T; at most 10 windows. */
+  keepClosed(closed: { state: WindowState; bounds: WindowBounds; at: number }): void {
+    this.closedWindows.push(closed);
+    if (this.closedWindows.length > CLOSED_WINDOWS) this.closedWindows.shift();
   }
 
   has(windowId: number): boolean {

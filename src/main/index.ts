@@ -48,11 +48,11 @@ import { hardenWebContents } from './security/harden';
 import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
-import { createAppWindow } from './window/factory';
+import { createAppWindow, windowBounds } from './window/factory';
 import { applicationMenu } from './window/menu';
 import { keymapPlatform } from './window/policy';
 import { showNativeMenu } from './window/native-menu';
-import { ownArgs } from './window/policy';
+import { ownArgs, windowTitle } from './window/policy';
 
 const MIB = 1024 * 1024;
 /** How often each window's renderer memory is sampled for pressure demotion. */
@@ -111,7 +111,11 @@ function start(initialMode: StartupMode): void {
   };
   const documents = new TabRegistry(randomUUID, (windowId) => {
     pushSnapshot(windowId);
-    profileOf(windowId)?.keeper.changed();
+    const profile = profileOf(windowId);
+    if (profile) {
+      profile.keeper.changed();
+      updateTitle(profile, windowId);
+    }
   });
   const fs = new NodeFileSystem();
   const watcher = new NodeFileWatcher();
@@ -186,8 +190,30 @@ function start(initialMode: StartupMode): void {
   registerSchemes();
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
 
+  /** `<file> — <profile> — galeo`, from the window's shown tab (UX). */
+  const updateTitle = (profile: ProfileRuntime, windowId: number) => {
+    const window = profile.windows.find((each) => each.webContents.id === windowId);
+    const { tabs, active } = documents.snapshot(windowId);
+    const shown = tabs.find((tab) => tab.id === active);
+    window?.setTitle(windowTitle([shown ? path.basename(shown.path) : null, profile.name], { sandboxed }));
+  };
+
+  /** Keys main takes before the page (ADR-004 capabilities; window keys work even when the page is busy). */
+  const mainKey = (command: Command, profile: ProfileRuntime, window: BrowserWindow) => {
+    if (command === 'newWindow') openMainWindow(profile);
+    else if (command === 'closeWindow') window.close();
+    else if (command === 'quit') app.quit();
+    else recordCapabilityKey(command);
+  };
+
   const openMainWindow = (profile: ProfileRuntime, { bounds = null, state }: { bounds?: WindowBounds | null; state?: WindowState } = {}) => {
-    const window = createAppWindow({ url: rendererUrl(runtime), sandboxed, onCapabilityKey: recordCapabilityKey, bounds });
+    const window: BrowserWindow = createAppWindow({
+      url: rendererUrl(runtime),
+      sandboxed,
+      onMainKey: (command) => mainKey(command, profile, window),
+      bounds,
+      title: [null, profile.name],
+    });
     const windowId = window.webContents.id;
     profile.windows.push(window);
     // A new window comes to the front; after the profile's last one closed (macOS runs on), saving resumes.
@@ -217,8 +243,12 @@ function start(initialMode: StartupMode): void {
       }
     });
     window.on('close', () => {
+      if (quitting || profile.discard) return;
       // The profile's last window: what it holds now is what the save keeps, not the empty aftermath.
-      if (!quitting && profile.windows.length === 1) profile.keeper.holdForQuit();
+      if (profile.windows.length === 1) return void profile.keeper.holdForQuit();
+      // One of several: its tabs stay recoverable with Ctrl+Shift+T while the profile runs (UX F5).
+      const closed = documents.exportWindow(windowId);
+      if (closed.tabs.length > 0) profile.keepClosed({ state: closed, bounds: windowBounds(window), at: documents.stamp() });
     });
     window.on('closed', () => {
       profile.windows.splice(profile.windows.indexOf(window), 1);
@@ -247,7 +277,8 @@ function start(initialMode: StartupMode): void {
   const rememberProfile = (id: string) => void appState.setLastProfile(id).catch((error: unknown) => console.warn('galeo: app state not saved', error));
 
   const startRuntime = async (id: string): Promise<ProfileRuntime> => {
-    const profile = new ProfileRuntime(id, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder });
+    const name = (await catalog.list()).find((each) => each.id === id)?.name ?? id;
+    const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder });
     running.set(id, profile);
     profile.settings.onChange((current) => {
       nativeTheme.themeSource = current.themeMode;
@@ -472,6 +503,14 @@ function start(initialMode: StartupMode): void {
           demote,
           stale: (windowId, id) => sendTo(windowId, 'tabs.stale', id),
           positioned: (windowId) => profileOf(windowId)?.keeper.changed(),
+          closedWindows: {
+            at: (windowId) => profileOf(windowId)?.closedWindows.at(-1)?.at ?? null,
+            reopen: (windowId) => {
+              const profile = profileOf(windowId);
+              const closed = profile?.closedWindows.pop();
+              if (profile && closed) openMainWindow(profile, { bounds: closed.bounds, state: closed.state });
+            },
+          },
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, selections, tabs: documents }),
       },

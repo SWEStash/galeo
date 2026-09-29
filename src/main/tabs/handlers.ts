@@ -27,6 +27,8 @@ export interface TabHandlerDeps {
   stale: (window: number, id: string) => void;
   /** A tab's position changed (the session keeps it). */
   positioned: (window: number) => void;
+  /** The windows of the sender's profile that closed and can come back: when the last one closed, and how. */
+  closedWindows: { at: (window: number) => number | null; reopen: (window: number) => void };
 }
 
 /**
@@ -34,7 +36,7 @@ export interface TabHandlerDeps {
  * step with main; it gets main's snapshot again instead of an error (ADR-002).
  */
 export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
-  const { tabs, warm, reads, resync, closed, demote, stale, positioned } = deps;
+  const { tabs, warm, reads, resync, closed, demote, stale, positioned, closedWindows } = deps;
   const demoteAll = (window: number, ids: string[]) => {
     if (ids.length > 0) demote(window, ids);
   };
@@ -66,7 +68,17 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
       reads.forget(id);
       closed(id);
     },
-    'tabs.reopenClosed': (_args, event) => tabs.reopenClosed(event.sender.id)?.id ?? null,
+    // Whatever closed last comes back: this window's tab, or a whole window of its profile (UX F4).
+    'tabs.reopenClosed': (_args, event) => {
+      const window = event.sender.id;
+      const tabAt = tabs.closedAt(window);
+      const windowAt = closedWindows.at(window);
+      if (windowAt !== null && (tabAt === null || windowAt > tabAt)) {
+        closedWindows.reopen(window);
+        return null;
+      }
+      return tabs.reopenClosed(window)?.id ?? null;
+    },
     'tabs.move': ([id, position], event) => {
       if (!tabs.move(id, event.sender.id, position)) resync(event.sender.id);
     },
