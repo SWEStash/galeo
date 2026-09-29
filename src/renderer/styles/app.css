@@ -38,6 +38,186 @@ body,
   padding-left: 78px;
 }
 
+/* The profile chip (UX F5): its name, and its accent beside it. */
+.profile-chip {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  max-width: 160px;
+  margin: 4px 6px;
+  padding: 0 8px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  font: inherit;
+  -webkit-app-region: no-drag;
+}
+
+.profile-chip[data-focus-visible] {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 1px;
+}
+
+.profile-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-chip-swatch {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.menu-popover {
+  min-width: 220px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-bg);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+  font: 13px var(--galeo-font-ui);
+  color: var(--galeo-color-fg);
+}
+
+.menu {
+  padding: 4px;
+  outline: none;
+}
+
+.menu-header {
+  padding: 6px 8px 2px;
+  color: var(--galeo-color-muted);
+  font-size: 12px;
+}
+
+.menu-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 4px;
+  outline: none;
+  cursor: default;
+}
+
+.menu-item[data-focused] {
+  background: var(--galeo-color-code-bg);
+}
+
+.menu-item[data-disabled] {
+  color: var(--galeo-color-muted);
+}
+
+.menu-description {
+  margin-left: auto;
+  color: var(--galeo-color-muted);
+  font-size: 12px;
+}
+
+.menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--galeo-color-border);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 35%);
+}
+
+.modal {
+  width: min(420px, calc(100vw - 32px));
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  font: 14px var(--galeo-font-ui);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  outline: none;
+}
+
+.dialog h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.dialog p {
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field input {
+  padding: 5px 8px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: 4px;
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  font: inherit;
+}
+
+.field .react-aria-FieldError {
+  color: var(--galeo-color-log-error);
+  font-size: 13px;
+}
+
+.swatches-label {
+  margin-top: 4px;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+  outline: none;
+}
+
+.swatch-item {
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  outline: none;
+}
+
+.swatch-item[data-selected] {
+  border-color: var(--galeo-color-fg);
+}
+
+.swatch-item[data-focus-visible] {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 1px;
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.dialog-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .tab-strip {
   position: relative;
   display: flex;
@@ -71,7 +251,7 @@ body,
 .tab[data-selected] {
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
-  box-shadow: inset 0 -2px 0 var(--galeo-color-focus);
+  box-shadow: inset 0 -2px 0 var(--galeo-color-accent);
 }
 
 .tab[data-focus-visible] {

@@ -22,6 +22,8 @@
   --galeo-color-link: #0969da;
   --galeo-color-code-bg: #f6f8fa;
   --galeo-color-focus: #0969da;
+  /* The window's profile accent (the page sets it); chrome only, never documents. */
+  --galeo-color-accent: #3a7bd5;
   --galeo-color-mark: rgb(255 212 59 / 45%);
   --galeo-color-mark-current: #ffa62b;
   --galeo-color-log-error: #d1242f;

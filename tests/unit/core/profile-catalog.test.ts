@@ -62,7 +62,7 @@ describe('ProfileCatalog.list', () => {
 describe('ProfileCatalog.create', () => {
   it('writes profile.json with the name and accent, owner-only', async () => {
     const { fs, catalog } = setup();
-    expect(await catalog.create('acme', 'Acme', '#1a7f5a')).toEqual({ id: 'acme', name: 'Acme', accent: '#1a7f5a' });
+    expect(await catalog.create('acme', 'Acme', '#1a7f5a')).toEqual({ ok: true, profile: { id: 'acme', name: 'Acme', accent: '#1a7f5a' } });
     const path = `${CONFIG}/profiles/acme/profile.json`;
     expect(await read(fs, path)).toEqual({ schemaVersion: 1, name: 'Acme', accent: '#1a7f5a' });
     expect(fs.modeOf(path)).toBe(0o600);
@@ -77,9 +77,11 @@ describe('ProfileCatalog.create', () => {
     await expect(catalog.create('../x', 'X', null)).rejects.toThrow(/id/);
   });
 
-  it('refuses an unusable name', async () => {
-    const { catalog } = setup();
-    await expect(catalog.create('x', ' ', null)).rejects.toThrow(/name/);
+  it('refuses an unusable name, or one another profile has (ignoring case)', async () => {
+    const { catalog } = setup({ [`${CONFIG}/profiles/acme/profile.json`]: profileJson({ name: 'Acme' }) });
+    expect(await catalog.create('x', ' ', null)).toEqual({ ok: false, reason: 'empty' });
+    expect(await catalog.create('x', 'ACME', null)).toEqual({ ok: false, reason: 'taken' });
+    expect(await catalog.create('x', 'Default', null)).toEqual({ ok: false, reason: 'taken' });
   });
 });
 
@@ -96,14 +98,19 @@ describe('ProfileCatalog.update', () => {
     const path = `${CONFIG}/profiles/acme/profile.json`;
     const { fs, catalog } = setup({ [path]: '{ broken' });
     const result = await catalog.update('acme', { name: 'New' });
-    expect(result).toMatchObject({ ok: false, notice: { path, reason: 'invalid' } });
+    expect(result).toMatchObject({ ok: false, reason: 'invalid-file', notice: { path, reason: 'invalid' } });
     expect(new TextDecoder().decode(await fs.readFile(path, { maxBytes: 1e6 }))).toBe('{ broken');
   });
 
-  it('refuses an unknown profile or an unusable name', async () => {
-    const { catalog } = setup({ [`${CONFIG}/profiles/acme/profile.json`]: profileJson({ name: 'Acme' }) });
+  it('refuses an unknown profile, an unusable name, or another profile’s', async () => {
+    const { catalog } = setup({
+      [`${CONFIG}/profiles/acme/profile.json`]: profileJson({ name: 'Acme' }),
+      [`${CONFIG}/profiles/beta/profile.json`]: profileJson({ name: 'Beta' }),
+    });
     await expect(catalog.update('nope', { name: 'X' })).rejects.toThrow(/no such profile/);
-    await expect(catalog.update('acme', { name: '' })).rejects.toThrow(/name/);
+    expect(await catalog.update('acme', { name: '' })).toEqual({ ok: false, reason: 'empty' });
+    expect(await catalog.update('acme', { name: 'beta' })).toEqual({ ok: false, reason: 'taken' });
+    expect(await catalog.update('acme', { name: 'ACME' })).toMatchObject({ ok: true, profile: { name: 'ACME' } });
   });
 
   it('can recolour default, which has no file yet', async () => {

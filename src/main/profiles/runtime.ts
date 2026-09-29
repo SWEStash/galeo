@@ -7,6 +7,7 @@ import { SessionStore } from '../../core/session/store';
 import type { Utf8 } from '../../core/settings/json-file';
 import { ProfileSettings } from '../../core/settings/profile-settings';
 import type { WindowBounds } from '../../core/session/model';
+import type { SettingsNotice } from '../../shared/settings';
 import type { TabRegistry, WindowState } from '../../core/tabs/registry';
 import type { AppPaths } from '../../core/ports';
 import { parseRecentFiles, parseSession } from '../session/schemas';
@@ -38,6 +39,8 @@ export class ProfileRuntime {
   readonly windows: BrowserWindow[] = [];
   /** Windows closed while others stayed open, newest last, until the profile stops (UX F5: Ctrl+Shift+T). */
   readonly closedWindows: { state: WindowState; bounds: WindowBounds; at: number }[] = [];
+  /** Its session file was invalid at start and a snapshot was restored instead (SR-17), for the window to say. */
+  sessionNotice: SettingsNotice | null = null;
   /** Set when the profile is going away unsaved (Undo of a profile `--profile` created). */
   discard = false;
 

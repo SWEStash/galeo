@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
 import { isTextDropItem, Tab, TabList, useDrag, useDrop } from 'react-aria-components';
 import type { DocumentRecord } from '../../shared/documents';
 import { tabLabels } from '../../shared/tab-labels';
@@ -13,7 +13,7 @@ const TAB_TYPE = 'application/x-galeo-tab';
  * ←/→ move between tabs, Enter or Space shows one, Delete closes it; a tab closes on middle-click
  * or its ✕ too, and drags to a new place.
  */
-export function TabBar({ view, store }: { view: TabsView; store: TabStore }) {
+export function TabBar({ view, store, start }: { view: TabsView; store: TabStore; start?: ReactNode }) {
   const listRef = useRef<HTMLDivElement>(null);
   const labels = tabLabels(view.tabs.map((tab) => tab.path));
   const [caret, setCaret] = useState<{ index: number; left: number } | null>(null);
@@ -63,6 +63,7 @@ export function TabBar({ view, store }: { view: TabsView; store: TabStore }) {
 
   return (
     <div className="tab-bar" data-testid="tab-bar">
+      {start}
       <div className="tab-strip" ref={listRef} {...dropProps} onKeyDown={onKeyDown}>
         <TabList aria-label="Open documents" className="tab-list" items={view.tabs.map((tab, index) => ({ ...tab, label: labels[index]! }))}>
           {(tab) => (

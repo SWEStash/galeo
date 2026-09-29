@@ -1,4 +1,5 @@
 import { z, type ZodType } from 'zod';
+import { ACCENTS } from '../accents';
 import { CHOSEN_ENCODINGS, type Channel, type Requests } from './ipc';
 
 /**
@@ -14,6 +15,10 @@ export const scrollAnchor = z.strictObject({
   heading: z.string().min(1).max(256).nullable(),
   fraction: z.number().min(0).max(1),
 });
+
+const profileId = z.string().min(1).max(32);
+const profileName = z.string().max(256);
+const accent = z.enum(ACCENTS.map((each) => each.color) as [string, ...string[]]).nullable();
 
 /** A tab's zoom, 50 % to 300 %. */
 export const zoomLevel = z.number().min(0.5).max(3);
@@ -45,4 +50,10 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'recent.clear': z.tuple([]),
   'profiles.created': z.tuple([]),
   'profiles.undoCreate': z.tuple([documentId]),
+  'profiles.list': z.tuple([]),
+  'profiles.open': z.tuple([profileId]),
+  // Names are checked by main's own rules; this only bounds them. Accents are the presets (UX §6).
+  'profiles.create': z.tuple([profileName, accent]),
+  'profiles.update': z.tuple([profileName, accent]),
+  'profiles.delete': z.tuple([]),
 };

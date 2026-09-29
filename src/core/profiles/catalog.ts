@@ -4,7 +4,7 @@ import { FsError, type FileSystem } from '../ports';
 import { ConfigFile } from '../settings/config-file';
 import { readJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
 import { CONFIG_MAX_BYTES, SETTINGS_VERSION, type ProfileFile } from '../settings/profile-settings';
-import { isProfileId, validateName } from './names';
+import { isProfileId, validateName, type NameProblem } from './names';
 
 export const DEFAULT_PROFILE = 'default';
 
@@ -23,7 +23,11 @@ export interface ProfileCatalogDeps {
   parse: Parse<ProfileFile>;
 }
 
-export type Updated = { ok: true; profile: Profile } | { ok: false; notice: SettingsNotice };
+/** Why a name can't be used: see `validateName`, or another profile has it (ignoring case). */
+export type NameRefusal = NameProblem | 'taken';
+
+export type Created = { ok: true; profile: Profile } | { ok: false; reason: NameRefusal };
+export type Updated = Created | { ok: false; reason: 'invalid-file'; notice: SettingsNotice };
 
 /**
  * The profiles on disk (ADR-005): one folder per id under `profiles/` in the config directory,
@@ -43,14 +47,14 @@ export class ProfileCatalog {
     return [first!, ...rest.sort((a, b) => a.name.localeCompare(b.name))];
   }
 
-  async create(id: string, name: string, accent: string | null): Promise<Profile> {
+  async create(id: string, name: string, accent: string | null): Promise<Created> {
     requireId(id);
-    const valid = validateName(name);
-    if (!valid.ok) throw new Error(`profile name ${valid.reason}`);
     if (id === DEFAULT_PROFILE || (await this.folders()).includes(id)) throw new Error(`profile ${id} exists`);
+    const valid = await this.usable(name, null);
+    if (!valid.ok) return valid;
     const value: ProfileFile = accent === null ? { name: valid.name } : { name: valid.name, accent };
     await this.file(id).update(() => value);
-    return { id, name: valid.name, accent };
+    return { ok: true, profile: { id, name: valid.name, accent } };
   }
 
   /** Renames or recolours, re-reading the file first; an invalid hand edit is left as it is (SR-17). */
@@ -59,8 +63,8 @@ export class ProfileCatalog {
     if (id !== DEFAULT_PROFILE && !(await this.folders()).includes(id)) throw new Error(`no such profile ${id}`);
     let name: string | undefined;
     if (change.name !== undefined) {
-      const valid = validateName(change.name);
-      if (!valid.ok) throw new Error(`profile name ${valid.reason}`);
+      const valid = await this.usable(change.name, id);
+      if (!valid.ok) return valid;
       name = valid.name;
     }
     const updated = await this.file(id).update((value) => ({
@@ -68,7 +72,7 @@ export class ProfileCatalog {
       ...(name === undefined ? {} : { name }),
       ...(change.accent === undefined ? {} : { accent: change.accent }),
     }));
-    if (updated.notice) return { ok: false, notice: updated.notice };
+    if (updated.notice) return { ok: false, reason: 'invalid-file', notice: updated.notice };
     return { ok: true, profile: toProfile(id, updated.value) };
   }
 
@@ -78,6 +82,15 @@ export class ProfileCatalog {
     if (id === DEFAULT_PROFILE) throw new Error('the default profile cannot be deleted');
     await this.deps.fs.remove(joinPath(this.deps.configDir, 'profiles', id));
     await this.deps.fs.remove(joinPath(this.deps.stateDir, 'profiles', id));
+  }
+
+  /** A valid name no other profile than `self` has. */
+  private async usable(name: string, self: string | null): Promise<{ ok: true; name: string } | { ok: false; reason: NameRefusal }> {
+    const valid = validateName(name);
+    if (!valid.ok) return valid;
+    const wanted = valid.name.toLowerCase();
+    const taken = (await this.list()).some((profile) => profile.id !== self && profile.name.toLowerCase() === wanted);
+    return taken ? { ok: false, reason: 'taken' } : valid;
   }
 
   private async read(id: string): Promise<Profile> {

@@ -6,7 +6,10 @@ import type { ColorScheme } from './document/host';
 import { useColorScheme } from './document/theme';
 import { markFirstPaint } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
-import { SettingsNotice } from './settings/SettingsNotice';
+import { SessionNotice, SettingsNotice } from './settings/SettingsNotice';
+import { ProfileChip } from './profiles/ProfileChip';
+import { useProfiles } from './profiles/useProfiles';
+import { accentOf } from '../shared/accents';
 import { useSettings } from './settings/useSettings';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { tabAction } from './tabs/commands';
@@ -47,6 +50,13 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
   const [client, setClient] = useState<RenderClient | null>(null);
   const { view, store } = useTabs();
   const settings = useSettings();
+  const profiles = useProfiles();
+  const accent = accentOf(profiles?.profiles.find((profile) => profile.id === profiles.current)?.accent ?? null);
+
+  // The profile's accent colours the app chrome (the chip, the shown tab's line), never documents.
+  useEffect(() => {
+    document.documentElement.style.setProperty('--galeo-color-accent', accent);
+  }, [accent]);
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(markFirstPaint, []);
@@ -77,9 +87,10 @@ function MainView({ sandboxed, scheme, platform }: { sandboxed: boolean; scheme:
       onSelectionChange={(key) => store.activate(String(key))}
       keyboardActivation="manual"
     >
-      <TabBar view={view} store={store} />
+      <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} platform={platform} />} />
       <ProfileCreatedNotice />
       {settings && <SettingsNotice notices={settings.notices} />}
+      {settings && <SessionNotice notice={settings.session} />}
       <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
         {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}
         {view.tabs.map((tab) => (

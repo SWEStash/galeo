@@ -9,7 +9,8 @@ import { DocumentMenus } from '../core/documents/menus';
 import { SelectionGrants } from '../core/documents/selections';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import { AppState } from '../core/profiles/app-state';
-import { ProfileCatalog } from '../core/profiles/catalog';
+import { DEFAULT_PROFILE, ProfileCatalog } from '../core/profiles/catalog';
+import { profileIdFor } from '../core/profiles/names';
 import { openFiles } from '../core/routing/open-files';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds } from '../core/session/model';
@@ -18,7 +19,7 @@ import { WarmTabs } from '../core/tabs/lifecycle';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
 import type { OpenRequest, OsShell } from '../core/ports';
-import type { EventName, Events } from '../shared/contracts';
+import type { EventName, Events, ProfileResult, ProfilesState, SettingsState } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
@@ -158,9 +159,23 @@ function start(initialMode: StartupMode): void {
   let quitting = false;
   const profileOf = (windowId: number) => [...running.values()].find((runtime) => runtime.has(windowId));
   const idsOf = (runtime: ProfileRuntime) => runtime.windows.map((window) => window.webContents.id);
-  const broadcastSettings = (runtime: ProfileRuntime) => {
-    for (const window of runtime.windows) {
-      sendEvent(window.webContents, 'settings.changed', { settings: runtime.settings.current, notices: runtime.settings.notices });
+  const settingsState = (profile: ProfileRuntime): SettingsState => ({
+    settings: profile.settings.current,
+    notices: profile.settings.notices,
+    session: profile.sessionNotice,
+  });
+  const broadcastSettings = (profile: ProfileRuntime) => {
+    for (const window of profile.windows) sendEvent(window.webContents, 'settings.changed', settingsState(profile));
+  };
+  const profilesState = async (current: string): Promise<ProfilesState> => ({
+    current,
+    profiles: (await catalog.list()).map((profile) => ({ ...profile, running: running.has(profile.id) })),
+  });
+  /** Every window's profile menu and chip follow profiles being created, changed, started and stopped. */
+  const broadcastProfiles = async () => {
+    for (const profile of running.values()) {
+      const state = await profilesState(profile.id);
+      for (const window of profile.windows) sendEvent(window.webContents, 'profiles.changed', state);
     }
   };
   const warmLimits = (current: Settings) => ({ count: current.warmTabs, bytes: current.warmMegabytes * MIB });
@@ -302,6 +317,7 @@ function start(initialMode: StartupMode): void {
     const profile = await startRuntime(id);
     const { session, notice } = await profile.sessions.load();
     if (notice) reportSessionNotice(notice);
+    profile.sessionNotice = notice;
     let front: BrowserWindow | null = null;
     if (session && session.windows.length > 0) {
       const order = [...session.windows.keys()].sort((a, b) => rank(session, b) - rank(session, a));
@@ -309,6 +325,7 @@ function start(initialMode: StartupMode): void {
       front = opened.get(session.focusOrder[0] ?? order.at(-1)!)!;
     }
     profile.keeper.start();
+    void broadcastProfiles();
     return front;
   };
 
@@ -318,6 +335,7 @@ function start(initialMode: StartupMode): void {
       .stop()
       .catch((error: unknown) => console.warn(`galeo: profile ${profile.id} not saved`, error))
       .finally(() => stopping.delete(stop));
+    void broadcastProfiles();
     stopping.add(stop);
   };
 
@@ -371,24 +389,30 @@ function start(initialMode: StartupMode): void {
   };
 
   // Requests are handled one at a time: each sees the windows and profiles the one before left.
-  let routing: Promise<void> = Promise.resolve();
-  const enqueue = (task: () => Promise<unknown>) => {
-    routing = routing.then(task).then(
-      () => {},
-      (error: unknown) => console.warn('galeo: open request failed', error),
-    );
-    return routing;
+  let routing: Promise<unknown> = Promise.resolve();
+  /** Runs `task` after the ones before it; its own promise carries its result or error (already logged). */
+  const enqueue = <T>(task: () => Promise<T>): Promise<T> => {
+    const run = routing.then(task);
+    routing = run.catch((error: unknown) => console.warn('galeo: open request failed', error));
+    return run;
   };
-  const acceptOpenRequests = () => instance.onOpenRequest((request) => void enqueue(() => openRequest(request)));
+  const acceptOpenRequests = () => instance.onOpenRequest((request) => void enqueue(() => openRequest(request)).catch(() => {}));
 
   /** Undo of a created profile: its files go where they would have gone, then it is deleted unsaved. */
   const undoCreate = async (token: string) => {
     const created = undoable.get(token);
     if (!created) return;
     undoable.delete(token);
-    // Routed first: closing the app's last window would quit it.
-    await openRouted({ profile: null, newWindow: false }, created.files, created.profile);
-    const profile = running.get(created.profile);
+    await removeProfile(created.profile, created.files);
+  };
+
+  /**
+   * Deletes a profile, unsaved (UX F5: its session and settings; files are never touched). Its
+   * `files` go where they would have gone without it, first: closing the app's last window would quit it.
+   */
+  const removeProfile = async (id: string, files: readonly string[]) => {
+    await openRouted({ profile: null, newWindow: false }, files, id);
+    const profile = running.get(id);
     if (profile) {
       profile.discard = true;
       const closing = [...profile.windows].map(
@@ -401,7 +425,25 @@ function start(initialMode: StartupMode): void {
       await Promise.all(closing);
       await Promise.all([...stopping]);
     }
-    await catalog.delete(created.profile);
+    await catalog.delete(id);
+    await broadcastProfiles();
+  };
+
+  const createProfile = async (name: string, accent: string | null): Promise<ProfileResult> => {
+    const ids = (await catalog.list()).map((profile) => profile.id);
+    const created = await catalog.create(profileIdFor(name, ids), name, accent);
+    if (!created.ok) return created;
+    await openRouted({ profile: created.profile.id, newWindow: false }, []);
+    return { ok: true };
+  };
+
+  const updateProfile = async (profile: ProfileRuntime, name: string, accent: string | null): Promise<ProfileResult> => {
+    const updated = await catalog.update(profile.id, accent === null ? { name } : { name, accent });
+    if (!updated.ok) return { ok: false, reason: updated.reason };
+    profile.name = updated.profile.name;
+    for (const windowId of idsOf(profile)) updateTitle(profile, windowId);
+    await broadcastProfiles();
+    return { ok: true };
   };
 
   // Saving is async; the quit waits for it once.
@@ -452,11 +494,27 @@ function start(initialMode: StartupMode): void {
           mode = { kind: 'normal' };
           acceptOpenRequests();
           // Closed once the launch's window is open: the app quits when its last window closes.
-          void enqueue(async () => choiceWindow?.close());
+          void enqueue(async () => choiceWindow?.close()).catch(() => {});
         },
         'settings.get': (_args, event) => {
           const profile = profileOf(event.sender.id);
-          return profile ? { settings: profile.settings.current, notices: profile.settings.notices } : { settings: DEFAULT_SETTINGS, notices: [] };
+          return profile ? settingsState(profile) : { settings: DEFAULT_SETTINGS, notices: [], session: null };
+        },
+        'profiles.list': (_args, event) => profilesState(profileOf(event.sender.id)?.id ?? DEFAULT_PROFILE),
+        'profiles.open': async ([id]) => {
+          if (!(await catalog.list()).some((profile) => profile.id === id)) throw new Error('no such profile');
+          await enqueue(() => openRouted({ profile: id, newWindow: false }, []));
+        },
+        'profiles.create': ([name, accent]) => enqueue(() => createProfile(name, accent)),
+        'profiles.update': ([name, accent], event) => {
+          const profile = profileOf(event.sender.id);
+          if (!profile) throw new Error('no profile');
+          return enqueue(() => updateProfile(profile, name, accent));
+        },
+        'profiles.delete': (_args, event) => {
+          const profile = profileOf(event.sender.id);
+          if (!profile || profile.id === DEFAULT_PROFILE) throw new Error('not deletable');
+          return enqueue(() => removeProfile(profile.id, []));
         },
         'session.previous': (_args, event) => profileOf(event.sender.id)?.sessions.previous() ?? [],
         'session.restorePrevious': async ([snapshot], event) => {
@@ -526,7 +584,7 @@ function start(initialMode: StartupMode): void {
       windowCount: () => BrowserWindow.getAllWindows().length,
       // macOS without windows: the dock icon brings back the last profile, as a launch would.
       openWindow: () => {
-        if (mode.kind === 'normal') void enqueue(() => openRouted({ profile: null, newWindow: false }, []));
+        if (mode.kind === 'normal') void enqueue(() => openRouted({ profile: null, newWindow: false }, [])).catch(() => {});
       },
     });
   });

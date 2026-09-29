@@ -12,7 +12,27 @@ export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, Imag
 export interface SettingsState {
   settings: Settings;
   notices: SettingsNotice[];
+  /** The profile's session file was invalid; it was set aside and the newest valid snapshot restored (SR-17). */
+  session: SettingsNotice | null;
 }
+
+/** A profile as the profile menu shows it; `running` while it has a window (ADR-005). */
+export interface ProfileView {
+  id: string;
+  name: string;
+  accent: string | null;
+  running: boolean;
+}
+
+/** The profiles, and which one the window belongs to. */
+export interface ProfilesState {
+  current: string;
+  profiles: ProfileView[];
+}
+
+/** Why a profile name was refused, or why the profile's file couldn't be changed (left untouched, SR-17). */
+export type ProfileRefusal = 'empty' | 'too-long' | 'control-character' | 'taken' | 'invalid-file';
+export type ProfileResult = { ok: true } | { ok: false; reason: ProfileRefusal };
 
 /** A previous session of the profile, as "Restore previous session" lists it. */
 export interface PreviousSession {
@@ -71,6 +91,11 @@ export const CHANNELS = [
   'recent.clear',
   'profiles.created',
   'profiles.undoCreate',
+  'profiles.list',
+  'profiles.open',
+  'profiles.create',
+  'profiles.update',
+  'profiles.delete',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -124,6 +149,15 @@ export interface Requests {
   'profiles.created': [];
   /** Undoes a profile `--profile` just created (by the token its notice carried): its files go where they would have without it. */
   'profiles.undoCreate': [token: string];
+  'profiles.list': [];
+  /** Switches to a profile: its last focused window if it runs, else it starts with its session. */
+  'profiles.open': [id: string];
+  /** Creates a profile and opens a window of it. */
+  'profiles.create': [name: string, accent: string | null];
+  /** Renames and recolours the sender's own profile. */
+  'profiles.update': [name: string, accent: string | null];
+  /** Deletes the sender's own profile: its windows close, its session and settings go (never `default`). */
+  'profiles.delete': [];
 }
 
 /** Resolved value of each channel. */
@@ -155,10 +189,15 @@ export interface Responses {
   'recent.clear': void;
   'profiles.created': { name: string; token: string } | null;
   'profiles.undoCreate': void;
+  'profiles.list': ProfilesState;
+  'profiles.open': void;
+  'profiles.create': ProfileResult;
+  'profiles.update': ProfileResult;
+  'profiles.delete': void;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed', 'profiles.changed'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -171,6 +210,8 @@ export interface Events {
   /** The tab's file changed since the read it shows; read it again. */
   'tabs.stale': string;
   'settings.changed': SettingsState;
+  /** A profile was created, renamed, recoloured, deleted, started or stopped. */
+  'profiles.changed': ProfilesState;
 }
 
 type Group<C extends string> = C extends `${infer G}.${string}` ? G : never;

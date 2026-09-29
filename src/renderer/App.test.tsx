@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord, SettingsState, TabSnapshot } from '../shared/contracts';
+import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
 import type { Settings } from '../shared/settings';
 
 const DEFAULT_SETTINGS: Settings = {
@@ -57,6 +57,7 @@ const events: {
   demote?: (ids: string[]) => void;
   stale?: (id: string) => void;
   settings?: (state: SettingsState) => void;
+  profiles?: (state: ProfilesState) => void;
 } = {};
 
 function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: DocumentRecord[]; content?: DocumentContent } = {}) {
@@ -107,7 +108,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       restorePrevious: vi.fn().mockResolvedValue(undefined),
     },
     settings: {
-      get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [] }),
+      get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null }),
       onChanged: vi.fn((listener: (state: SettingsState) => void) => {
         events.settings = listener;
         return () => {};
@@ -116,6 +117,15 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
     profiles: {
       created: vi.fn().mockResolvedValue(null),
       undoCreate: vi.fn().mockResolvedValue(undefined),
+      list: vi.fn().mockResolvedValue({ current: 'default', profiles: [{ id: 'default', name: 'default', accent: '#8b5cf6', running: true }] }),
+      open: vi.fn().mockResolvedValue(undefined),
+      create: vi.fn().mockResolvedValue({ ok: true }),
+      update: vi.fn().mockResolvedValue({ ok: true }),
+      delete: vi.fn().mockResolvedValue(undefined),
+      onChanged: vi.fn((listener: (state: ProfilesState) => void) => {
+        events.profiles = listener;
+        return () => {};
+      }),
     },
   } satisfies GaleoApi;
   Object.defineProperty(window, 'galeo', { value: api, configurable: true });
@@ -620,16 +630,39 @@ describe('App', () => {
   it('names a config file that was left untouched, until it is fixed or dismissed', async () => {
     const api = stubBridge();
     const notice = { path: '/cfg/settings.json', reason: 'invalid' as const, detail: 'Unexpected token' };
-    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice] });
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null });
     const container = await renderApp();
     const shown = () => container.querySelector('[data-testid="settings-notice"]');
     await vi.waitFor(() => expect(shown()?.textContent).toContain('/cfg/settings.json'));
     expect(shown()?.textContent).toContain('left untouched');
-    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [] }));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null }));
     expect(shown()).toBeNull();
-    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [notice] }));
+    await act(async () => events.settings?.({ settings: { ...DEFAULT_SETTINGS }, notices: [notice], session: null }));
     const dismiss = [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!;
     await act(async () => dismiss.click());
+    expect(shown()).toBeNull();
+  });
+
+  it("shows the window's profile at the tab bar's start, in its accent, and follows changes to it", async () => {
+    stubBridge();
+    const container = await renderApp();
+    const chip = () => container.querySelector('.tab-bar [data-testid="profile-chip"]');
+    await vi.waitFor(() => expect(chip()?.textContent).toContain('default'));
+    expect(document.documentElement.style.getPropertyValue('--galeo-color-accent')).toBe('#8b5cf6');
+    await act(async () => events.profiles?.({ current: 'default', profiles: [{ id: 'default', name: 'Home', accent: '#d64545', running: true }] }));
+    expect(chip()?.textContent).toContain('Home');
+    expect(document.documentElement.style.getPropertyValue('--galeo-color-accent')).toBe('#d64545');
+  });
+
+  it('says when the saved session was invalid and an earlier one was restored', async () => {
+    const api = stubBridge();
+    const session = { path: '/state/profiles/default/session.json', reason: 'invalid' as const, detail: null };
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session });
+    const container = await renderApp();
+    const shown = () => container.querySelector('[data-testid="session-notice"]');
+    await vi.waitFor(() => expect(shown()?.textContent).toContain("couldn't be read"));
+    expect(shown()?.textContent).toContain('the last saved one before it');
+    await act(async () => [...shown()!.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!.click());
     expect(shown()).toBeNull();
   });
 

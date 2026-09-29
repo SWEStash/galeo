@@ -18,3 +18,20 @@ export function SettingsNotice({ notices }: { notices: readonly Notice[] }) {
     </div>
   );
 }
+
+/** The profile's session file was invalid: set aside, and the newest valid snapshot restored (SR-17). */
+export function SessionNotice({ notice }: { notice: Notice | null }) {
+  const [dismissed, setDismissed] = useState<Notice | null>(null);
+  if (!notice || dismissed === notice) return null;
+  return (
+    <div className="notice" role="status" data-testid="session-notice">
+      <p>
+        The saved session couldn't be read, so the last saved one before it was restored. The file was kept as{' '}
+        <code>{notice.path}.invalid</code>.
+      </p>
+      <button type="button" onClick={() => setDismissed(notice)}>
+        Dismiss
+      </button>
+    </div>
+  );
+}

@@ -44,6 +44,6 @@ describe('buildApi', () => {
       'onStale',
     ]);
     expect(Object.keys(api.settings)).toEqual(['get', 'onChanged']);
-    expect(Object.keys(api.profiles)).toEqual(['created', 'undoCreate']);
+    expect(Object.keys(api.profiles)).toEqual(['created', 'undoCreate', 'list', 'open', 'create', 'update', 'delete', 'onChanged']);
   });
 });

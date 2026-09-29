@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { pressInMain } from '../helpers/keys';
 import { launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
@@ -12,20 +13,6 @@ const [basic, gfm, math, frontmatter] = ['basic.md', 'gfm.md', 'math.md', 'front
 
 const paths = async (page: Page) => (await page.evaluate(() => window.galeo.tabs.snapshot())).tabs.map((tab) => tab.path);
 const titles = (app: ElectronApplication) => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((window) => window.getTitle()).sort());
-
-/**
- * Presses a key main handles through the window's own input path, as the desktop delivers it
- * (Playwright's presses skip main's input hook). CmdOrCtrl, plus Shift when asked.
- */
-async function pressInMain(app: ElectronApplication, page: Page, keyCode: string, shift = false) {
-  const window = await app.browserWindow(page);
-  await window.evaluate((browserWindow, { keyCode, shift }) => {
-    const modifiers: ('control' | 'meta' | 'shift')[] = [process.platform === 'darwin' ? 'meta' : 'control'];
-    if (shift) modifiers.push('shift');
-    browserWindow.webContents.sendInputEvent({ type: 'keyDown', keyCode, modifiers });
-    browserWindow.webContents.sendInputEvent({ type: 'keyUp', keyCode, modifiers });
-  }, { keyCode, shift });
-}
 
 test('the window title names the shown file and the profile', async () => {
   const { app, window, close } = await launchApp(['--', basic, gfm]);
