@@ -8,9 +8,9 @@ Type=Application
 Icon=galeo
 StartupWMClass=galeo
 MimeType=text/markdown;text/x-markdown;text/plain;text/x-log;
-Actions=NewWindow;
+Actions=new-window;
 
-[Desktop Action NewWindow]
+[Desktop Action new-window]
 Name=New Window
 Exec=/opt/galeo/galeo --new-window
 `;
@@ -35,7 +35,14 @@ describe('desktopEntryProblems (ADR-008, SR-13)', () => {
   });
 
   it('wants the New Window action listed and opening a new window without files', () => {
-    expect(desktopEntryProblems(GOOD.replace('Actions=NewWindow;\n', ''))).toEqual(['Actions does not list NewWindow']);
+    expect(desktopEntryProblems(GOOD.replace('Actions=new-window;\n', ''))).toEqual(['Actions does not list new-window']);
     expect(desktopEntryProblems(GOOD.replace('--new-window', '--new-window %F'))).toEqual(['the New Window action must run --new-window, with no files']);
+  });
+
+  it('wants the action id GNOME recognises, so its dock shows one New Window item', () => {
+    expect(desktopEntryProblems(GOOD.replaceAll('new-window;', 'NewWindow;').replace('Action new-window', 'Action NewWindow'))).toEqual([
+      'Actions does not list new-window',
+      'the New Window action must run --new-window, with no files',
+    ]);
   });
 });

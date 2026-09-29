@@ -24,12 +24,12 @@ export default {
     desktop: {
       entry: {
         Name: 'galeo',
-        Comment: 'Read Markdown, text and log files',
         // electron-builder writes the action's group but not this key, without which no desktop shows it.
-        Actions: 'NewWindow;',
+        // GNOME Shell shows its own "New Window" too unless the action's id is `new-window`.
+        Actions: 'new-window;',
       },
       desktopActions: {
-        NewWindow: { Name: 'New Window', Exec: '/opt/galeo/galeo --new-window' },
+        'new-window': { Name: 'New Window', Exec: '/opt/galeo/galeo --new-window' },
       },
     },
   },

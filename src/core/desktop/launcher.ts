@@ -39,7 +39,8 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
   const desktop = [
     '[Desktop Entry]',
     'Name=galeo',
-    'Comment=Read Markdown, text and log files',
+    // The .deb's entry takes its Comment from package.json's description (electron-builder).
+    'Comment=A fast, private desktop reader for Markdown, text and log files',
     `Exec=${exec} -- %F`,
     'Icon=galeo',
     'Type=Application',
@@ -47,10 +48,10 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
     'StartupWMClass=galeo',
     'MimeType=text/markdown;text/x-markdown;text/plain;text/x-log;',
     'Categories=Utility;',
-    'Actions=NewWindow;',
+    'Actions=new-window;',
     ENTRY_MARK,
     '',
-    '[Desktop Action NewWindow]',
+    '[Desktop Action new-window]',
     'Name=New Window',
     `Exec=${exec} --new-window`,
     '',

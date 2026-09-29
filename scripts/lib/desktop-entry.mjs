@@ -31,8 +31,9 @@ export function desktopEntryProblems(text) {
   for (const type of MIME_TYPES) if (!mimeTypes.includes(type)) problems.push(`MimeType lacks ${type}`);
   if (entry.get('StartupWMClass') !== 'galeo') problems.push('StartupWMClass must be galeo');
   if (!entry.get('Icon')) problems.push('no Icon');
-  if (!(entry.get('Actions') ?? '').split(';').includes('NewWindow')) problems.push('Actions does not list NewWindow');
-  const action = all.get('Desktop Action NewWindow')?.get('Exec') ?? '';
+  // GNOME Shell adds its own "New Window" to the dock menu unless the entry has an action with this id.
+  if (!(entry.get('Actions') ?? '').split(';').includes('new-window')) problems.push('Actions does not list new-window');
+  const action = all.get('Desktop Action new-window')?.get('Exec') ?? '';
   if (!/ --new-window$/.test(action)) problems.push('the New Window action must run --new-window, with no files');
   return problems;
 }
