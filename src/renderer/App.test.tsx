@@ -733,6 +733,27 @@ describe('App', () => {
     expect(api.settings.openNoticeFile).toHaveBeenCalledWith(0);
   });
 
+  it('keeps a dismissed notice dismissed when main sends the same notices again', async () => {
+    const api = stubBridge();
+    const notice = { path: '/cfg/settings.json', reason: 'invalid' as const, detail: null };
+    const session = { path: '/state/profiles/default/session.json', reason: 'invalid' as const, detail: null };
+    const state = () => ({ settings: { ...DEFAULT_SETTINGS }, notices: [{ ...notice }], session: { ...session }, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
+    api.settings.get.mockResolvedValue(state());
+    const container = await renderApp();
+    for (const id of ['settings-notice', 'session-notice']) {
+      const shown = await vi.waitFor(() => container.querySelector(`[data-testid="${id}"]`)!);
+      await act(async () => [...shown.querySelectorAll('button')].find((button) => button.textContent === 'Dismiss')!.click());
+    }
+    // A custom.css or settings change re-sends the whole state, equal notices included.
+    await act(async () => events.settings?.(state()));
+    expect(container.querySelector('[data-testid="settings-notice"]')).toBeNull();
+    expect(container.querySelector('[data-testid="session-notice"]')).toBeNull();
+    // Fixed, then broken the same way again: it shows again.
+    await act(async () => events.settings?.({ ...state(), notices: [] }));
+    await act(async () => events.settings?.(state()));
+    expect(container.querySelector('[data-testid="settings-notice"]')).not.toBeNull();
+  });
+
   it('offers Undo for a profile --profile just created', async () => {
     const api = stubBridge();
     api.profiles.created.mockResolvedValue({ name: 'Acme', token: 'undo-1' });

@@ -72,14 +72,14 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
         <RadioGroup className="field" value={values.themeMode} onChange={(value) => set({ themeMode: value as ThemeMode })} orientation="horizontal">
           <Label>Theme</Label>
           <RadioField value="system">
-          <RadioButton>System</RadioButton>
-        </RadioField>
+            <RadioButton>System</RadioButton>
+          </RadioField>
           <RadioField value="light">
-          <RadioButton>Light</RadioButton>
-        </RadioField>
+            <RadioButton>Light</RadioButton>
+          </RadioField>
           <RadioField value="dark">
-          <RadioButton>Dark</RadioButton>
-        </RadioField>
+            <RadioButton>Dark</RadioButton>
+          </RadioField>
         </RadioGroup>,
       )}
       <div className="setting" data-setting="accent">
@@ -156,6 +156,7 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
                 void window.galeo.app
                   .installLauncher()
                   .then((result) => setLauncher(result.ok ? `Installed ${result.bin}. Open a new terminal to use galeo.` : `Not installed: ${result.reason}.`))
+                  .catch(() => setLauncher("Not installed: galeo couldn't write the files."))
               }
             >
               Install command-line launcher

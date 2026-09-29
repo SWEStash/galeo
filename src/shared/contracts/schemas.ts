@@ -1,5 +1,4 @@
 import { z, type ZodType } from 'zod';
-import { ACCENTS } from '../accents';
 import type { SettingsOverrides } from '../settings';
 import { CHOSEN_ENCODINGS, type Channel, type Requests } from './ipc';
 
@@ -19,7 +18,8 @@ export const scrollAnchor = z.strictObject({
 
 const profileId = z.string().min(1).max(32);
 const profileName = z.string().max(256);
-const accent = z.enum(ACCENTS.map((each) => each.color) as [string, ...string[]]).nullable();
+// Any colour `profile.json` may hold: the dialogs offer presets, and a hand-picked one survives a rename.
+const accent = z.string().regex(/^#[0-9a-f]{6}$/i).nullable();
 
 /** Every setting a file or the Settings tab may set (SR-17), each optional. */
 export const settingsOverrides = z.strictObject({
@@ -67,7 +67,7 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'profiles.undoCreate': z.tuple([documentId]),
   'profiles.list': z.tuple([]),
   'profiles.open': z.tuple([profileId]),
-  // Names are checked by main's own rules; this only bounds them. Accents are the presets (UX §6).
+  // Names are checked by main's own rules; this only bounds them.
   'profiles.create': z.tuple([profileName, accent]),
   'profiles.update': z.tuple([profileName, accent]),
   'profiles.delete': z.tuple([]),

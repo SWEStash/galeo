@@ -166,4 +166,12 @@ describe('SettingsView (UX §6)', () => {
     await act(async () => button(container, 'Install command-line launcher').click());
     await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('is not galeo'));
   });
+
+  it('says the launcher was not installed when installing failed outright', async () => {
+    const { app } = stubBridge();
+    app.installLauncher.mockRejectedValue(new Error('EACCES'));
+    const container = await render(STATE, true);
+    await act(async () => button(container, 'Install command-line launcher').click());
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('Not installed'));
+  });
 });

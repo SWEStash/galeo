@@ -376,7 +376,11 @@ function start(initialMode: StartupMode): void {
   const openRouted = async (request: RouteRequest, files: readonly string[], without?: string): Promise<Route> => {
     const decision = route(request, await world(without));
     if (decision.kind === 'invalid') return decision;
-    if (decision.create !== null) await catalog.create(decision.profile, decision.create, null);
+    if (decision.create !== null) {
+      // Routing and the catalog check names alike, so this only fails if they ever drift apart.
+      const created = await catalog.create(decision.profile, decision.create, null);
+      if (!created.ok) throw new Error(`profile ${decision.create} not created: ${created.reason}`);
+    }
     let window = decision.start ? await startProfile(decision.profile) : null;
     let fresh = decision.start;
     const profile = running.get(decision.profile)!;
@@ -545,8 +549,7 @@ function start(initialMode: StartupMode): void {
         },
         'profiles.create': ([name, accent]) => enqueue(() => createProfile(name, accent)),
         'profiles.update': ([name, accent], event) => {
-          const profile = profileOf(event.sender.id);
-          if (!profile) throw new Error('no profile');
+          const profile = ownProfile(event);
           return enqueue(() => updateProfile(profile, name, accent));
         },
         'profiles.delete': (_args, event) => {

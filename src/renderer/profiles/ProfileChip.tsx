@@ -159,13 +159,19 @@ function ProfileDialog(props: {
   const [name, setName] = useState(props.name);
   const [accent, setAccent] = useState(props.accent);
   const [refusal, setRefusal] = useState<ProfileRefusal | null>(null);
+  const [failed, setFailed] = useState(false);
   const accentLabel = useId();
 
   const submit = async (event: { preventDefault(): void }) => {
     event.preventDefault();
-    const result = await props.onSubmit(name, accent);
-    if (result.ok) props.onClose();
-    else setRefusal(result.reason);
+    setFailed(false);
+    try {
+      const result = await props.onSubmit(name, accent);
+      if (result.ok) props.onClose();
+      else setRefusal(result.reason);
+    } catch {
+      setFailed(true);
+    }
   };
 
   return (
@@ -204,6 +210,7 @@ function ProfileDialog(props: {
                 </ColorSwatchPickerItem>
               ))}
             </ColorSwatchPicker>
+            {failed && <p role="alert">The profile couldn't be saved. Try again.</p>}
             <div className="dialog-buttons">
               <Button onPress={props.onClose}>Cancel</Button>
               <Button type="submit">{props.action}</Button>

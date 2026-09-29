@@ -163,4 +163,16 @@ describe('ProfileChip (UX F5)', () => {
     await act(async () => menuItem('3 tabs')!.click());
     expect(session.restorePrevious).toHaveBeenCalledWith(1);
   });
+
+  it('says so in the dialog when main could not save the profile at all', async () => {
+    const { profiles } = stubBridge();
+    profiles.create.mockRejectedValue(new Error('no profile'));
+    const container = await render();
+    await openMenu(container);
+    await act(async () => menuItem('New profile')!.click());
+    const form = await vi.waitFor(() => dialog()!);
+    await act(async () => button(form, 'Create').click());
+    await vi.waitFor(() => expect(form.querySelector('[role="alert"]')?.textContent).toContain("couldn't be saved"));
+    expect(dialog()).not.toBeNull();
+  });
 });

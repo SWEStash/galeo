@@ -98,3 +98,15 @@ describe('document channel arguments (SR-11)', () => {
     expect(accepts(channel, [ID])).toBe(false);
   });
 });
+
+describe('profile channel arguments', () => {
+  it.each(['profiles.create', 'profiles.update'] as const)('%s takes a bounded name and any #rrggbb accent, or none', (channel) => {
+    expect(accepts(channel, ['Acme', '#2f9e44'])).toBe(true);
+    // A colour hand-edited into profile.json is kept when only the name changes.
+    expect(accepts(channel, ['Acme', '#ABCDEF'])).toBe(true);
+    expect(accepts(channel, ['Acme', null])).toBe(true);
+    for (const bad of [['Acme', 'red'], ['Acme', '#abc'], ['Acme', '#2f9e44; x'], ['x'.repeat(257), null], [7, null], ['Acme']]) {
+      expect(accepts(channel, bad)).toBe(false);
+    }
+  });
+});
