@@ -63,3 +63,20 @@ export function scrollTopFor(
   if (heading) return heading.top;
   return anchor.fraction * Math.max(0, size.height - size.viewport);
 }
+
+/**
+ * Where to scroll once the content was replaced by a new version of the file, so the reader stays
+ * put: the heading above the view keeps its distance (its id survives edits elsewhere, where
+ * source lines don't), else the block at the top does.
+ */
+export function keptTopFor(
+  before: readonly PlacedBlock[],
+  top: number,
+  after: readonly PlacedBlock[],
+  size: Omit<ScrollState, 'top'>,
+): number {
+  const heading = before.filter((each) => each.heading !== null && each.top <= top).at(-1);
+  const same = heading && after.find((each) => each.heading === heading.heading);
+  if (heading && same) return same.top + (top - heading.top);
+  return scrollTopFor(anchorAt(before, { top, ...size }), after, size);
+}

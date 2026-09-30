@@ -3,7 +3,7 @@ import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
 import type { ImageResult } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { commandFor, type Platform } from '../../shared/keymap';
-import type { ScrollAnchor } from '../../shared/tabs';
+import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
 import { DocumentBanner, DocumentLoading, DocumentState } from './DocumentState';
@@ -48,6 +48,10 @@ export interface DocumentPaneProps {
   onClose?: () => void;
   /** The tab's zoom; it scales the document only. */
   zoom?: number;
+  /** How the reader last showed this document (a restored tab keeps its view and follow state). */
+  initialViewState?: TabViewState;
+  /** The reader chose another view, or started or stopped following a log. */
+  onViewState?: (state: TabViewState) => void;
 }
 
 function countLines(text: string): number {
@@ -58,7 +62,8 @@ function countLines(text: string): number {
 
 /**
  * One document and everything about how it's shown: its view, banners, find and keys. The
- * window gives it a fresh key per document, so a navigation starts from the document's defaults.
+ * window gives it a fresh key per navigation, so another document starts from its defaults; a
+ * new version of the same file arrives as new `content` and keeps them.
  */
 export function DocumentPane({
   content,
@@ -79,13 +84,15 @@ export function DocumentPane({
   onContextMenu,
   onClose,
   zoom = 1,
+  initialViewState = {},
+  onViewState,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
   // The document's own opening view until the user toggles it.
-  const [chosenView, setChosenView] = useState<ViewMode | null>(null);
+  const [chosenView, setChosenView] = useState<ViewMode | null>(initialViewState.view ?? null);
   const [renderAnyway, setRenderAnyway] = useState(false);
   const [wrap, setWrap] = useState(false);
-  const [follow, setFollow] = useState(false);
+  const [follow, setFollow] = useState(initialViewState.follow === true);
   const wantedView = chosenView ?? ready?.view ?? 'rendered';
   // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
   const renderable = ready?.format === 'markdown' || ready?.format === 'text';
@@ -93,7 +100,7 @@ export function DocumentPane({
   const render = useRenderedHtml(client, markdown, wantedView === 'rendered');
   // A document that failed to render shows its source instead.
   const view = wantedView === 'rendered' && render.status === 'failed' ? 'source' : wantedView;
-  const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending', LOADING_DELAY_MS);
+  const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending' && render.html === null, LOADING_DELAY_MS);
   const rendered = useMemo<RenderedContent | null>(() => {
     if (ready?.format === 'text') return { text: ready.text };
     return render.html === null ? null : { html: render.html };
@@ -167,6 +174,10 @@ export function DocumentPane({
     documentHandle.current?.scrollToAnchor(pendingAnchor.anchor);
     onAnchorShown();
   }, [pendingAnchor, view, rendered, onAnchorShown]);
+
+  useEffect(() => {
+    onViewState?.({ ...(chosenView ? { view: chosenView } : {}), ...(follow ? { follow: true as const } : {}) });
+  }, [onViewState, chosenView, follow]);
 
   const lines = useMemo(() => (ready ? countLines(ready.text) : null), [ready]);
   useEffect(() => {

@@ -4,7 +4,7 @@ import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
 import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
-import { anchorAt, blockAtOrBefore, firstVisibleLine, scrollTopFor, type PlacedBlock } from './anchor';
+import { anchorAt, blockAtOrBefore, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
 import { mountDocumentHost, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import type { SourceLanguage } from './source-view';
@@ -177,10 +177,22 @@ export function DocumentView({
     };
   }, []);
 
+  const hasContent = useRef(false);
   useLayoutEffect(() => {
     if (!rendered) return;
-    if ('html' in rendered) host().setContent(rendered.html);
-    else host().setReaderText(rendered.text);
+    const documentHost = host();
+    const element = container.current!;
+    // New content for the same file (it changed on disk) keeps the reader where they were,
+    // anchored to the block at the top of the view, before anything paints (UX F7).
+    const before = hasContent.current && view === 'rendered' && !waking ? placedBlocks(documentHost, element) : null;
+    const top = element.scrollTop;
+    if ('html' in rendered) documentHost.setContent(rendered.html);
+    else documentHost.setReaderText(rendered.text);
+    if (before) {
+      element.scrollTop = keptTopFor(before, top, placedBlocks(documentHost, element), { height: element.scrollHeight, viewport: element.clientHeight });
+      element.dataset['reloadedAt'] = String(Date.now());
+    }
+    hasContent.current = true;
     if (view === 'rendered') markDocumentPaint();
   }, [rendered]);
 
@@ -207,8 +219,12 @@ export function DocumentView({
     };
   }, [rendered, onResolveImage]);
 
+  const shownSource = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (view === 'source' || host().source) host().showSource(source.text, source.language, wrap);
+    if (view !== 'source' && !host().source) return;
+    host().showSource(source.text, source.language, wrap);
+    if (shownSource.current !== null && shownSource.current !== source.text) container.current!.dataset['reloadedAt'] = String(Date.now());
+    shownSource.current = source.text;
     if (view === 'source') markDocumentPaint();
   }, [source.text, source.language, view, wrap]);
 

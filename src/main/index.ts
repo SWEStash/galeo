@@ -6,6 +6,7 @@ import { ImageGrants } from '../core/documents/images';
 import { ReadIdentities } from '../core/documents/identities';
 import { DocumentLinks } from '../core/documents/links';
 import { DocumentMenus } from '../core/documents/menus';
+import { DocumentWatches } from '../core/documents/watches';
 import { SelectionGrants } from '../core/documents/selections';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import { AppState } from '../core/profiles/app-state';
@@ -115,6 +116,7 @@ function start(initialMode: StartupMode): void {
   };
   const documents = new TabRegistry(randomUUID, (windowId) => {
     pushSnapshot(windowId);
+    documentWatches.sync(windowId, documents.list(windowId));
     const profile = profileOf(windowId);
     if (profile) {
       profile.keeper.changed();
@@ -123,6 +125,14 @@ function start(initialMode: StartupMode): void {
   });
   const fs = new NodeFileSystem();
   const watcher = new CoalescingWatcher({ inner: new NodeFileWatcher(), clock: systemClock, fs });
+  // A tab whose file changed since the page read it reads it again (live reload, UX F7).
+  const documentWatches = new DocumentWatches({
+    watcher,
+    changed: (windowId, id) => {
+      const tab = documents.get(id, windowId);
+      if (tab) void reads.changed(id, tab.path).then((changed) => changed && sendTo(windowId, 'tabs.stale', id));
+    },
+  });
   const images = new ImageGrants(randomUUID);
   const shell = externalShell();
   const menus = new DocumentMenus({

@@ -1,5 +1,5 @@
 import type { DocumentRecord } from '../../shared/documents';
-import type { ScrollAnchor, TabSnapshot, TabView } from '../../shared/tabs';
+import type { ScrollAnchor, TabSnapshot, TabView, TabViewState } from '../../shared/tabs';
 import type { WhatwgEncoding } from '../text/decode';
 
 /**
@@ -12,6 +12,9 @@ export interface HistoryEntry {
   position?: ScrollAnchor;
   /** The encoding the reader chose for this file ("Reopen with encoding…"). */
   encoding?: WhatwgEncoding;
+  /** The view the reader chose, and whether a log follows its end. */
+  view?: TabViewState['view'];
+  follow?: true;
 }
 
 interface Stored {
@@ -100,8 +103,14 @@ export class TabRegistry {
   snapshot(window: number): TabSnapshot {
     const tabs = (this.order.get(window) ?? []).map((id): TabView => {
       const record = this.records.get(id)!;
-      const position = record.entries[record.index]!.position;
-      return { ...recordOf(record), ...(record.zoom ? { zoom: record.zoom } : {}), ...(position ? { position } : {}) };
+      const { position, view, follow } = record.entries[record.index]!;
+      return {
+        ...recordOf(record),
+        ...(record.zoom ? { zoom: record.zoom } : {}),
+        ...(position ? { position } : {}),
+        ...(view ? { view } : {}),
+        ...(follow ? { follow } : {}),
+      };
     });
     return { revision: this.revisions.get(window) ?? 0, active: this.active.get(window) ?? null, tabs };
   }
@@ -229,6 +238,18 @@ export class TabRegistry {
     const record = this.owned(id, window);
     if (!record) return false;
     record.entries[record.index]!.position = position;
+    return true;
+  }
+
+  /** How the reader shows the tab's current entry. Not a change either: the session keeps it. */
+  setViewState(id: string, window: number, state: TabViewState): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    const entry = record.entries[record.index]!;
+    delete entry.view;
+    delete entry.follow;
+    if (state.view) entry.view = state.view;
+    if (state.follow) entry.follow = true;
     return true;
   }
 

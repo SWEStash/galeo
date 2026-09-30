@@ -1,7 +1,14 @@
 import type { DocumentRecord } from './documents';
+import type { ViewMode } from './formats';
 
-/** A tab in a snapshot: its record, zoom (absent at 100 %) and the last position main heard of. */
-export interface TabView extends DocumentRecord {
+/** How the reader left a tab's document: the view they chose, and whether a log follows its end. */
+export interface TabViewState {
+  view?: ViewMode;
+  follow?: true;
+}
+
+/** A tab in a snapshot: its record, zoom (absent at 100 %), the last position and view state main heard of. */
+export interface TabView extends DocumentRecord, TabViewState {
   zoom?: number;
   position?: ScrollAnchor;
 }

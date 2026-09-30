@@ -284,6 +284,14 @@ body,
   flex: none;
   font-size: 12px;
 }
+.tab-indicator[data-indicator='reloaded from disk'] {
+  animation: galeo-reloaded 1s ease-out;
+}
+@keyframes galeo-reloaded {
+  from {
+    opacity: 0.3;
+  }
+}
 
 .visually-hidden {
   position: absolute;
@@ -456,7 +464,8 @@ button:focus-visible {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .document-loading-line {
+  .document-loading-line,
+  .tab-indicator {
     animation: none;
   }
 }

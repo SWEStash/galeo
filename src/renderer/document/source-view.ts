@@ -25,6 +25,9 @@ export interface FindResult {
   capped: boolean;
 }
 
+/** How close to the end still counts as at the end. */
+const END_SLACK_PX = 4;
+
 /** Counting stops here, so a common word in a 100 MB log doesn't stall the find bar. */
 const FIND_CAP = 10_000;
 
@@ -171,7 +174,19 @@ export function createSourceView(options: {
       closeSearchPanel(view);
     },
     setText(text) {
-      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+      // Only the span that differs is replaced: text before and after it keeps its place, and the
+      // snapshot keeps the scroll position through the change (a file changed on disk).
+      const old = view.state.doc.toString();
+      if (old === text) return;
+      let start = 0;
+      const shorter = Math.min(old.length, text.length);
+      while (start < shorter && old.charCodeAt(start) === text.charCodeAt(start)) start++;
+      let end = 0;
+      while (end < shorter - start && old.charCodeAt(old.length - 1 - end) === text.charCodeAt(text.length - 1 - end)) end++;
+      view.dispatch({
+        changes: { from: start, to: old.length - end, insert: text.slice(start, text.length - end) },
+        effects: view.scrollSnapshot(),
+      });
     },
     setWrap(wrap) {
       view.dispatch({ effects: wrapping.reconfigure(wrap ? EditorView.lineWrapping : []) });
@@ -185,10 +200,14 @@ export function createSourceView(options: {
       view.dispatch({ effects: EditorView.scrollIntoView(view.state.doc.length, { y: 'end', yMargin: 0 }) });
     },
     onScrollUp(listener) {
-      let last = view.scrollDOM.scrollTop;
+      const scroller = view.scrollDOM;
+      let last = scroller.scrollTop;
       const onScroll = () => {
-        const top = view.scrollDOM.scrollTop;
-        if (top < last) listener();
+        const top = scroller.scrollTop;
+        // The editor corrects its estimated line heights once it measures them, which can move the
+        // view up a little while it stays at the end: that isn't the reader leaving it.
+        const atEnd = scroller.scrollHeight - scroller.clientHeight - top <= END_SLACK_PX;
+        if (top < last && !atEnd) listener();
         last = top;
       };
       view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });

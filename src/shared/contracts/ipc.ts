@@ -4,7 +4,7 @@
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult } from '../documents';
 import type { Platform } from '../keymap';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
-import type { ScrollAnchor, TabSnapshot } from '../tabs';
+import type { ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
 
 export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
 
@@ -93,6 +93,7 @@ export const CHANNELS = [
   'tabs.rendered',
   'tabs.position',
   'tabs.zoom',
+  'tabs.viewState',
   'tabs.close',
   'tabs.reopenClosed',
   'tabs.move',
@@ -151,6 +152,7 @@ export interface Requests {
   'tabs.position': [id: string, position: ScrollAnchor];
   /** The tab's zoom (1 is 100 %), kept by main for the session. */
   'tabs.zoom': [id: string, zoom: number];
+  'tabs.viewState': [id: string, state: TabViewState];
   'tabs.close': [id: string];
   /** Brings back the window's most recently closed tab. */
   'tabs.reopenClosed': [];
@@ -208,6 +210,7 @@ export interface Responses {
   'tabs.rendered': void;
   'tabs.position': void;
   'tabs.zoom': void;
+  'tabs.viewState': void;
   'tabs.close': void;
   /** The reopened tab's id, or null when none was closed. */
   'tabs.reopenClosed': string | null;

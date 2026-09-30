@@ -4,31 +4,33 @@ import { ignoreClosedTab } from '../tabs/closed-tab';
 
 export interface OpenDocument {
   content: DocumentContent;
-  /** Counts reads, so the page can reset per-document state after a navigation. */
+  /** Which navigation this read belongs to: a new one starts the document's state afresh. */
+  navigation: number;
+  /** Counts reads, so a re-read of the same file (it changed on disk) can be told from the first. */
   generation: number;
 }
 
 /**
- * One tab's document, read from main; `reload` reads it again (after main navigated the tab), and
- * so does a new `staleReads` count (main said the file changed).
+ * One tab's document, read from main. `navigated` reads it again after main navigated the tab;
+ * a new `staleReads` count (the file changed) reads it again in place.
  */
-export function useDocument(id: string, staleReads = 0): { document: OpenDocument | null; reload: () => void } {
+export function useDocument(id: string, staleReads = 0): { document: OpenDocument | null; navigated: () => void } {
   const [document, setDocument] = useState<OpenDocument | null>(null);
-  const [reads, setReads] = useState(0);
+  const [navigation, setNavigation] = useState(0);
 
   useEffect(() => {
     let current = true;
     void window.galeo.documents
       .read(id)
       .then((content) => {
-        if (current) setDocument({ content, generation: reads + staleReads });
+        if (current) setDocument({ content, navigation, generation: navigation + staleReads });
       })
       .catch(ignoreClosedTab);
     return () => {
       current = false;
     };
-  }, [id, reads, staleReads]);
+  }, [id, navigation, staleReads]);
 
-  const reload = useCallback(() => setReads((n) => n + 1), []);
-  return { document, reload };
+  const navigated = useCallback(() => setNavigation((n) => n + 1), []);
+  return { document, navigated };
 }

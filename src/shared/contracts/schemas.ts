@@ -36,6 +36,8 @@ export const settingsOverrides = z.strictObject({
 
 /** A tab's zoom, 50 % to 300 %. */
 export const zoomLevel = z.number().min(0.5).max(3);
+/** A tab's chosen view and follow state; only what differs from the defaults is ever set. */
+export const tabViewState = z.strictObject({ view: z.enum(['rendered', 'source']).exactOptional(), follow: z.literal(true).exactOptional() });
 
 export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),
@@ -54,6 +56,7 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'tabs.rendered': z.tuple([documentId, z.int().min(0).max(2 ** 31)]),
   'tabs.position': z.tuple([documentId, scrollAnchor]),
   'tabs.zoom': z.tuple([documentId, zoomLevel]),
+  'tabs.viewState': z.tuple([documentId, tabViewState]),
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),
   'tabs.move': z.tuple([documentId, z.int().min(0).max(9999)]),

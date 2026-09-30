@@ -217,6 +217,23 @@ describe('TabRegistry', () => {
     expect(tabs.position(id, 2)).toBeNull();
   });
 
+  it("keeps each entry's chosen view and follow state quietly, and shows them in snapshots and the session", () => {
+    const changed: number[] = [];
+    const tabs = new TabRegistry(counterIds(), (window) => changed.push(window));
+    const { id } = tabs.open('/d/a.log', 1);
+    const before = changed.length;
+    expect(tabs.setViewState(id, 1, { view: 'source', follow: true })).toBe(true);
+    expect(tabs.setViewState(id, 2, { view: 'source' })).toBe(false);
+    expect(changed.length).toBe(before);
+    expect(tabs.snapshot(1).tabs[0]).toMatchObject({ view: 'source', follow: true });
+    expect(tabs.exportWindow(1).tabs[0]!.entries[0]).toEqual({ path: '/d/a.log', anchor: null, view: 'source', follow: true });
+    tabs.setViewState(id, 1, {});
+    expect(tabs.exportWindow(1).tabs[0]!.entries[0]).toEqual({ path: '/d/a.log', anchor: null });
+    tabs.setViewState(id, 1, { follow: true });
+    tabs.navigate(id, 1, { path: '/d/b.md', anchor: null });
+    expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('follow');
+  });
+
   it("keeps a chosen encoding for the entry's file only", () => {
     const tabs = new TabRegistry(counterIds());
     const { id } = tabs.open('/d/a.txt', 1);

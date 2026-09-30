@@ -150,6 +150,11 @@ function useTabShortcuts(store: TabStore, platform: Platform) {
         store.zoom(view.active, zoom);
         return;
       }
+      if (command === 'reload' && view.active) {
+        event.preventDefault();
+        store.reread(view.active);
+        return;
+      }
       if (command === 'settings') {
         event.preventDefault();
         void window.galeo.tabs.openSettings();

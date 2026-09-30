@@ -89,6 +89,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       rendered: vi.fn().mockResolvedValue(undefined),
       position: vi.fn().mockResolvedValue(undefined),
       zoom: vi.fn().mockResolvedValue(undefined),
+      viewState: vi.fn().mockResolvedValue(undefined),
       openSettings: vi.fn().mockResolvedValue('settings-1'),
       onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
         events.tabs = listener;
@@ -334,6 +335,9 @@ describe('App', () => {
     await press({ key: 'End' });
     expect(documentElement.dataset['follow']).toBe('on');
     const scroller = shadow.querySelector<HTMLElement>('.cm-scroller')!;
+    // happy-dom lays nothing out: give the log a height, so scrolling up leaves its end.
+    Object.defineProperty(scroller, 'scrollHeight', { configurable: true, value: 1000 });
+    Object.defineProperty(scroller, 'clientHeight', { configurable: true, value: 200 });
     await act(async () => {
       scroller.scrollTop = 100;
       scroller.dispatchEvent(new Event('scroll'));

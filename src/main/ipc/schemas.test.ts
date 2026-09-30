@@ -87,6 +87,15 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('tabs.viewState takes an id and a view state with only a view and a follow flag', () => {
+    expect(accepts('tabs.viewState', [ID, {}])).toBe(true);
+    expect(accepts('tabs.viewState', [ID, { view: 'source', follow: true }])).toBe(true);
+    expect(accepts('tabs.viewState', [ID, { view: 'rendered' }])).toBe(true);
+    for (const bad of [[ID], [ID, { view: 'raw' }], [ID, { follow: 'yes' }], [ID, { follow: false }], [ID, { extra: 1 }], ['', {}], [ID, {}, 'x']]) {
+      expect(accepts('tabs.viewState', bad)).toBe(false);
+    }
+  });
+
   it('session.restorePrevious takes a snapshot number from 1 to 3', () => {
     expect(accepts('session.restorePrevious', [1])).toBe(true);
     expect(accepts('session.restorePrevious', [3])).toBe(true);

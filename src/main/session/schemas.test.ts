@@ -13,7 +13,10 @@ const valid = {
       tabs: [
         tab,
         {
-          entries: [{ path: '/d/b.txt', anchor: 'intro', encoding: 'windows-1252', position: { line: 3, offset: 0, heading: null, fraction: 0.1 } }],
+          entries: [
+            { path: '/d/b.txt', anchor: 'intro', encoding: 'windows-1252', position: { line: 3, offset: 0, heading: null, fraction: 0.1 }, view: 'source' },
+            { path: '/d/c.log', anchor: null, view: 'source', follow: true },
+          ],
           index: 0,
           zoom: 1.25,
         },
@@ -33,6 +36,8 @@ describe('parseSession (SR-17)', () => {
     ['an active tab that does not exist', { ...valid, windows: [{ ...valid.windows[0]!, active: 5 }] }],
     ['a focus order naming a missing window', { ...valid, focusOrder: [1] }],
     ['a relative path', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: 'a.md', anchor: null }], index: 0 }] }] }],
+    ['an unknown view', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, view: 'raw' }], index: 0 }] }] }],
+    ['a follow state other than true', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, follow: false }], index: 0 }] }] }],
     ['a zoom out of range', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, zoom: 9 }] }] }],
     ['document text smuggled in', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, text: '# secret' }] }] }],
     ['too many windows', { ...valid, windows: Array.from({ length: 51 }, () => valid.windows[0]!), focusOrder: [] }],

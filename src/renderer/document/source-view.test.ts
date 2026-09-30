@@ -35,6 +35,53 @@ describe('createSourceView', () => {
     source.destroy();
   });
 
+  it('changes only the part of the text that differs, so lines before and after keep their place', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a\nb\nc\n', language: null, wrap: false });
+    const changes: [number, number, string][] = [];
+    const dispatch = source.view.dispatch.bind(source.view);
+    source.view.dispatch = ((...specs: Parameters<typeof dispatch>) => {
+      for (const spec of specs as { changes?: { from: number; to: number; insert: string } }[]) {
+        if (spec.changes) changes.push([spec.changes.from, spec.changes.to, spec.changes.insert]);
+      }
+      return dispatch(...specs);
+    }) as typeof dispatch;
+    source.setText('a\nb\nc\nd\n');
+    source.setText('a\nB\nc\nd\n');
+    source.setText('a\nB\nc\nd\n');
+    expect(changes).toEqual([
+      [6, 6, 'd\n'],
+      [2, 3, 'B'],
+    ]);
+    expect(source.view.state.doc.toString()).toBe('a\nB\nc\nd\n');
+    source.setText('x');
+    expect(source.view.state.doc.toString()).toBe('x');
+    source.destroy();
+  });
+
+  it('hears a scroll up only when it leaves the end, not a small correction that stays there', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'x\n'.repeat(100), language: null, wrap: false });
+    const scroller = source.view.scrollDOM;
+    let top = 0;
+    Object.defineProperty(scroller, 'scrollHeight', { configurable: true, get: () => 2000 });
+    Object.defineProperty(scroller, 'clientHeight', { configurable: true, get: () => 500 });
+    Object.defineProperty(scroller, 'scrollTop', { configurable: true, get: () => top, set: (value: number) => (top = value) });
+    const scrollTo = (value: number) => {
+      top = value;
+      scroller.dispatchEvent(new Event('scroll'));
+    };
+    scrollTo(1500);
+    let heard = 0;
+    const stop = source.onScrollUp(() => heard++);
+    scrollTo(1498);
+    expect(heard).toBe(0);
+    scrollTo(1200);
+    expect(heard).toBe(1);
+    stop();
+    source.destroy();
+  });
+
   it('replaces its text in place', () => {
     const { root, parent } = shadowContainer();
     const source = createSourceView({ root, parent, text: 'one', language: null, wrap: false });

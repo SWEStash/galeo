@@ -43,6 +43,10 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
       )}
       {status?.lines != null && <span data-testid="status-lines">{status.lines.toLocaleString('en')} ln</span>}
       {zoom !== 1 && <span data-testid="status-zoom">{Math.round(zoom * 100)}%</span>}
+      {/* Said once, politely: the shown file took a new version from disk (UX §7). */}
+      <span className="status-reloaded" data-testid="status-reloaded" role="status">
+        {tab && view.reloaded.has(tab.id) ? '↻ Reloaded' : ''}
+      </span>
       {children}
     </footer>
   );

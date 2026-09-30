@@ -21,6 +21,7 @@ function setup(initial: TabSnapshot) {
     reopenClosed: vi.fn().mockResolvedValue(undefined),
     position: vi.fn().mockResolvedValue(undefined),
     zoom: vi.fn().mockResolvedValue(undefined),
+    viewState: vi.fn().mockResolvedValue(undefined),
     onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
       push = listener;
       return () => {};
@@ -268,5 +269,42 @@ describe('createTabStore', () => {
     store.stop();
     expect(unsubscribed.sort()).toEqual(['changed', 'demote', 'stale']);
   });
-});
 
+  it('marks a tab reloaded from disk for a second, then clears the mark', async () => {
+    vi.useFakeTimers();
+    try {
+      const { store } = setup(snapshot(1, ['a', 'b'], 'a'));
+      await store.start();
+      store.reloaded('b');
+      expect(store.getSnapshot().reloaded.has('b')).toBe(true);
+      vi.advanceTimersByTime(999);
+      expect(store.getSnapshot().reloaded.has('b')).toBe(true);
+      store.reloaded('b');
+      vi.advanceTimersByTime(999);
+      expect(store.getSnapshot().reloaded.has('b')).toBe(true);
+      vi.advanceTimersByTime(1);
+      expect(store.getSnapshot().reloaded.has('b')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("starts each tab in the view state main kept, and reports the reader's changes once", async () => {
+    const initial = snapshot(1, ['a', 'b'], 'a');
+    initial.tabs[0] = { ...initial.tabs[0]!, view: 'source', follow: true };
+    const { store, api, push } = setup(initial);
+    await store.start();
+    expect(store.viewStateOf('a')).toEqual({ view: 'source', follow: true });
+    expect(store.viewStateOf('b')).toEqual({});
+    store.setViewState('a', { view: 'source', follow: true });
+    expect(api.viewState).not.toHaveBeenCalled();
+    store.setViewState('a', { view: 'source' });
+    expect(api.viewState).toHaveBeenCalledWith('a', { view: 'source' });
+    expect(store.viewStateOf('a')).toEqual({ view: 'source' });
+    // A navigation: main's snapshot names the view state of the entry the tab shows now.
+    const next = snapshot(2, ['a', 'b'], 'a');
+    next.tabs[0] = { ...next.tabs[0]!, view: 'source', follow: true };
+    push(next);
+    expect(store.viewStateOf('a')).toEqual({ view: 'source', follow: true });
+  });
+});

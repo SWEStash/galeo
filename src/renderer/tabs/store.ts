@@ -2,7 +2,7 @@ import type { GaleoApi } from '../../shared/contracts';
 import type { DocumentContent, DocumentRecord, TextEncoding } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { zoomStep } from '../document/zoom';
-import type { ScrollAnchor, TabSnapshot } from '../../shared/tabs';
+import type { ScrollAnchor, TabSnapshot, TabViewState } from '../../shared/tabs';
 
 /** What the tab bar and status bar show about a tab, as its document reports it. */
 export interface TabStatus {
@@ -27,11 +27,16 @@ export interface TabsView {
   statuses: ReadonlyMap<string, TabStatus>;
   /** Each tab's zoom (1 when absent); zoom is per tab and scales the document only. */
   zooms: ReadonlyMap<string, number>;
+  /** Tabs that took a new version of their file from disk within the last second (UX F4 `↻`). */
+  reloaded: ReadonlySet<string>;
 }
+
+/** How long a tab shows that it reloaded. */
+export const RELOADED_MS = 1000;
 
 export type TabsApi = Pick<
   GaleoApi['tabs'],
-  'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'position' | 'zoom' | 'onChanged' | 'onDemote' | 'onStale'
+  'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'position' | 'zoom' | 'viewState' | 'onChanged' | 'onDemote' | 'onStale'
 >;
 
 export interface TabStore {
@@ -48,10 +53,15 @@ export interface TabStore {
   /** The reader scrolled a tab: kept here for its next wake, and reported to main for history and sessions. */
   moved(id: string, position: ScrollAnchor): void;
   positionOf(id: string): ScrollAnchor | null;
+  /** How the tab's document is shown: the reader's chosen view and follow state (the session keeps it). */
+  viewStateOf(id: string): TabViewState;
+  setViewState(id: string, state: TabViewState): void;
   setStatus(id: string, status: TabStatus): void;
   /** Reads the tab again, keeping its place (a changed file, or another encoding). */
   reread(id: string): void;
   zoom(id: string, direction: 'in' | 'out' | 'reset'): void;
+  /** The tab now shows a new version of its file. */
+  reloaded(id: string): void;
 }
 
 /**
@@ -68,8 +78,11 @@ export function createTabStore(api: TabsApi): TabStore {
     reads: new Map(),
     statuses: new Map(),
     zooms: new Map(),
+    reloaded: new Set(),
   };
+  const reloadTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const positions = new Map<string, ScrollAnchor>();
+  const viewStates = new Map<string, TabViewState>();
   let unsubscribe: (() => void)[] = [];
   /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
   let wanted: string | null = null;
@@ -84,8 +97,10 @@ export function createTabStore(api: TabsApi): TabStore {
     const rendered = new Set([...merged.rendered].filter((id) => ids.has(id)));
     if (merged.active) rendered.add(merged.active);
     const own = <V,>(map: ReadonlyMap<string, V>) => new Map([...map].filter(([id]) => ids.has(id)));
-    view = { ...merged, rendered, reads: own(merged.reads), statuses: own(merged.statuses), zooms: own(merged.zooms) };
+    const reloaded = new Set([...merged.reloaded].filter((id) => ids.has(id)));
+    view = { ...merged, rendered, reloaded, reads: own(merged.reads), statuses: own(merged.statuses), zooms: own(merged.zooms) };
     for (const id of positions.keys()) if (!ids.has(id)) positions.delete(id);
+    for (const id of viewStates.keys()) if (!ids.has(id)) viewStates.delete(id);
     for (const listener of listeners) listener();
   };
 
@@ -112,7 +127,11 @@ export function createTabStore(api: TabsApi): TabStore {
     const ids = snapshot.tabs.map((tab) => tab.id);
     // Main holds each tab's zoom, and the last position it heard of: what a restored tab starts from.
     const zooms = new Map(snapshot.tabs.flatMap((tab) => (tab.zoom ? [[tab.id, tab.zoom] as const] : [])));
-    for (const tab of snapshot.tabs) if (tab.position && !positions.has(tab.id)) positions.set(tab.id, tab.position);
+    for (const tab of snapshot.tabs) {
+      if (tab.position && !positions.has(tab.id)) positions.set(tab.id, tab.position);
+      // Main's is the entry the tab shows now: after a navigation, another entry's.
+      viewStates.set(tab.id, { ...(tab.view ? { view: tab.view } : {}), ...(tab.follow ? { follow: tab.follow } : {}) });
+    }
     view = { ...view, zooms };
     if (wanted && ids.includes(wanted)) {
       const id = wanted;
@@ -146,6 +165,8 @@ export function createTabStore(api: TabsApi): TabStore {
     stop() {
       for (const stop of unsubscribe) stop();
       unsubscribe = [];
+      for (const timer of reloadTimers.values()) clearTimeout(timer);
+      reloadTimers.clear();
     },
     activate(id) {
       if (id === view.active || !view.tabs.some((tab) => tab.id === id)) return;
@@ -173,6 +194,12 @@ export function createTabStore(api: TabsApi): TabStore {
       void api.position(id, position);
     },
     positionOf: (id) => positions.get(id) ?? null,
+    viewStateOf: (id) => viewStates.get(id) ?? {},
+    setViewState(id, state) {
+      if (JSON.stringify(viewStates.get(id) ?? {}) === JSON.stringify(state)) return;
+      viewStates.set(id, state);
+      void api.viewState(id, state);
+    },
     reread,
     setStatus(id, status) {
       const current = view.statuses.get(id);
@@ -186,6 +213,19 @@ export function createTabStore(api: TabsApi): TabStore {
       else zooms.set(id, next);
       set({ zooms });
       void api.zoom(id, next);
+    },
+    reloaded(id) {
+      clearTimeout(reloadTimers.get(id));
+      reloadTimers.set(
+        id,
+        setTimeout(() => {
+          reloadTimers.delete(id);
+          const reloaded = new Set(view.reloaded);
+          reloaded.delete(id);
+          set({ reloaded });
+        }, RELOADED_MS),
+      );
+      if (!view.reloaded.has(id)) set({ reloaded: new Set(view.reloaded).add(id) });
     },
     reopenClosed() {
       void api.reopenClosed().then((id) => {

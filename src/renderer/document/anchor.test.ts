@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorAt, blockAtOrBefore, firstVisibleLine, scrollTopFor } from './anchor';
+import { anchorAt, blockAtOrBefore, firstVisibleLine, keptTopFor, scrollTopFor } from './anchor';
 
 describe('firstVisibleLine', () => {
   const blocks = [
@@ -79,5 +79,35 @@ describe('scrollTopFor', () => {
   it('falls back to the heading, then to the fraction of the way down', () => {
     expect(scrollTopFor({ line: 5, offset: 0, heading: 'user-content-goals', fraction: 0.9 }, blocks, size)).toBe(140);
     expect(scrollTopFor({ line: 5, offset: 0, heading: 'user-content-gone', fraction: 0.5 }, blocks, size)).toBe(400);
+  });
+});
+
+describe('keptTopFor', () => {
+  const size = { height: 5000, viewport: 500 };
+  const before = [
+    { line: 1, top: 0, bottom: 40, heading: 'intro' },
+    { line: 3, top: 60, bottom: 400, heading: null },
+    { line: 9, top: 420, bottom: 460, heading: 'usage' },
+    { line: 11, top: 480, bottom: 900, heading: null },
+  ];
+
+  it('keeps the heading above the view at the same distance, whatever changed above it', () => {
+    // Twenty lines were added to the intro: every later block moved down 300 px and 20 lines.
+    const after = [
+      { line: 1, top: 0, bottom: 40, heading: 'intro' },
+      { line: 3, top: 60, bottom: 700, heading: null },
+      { line: 29, top: 720, bottom: 760, heading: 'usage' },
+      { line: 31, top: 780, bottom: 1200, heading: null },
+    ];
+    expect(keptTopFor(before, 500, after, size)).toBe(800);
+  });
+
+  it('falls back to the block at the top when no heading is above the view, or it went away', () => {
+    const after = [
+      { line: 1, top: 0, bottom: 40, heading: null },
+      { line: 3, top: 60, bottom: 400, heading: null },
+    ];
+    expect(keptTopFor(before, 100, after, size)).toBe(100);
+    expect(keptTopFor(before.slice(1).map((b) => ({ ...b, heading: null })), 100, after, size)).toBe(100);
   });
 });

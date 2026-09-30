@@ -5,7 +5,7 @@ import { HISTORY_DEPTH } from '../../core/tabs/registry';
 import { isProfileId } from '../../core/profiles/names';
 import type { Parse } from '../../core/settings/json-file';
 import { CHOSEN_ENCODINGS } from '../../shared/contracts';
-import { scrollAnchor, zoomLevel } from '../../shared/contracts/schemas';
+import { scrollAnchor, tabViewState, zoomLevel } from '../../shared/contracts/schemas';
 import { parserFor } from '../schemas/parse';
 
 /**
@@ -25,6 +25,7 @@ const entry = z.strictObject({
   anchor: z.string().max(8192).nullable(),
   position: scrollAnchor.optional(),
   encoding: z.enum(CHOSEN_ENCODINGS).optional(),
+  ...tabViewState.shape,
 });
 
 const tab = z

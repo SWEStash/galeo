@@ -36,6 +36,7 @@ describe('buildApi', () => {
       'rendered',
       'position',
       'zoom',
+      'viewState',
       'close',
       'reopenClosed',
       'move',
