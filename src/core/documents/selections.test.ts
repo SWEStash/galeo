@@ -33,6 +33,18 @@ describe('SelectionGrants', () => {
     expect(grants.choose(1, 'recent', 'pick-2')).toBe('/d/b.md');
   });
 
+  it('keeps the id of a path it offers again, so a pick made while the list updates still counts', () => {
+    const grants = new SelectionGrants(counterIds());
+    grants.offer(1, 'quick-open', ['/d/a.md', '/d/b.md']);
+    const again = grants.offer(1, 'quick-open', ['/d/c.md', '/d/a.md']);
+    expect(again).toEqual([
+      { id: 'pick-3', path: '/d/c.md' },
+      { id: 'pick-1', path: '/d/a.md' },
+    ]);
+    expect(grants.choose(1, 'quick-open', 'pick-1')).toBe('/d/a.md');
+    expect(grants.choose(1, 'quick-open', 'pick-2')).toBeNull();
+  });
+
   it("drops a closed window's offers", () => {
     const grants = new SelectionGrants(counterIds());
     grants.offer(1, 'recent', ['/d/a.md']);

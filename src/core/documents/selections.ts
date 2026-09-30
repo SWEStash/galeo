@@ -11,8 +11,10 @@ export class SelectionGrants {
 
   constructor(private readonly randomId: () => string) {}
 
+  /** Replaces the window's list; a path the last list had keeps its id (a list updating as results stream in). */
   offer(window: number, list: SelectionList, paths: readonly string[]): { id: string; path: string }[] {
-    const entries = paths.map((path) => ({ id: this.randomId(), path }));
+    const previous = new Map([...(this.offers.get(`${window}:${list}`) ?? [])].map(([id, path]) => [path, id]));
+    const entries = paths.map((path) => ({ id: previous.get(path) ?? this.randomId(), path }));
     this.offers.set(`${window}:${list}`, new Map(entries.map((entry) => [entry.id, entry.path])));
     return entries;
   }
