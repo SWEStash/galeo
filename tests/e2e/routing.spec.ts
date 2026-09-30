@@ -180,3 +180,28 @@ test('a launch without files opens nothing new: it asks for the running window',
     removeTempHome(home);
   }
 });
+
+test('files added to a window that is not focused make it ask for attention, without raising it', async () => {
+  const home = tempHome();
+  const { app, window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect.poll(() => shownPath(window)).toBe(basic);
+    const attention = () => app.evaluate(() => (globalThis as { __galeoAttention?: number[] }).__galeoAttention?.length ?? 0);
+    // Focused: nothing to ask for.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.focus());
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFocused())).toBe(true);
+    expect(launchSecond(home, ['--', gfm]).status).toBe(0);
+    await expect.poll(() => paths(window)).toEqual([basic, gfm]);
+    expect(await attention()).toBe(0);
+    // Elsewhere (another workspace): the files arrive and the window asks, once.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.blur());
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFocused())).toBe(false);
+    expect(launchSecond(home, ['--', math]).status).toBe(0);
+    await expect.poll(() => paths(window)).toEqual([basic, gfm, math]);
+    expect(await attention()).toBe(1);
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isFocused())).toBe(false);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});

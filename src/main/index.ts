@@ -28,6 +28,8 @@ import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
 import { CoalescingWatcher } from '../core/watch/coalescing';
 import { QuickOpen } from '../core/quick-open/session';
+import { DropGrants } from '../core/documents/drops';
+import { asksForAttention } from '../core/routing/attention';
 import { createPrivateDirs, resolveAppPaths, withTestHome } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
 import { NodeFileWatcher } from './adapters/file-watcher';
@@ -46,6 +48,7 @@ import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
 import { recentHandlers } from './session/recent-handlers';
 import { quickOpenHandlers } from './quick-open/handlers';
+import { dropHandlers } from './drops/handlers';
 import { ProfileRuntime } from './profiles/runtime';
 import { parseAppState } from './session/schemas';
 import { parseProfileFile } from './settings/schemas';
@@ -224,9 +227,12 @@ function start(initialMode: StartupMode): void {
     home: app.getPath('home'),
     onUpdate: (windowId, results) => sendTo(windowId, 'quickOpen.results', results),
   });
-  /** Shows files in the window: their tabs if it has them, else new ones after the shown one. */
-  const openInWindow = (windowId: number, files: readonly string[]) => {
-    openFiles(documents, windowId, files);
+  const drops = new DropGrants(randomUUID);
+  /** A folder dropped on the window, which its next quick open searches. */
+  const droppedFolders = new Map<number, string>();
+  /** Shows files in the window: their tabs if it has them, else new ones after the shown one (or `after`). */
+  const openInWindow = (windowId: number, files: readonly string[], after?: string | null) => {
+    openFiles(documents, windowId, files, after);
     // Main showed the tab itself, so the page won't report it: the warm set hears it here.
     const shown = documents.snapshot(windowId).active;
     if (files.length > 0 && shown) {
@@ -288,6 +294,7 @@ function start(initialMode: StartupMode): void {
     window.on('move', followBounds);
     window.on('resize', followBounds);
     window.on('focus', () => {
+      window.flashFrame(false);
       focusOrder = [windowId, ...focusOrder.filter((id) => id !== windowId)];
       rememberProfile(profile.id);
       profile.keeper.changed();
@@ -317,6 +324,8 @@ function start(initialMode: StartupMode): void {
       warm.closeWindow(windowId);
       images.closeWindow(windowId);
       quickOpen.close(windowId);
+      drops.closeWindow(windowId);
+      droppedFolders.delete(windowId);
       selections.closeWindow(windowId);
       for (const [token, created] of undoable) if (created.window === windowId) undoable.delete(token);
       // A quit saves every running profile itself, before its windows close.
@@ -434,6 +443,9 @@ function start(initialMode: StartupMode): void {
     }
     const windowId = window.webContents.id;
     openInWindow(windowId, files);
+    // Files added behind the reader's back, maybe on another workspace: the window asks for
+    // attention, and is never raised for it (ADR-005).
+    if (asksForAttention({ fresh, files: files.length, focused: window.isFocused() })) requestAttention(window);
     if (!fresh && files.length === 0) window.focus();
     if (decision.create !== null) {
       undoable.set(randomUUID(), { profile: decision.profile, name: decision.create, files, window: windowId });
@@ -672,6 +684,13 @@ function start(initialMode: StartupMode): void {
           },
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
+        ...dropHandlers({
+          drops,
+          fs,
+          received: (windowId, drop) => sendTo(windowId, 'drops.received', drop),
+          open: (windowId, files, after) => openInWindow(windowId, files, after),
+          searchFolder: (windowId, folder) => droppedFolders.set(windowId, folder),
+        }),
         ...quickOpenHandlers({
           quickOpen,
           request: (windowId) => {
@@ -679,7 +698,10 @@ function start(initialMode: StartupMode): void {
             if (!profile) return null;
             const tabs = documents.list(windowId).filter((tab) => tab.kind !== 'settings');
             const active = tabs.find((tab) => tab.id === documents.snapshot(windowId).active) ?? null;
+            const folder = droppedFolders.get(windowId);
+            droppedFolders.delete(windowId);
             return {
+              ...(folder === undefined ? {} : { folder }),
               active: active?.path ?? null,
               tabs: tabs.map((tab) => tab.path),
               recent: profile.recent.list().map((file) => file.path),
@@ -710,6 +732,18 @@ function start(initialMode: StartupMode): void {
       },
     });
   });
+}
+
+/**
+ * Flashes the window's taskbar entry (GNOME: "galeo is ready") until it's focused. Unpackaged
+ * test runs count the requests in `globalThis.__galeoAttention`, since a headless desktop shows none.
+ */
+function requestAttention(window: BrowserWindow): void {
+  window.flashFrame(true);
+  if (!app.isPackaged) {
+    const requests = ((globalThis as { __galeoAttention?: number[] }).__galeoAttention ??= []);
+    requests.push(window.webContents.id);
+  }
 }
 
 /**

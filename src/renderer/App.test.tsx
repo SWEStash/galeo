@@ -109,6 +109,10 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       open: vi.fn().mockResolvedValue(undefined),
       clear: vi.fn().mockResolvedValue(undefined),
     },
+    drops: {
+      open: vi.fn().mockResolvedValue({ folder: false }),
+      onReceived: vi.fn(() => () => {}),
+    },
     quickOpen: {
       start: vi.fn().mockResolvedValue({ token: 'qo-1', scope: null }),
       query: vi.fn().mockResolvedValue({ token: 'qo-1', query: '', sections: [] }),

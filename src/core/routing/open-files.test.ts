@@ -60,4 +60,16 @@ describe('openFiles', () => {
     openFiles(tabs, 1, ['/d/a.md', '/d/b.md', '/d/c.md']);
     expect(new Set(shown)).toEqual(new Set([null, 't1']));
   });
+
+  it('starts where asked: after a given tab, or before every tab', () => {
+    const tabs = registry();
+    const x = tabs.open('/d/x.md', 1);
+    const y = tabs.open('/d/y.md', 1);
+    tabs.activate(y.id, 1);
+    openFiles(tabs, 1, ['/d/a.md', '/d/b.md'], x.id);
+    expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/x.md', '/d/a.md', '/d/b.md', '/d/y.md']);
+    openFiles(tabs, 1, ['/d/c.md', '/d/d.md'], null);
+    expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/c.md', '/d/d.md', '/d/x.md', '/d/a.md', '/d/b.md', '/d/y.md']);
+    expect(tabs.snapshot(1).active).toBe(tabs.list(1)[0]!.id);
+  });
 });

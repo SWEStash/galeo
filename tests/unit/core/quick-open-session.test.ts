@@ -54,6 +54,14 @@ describe('QuickOpen', () => {
     expect((await quickOpen.query(1, none.token, 'plan')).sections.map((section) => section.kind)).not.toContain('repo');
   });
 
+  it('searches a dropped folder itself, even inside a repository', async () => {
+    const { quickOpen, start } = setup();
+    const { token, scope } = await start({ folder: `${HOME}/git/acme/.local` });
+    expect(scope).toBe('.local');
+    await quickOpen.walked(token);
+    expect(names(await quickOpen.query(1, token, 'plan'), 'repo')).toEqual(['plans/plan.md']);
+  });
+
   it('shows the open tabs and the recent files for an empty query, each file once, folders as ~/…', async () => {
     const { quickOpen, start } = setup();
     const { token } = await start({ recent: [`${HOME}/notes/today.md`, `${HOME}/git/acme/docs/plan-old.md`] });

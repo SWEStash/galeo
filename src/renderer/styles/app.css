@@ -895,3 +895,24 @@ button:focus-visible {
   color: var(--galeo-color-fg);
   font: inherit;
 }
+
+/* Files dragged in from the file manager (UX F3). */
+.drop-area {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.drop-overlay {
+  position: absolute;
+  inset: 8px;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--galeo-color-focus);
+  border-radius: var(--galeo-radius);
+  background: color-mix(in srgb, var(--galeo-color-bg) 85%, transparent);
+  color: var(--galeo-color-fg);
+  font: 600 16px var(--galeo-font-ui);
+  pointer-events: none;
+}

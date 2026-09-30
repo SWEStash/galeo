@@ -104,6 +104,7 @@ export const CHANNELS = [
   'recent.list',
   'recent.open',
   'recent.clear',
+  'drops.open',
   'quickOpen.start',
   'quickOpen.query',
   'quickOpen.open',
@@ -123,6 +124,20 @@ export const CHANNELS = [
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
+
+/**
+ * Channels only the preload calls, never part of `window.galeo`: what they carry comes from the
+ * preload's isolated world, which page script can't reach (SR-12).
+ */
+export const PRELOAD_CHANNELS = ['drops.register'] as const;
+export type PreloadChannel = (typeof PRELOAD_CHANNELS)[number];
+/** Every channel main handles. */
+export type AnyChannel = Channel | PreloadChannel;
+
+/** Where dropped files go: after a tab (null: before every tab); without `after`, after the shown tab. */
+export interface DropTarget {
+  after?: string | null;
+}
 
 /** Arguments of each channel, as a tuple. */
 export interface Requests {
@@ -172,6 +187,9 @@ export interface Requests {
   'recent.list': [];
   'recent.open': [id: string];
   'recent.clear': [];
+  /** The paths of a real drop, from the preload only. */
+  'drops.register': [paths: string[]];
+  'drops.open': [token: string, target: DropTarget];
   'quickOpen.start': [];
   'quickOpen.query': [token: string, query: string];
   'quickOpen.open': [token: string, id: string, newWindow: boolean];
@@ -230,6 +248,9 @@ export interface Responses {
   'recent.list': { id: string; path: string }[];
   'recent.open': void;
   'recent.clear': void;
+  'drops.register': void;
+  /** A folder was dropped: quick open should open, searching it. */
+  'drops.open': { folder: boolean };
   'quickOpen.start': QuickOpenStart;
   'quickOpen.query': QuickOpenResults;
   'quickOpen.open': void;
@@ -249,7 +270,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed', 'profiles.changed', 'quickOpen.results'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -266,6 +287,8 @@ export interface Events {
   'profiles.changed': ProfilesState;
   /** More results for the open quick open's query: its repository walk found more. */
   'quickOpen.results': QuickOpenResults;
+  /** Files were dropped on the window: open them where the drop landed with this token. */
+  'drops.received': { token: string; count: number };
 }
 
 type Group<C extends string> = C extends `${infer G}.${string}` ? G : never;

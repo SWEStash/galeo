@@ -1,6 +1,6 @@
 import { z, type ZodType } from 'zod';
 import type { SettingsOverrides } from '../settings';
-import { CHOSEN_ENCODINGS, type Channel, type Requests } from './ipc';
+import { CHOSEN_ENCODINGS, type AnyChannel, type Requests } from './ipc';
 
 /**
  * Argument schemas for every renderer → main channel. Imported by main only (SR-11), and kept out
@@ -40,7 +40,7 @@ const quickOpenToken = z.string().min(1).max(64);
 /** A tab's chosen view and follow state; only what differs from the defaults is ever set. */
 export const tabViewState = z.strictObject({ view: z.enum(['rendered', 'source']).exactOptional(), follow: z.literal(true).exactOptional() });
 
-export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
+export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),
   'app.resolveSandboxUnavailable': z.tuple([z.enum(['quit', 'run-unsandboxed'])]),
   'app.installLauncher': z.tuple([]),
@@ -67,6 +67,8 @@ export const requestSchemas: { [C in Channel]: ZodType<Requests[C]> } = {
   'recent.list': z.tuple([]),
   'recent.open': z.tuple([documentId]),
   'recent.clear': z.tuple([]),
+  'drops.register': z.tuple([z.array(z.string().min(1).max(32_767)).min(1).max(1000)]),
+  'drops.open': z.tuple([z.string().min(1).max(64), z.strictObject({ after: documentId.nullable().exactOptional() })]),
   'quickOpen.start': z.tuple([]),
   'quickOpen.query': z.tuple([quickOpenToken, z.string().max(4096)]),
   'quickOpen.open': z.tuple([quickOpenToken, documentId, z.boolean()]),

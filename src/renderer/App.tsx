@@ -22,6 +22,8 @@ import { TabBar } from './tabs/TabBar';
 import { TabDocument } from './tabs/TabDocument';
 import { useTabs } from './tabs/useTabs';
 import { QuickOpen } from './quick-open/QuickOpen';
+import { DropArea } from './tabs/DropArea';
+import { useFileDrops } from './tabs/useFileDrops';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
 
@@ -90,6 +92,7 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
     requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]')?.focus());
   }, []);
   useTabShortcuts(store, platform, openQuickOpen);
+  const { landed } = useFileDrops(openQuickOpen);
 
   useEffect(() => {
     if (!message) return;
@@ -106,33 +109,35 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
         onSelectionChange={(key) => store.activate(String(key))}
         keyboardActivation="manual"
       >
-        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} platform={platform} />} onOpenFile={openQuickOpen} />
+        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} platform={platform} />} onOpenFile={openQuickOpen} onFilesDropped={(after) => landed({ after })} />
         <ProfileCreatedNotice />
         {settings && <SettingsNotice notices={settings.notices} />}
         {settings && <SessionNotice notice={settings.session} />}
         <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
-          {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}
-          {view.tabs.map((tab) => (
-            // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
-            <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
-              {tab.kind === 'settings' ? (
-                settings && profile && <SettingsView state={settings} profile={profile} appImage={appImage} />
-              ) : (
-                <TabDocument
-                  id={tab.id}
-                  active={tab.id === view.active}
-                  rendered={view.rendered.has(tab.id)}
-                  staleReads={view.reads.get(tab.id) ?? 0}
-                  zoom={view.zooms.get(tab.id) ?? 1}
-                  store={store}
-                  client={client}
-                  platform={platform}
-                  scheme={scheme}
-                  onMessage={setMessage}
-                />
-              )}
-            </TabPanel>
-          ))}
+          <DropArea onDrop={() => landed({})}>
+            {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}
+            {view.tabs.map((tab) => (
+              // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
+              <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
+                {tab.kind === 'settings' ? (
+                  settings && profile && <SettingsView state={settings} profile={profile} appImage={appImage} />
+                ) : (
+                  <TabDocument
+                    id={tab.id}
+                    active={tab.id === view.active}
+                    rendered={view.rendered.has(tab.id)}
+                    staleReads={view.reads.get(tab.id) ?? 0}
+                    zoom={view.zooms.get(tab.id) ?? 1}
+                    store={store}
+                    client={client}
+                    platform={platform}
+                    scheme={scheme}
+                    onMessage={setMessage}
+                  />
+                )}
+              </TabPanel>
+            ))}
+          </DropArea>
         </main>
         {settings?.settings.statusBar !== false && (
           <StatusBar view={view} store={store}>

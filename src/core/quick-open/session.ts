@@ -60,8 +60,9 @@ export class QuickOpen {
   async start(window: number, request: QuickOpenRequest): Promise<QuickOpenStart> {
     this.close(window);
     const token = `${window}:${++this.tokens}`;
+    // A dropped folder is searched as it is; the shown file's folder widens to its repository.
     const folder = request.folder ?? (request.active === null ? null : folderOf(request.active));
-    const gitRoot = folder === null || folder === '' ? null : await findGitRoot(this.deps.fs, folder);
+    const gitRoot = request.folder !== undefined || folder === null || folder === '' ? null : await findGitRoot(this.deps.fs, folder);
     const root = gitRoot ?? (folder || null);
     const scope = root === null ? null : gitRoot ? `${fileName(root)} (git root)` : fileName(root);
     const session: Session = { token, request, root, scope, files: [], index: null, walking: root !== null, truncated: false, query: null, walk: Promise.resolve(), closed: false };

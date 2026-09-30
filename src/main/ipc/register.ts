@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron';
-import type { Channel, Requests, Responses } from '../../shared/contracts';
+import type { AnyChannel, Requests, Responses } from '../../shared/contracts';
 import { requestSchemas } from '../../shared/contracts/schemas';
 import { createHandler, type IpcEvent } from './handle';
 
@@ -7,12 +7,12 @@ import { createHandler, type IpcEvent } from './handle';
 export type WindowIpcEvent = IpcEvent & { sender: { id: number } };
 
 export type Handlers = {
-  [C in Channel]: (args: Requests[C], event: WindowIpcEvent) => Responses[C] | Promise<Responses[C]>;
+  [C in AnyChannel]: (args: Requests[C], event: WindowIpcEvent) => Responses[C] | Promise<Responses[C]>;
 };
 
 /** Registers every IPC handler behind the sender check and its schema. */
 export function registerIpc(handlers: Handlers, trustedOrigins: ReadonlySet<string>): void {
-  const register = <C extends Channel>(channel: C) =>
+  const register = <C extends AnyChannel>(channel: C) =>
     ipcMain.handle(
       channel,
       createHandler<Requests[C], Responses[C], WindowIpcEvent>({
@@ -22,5 +22,5 @@ export function registerIpc(handlers: Handlers, trustedOrigins: ReadonlySet<stri
         handle: handlers[channel],
       }),
     );
-  for (const channel of Object.keys(handlers) as Channel[]) register(channel);
+  for (const channel of Object.keys(handlers) as AnyChannel[]) register(channel);
 }

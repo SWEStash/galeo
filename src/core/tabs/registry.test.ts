@@ -234,6 +234,14 @@ describe('TabRegistry', () => {
     expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('follow');
   });
 
+  it('opens a tab at the start when asked to open it after no tab', () => {
+    const tabs = new TabRegistry(counterIds());
+    tabs.open('/d/a.md', 1);
+    tabs.open('/d/b.md', 1);
+    tabs.open('/d/first.md', 1, null, null);
+    expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/first.md', '/d/a.md', '/d/b.md']);
+  });
+
   it("keeps a chosen encoding for the entry's file only", () => {
     const tabs = new TabRegistry(counterIds());
     const { id } = tabs.open('/d/a.txt', 1);

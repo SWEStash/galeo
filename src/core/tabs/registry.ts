@@ -74,9 +74,10 @@ export class TabRegistry {
     private readonly onChange: (window: number) => void = () => {},
   ) {}
 
-  /** Opens `path` (at `anchor`) after the tab `after`, else the active one, else at the end. */
-  open(path: string, window: number, anchor: string | null = null, after?: string): DocumentRecord {
+  /** Opens `path` (at `anchor`) after the tab `after` (null: first), else the active one, else at the end. */
+  open(path: string, window: number, anchor: string | null = null, after?: string | null): DocumentRecord {
     const order = this.orderOf(window);
+    if (after === null) return this.insert(window, [{ path, anchor }], 0, 0);
     const next = (after !== undefined && order.includes(after) ? after : undefined) ?? this.active.get(window);
     const position = next === undefined ? order.length : order.indexOf(next) + 1;
     return this.insert(window, [{ path, anchor }], 0, position);

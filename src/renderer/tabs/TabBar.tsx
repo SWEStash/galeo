@@ -13,7 +13,20 @@ const TAB_TYPE = 'application/x-galeo-tab';
  * ←/→ move between tabs, Enter or Space shows one, Delete closes it; a tab closes on middle-click
  * or its ✕ too, and drags to a new place.
  */
-export function TabBar({ view, store, start, onOpenFile }: { view: TabsView; store: TabStore; start?: ReactNode; onOpenFile?: () => void }) {
+export function TabBar({
+  view,
+  store,
+  start,
+  onOpenFile,
+  onFilesDropped,
+}: {
+  view: TabsView;
+  store: TabStore;
+  start?: ReactNode;
+  onOpenFile?: () => void;
+  /** Files from the file manager were dropped at the caret: they go after this tab (null: first). */
+  onFilesDropped?: (after: string | null) => void;
+}) {
   const listRef = useRef<HTMLDivElement>(null);
   const labels = tabLabels(view.tabs.map((tab) => tab.path));
   const [caret, setCaret] = useState<{ index: number; left: number } | null>(null);
@@ -37,13 +50,18 @@ export function TabBar({ view, store, start, onOpenFile }: { view: TabsView; sto
 
   const { dropProps } = useDrop({
     ref: listRef,
-    getDropOperation: (types) => (types.has(TAB_TYPE) ? 'move' : 'cancel'),
+    // Tabs move; files from the file manager open at the caret (their paths reach main from the preload only).
+    getDropOperation: (types) => (types.has(TAB_TYPE) ? 'move' : onFilesDropped ? 'copy' : 'cancel'),
     onDropMove: (event) => setCaret(insertionAt(event.x)),
     onDropExit: () => setCaret(null),
     onDrop: async (event) => {
       setCaret(null);
       const item = event.items.filter(isTextDropItem).find((each) => each.types.has(TAB_TYPE));
-      if (!item) return;
+      if (!item) {
+        const at = insertionAt(event.x).index;
+        onFilesDropped?.(at === 0 ? null : view.tabs[at - 1]!.id);
+        return;
+      }
       const id = await item.getText(TAB_TYPE);
       const from = view.tabs.findIndex((tab) => tab.id === id);
       let to = insertionAt(event.x).index;
