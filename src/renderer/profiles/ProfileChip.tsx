@@ -24,7 +24,7 @@ import {
 } from 'react-aria-components';
 import { ACCENTS, accentOf } from '../../shared/accents';
 import type { PreviousSession, ProfileRefusal, ProfileResult, ProfilesState } from '../../shared/contracts';
-import { commandFor, type Platform } from '../../shared/keymap';
+import { useCommands } from '../commands/useCommands';
 
 const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -42,21 +42,13 @@ type Editing = { kind: 'new' } | { kind: 'edit' } | { kind: 'delete' } | null;
  * The profile chip at the tab bar's left edge (UX F5): the window's profile by name and accent,
  * and its menu (Ctrl+Shift+M): switch, new, edit, delete, restore a previous session.
  */
-export function ProfileChip({ state, platform }: { state: ProfilesState; platform: Platform }) {
+export function ProfileChip({ state }: { state: ProfilesState }) {
   const current = state.profiles.find((profile) => profile.id === state.current);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
   const [previous, setPrevious] = useState<PreviousSession[]>([]);
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (commandFor(event, platform) !== 'profileMenu') return;
-      event.preventDefault();
-      setOpen(true);
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [platform]);
+  useCommands({ profileMenu: () => setOpen(true) });
 
   // The previous sessions are asked for each time the menu opens: saving adds them as the app runs.
   useEffect(() => {

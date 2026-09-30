@@ -2,7 +2,7 @@
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS` and `EVENTS`, one fixed method per channel or event.
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult } from '../documents';
-import type { Platform } from '../keymap';
+import type { Platform, WindowCommand } from '../keymap';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
 import type { ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
 import type { QuickOpenResults, QuickOpenStart } from '../quick-open';
@@ -121,6 +121,7 @@ export const CHANNELS = [
   'settings.openCustomCss',
   'settings.openNoticeFile',
   'tabs.openSettings',
+  'window.command',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -216,6 +217,8 @@ export interface Requests {
   'settings.openNoticeFile': [index: number];
   /** Shows the window's settings tab (Ctrl+,), opening it if needed. */
   'tabs.openSettings': [];
+  /** A window command from the palette, for the sender's window (keys reach main without the page). */
+  'window.command': [command: WindowCommand];
 }
 
 /** Resolved value of each channel. */
@@ -267,6 +270,7 @@ export interface Responses {
   'settings.openCustomCss': void;
   'settings.openNoticeFile': void;
   'tabs.openSettings': string;
+  'window.command': void;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */

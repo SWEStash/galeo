@@ -263,6 +263,7 @@ function start(initialMode: StartupMode): void {
       if (!profile.discard) openMainWindow(profile);
     }
     else if (command === 'closeWindow') window.close();
+    else if (command === 'fullScreen') window.setFullScreen(!window.isFullScreen());
     else if (command === 'quit') app.quit();
     else recordCapabilityKey(command);
   };
@@ -648,6 +649,11 @@ function start(initialMode: StartupMode): void {
           return openConfigFile({ fs, shell, utf8 }, notice.path);
         },
         'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
+        'window.command': ([command], event) => {
+          const profile = profileOf(event.sender.id);
+          const window = profile?.windows.find((each) => each.webContents.id === event.sender.id);
+          if (profile && window) mainKey(command, profile, window);
+        },
         'documents.pathMenu': ([id], event) => {
           if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
           return menus.path(id, event.sender.id);

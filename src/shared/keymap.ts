@@ -104,10 +104,11 @@ export const CAPABILITY_COMMANDS: readonly Command[] = ['editMode'];
  * Window commands main handles in `before-input-event` too: they work while the page is busy or
  * hung, and need no channel from the page.
  */
-export const WINDOW_COMMANDS: readonly Command[] = ['newWindow', 'closeWindow', 'quit'];
+export const WINDOW_COMMANDS = ['newWindow', 'closeWindow', 'quit', 'fullScreen'] as const satisfies readonly Command[];
+export type WindowCommand = (typeof WINDOW_COMMANDS)[number];
 
 /** A key main takes before the page sees it: a capability or a window command. */
 export function mainCommandFor(event: KeyEventLike, platform: Platform): Command | null {
   const command = commandFor(event, platform);
-  return command && (CAPABILITY_COMMANDS.includes(command) || WINDOW_COMMANDS.includes(command)) ? command : null;
+  return command && (CAPABILITY_COMMANDS.includes(command) || (WINDOW_COMMANDS as readonly Command[]).includes(command)) ? command : null;
 }

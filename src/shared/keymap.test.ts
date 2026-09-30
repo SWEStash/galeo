@@ -119,6 +119,7 @@ describe('mainCommandFor', () => {
     expect(mainCommandFor(key('E', { metaKey: true }), 'darwin')).toBe('editMode');
     expect(mainCommandFor(key('n', { metaKey: true }), 'darwin')).toBe('newWindow');
     expect(mainCommandFor(key('q', { metaKey: true }), 'darwin')).toBe('quit');
+    expect(mainCommandFor(key('F11'), 'linux')).toBe('fullScreen');
   });
 
   it('leaves every other shortcut to the page', () => {

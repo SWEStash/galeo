@@ -179,4 +179,9 @@ describe('settings, profile and app channel arguments (SR-11)', () => {
     expect(accepts(channel, [])).toBe(true);
     expect(accepts(channel, ['acme'])).toBe(false);
   });
+
+  it('window.command takes a window command only, never a capability', () => {
+    for (const command of ['newWindow', 'closeWindow', 'quit', 'fullScreen']) expect(accepts('window.command', [command])).toBe(true);
+    for (const bad of [['editMode'], ['reload'], ['toString'], [], ['quit', 'extra'], [1]]) expect(accepts('window.command', bad)).toBe(false);
+  });
 });

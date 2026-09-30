@@ -407,6 +407,23 @@ body,
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* The palette: a command's name, its keys at the end of the row. */
+.palette-label {
+  flex: 1;
+  white-space: nowrap;
+}
+.palette-keys {
+  display: flex;
+  gap: 4px;
+}
+.palette-keys kbd {
+  padding: 0 4px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: 3px;
+  color: var(--galeo-color-muted);
+  font: 12px var(--galeo-font-ui);
+  white-space: nowrap;
+}
 .quick-open-empty {
   margin: 0;
   padding: 12px;

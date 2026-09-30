@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACCENTS } from '../../shared/accents';
 import type { ProfilesState } from '../../shared/contracts';
+import { CommandsProvider } from '../commands/useCommands';
 import { ProfileChip } from './ProfileChip';
 
 const STATE: ProfilesState = {
@@ -33,7 +34,13 @@ async function render(state: ProfilesState = STATE) {
   document.body.append(container);
   const root = createRoot(container);
   roots.push(root);
-  await act(async () => root.render(<ProfileChip state={state} platform="linux" />));
+  await act(async () =>
+    root.render(
+      <CommandsProvider platform="linux">
+        <ProfileChip state={state} />
+      </CommandsProvider>,
+    ),
+  );
   return container;
 }
 

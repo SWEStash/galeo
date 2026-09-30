@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
-import { commandFor, tabNumberFor, type Platform } from '../shared/keymap';
+import type { Command, Platform } from '../shared/keymap';
+import { CommandsProvider, useCommands, useDispatcher } from './commands/useCommands';
+import type { PaletteEntry } from './palette/entries';
+import { Palette } from './palette/Palette';
 import { useColorScheme } from './document/theme';
 import { markFirstPaint } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
@@ -43,7 +46,11 @@ export function App() {
 
   if (!info) return null;
   if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
-  return <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} />;
+  return (
+    <CommandsProvider platform={info.platform}>
+      <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} />
+    </CommandsProvider>
+  );
 }
 
 /** Status-bar messages go away on their own. */
@@ -84,14 +91,26 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
     return () => worker.terminate();
   }, []);
 
-  const [quickOpen, setQuickOpen] = useState(false);
-  const openQuickOpen = useCallback(() => setQuickOpen(true), []);
-  const closeQuickOpen = useCallback(() => {
-    setQuickOpen(false);
+  // One overlay at a time: quick open or the palette.
+  const [overlay, setOverlay] = useState<'quickOpen' | 'palette' | null>(null);
+  const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
+  const closeOverlay = useCallback(() => {
+    setOverlay(null);
     // Focus goes back to the document being read (UX F8), once the dialog has let it go.
     requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]')?.focus());
   }, []);
-  useTabShortcuts(store, platform, openQuickOpen);
+  useTabShortcuts(store, openQuickOpen);
+  useCommands({ commandPalette: () => setOverlay('palette') });
+  const [recentRevision, setRecentRevision] = useState(0);
+  const runEntry = usePaletteActions(store, setMessage, () => setRecentRevision((revision) => revision + 1));
+  const choose = useCallback(
+    (entry: PaletteEntry) => {
+      closeOverlay();
+      // After the focus is back in the document, so a command that moves it (find) keeps it.
+      requestAnimationFrame(() => runEntry(entry));
+    },
+    [closeOverlay, runEntry],
+  );
   const { landed } = useFileDrops(openQuickOpen);
 
   useEffect(() => {
@@ -109,13 +128,13 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
         onSelectionChange={(key) => store.activate(String(key))}
         keyboardActivation="manual"
       >
-        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} platform={platform} />} onOpenFile={openQuickOpen} onFilesDropped={(after) => landed({ after })} />
+        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} />} onOpenFile={openQuickOpen} onFilesDropped={(after) => landed({ after })} />
         <ProfileCreatedNotice />
         {settings && <SettingsNotice notices={settings.notices} />}
         {settings && <SessionNotice notice={settings.session} />}
         <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
           <DropArea onDrop={() => landed({})}>
-            {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}
+            {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow key={recentRevision} platform={platform} />}
             {view.tabs.map((tab) => (
               // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
               <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
@@ -149,48 +168,81 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
         )}
       </Tabs>
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
-      {quickOpen && <QuickOpen platform={platform} onClose={closeQuickOpen} />}
+      {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} />}
+      {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}
     </>
   );
 }
 
 /** The tab shortcuts and per-tab zoom (UX §5), wherever the focus is. */
-function useTabShortcuts(store: TabStore, platform: Platform, openQuickOpen: () => void) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      // The store's state as of this key, not of the last render: keys can come faster than renders.
-      const view = store.getSnapshot();
-      const command = commandFor(event, platform);
-      const zoom = command === 'zoomIn' ? 'in' : command === 'zoomOut' ? 'out' : command === 'zoomReset' ? 'reset' : null;
-      if (zoom && view.active) {
-        event.preventDefault();
-        store.zoom(view.active, zoom);
-        return;
+function useTabShortcuts(store: TabStore, openQuickOpen: () => void) {
+  // The store's state as of the key, not of the last render: keys can come faster than renders.
+  const active = () => store.getSnapshot().active;
+  const zoom = (direction: 'in' | 'out' | 'reset') => () => {
+    const id = active();
+    if (!id) return false;
+    store.zoom(id, direction);
+    return true;
+  };
+  const tabs = (command: Command) => ({ tabNumber }: { tabNumber: number | null }) => {
+    const action = tabAction(command, tabNumber, store.getSnapshot());
+    if (!action) return false;
+    if (action.kind === 'activate') store.activate(action.id);
+    else if (action.kind === 'move') store.move(action.id, action.position);
+    else if (action.kind === 'close') store.close(action.id);
+    else store.reopenClosed();
+    return true;
+  };
+  useCommands({
+    zoomIn: zoom('in'),
+    zoomOut: zoom('out'),
+    zoomReset: zoom('reset'),
+    quickOpen: openQuickOpen,
+    reload: () => {
+      const id = active();
+      if (!id) return false;
+      store.reread(id);
+      return true;
+    },
+    settings: () => void window.galeo.tabs.openSettings(),
+    nextTab: tabs('nextTab'),
+    previousTab: tabs('previousTab'),
+    goToTab: tabs('goToTab'),
+    goToLastTab: tabs('goToLastTab'),
+    moveTabLeft: tabs('moveTabLeft'),
+    moveTabRight: tabs('moveTabRight'),
+    closeTab: tabs('closeTab'),
+    reopenClosed: tabs('reopenClosed'),
+  });
+}
+
+/** What a palette entry does in this window, besides running a command. */
+function usePaletteActions(store: TabStore, say: (message: string) => void, recentCleared: () => void) {
+  const dispatcher = useDispatcher();
+  return useCallback(
+    (entry: PaletteEntry) => {
+      const { action } = entry;
+      if (action.kind === 'command') {
+        if (!dispatcher.run(action.command, { typing: false, tabNumber: action.tabNumber ?? null })) say(`${entry.label} isn't available here`);
+      } else if (action.kind === 'main') void window.galeo.window.command(action.command);
+      else if (action.kind === 'hint') say(action.message);
+      else if (action.kind === 'openWithDefaultApp') {
+        const view = store.getSnapshot();
+        const shown = view.tabs.find((tab) => tab.id === view.active);
+        if (shown && shown.kind !== 'settings') void window.galeo.documents.contextMenu(shown.id);
+        else say('No document is shown');
+      } else if (action.kind === 'restorePrevious') {
+        void window.galeo.session.previous().then(([latest]) => {
+          if (latest) void window.galeo.session.restorePrevious(latest.snapshot);
+          else say('No previous session to restore');
+        });
+      } else {
+        void window.galeo.recent.clear().then(() => {
+          recentCleared();
+          say('Recent files cleared');
+        });
       }
-      if (command === 'quickOpen') {
-        event.preventDefault();
-        openQuickOpen();
-        return;
-      }
-      if (command === 'reload' && view.active) {
-        event.preventDefault();
-        store.reread(view.active);
-        return;
-      }
-      if (command === 'settings') {
-        event.preventDefault();
-        void window.galeo.tabs.openSettings();
-        return;
-      }
-      const action = command && tabAction(command, tabNumberFor(event, platform), view);
-      if (!action) return;
-      event.preventDefault();
-      if (action.kind === 'activate') store.activate(action.id);
-      else if (action.kind === 'move') store.move(action.id, action.position);
-      else if (action.kind === 'close') store.close(action.id);
-      else store.reopenClosed();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [store, platform, openQuickOpen]);
+    },
+    [dispatcher, store, say, recentCleared],
+  );
 }

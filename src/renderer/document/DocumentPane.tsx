@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
 import type { ImageResult } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
-import { commandFor, type Platform } from '../../shared/keymap';
+import type { Platform } from '../../shared/keymap';
+import { useCommands } from '../commands/useCommands';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
@@ -128,39 +129,58 @@ export function DocumentPane({
     documentHandle.current?.focus();
   }, []);
 
-  useEffect(() => {
-    if (!active) return;
-    // Capture phase, so the source view's editor never sees these keys first.
-    const onKey = (event: KeyboardEvent) => {
-      const command = commandFor(event, platform);
-      // In a text field (the find bar), End and Alt+arrows edit the text; they don't move the document.
-      const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
-      if (command === 'toggleSource' && renderable) {
-        event.preventDefault();
+  // In a text field (the find bar), End and Alt+arrows edit the text; they don't move the document.
+  const history = (direction: 'back' | 'forward') => ({ typing }: { typing: boolean }) => {
+    if (typing) return false;
+    onHistory(direction);
+    return true;
+  };
+  const step = (direction: 1 | -1) => () => {
+    if (!find.open) return false;
+    stepFind(direction);
+    return true;
+  };
+  useCommands(
+    {
+      toggleSource: () => {
+        if (!renderable) return false;
         setChosenView(view === 'rendered' ? 'source' : 'rendered');
-      } else if (command === 'toggleWrap' && view === 'source') {
-        event.preventDefault();
+        return true;
+      },
+      toggleWrap: () => {
+        if (view !== 'source') return false;
         setWrap((current) => !current);
-      } else if (command === 'followEnd' && ready?.format === 'log' && !typing) {
-        event.preventDefault();
+        return true;
+      },
+      followEnd: ({ typing }) => {
+        if (ready?.format !== 'log' || typing) return false;
         setFollow(true);
-      } else if (command === 'find' && ready) {
-        event.preventDefault();
+        return true;
+      },
+      find: () => {
+        if (!ready) return false;
         setFind((current) => ({ ...current, open: true, token: current.token + 1 }));
-      } else if ((command === 'findNext' || command === 'findPrevious') && find.open) {
-        event.preventDefault();
-        stepFind(command === 'findNext' ? 1 : -1);
-      } else if (event.key === 'Escape' && find.open) {
-        event.preventDefault();
-        closeFind();
-      } else if ((command === 'back' || command === 'forward') && !typing) {
-        event.preventDefault();
-        onHistory(command);
-      }
+        return true;
+      },
+      findNext: step(1),
+      findPrevious: step(-1),
+      back: history('back'),
+      forward: history('forward'),
+    },
+    active,
+  );
+
+  useEffect(() => {
+    if (!active || !find.open) return;
+    // Capture phase, like the commands: Esc closes find wherever the focus is.
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      closeFind();
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [active, platform, renderable, view, ready, find.open, stepFind, closeFind, onHistory]);
+  }, [active, find.open, closeFind]);
 
   // Switching views, or the rendered HTML arriving, repeats the search in what is now showing.
   useEffect(() => {

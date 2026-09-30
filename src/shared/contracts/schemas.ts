@@ -1,4 +1,5 @@
 import { z, type ZodType } from 'zod';
+import { WINDOW_COMMANDS } from '../keymap';
 import type { SettingsOverrides } from '../settings';
 import { CHOSEN_ENCODINGS, type AnyChannel, type Requests } from './ipc';
 
@@ -86,4 +87,5 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'settings.openCustomCss': z.tuple([z.enum(['global', 'profile'])]),
   'settings.openNoticeFile': z.tuple([z.int().min(0).max(100)]),
   'tabs.openSettings': z.tuple([]),
+  'window.command': z.tuple([z.enum(WINDOW_COMMANDS)]),
 };
