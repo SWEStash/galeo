@@ -25,6 +25,7 @@ import type { EventName, Events, ProfileResult, ProfilesState, SettingsResult, S
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
+import { CoalescingWatcher } from '../core/watch/coalescing';
 import { createPrivateDirs, resolveAppPaths, withTestHome } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
 import { NodeFileWatcher } from './adapters/file-watcher';
@@ -121,7 +122,7 @@ function start(initialMode: StartupMode): void {
     }
   });
   const fs = new NodeFileSystem();
-  const watcher = new NodeFileWatcher();
+  const watcher = new CoalescingWatcher({ inner: new NodeFileWatcher(), clock: systemClock, fs });
   const images = new ImageGrants(randomUUID);
   const shell = externalShell();
   const menus = new DocumentMenus({
