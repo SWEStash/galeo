@@ -144,7 +144,7 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
       <h2>Quick open</h2>
       {setting(
         'quickOpenExclude',
-        <ListSetting label="Excluded from quick open" hint="One folder or pattern per line" value={values.quickOpenExclude} onCommit={(quickOpenExclude) => set({ quickOpenExclude })} />,
+        <ListSetting label="Excluded from quick open" hint="One folder or file name per line, skipped wherever it appears" value={values.quickOpenExclude} onCommit={(quickOpenExclude) => set({ quickOpenExclude })} />,
       )}
 
       <h2>Custom CSS</h2>

@@ -13,7 +13,7 @@ const TAB_TYPE = 'application/x-galeo-tab';
  * ←/→ move between tabs, Enter or Space shows one, Delete closes it; a tab closes on middle-click
  * or its ✕ too, and drags to a new place.
  */
-export function TabBar({ view, store, start }: { view: TabsView; store: TabStore; start?: ReactNode }) {
+export function TabBar({ view, store, start, onOpenFile }: { view: TabsView; store: TabStore; start?: ReactNode; onOpenFile?: () => void }) {
   const listRef = useRef<HTMLDivElement>(null);
   const labels = tabLabels(view.tabs.map((tab) => tab.path));
   const [caret, setCaret] = useState<{ index: number; left: number } | null>(null);
@@ -79,6 +79,11 @@ export function TabBar({ view, store, start }: { view: TabsView; store: TabStore
         </TabList>
         {caret && <div className="tab-caret" data-testid="tab-caret" style={{ left: caret.left }} />}
       </div>
+      {onOpenFile && (
+        <button type="button" className="tab-new" data-testid="tab-new" aria-label="Open file… (Ctrl+P)" title="Open file… (Ctrl+P)" onClick={onOpenFile}>
+          +
+        </button>
+      )}
       {/* Tabs never cover this: the window can always be dragged, however many are open. */}
       <div className="window-grip" data-testid="window-grip" />
     </div>

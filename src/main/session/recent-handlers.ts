@@ -1,6 +1,5 @@
 import type { SelectionGrants } from '../../core/documents/selections';
 import type { RecentFiles } from '../../core/session/recent';
-import type { TabRegistry } from '../../core/tabs/registry';
 import type { Handlers } from '../ipc/register';
 
 /** The empty window shows this many recent files (UX §4). */
@@ -14,16 +13,17 @@ export function recentHandlers(deps: {
   /** The recent files of the window's profile. */
   recent: (window: number) => RecentFiles | undefined;
   selections: SelectionGrants;
-  tabs: TabRegistry;
+  /** Shows the file in the window: its tab if it has one, else a new one. */
+  open: (window: number, path: string) => void;
 }): Pick<Handlers, 'recent.list' | 'recent.open' | 'recent.clear'> {
-  const { recent, selections, tabs } = deps;
+  const { recent, selections, open } = deps;
   return {
     'recent.list': (_args, event) =>
       selections.offer(event.sender.id, 'recent', (recent(event.sender.id)?.list() ?? []).slice(0, SHOWN).map((file) => file.path)),
     'recent.open': ([id], event) => {
       const path = selections.choose(event.sender.id, 'recent', id);
       if (!path) throw new Error('not offered');
-      tabs.open(path, event.sender.id);
+      open(event.sender.id, path);
     },
     'recent.clear': async (_args, event) => {
       const list = recent(event.sender.id);

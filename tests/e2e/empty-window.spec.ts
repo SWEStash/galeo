@@ -21,6 +21,12 @@ test('a window without tabs shows how to open files and the recent ones, and pas
     const results = await new AxeBuilder({ page: first.window }).setLegacyMode(true).include('.empty-window').analyze();
     expect(results.violations).toEqual([]);
 
+    // The hint's key works: quick open lists the recent file too.
+    await first.window.keyboard.press('ControlOrMeta+P');
+    await expect(first.window.getByTestId('quick-open').getByRole('option', { name: /basic\.md/ })).toBeVisible();
+    await first.window.keyboard.press('Escape');
+    await expect(first.window.getByTestId('quick-open')).toHaveCount(0);
+
     await empty.getByRole('button', { name: /basic\.md/ }).click();
     await expect(first.window.getByRole('tab')).toHaveText(['basic.md✕']);
     await expect(shownDocument(first.window).locator('h1')).toBeVisible();

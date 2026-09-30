@@ -96,6 +96,22 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('quick open takes a bounded token, a bounded query, an offered id and where to open it', () => {
+    expect(accepts('quickOpen.start', [])).toBe(true);
+    expect(accepts('quickOpen.start', ['/r'])).toBe(false);
+    expect(accepts('quickOpen.query', ['1:1', ''])).toBe(true);
+    expect(accepts('quickOpen.query', ['1:1', 'x'.repeat(4096)])).toBe(true);
+    for (const bad of [['1:1'], ['', 'plan'], ['1:1', 'x'.repeat(4097)], ['1:1', 7], ['x'.repeat(65), 'plan']]) {
+      expect(accepts('quickOpen.query', bad)).toBe(false);
+    }
+    expect(accepts('quickOpen.open', ['1:1', ID, true])).toBe(true);
+    for (const bad of [['1:1', ID], ['1:1', '', false], ['1:1', ID, 'yes'], ['1:1', ID, false, 'x']]) {
+      expect(accepts('quickOpen.open', bad)).toBe(false);
+    }
+    expect(accepts('quickOpen.close', ['1:1'])).toBe(true);
+    expect(accepts('quickOpen.close', [])).toBe(false);
+  });
+
   it('session.restorePrevious takes a snapshot number from 1 to 3', () => {
     expect(accepts('session.restorePrevious', [1])).toBe(true);
     expect(accepts('session.restorePrevious', [3])).toBe(true);

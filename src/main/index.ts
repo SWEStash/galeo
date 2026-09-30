@@ -27,6 +27,7 @@ import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
 import { CoalescingWatcher } from '../core/watch/coalescing';
+import { QuickOpen } from '../core/quick-open/session';
 import { createPrivateDirs, resolveAppPaths, withTestHome } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
 import { NodeFileWatcher } from './adapters/file-watcher';
@@ -44,6 +45,7 @@ import { sendEvent } from './ipc/send';
 import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
 import { recentHandlers } from './session/recent-handlers';
+import { quickOpenHandlers } from './quick-open/handlers';
 import { ProfileRuntime } from './profiles/runtime';
 import { parseAppState } from './session/schemas';
 import { parseProfileFile } from './settings/schemas';
@@ -215,6 +217,23 @@ function start(initialMode: StartupMode): void {
     },
   });
   const selections = new SelectionGrants(randomUUID);
+  const quickOpen = new QuickOpen({
+    fs,
+    clock: systemClock,
+    grants: selections,
+    home: app.getPath('home'),
+    onUpdate: (windowId, results) => sendTo(windowId, 'quickOpen.results', results),
+  });
+  /** Shows files in the window: their tabs if it has them, else new ones after the shown one. */
+  const openInWindow = (windowId: number, files: readonly string[]) => {
+    openFiles(documents, windowId, files);
+    // Main showed the tab itself, so the page won't report it: the warm set hears it here.
+    const shown = documents.snapshot(windowId).active;
+    if (files.length > 0 && shown) {
+      const ids = warm.activated(windowId, shown);
+      if (ids.length > 0) demote(windowId, ids);
+    }
+  };
   // Profiles `--profile` created, by the token their window's notice carries, until Undo or the window goes.
   const undoable = new Map<string, { profile: string; name: string; files: readonly string[]; window: number }>();
 
@@ -297,6 +316,7 @@ function start(initialMode: StartupMode): void {
       documents.closeWindow(windowId);
       warm.closeWindow(windowId);
       images.closeWindow(windowId);
+      quickOpen.close(windowId);
       selections.closeWindow(windowId);
       for (const [token, created] of undoable) if (created.window === windowId) undoable.delete(token);
       // A quit saves every running profile itself, before its windows close.
@@ -413,13 +433,7 @@ function start(initialMode: StartupMode): void {
       fresh = true;
     }
     const windowId = window.webContents.id;
-    openFiles(documents, windowId, files);
-    // Main showed the tab itself, so the page won't report it: the warm set hears it here.
-    const shown = documents.snapshot(windowId).active;
-    if (files.length > 0 && shown) {
-      const ids = warm.activated(windowId, shown);
-      if (ids.length > 0) demote(windowId, ids);
-    }
+    openInWindow(windowId, files);
     if (!fresh && files.length === 0) window.focus();
     if (decision.create !== null) {
       undoable.set(randomUUID(), { profile: decision.profile, name: decision.create, files, window: windowId });
@@ -657,7 +671,28 @@ function start(initialMode: StartupMode): void {
             },
           },
         }),
-        ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, selections, tabs: documents }),
+        ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
+        ...quickOpenHandlers({
+          quickOpen,
+          request: (windowId) => {
+            const profile = profileOf(windowId);
+            if (!profile) return null;
+            const tabs = documents.list(windowId).filter((tab) => tab.kind !== 'settings');
+            const active = tabs.find((tab) => tab.id === documents.snapshot(windowId).active) ?? null;
+            return {
+              active: active?.path ?? null,
+              tabs: tabs.map((tab) => tab.path),
+              recent: profile.recent.list().map((file) => file.path),
+              exclude: profile.settings.current.quickOpenExclude,
+            };
+          },
+          open: async (windowId, file, newWindow) => {
+            const profile = profileOf(windowId);
+            if (!profile) return;
+            if (newWindow) await enqueue(() => openRouted({ profile: profile.id, newWindow: true }, [file]));
+            else openInWindow(windowId, [file]);
+          },
+        }),
       },
       trustedOrigins(runtime),
     );

@@ -5,6 +5,7 @@ import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, Imag
 import type { Platform } from '../keymap';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
 import type { ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
+import type { QuickOpenResults, QuickOpenStart } from '../quick-open';
 
 export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
 
@@ -103,6 +104,10 @@ export const CHANNELS = [
   'recent.list',
   'recent.open',
   'recent.clear',
+  'quickOpen.start',
+  'quickOpen.query',
+  'quickOpen.open',
+  'quickOpen.close',
   'profiles.created',
   'profiles.undoCreate',
   'profiles.list',
@@ -167,6 +172,10 @@ export interface Requests {
   'recent.list': [];
   'recent.open': [id: string];
   'recent.clear': [];
+  'quickOpen.start': [];
+  'quickOpen.query': [token: string, query: string];
+  'quickOpen.open': [token: string, id: string, newWindow: boolean];
+  'quickOpen.close': [token: string];
   /** `--profile` created the sender's profile for it: the notice to show, with the token Undo takes (ADR-005). */
   'profiles.created': [];
   /** Undoes a profile `--profile` just created (by the token its notice carried): its files go where they would have without it. */
@@ -221,6 +230,10 @@ export interface Responses {
   'recent.list': { id: string; path: string }[];
   'recent.open': void;
   'recent.clear': void;
+  'quickOpen.start': QuickOpenStart;
+  'quickOpen.query': QuickOpenResults;
+  'quickOpen.open': void;
+  'quickOpen.close': void;
   'profiles.created': { name: string; token: string } | null;
   'profiles.undoCreate': void;
   'profiles.list': ProfilesState;
@@ -236,7 +249,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed', 'profiles.changed'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed', 'profiles.changed', 'quickOpen.results'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -251,6 +264,8 @@ export interface Events {
   'settings.changed': SettingsState;
   /** A profile was created, renamed, recoloured, deleted, started or stopped. */
   'profiles.changed': ProfilesState;
+  /** More results for the open quick open's query: its repository walk found more. */
+  'quickOpen.results': QuickOpenResults;
 }
 
 type Group<C extends string> = C extends `${infer G}.${string}` ? G : never;

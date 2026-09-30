@@ -21,6 +21,7 @@ import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
 import { TabDocument } from './tabs/TabDocument';
 import { useTabs } from './tabs/useTabs';
+import { QuickOpen } from './quick-open/QuickOpen';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
 
@@ -81,7 +82,14 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
     return () => worker.terminate();
   }, []);
 
-  useTabShortcuts(store, platform);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const openQuickOpen = useCallback(() => setQuickOpen(true), []);
+  const closeQuickOpen = useCallback(() => {
+    setQuickOpen(false);
+    // Focus goes back to the document being read (UX F8), once the dialog has let it go.
+    requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]')?.focus());
+  }, []);
+  useTabShortcuts(store, platform, openQuickOpen);
 
   useEffect(() => {
     if (!message) return;
@@ -90,55 +98,59 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
   }, [message]);
 
   return (
-    <Tabs
-      className="window"
-      // Null only while the window has no tabs; no tab has the empty key.
-      selectedKey={view.active ?? ''}
-      onSelectionChange={(key) => store.activate(String(key))}
-      keyboardActivation="manual"
-    >
-      <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} platform={platform} />} />
-      <ProfileCreatedNotice />
-      {settings && <SettingsNotice notices={settings.notices} />}
-      {settings && <SessionNotice notice={settings.session} />}
-      <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
-        {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}
-        {view.tabs.map((tab) => (
-          // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
-          <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
-            {tab.kind === 'settings' ? (
-              settings && profile && <SettingsView state={settings} profile={profile} appImage={appImage} />
-            ) : (
-              <TabDocument
-                id={tab.id}
-                active={tab.id === view.active}
-                rendered={view.rendered.has(tab.id)}
-                staleReads={view.reads.get(tab.id) ?? 0}
-                zoom={view.zooms.get(tab.id) ?? 1}
-                store={store}
-                client={client}
-                platform={platform}
-                scheme={scheme}
-                onMessage={setMessage}
-              />
-            )}
-          </TabPanel>
-        ))}
-      </main>
-      {settings?.settings.statusBar !== false && (
-        <StatusBar view={view} store={store}>
-          <span className="status-message" data-testid="status-message" role="status">
-            {message ?? ''}
-          </span>
-          {!sandboxed && <UnsandboxedBadge />}
-        </StatusBar>
-      )}
-    </Tabs>
+    <>
+      <Tabs
+        className="window"
+        // Null only while the window has no tabs; no tab has the empty key.
+        selectedKey={view.active ?? ''}
+        onSelectionChange={(key) => store.activate(String(key))}
+        keyboardActivation="manual"
+      >
+        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} platform={platform} />} onOpenFile={openQuickOpen} />
+        <ProfileCreatedNotice />
+        {settings && <SettingsNotice notices={settings.notices} />}
+        {settings && <SessionNotice notice={settings.session} />}
+        <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
+          {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow platform={platform} />}
+          {view.tabs.map((tab) => (
+            // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
+            <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
+              {tab.kind === 'settings' ? (
+                settings && profile && <SettingsView state={settings} profile={profile} appImage={appImage} />
+              ) : (
+                <TabDocument
+                  id={tab.id}
+                  active={tab.id === view.active}
+                  rendered={view.rendered.has(tab.id)}
+                  staleReads={view.reads.get(tab.id) ?? 0}
+                  zoom={view.zooms.get(tab.id) ?? 1}
+                  store={store}
+                  client={client}
+                  platform={platform}
+                  scheme={scheme}
+                  onMessage={setMessage}
+                />
+              )}
+            </TabPanel>
+          ))}
+        </main>
+        {settings?.settings.statusBar !== false && (
+          <StatusBar view={view} store={store}>
+            <span className="status-message" data-testid="status-message" role="status">
+              {message ?? ''}
+            </span>
+            {!sandboxed && <UnsandboxedBadge />}
+          </StatusBar>
+        )}
+      </Tabs>
+      {/* Outside the tabs: their collection is built by rendering their children once more. */}
+      {quickOpen && <QuickOpen platform={platform} onClose={closeQuickOpen} />}
+    </>
   );
 }
 
 /** The tab shortcuts and per-tab zoom (UX §5), wherever the focus is. */
-function useTabShortcuts(store: TabStore, platform: Platform) {
+function useTabShortcuts(store: TabStore, platform: Platform, openQuickOpen: () => void) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // The store's state as of this key, not of the last render: keys can come faster than renders.
@@ -148,6 +160,11 @@ function useTabShortcuts(store: TabStore, platform: Platform) {
       if (zoom && view.active) {
         event.preventDefault();
         store.zoom(view.active, zoom);
+        return;
+      }
+      if (command === 'quickOpen') {
+        event.preventDefault();
+        openQuickOpen();
         return;
       }
       if (command === 'reload' && view.active) {
@@ -170,5 +187,5 @@ function useTabShortcuts(store: TabStore, platform: Platform) {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [store, platform]);
+  }, [store, platform, openQuickOpen]);
 }

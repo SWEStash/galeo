@@ -116,6 +116,8 @@ test('a followed log scrolls to its new end; a log not followed stays where it i
   const { window, close } = await launchApp(['--', followed, still]);
   try {
     await expect(shownDocument(window).locator('.cm-content')).toContainText('line 1');
+    // The log's own line count: its pane has reported, so it hears keys now.
+    await expect(window.getByTestId('status-lines')).toHaveText('301 ln');
     await window.keyboard.press('End');
     await expect(shownDocument(window)).toHaveAttribute('data-follow', 'on');
     appendFileSync(followed, lines(301, 400));

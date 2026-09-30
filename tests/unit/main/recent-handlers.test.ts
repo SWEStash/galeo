@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SelectionGrants } from '../../../src/core/documents/selections';
+import { openFiles } from '../../../src/core/routing/open-files';
 import { RecentFiles } from '../../../src/core/session/recent';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import { utf8 } from '../../../src/main/adapters/utf8';
@@ -15,7 +16,7 @@ async function setup(count = 3) {
   const recent = new RecentFiles({ fs, utf8, path: '/s/recent.json', parse: (data) => ({ ok: true, value: data as never }), now: () => n++ });
   for (let i = 0; i < count; i++) await recent.add(`/d/f${i}.md`);
   const tabs = new TabRegistry(() => `tab-${++n}`);
-  const handlers = recentHandlers({ recent: () => recent, selections: new SelectionGrants(() => `pick-${++n}`), tabs });
+  const handlers = recentHandlers({ recent: () => recent, selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
   return { recent, tabs, handlers };
 }
 
@@ -30,6 +31,8 @@ describe('recentHandlers', () => {
   it('opens a file the window was offered, in that window', async () => {
     const { handlers, tabs } = await setup();
     const [first] = await handlers['recent.list']([], from(1));
+    await handlers['recent.open']([first!.id], from(1));
+    expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/f2.md']);
     await handlers['recent.open']([first!.id], from(1));
     expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/f2.md']);
   });
@@ -62,7 +65,7 @@ describe('recentHandlers', () => {
     };
     const [a, b] = [await listOf('a'), await listOf('b')];
     const tabs = new TabRegistry(() => `tab-${++n}`);
-    const handlers = recentHandlers({ recent: (window) => ({ 1: a, 2: b })[window], selections: new SelectionGrants(() => `pick-${++n}`), tabs });
+    const handlers = recentHandlers({ recent: (window) => ({ 1: a, 2: b })[window], selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
     expect((await handlers['recent.list']([], from(2))).map((file) => file.path)).toEqual(['/d/b.md']);
     await handlers['recent.clear']([], from(1));
     expect(a.list()).toEqual([]);
