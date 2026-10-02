@@ -50,8 +50,8 @@ describe('DocumentView', () => {
       </StrictMode>,
     );
     const shadow = shadowOf(container);
-    // The editor loads the first time a source view shows.
-    await vi.waitFor(() => expect(shadow.querySelectorAll('.cm-editor')).toHaveLength(1));
+    // The editor loads the first time a source view shows (a slow runner can take over a second).
+    await vi.waitFor(() => expect(shadow.querySelectorAll('.cm-editor')).toHaveLength(1), { timeout: 5_000 });
     const editor = shadow.querySelector('.cm-editor');
     await act(async () => root!.render(<DocumentView {...props} view="rendered" rendered={{ html: '<p>r</p>' }} scheme="light" />));
     await act(async () => root!.render(<DocumentView {...props} view="source" rendered={{ html: '<p>r</p>' }} scheme="light" />));

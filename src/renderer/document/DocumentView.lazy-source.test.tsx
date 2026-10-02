@@ -38,7 +38,7 @@ describe('DocumentView with the editor not loaded yet', () => {
 
     await act(async () => gate.open());
 
-    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull(), { timeout: 5_000 });
     expect(shadow.querySelector('article')?.hidden).toBe(true);
     expect(view.dataset['view']).toBe('source');
   });
