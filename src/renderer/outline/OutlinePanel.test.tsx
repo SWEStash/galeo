@@ -67,4 +67,14 @@ describe('OutlinePanel', () => {
     await act(async () => root!.render(<OutlinePanel entries={ENTRIES} current="h-Install" onChoose={() => {}} onClose={() => {}} autoFocus />));
     expect(document.activeElement?.textContent).toBe('Install');
   });
+
+  it('keeps headings that share an id apart (empty headings slug to the same one)', async () => {
+    const same = (text: string, line: number): OutlineEntry => ({ depth: 2, text, id: 'user-content-', line });
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { container } = await render({ entries: [same('a', 1), same('b', 3)], current: null });
+    await act(async () => root!.render(<OutlinePanel entries={[same('b', 3), same('c', 5)]} current={null} onChoose={() => {}} onClose={() => {}} />));
+    expect(buttons(container).map((button) => button.textContent)).toEqual(['b', 'c']);
+    expect(errors.mock.calls.flat().join(' ')).not.toMatch(/same key/);
+    errors.mockRestore();
+  });
 });

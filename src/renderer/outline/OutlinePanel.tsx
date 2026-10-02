@@ -52,7 +52,8 @@ export function OutlinePanel({ entries, current, onChoose, onClose, autoFocus = 
   const list = (nodes: OutlineNode[]) => (
     <ul className="outline-list">
       {nodes.map(({ entry, children }) => (
-        <li key={entry.id}>
+        // Its source line: ids can repeat (empty headings slug alike), lines can't.
+        <li key={entry.line}>
           <button
             type="button"
             className="outline-item"
