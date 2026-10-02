@@ -80,3 +80,19 @@ export function keptTopFor(
   if (heading && same) return same.top + (top - heading.top);
   return scrollTopFor(anchorAt(before, { top, ...size }), after, size);
 }
+
+/** A heading scrolled to sits a few pixels under the top of the view (rounding, margins). */
+const HEADING_SLACK_PX = 8;
+
+/**
+ * The heading being read: the last one at or above the top of the view; the first one before any
+ * is reached (the document's top); null without headings.
+ */
+export function currentHeading(headings: readonly { id: string; top: number }[], viewportTop: number): string | null {
+  let current = headings[0]?.id ?? null;
+  for (const heading of headings) {
+    if (heading.top > viewportTop + HEADING_SLACK_PX) break;
+    current = heading.id;
+  }
+  return current;
+}

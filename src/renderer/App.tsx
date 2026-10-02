@@ -5,6 +5,7 @@ import type { Command, Platform } from '../shared/keymap';
 import { CommandsProvider, useCommands, useDispatcher } from './commands/useCommands';
 import type { PaletteEntry } from './palette/entries';
 import { Palette } from './palette/Palette';
+import { OutlineProvider } from './outline/useOutline';
 import { useColorScheme } from './document/theme';
 import { markFirstPaint } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
@@ -48,7 +49,9 @@ export function App() {
   if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
   return (
     <CommandsProvider platform={info.platform}>
-      <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} />
+      <OutlineProvider>
+        <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} />
+      </OutlineProvider>
     </CommandsProvider>
   );
 }

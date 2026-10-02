@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RenderClient } from '../worker/client';
+import type { OutlineEntry } from '../worker/pipeline/render';
 import { useRenderedHtml, type RenderState } from './useRenderedHtml';
 
 const styles = vi.hoisted(() => {
@@ -19,10 +20,12 @@ afterEach(() => {
 
 /** A worker whose renders finish only when the test says. */
 function manualClient() {
-  const pending: { text: string; resolve: (html: string, math?: boolean) => void }[] = [];
+  const pending: { text: string; resolve: (html: string, math?: boolean, outline?: OutlineEntry[]) => void }[] = [];
   const client = {
     markdown: (text: string) =>
-      new Promise<{ html: string; math: boolean }>((resolve) => pending.push({ text, resolve: (html, math = false) => resolve({ html, math }) })),
+      new Promise<{ html: string; math: boolean; outline: OutlineEntry[] }>((resolve) =>
+        pending.push({ text, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
+      ),
   } as unknown as RenderClient;
   return { client, pending };
 }
@@ -66,5 +69,13 @@ describe('useRenderedHtml', () => {
     expect(seen.at(-1)).toMatchObject({ status: 'pending', html: '<h1>plain</h1>' });
     await act(async () => styles.resolve());
     expect(seen.at(-1)).toMatchObject({ status: 'done', html: '<span class="katex"></span>' });
+  });
+
+  it("keeps the document's outline with its HTML", async () => {
+    const { client, pending } = manualClient();
+    const { seen } = await mount(client, '# one');
+    const outline = [{ depth: 1, text: 'one', id: 'user-content-one', line: 1 }];
+    await act(async () => pending[0]!.resolve('<h1>one</h1>', false, outline));
+    expect(seen.at(-1)).toMatchObject({ status: 'done', outline });
   });
 });

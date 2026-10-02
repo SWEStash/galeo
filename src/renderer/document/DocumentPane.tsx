@@ -4,6 +4,8 @@ import type { ImageResult } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
+import { OutlinePanel } from '../outline/OutlinePanel';
+import { useOutline } from '../outline/useOutline';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
@@ -129,6 +131,22 @@ export function DocumentPane({
     documentHandle.current?.focus();
   }, []);
 
+  // The outline (Markdown, rendered view): open for the window, shown by the active pane only.
+  const [outlineOpen, setOutlineOpen] = useOutline();
+  const [focusOutline, setFocusOutline] = useState(false);
+  const [heading, setHeading] = useState<string | null>(null);
+  const outlined = ready?.format === 'markdown' && view === 'rendered';
+  const showsOutline = active && outlineOpen && outlined;
+  const closeOutline = useCallback(() => {
+    setOutlineOpen(false);
+    setFocusOutline(false);
+    documentHandle.current?.focus();
+  }, [setOutlineOpen]);
+  const goToHeading = useCallback((id: string) => {
+    documentHandle.current?.scrollToAnchor(id);
+    setHeading(id);
+  }, []);
+
   // In a text field (the find bar), End and Alt+arrows edit the text; they don't move the document.
   const history = (direction: 'back' | 'forward') => ({ typing }: { typing: boolean }) => {
     if (typing) return false;
@@ -166,6 +184,15 @@ export function DocumentPane({
       findPrevious: step(-1),
       back: history('back'),
       forward: history('forward'),
+      toggleOutline: () => {
+        if (!outlined) return false;
+        if (outlineOpen) closeOutline();
+        else {
+          setOutlineOpen(true);
+          setFocusOutline(true);
+        }
+        return true;
+      },
     },
     active,
   );
@@ -236,23 +263,29 @@ export function DocumentPane({
       {find.open && (
         <FindBar result={findResult} focusToken={find.token} onQuery={runFind} onStep={stepFind} onClose={closeFind} />
       )}
-      <DocumentView
-        ref={documentHandle}
-        rendered={rendered}
-        source={{ text: ready.text, language: SOURCE_LANGUAGES[ready.format] }}
-        view={view}
-        wrap={wrap}
-        follow={follow}
-        onFollowEnded={endFollow}
-        onLink={onLink}
-        onContextMenu={onContextMenu}
-        onResolveImage={onResolveImage}
-        scheme={scheme}
-        initialPosition={initialPosition}
-        onPosition={onPosition}
-        onWeight={onWeight}
-        zoom={zoom}
-      />
+      <div className="document-body">
+        <DocumentView
+          ref={documentHandle}
+          rendered={rendered}
+          source={{ text: ready.text, language: SOURCE_LANGUAGES[ready.format] }}
+          view={view}
+          wrap={wrap}
+          follow={follow}
+          onFollowEnded={endFollow}
+          onLink={onLink}
+          onContextMenu={onContextMenu}
+          onResolveImage={onResolveImage}
+          scheme={scheme}
+          initialPosition={initialPosition}
+          onPosition={onPosition}
+          onWeight={onWeight}
+          zoom={zoom}
+          onHeading={showsOutline ? setHeading : undefined}
+        />
+        {showsOutline && (
+          <OutlinePanel entries={render.outline} current={heading} onChoose={goToHeading} onClose={closeOutline} autoFocus={focusOutline} />
+        )}
+      </div>
     </>
   );
 }

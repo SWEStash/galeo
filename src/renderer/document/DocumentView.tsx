@@ -4,7 +4,7 @@ import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
 import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
-import { anchorAt, blockAtOrBefore, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
+import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
 import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
@@ -37,6 +37,8 @@ export interface DocumentViewProps {
   onWeight?: ((bytes: number) => void) | undefined;
   /** Scales the document (per tab), not the app around it. */
   zoom?: number;
+  /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
+  onHeading?: ((id: string | null) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
   ref?: Ref<DocumentHandle>;
 }
@@ -103,6 +105,7 @@ export function DocumentView({
   onPosition,
   onWeight,
   zoom = 1,
+  onHeading,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -314,6 +317,31 @@ export function DocumentView({
       scroller.removeEventListener('scroll', onScroll);
     };
   }, [view, rendered, sourceReady]);
+
+  // The outline follows the reader: the heading at the top of the view, once per frame of scrolling.
+  useEffect(() => {
+    if (!onHeading || view !== 'rendered' || !rendered) return;
+    const element = container.current!;
+    const article = host().article;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const headings = [...article.querySelectorAll<HTMLElement>('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')].map((heading) => ({
+        id: heading.id,
+        top: heading.getBoundingClientRect().top,
+      }));
+      onHeading(currentHeading(headings, element.getBoundingClientRect().top));
+    };
+    const onScroll = () => {
+      frame ||= requestAnimationFrame(update);
+    };
+    update();
+    element.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      element.removeEventListener('scroll', onScroll);
+    };
+  }, [onHeading, view, rendered]);
 
   useEffect(() => {
     const renderedBytes = rendered ? 2 * ('html' in rendered ? rendered.html.length : rendered.text.length) : 0;

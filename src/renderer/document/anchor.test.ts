@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorAt, blockAtOrBefore, firstVisibleLine, keptTopFor, scrollTopFor } from './anchor';
+import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, scrollTopFor } from './anchor';
 
 describe('firstVisibleLine', () => {
   const blocks = [
@@ -109,5 +109,27 @@ describe('keptTopFor', () => {
     ];
     expect(keptTopFor(before, 100, after, size)).toBe(100);
     expect(keptTopFor(before.slice(1).map((b) => ({ ...b, heading: null })), 100, after, size)).toBe(100);
+  });
+});
+
+describe('currentHeading', () => {
+  const headings = [
+    { id: 'intro', top: 100 },
+    { id: 'install', top: 400 },
+    { id: 'use', top: 900 },
+  ];
+
+  it('is the last heading at or above the top of the view', () => {
+    expect(currentHeading(headings, 450)).toBe('install');
+    expect(currentHeading(headings, 2000)).toBe('use');
+  });
+
+  it('counts a heading just below the top as reached, as scrolling to it leaves it there', () => {
+    expect(currentHeading(headings, 396)).toBe('install');
+  });
+
+  it('is the first heading before any is reached (the top of the document), and null without headings', () => {
+    expect(currentHeading(headings, 50)).toBe('intro');
+    expect(currentHeading([], 50)).toBeNull();
   });
 });
