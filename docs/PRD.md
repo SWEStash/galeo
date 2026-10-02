@@ -146,7 +146,8 @@ must not obstruct (plain files only, no sidecar metadata).
 13. **Quick open (Ctrl+P).** As the owner, I want to fuzzy-find files in the repository of the
     active file (git root, else its folder) and among open tabs.
     - AC: Includes git-ignored files and dot-folders such as `.local/` and `.claude/`; excludes
-      `.git/`, `node_modules/` and common build folders (configurable). No index is persisted.
+      `.git/`, `node_modules/` and common build folders, plus names the user adds in settings. No
+      index is persisted.
 14. **Themes and typography.** As a reader, I want light/dark/follow-system themes, font family
     and size, line width, and a custom CSS file per profile or global.
     - AC: Bundled themes meet WCAG AA contrast; Ctrl+= / Ctrl+- / Ctrl+0 zoom per tab.
@@ -270,8 +271,9 @@ live in the [UX specification](design/ux.md).
 - [x] **Custom CSS contract.** `--galeo-*` variables and a few `galeo-*` classes (ADR-006), listed in
       [document-styling.md](design/document-styling.md); the global and profile `custom.css` are
       adopted into every document's shadow root, live (confirmed with profiles, 2026-09-29).
-- [ ] **Quick-open exclusions**: default list, and whether to honour a galeo-specific ignore
-      file (decided when quick open is built).
+- [x] **Quick-open exclusions**: a built-in list of folder and file names (version control,
+      dependencies, build output), skipped wherever they appear, plus names from the
+      `quickOpenExclude` setting; no ignore file and no globs in v0.1 (owner, 2026-09-29).
 - [x] **Log level patterns**: a fixed set in v0.1 (level words, `key=value` and JSON level fields, one-letter tags, syslog priorities), decided with the log view (2026-09-27). User-configurable patterns can come later.
 - [ ] **Obsidian syntax** priority (Could → Should?): GitHub-style alerts / callouts are noted on
       the ADR-003 roadmap; decide after v0.1.

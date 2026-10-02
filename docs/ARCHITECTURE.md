@@ -134,12 +134,16 @@ flowchart LR
     caps[Capability checker<br/>read/open/edit/write grants]
     links[Link/image checks<br/>renderer's own parse · worker thread · time budget]
     fmt[Format detection<br/>extension · sniff · limits]
+    coal[Coalescing watcher<br/>quiet window · rate cap · poll fallback]
+    dw[Document watches<br/>open tabs' files → stale]
+    qoc[Quick open<br/>git root · bounded walk · fuzzy match]
+    grants[Grants<br/>quick-open ids · drop tokens · images]
   end
   subgraph adapt[Adapters · Electron + Node]
     inst[InstanceChannel<br/>requestSingleInstanceLock]
     win[WindowHost<br/>BrowserWindow · focus events · menus/accelerators]
     fsys[FileSystem<br/>caps · atomic write]
-    watch[FileWatcher<br/>per open file · coalesced]
+    watch[FileWatcher<br/>one fs.watch per folder]
     shellp[OsShell<br/>openExternal · openPath · reveal]
     paths[AppPaths<br/>XDG]
     ipc[IPC handlers<br/>sender check · schema validate]
@@ -153,7 +157,9 @@ flowchart LR
   reg --> sess --> fsys
   prof --> fsys
   fmt --> fsys
-  watch --> reg
+  watch --> coal --> dw --> reg
+  ipc --> qoc --> grants
+  caps --> grants
   paths --> sess & prof
 ```
 
@@ -162,9 +168,11 @@ flowchart LR
   Adapters.
 - Capability-granting user actions (edit mode, "open with default app") come from **WindowHost
   `before-input-event` keys or native menus built by Main**, which Main observes directly
-  (ADR-004). Drop grants come from the preload's isolated world (trusted drop events only).
-  The window keys (new window, close window, quit) are taken there too, so they work while a
-  page is busy.
+  (ADR-004). Drop grants come from the preload's isolated world (trusted drop events only); the
+  page gets a one-time token and says where the files landed. Quick open walks and matches in
+  Main and offers the page ids for the files it lists, never paths to request.
+  The window keys (new window, close window, quit, full screen) are taken there too, so they
+  work while a page is busy; the palette asks for the same four over `window.command`.
 - Main runs one **profile runtime** per running profile: its settings (watching `settings.json`,
   `profile.json` and both `custom.css`), session, recent files and windows. Every open request
   (first launch, a forwarded launch, the macOS dock) goes through one queue: argv parser →
@@ -260,11 +268,13 @@ sequenceDiagram
 
 ### 5.3 Live reload
 
-`FileWatcher` (coalesced) → Tab Registry marks the record changed → event to the owning
-renderer. If the tab is active, the renderer re-reads, re-parses, and re-inserts anchored to the
-nearest block. Warm tabs are marked stale and re-render in idle time or on activation. Hibernated
-tabs refresh on their next wake. Rename or delete puts
-the tab in the *missing* state; if the path reappears, the watcher restores the tab.
+Main watches the file of every open document tab. `FileWatcher` events go through Core's
+coalescing watcher (a burst arrives once, at most four times a second; an unwatchable folder is
+polled), then the read-identity check, then `tabs.stale` to the owning renderer. The shown tab
+re-reads and updates in place, keeping its view, find and follow state; the heading above the view
+keeps its distance, else the block at the top does. A warm tab takes the change when it is shown
+again; hibernated tabs refresh on their next wake. Rename or delete puts the tab in the *missing*
+state; if the path reappears, the tab reads it again.
 
 ### 5.4 Clicking a link (capability check)
 
@@ -313,12 +323,12 @@ renders only its active tab. Budget: first document painted within 500 ms.
 
 | PRD target | Mechanism |
 |---|---|
-| Cold start < 500 ms | Network Guard before windows; only the active tab renders; Chrome UI heavy features lazy-loaded; Mermaid, KaTeX, CodeMirror and Shiki grammars lazy |
+| Cold start < 500 ms | Network Guard before windows; only the active tab renders; Mermaid, KaTeX (worker and styles), Shiki and CodeMirror load with the first document that needs them, which `npm run check:bundle` enforces |
 | New tab < 100 ms | Worker parse; grammars only as needed; no process start (one renderer per window) |
 | Warm switch within the next frame | Warm DOM kept (LRU budget); switching toggles visibility only |
 | Hibernated wake < 150 ms | Re-read and re-parse in the worker, hidden insert, anchor, reveal |
 | Live reload < 500 ms | Coalesced watcher per open file; re-parse in the worker; anchored re-insert |
-| Smooth scrolling with diagrams | Mermaid renders on intersection, cached by content hash; `content-visibility` on off-screen blocks |
+| Smooth scrolling with diagrams | Mermaid draws on intersection (200 px ahead), cached by scheme and source; a cached diagram comes back at once. Drawing one takes the UI thread for up to about 100 ms, which the perf suite records |
 | Memory baseline | Renderers scale with windows, not tabs; warm budget with memory-pressure eviction |
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
@@ -352,14 +362,16 @@ src/
               markdown/ (sanitize schema, link and image rules and extraction: the page and main
               find a document's links the same way)
   core/       routing, profiles, registry, lifecycle, sessions, settings, capabilities, links,
-              formats, desktop (the AppImage's launcher files)
+              formats, desktop (the AppImage's launcher files), watch/ (coalescing),
+              quick-open/ (git root, walker, matcher, session), documents/ (reads, identities,
+              grants, watches)
   main/       adapters, IPC handlers, network guard, window factory, profile runtimes, app entry,
               tasks/ (the worker thread for parsing main's checks need)
   preload/    window.galeo bridge
-  renderer/   document/ (host, rendered/source/text/log views, find, states) · tabs/ (tab bar,
-              store, status bar, empty window) · profiles/ (chip, menu, dialogs) · settings/
-              (Settings tab, notices, tokens) · styles/ (tokens, fonts) · worker/ (render pipeline);
-              later quick-open, palette, outline
+  renderer/   document/ (host, rendered/source/text/log views, diagrams, find, states) · tabs/
+              (tab bar, store, status bar, empty window, drops) · commands/ (dispatcher) ·
+              quick-open/ · palette/ · outline/ · profiles/ (chip, menu, dialogs) · settings/
+              (Settings tab, notices, tokens) · styles/ (tokens, fonts) · worker/ (render pipeline)
 tests/
   unit/       core + shared (vitest, node)
   renderer/   pipeline, sanitizer corpus, format registry (vitest)

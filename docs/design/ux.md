@@ -82,7 +82,8 @@ $ galeo [--profile P] [--new-window] [--no-sandbox] file…
   recovers if the file is created — useful when an agent is about to write it).
 - `galeo` with no files: bring the target window forward (or open an empty window).
 - The target window is **not** force-raised (ADR-005): if it is on another workspace, GNOME shows
-  a "galeo is ready" notice and the user stays where they are.
+  a "galeo is ready" notice and the user stays where they are. Its taskbar entry asks for
+  attention until the window is focused.
 
 ### F2 — Double-click / Open With from Files
 
@@ -170,11 +171,15 @@ placement is not restorable on Wayland).
 
 - Opens instantly with open tabs + recent files; repo results stream in (no blocking scan).
 - Scope = git root of the active tab (else its folder); shown in the section header. Includes
-  git-ignored files and dot-folders; excludes `.git/`, `node_modules/`, build output (settings).
+  git-ignored files and dot-folders. Skips folders and files named `.git`, `node_modules`, `dist`,
+  `build`, `out`, `target`, `coverage`, `.venv`, `venv`, `__pycache__`, `.next` or `.cache`,
+  wherever they are; the setting adds names (no ignore file, no globs in v0.1). Symlinked folders
+  are not entered. The walk stops at 50 000 files, 32 levels or 3 s, and the section says so.
 - ↑/↓ select, Enter opens (focuses if already open), Ctrl+Enter opens in a new window, Esc closes
   and returns focus to the document.
 - Empty query shows open tabs and recent files; "no matches" shows the scope and a hint to type
   a path (`~/…` or `/…` jumps to arbitrary paths).
+- The tab bar's `+` button opens it too ("Open file… (Ctrl+P)").
 
 ### F9 — Find in document (Ctrl+F)
 
@@ -267,7 +272,7 @@ the native menu on the active tab.
 
 | Action | Shortcut | Notes |
 |---|---|---|
-| Quick open | Ctrl+P | Overrides print (print is in the palette) |
+| Quick open | Ctrl+P | Overrides print (print is not in v0.1) |
 | Command palette | Ctrl+Shift+P | |
 | Find / next / previous | Ctrl+F / Enter, F3 / Shift+Enter, Shift+F3 | |
 | Toggle source view | Ctrl+U | Chrome's view-source key |

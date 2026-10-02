@@ -109,7 +109,7 @@ so they carry the tests those packages would have had).
 
 | Need | Own module / built-in | Replaces | Approx. size |
 |---|---|---|---|
-| Watching open files | `FileWatcher` adapter: `fs.watch` on each open file's **parent directory**, filtered by name, coalesced; survives temp-file + rename saves; poll fallback for filesystems without events | `chokidar` | ~100 lines |
+| Watching open files | `FileWatcher` adapter: one `fs.watch` per **parent directory**, shared by its files and filtered by name, so it survives temp-file + rename saves; Core's coalescing watcher on top (quiet window, rate cap, `stat` polling where a folder can't be watched) | `chokidar` | ~200 lines |
 | Quick-open folder walk | Bounded walker on `fs.opendir` (count, depth, time; no symlink escape; loop detection; excludes) | `fdir` | ~80 lines |
 | Fuzzy matching (quick open, palette) | Subsequence matcher with path-aware scoring (basename, word-boundary and contiguity bonuses), behind a `Matcher` interface | `@leeoniya/ufuzzy` | ~120 lines |
 | Encoding detection | UTF-8 strict → BOM (UTF-16/32) → Windows-1252 fallback with a banner and "Reopen with encoding…"; decode with `TextDecoder` | `chardet` | ~40 lines |
