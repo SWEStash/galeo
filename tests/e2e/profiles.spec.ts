@@ -139,7 +139,8 @@ test('deleting a profile asks first, closes its windows and removes only its own
     await gone;
     const { config, state } = appDirs(home);
     await expect.poll(() => existsSync(path.join(config, 'profiles', 'old'))).toBe(false);
-    expect(existsSync(path.join(state, 'profiles', 'old'))).toBe(false);
+    // Its state folder goes right after its config folder.
+    await expect.poll(() => existsSync(path.join(state, 'profiles', 'old'))).toBe(false);
     expect(existsSync(gfm)).toBe(true);
     expect(await paths(window)).toEqual([basic]);
     // default is never offered for deletion.
