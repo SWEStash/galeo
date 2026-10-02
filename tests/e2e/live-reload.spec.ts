@@ -72,7 +72,7 @@ test('a changed file shows ↻ on its tab for a moment and says Reloaded; the vi
   try {
     const view = shownDocument(window);
     await expect(view.locator('h1')).toHaveText('Notes');
-    await window.keyboard.press('Control+U');
+    await window.keyboard.press('ControlOrMeta+U');
     await expect(view).toHaveAttribute('data-view', 'source');
     saveFile(file, '# Notes\n\nsecond\n');
     await expect(indicator(window, 'reloaded from disk')).toBeVisible();
@@ -95,7 +95,7 @@ test('F5 reads the shown file again, keeping its view', async () => {
   try {
     const view = shownDocument(window);
     await expect(view.locator('h1')).toHaveText('Notes');
-    await window.keyboard.press('Control+U');
+    await window.keyboard.press('ControlOrMeta+U');
     await expect(view).toHaveAttribute('data-view', 'source');
     await window.keyboard.press('F5');
     await expect(indicator(window, 'reloaded from disk')).toBeVisible();
@@ -168,7 +168,7 @@ test("a restart brings each tab back in the view it was in, and a followed log s
     try {
       const view = shownDocument(first.window);
       await expect(view.locator('h1')).toHaveText('Notes');
-      await first.window.keyboard.press('Control+U');
+      await first.window.keyboard.press('ControlOrMeta+U');
       await expect(view).toHaveAttribute('data-view', 'source');
       await first.window.keyboard.press('Control+Tab');
       await expect(shownDocument(first.window).locator('.cm-content')).toContainText('INFO start');
