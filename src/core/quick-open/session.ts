@@ -81,7 +81,7 @@ export class QuickOpen {
     const session = this.sessions.get(window);
     if (!session || session.token !== token) return { token, query, sections: [] };
     session.query = query;
-    const typed = this.typedFolder(query);
+    const typed = typedFolder(query, this.deps.home);
     const sections = typed ? [await this.pathSection(typed.folder, typed.filter, typed.shown)] : this.sections(session, query);
     return this.offer(window, session, query, sections);
   }
@@ -122,7 +122,7 @@ export class QuickOpen {
   }
 
   private update(window: number, session: Session): void {
-    if (session.closed || !session.query || this.typedFolder(session.query)) return;
+    if (session.closed || !session.query || typedFolder(session.query, this.deps.home)) return;
     const sections = this.sections(session, session.query);
     this.deps.onUpdate(window, this.offer(window, session, session.query, sections));
   }
@@ -165,13 +165,6 @@ export class QuickOpen {
     return path === home ? '~' : path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path;
   }
 
-  private typedFolder(query: string): { folder: string; filter: string; shown: string } | null {
-    if (!query.startsWith('~/') && !query.startsWith('/')) return null;
-    const slash = query.lastIndexOf('/');
-    const shown = query.slice(0, slash + 1);
-    const folder = shown.startsWith('~/') ? joinPath(this.deps.home, shown.slice(2, -1)).replace(/\/$/, '') : shown.slice(0, -1) || '/';
-    return { folder, filter: query.slice(slash + 1), shown };
-  }
 
   private async pathSection(folder: string, filter: string, shown: string): Promise<QuickOpenSection> {
     const entries: { name: string; path: string; folder: boolean }[] = [];
@@ -219,4 +212,21 @@ export class QuickOpen {
       })),
     };
   }
+}
+
+// A path typed into quick open: `~/` (or `~\`), `/…`, or a drive (`C:\…`, `C:/…`).
+const TYPED_PATH = /^(?:~[\\/]|\/|[A-Za-z]:[\\/])/;
+
+/**
+ * The folder a typed path names, with what follows its last separator (a filter) and the text
+ * shown for the folder; null for a name search.
+ */
+export function typedFolder(query: string, home: string): { folder: string; filter: string; shown: string } | null {
+  if (!TYPED_PATH.test(query)) return null;
+  const separator = Math.max(query.lastIndexOf('/'), query.lastIndexOf('\\'));
+  const shown = query.slice(0, separator + 1);
+  const inner = shown.slice(0, -1);
+  // A root keeps its separator: `/`, `C:\`.
+  const folder = inner.startsWith('~') ? joinPath(home, ...(inner.length > 2 ? [inner.slice(2)] : [])) : inner === '' || /^[A-Za-z]:$/.test(inner) ? shown : inner;
+  return { folder, filter: query.slice(separator + 1), shown };
 }

@@ -178,7 +178,7 @@ placement is not restorable on Wayland).
 - ↑/↓ select, Enter opens (focuses if already open), Ctrl+Enter opens in a new window, Esc closes
   and returns focus to the document.
 - Empty query shows open tabs and recent files; "no matches" shows the scope and a hint to type
-  a path (`~/…` or `/…` jumps to arbitrary paths).
+  a path (`~/…` or `/…`, or a drive such as `C:\…` on Windows, jumps to arbitrary paths).
 - The tab bar's `+` button opens it too ("Open file… (Ctrl+P)").
 
 ### F9 — Find in document (Ctrl+F)

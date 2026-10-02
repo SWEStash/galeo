@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SelectionGrants } from '../../../src/core/documents/selections';
-import { QuickOpen } from '../../../src/core/quick-open/session';
+import { QuickOpen, typedFolder } from '../../../src/core/quick-open/session';
 import type { QuickOpenResults } from '../../../src/shared/quick-open';
 import { FakeClock, FakeFileSystem } from '../../helpers/fakes';
 
@@ -120,5 +120,25 @@ describe('QuickOpen', () => {
     expect(folder.path).toBe('~/notes/week/');
     expect(quickOpen.choose(1, token, folder.id)).toBeNull();
     expect(names(await quickOpen.query(1, token, '~/nowhere/'), 'path')).toEqual([]);
+  });
+});
+
+describe('typedFolder', () => {
+  it('reads ~/ and absolute POSIX paths: the folder, and what follows its last slash', () => {
+    expect(typedFolder('~/notes/to', HOME)).toEqual({ folder: `${HOME}/notes`, filter: 'to', shown: '~/notes/' });
+    expect(typedFolder('/etc/', HOME)).toEqual({ folder: '/etc', filter: '', shown: '/etc/' });
+    expect(typedFolder('/', HOME)).toEqual({ folder: '/', filter: '', shown: '/' });
+  });
+
+  it('reads Windows paths with either separator, a drive root staying a root', () => {
+    const home = 'C:\\Users\\me';
+    expect(typedFolder('C:\\Users\\me\\no', home)).toEqual({ folder: 'C:\\Users\\me', filter: 'no', shown: 'C:\\Users\\me\\' });
+    expect(typedFolder('D:\\a\\acme/', home)).toEqual({ folder: 'D:\\a\\acme', filter: '', shown: 'D:\\a\\acme/' });
+    expect(typedFolder('c:/', home)).toEqual({ folder: 'c:/', filter: '', shown: 'c:/' });
+    expect(typedFolder('~\\docs\\', home)).toEqual({ folder: 'C:\\Users\\me\\docs', filter: '', shown: '~\\docs\\' });
+  });
+
+  it('leaves anything else to the name search', () => {
+    for (const query of ['notes', 'C:notes', '~notes', 'docs/plan']) expect(typedFolder(query, HOME), query).toBeNull();
   });
 });
