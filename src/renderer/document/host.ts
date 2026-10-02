@@ -29,6 +29,11 @@ const policy = (globalThis as { trustedTypes?: TrustedTypePolicyFactory }).trust
   createHTML: (html: string) => html,
 });
 
+/** Inserts already-sanitized HTML (worker output, or a diagram's checked SVG) through that policy. */
+export function setTrustedHtml(target: Element | ShadowRoot, html: string): void {
+  target.innerHTML = (policy ? policy.createHTML(html) : html) as string;
+}
+
 let sharedSheets: CSSStyleSheet[] | undefined;
 
 /**
@@ -81,7 +86,7 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
     },
     setContent(html) {
       article.classList.remove('galeo-text-reader');
-      article.innerHTML = (policy ? policy.createHTML(html) : html) as string;
+      setTrustedHtml(article, html);
     },
     setReaderText(text) {
       article.classList.add('galeo-text-reader');

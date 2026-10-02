@@ -1,0 +1,50 @@
+import type { Config as PurifyConfig, DOMPurify } from 'dompurify';
+import type { Mermaid, MermaidConfig } from 'mermaid';
+import type { ColorScheme } from './host';
+
+/**
+ * Mermaid in its strict mode with size limits (SR-03): no click callbacks, no HTML labels (so no
+ * `foreignObject`), and a document's `%%{init}%%` can't change these settings or inject CSS.
+ */
+const MERMAID_CONFIG: MermaidConfig = {
+  startOnLoad: false,
+  securityLevel: 'strict',
+  maxTextSize: 50_000,
+  maxEdges: 500,
+  htmlLabels: false,
+  flowchart: { htmlLabels: false },
+  suppressErrorRendering: true,
+  secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'htmlLabels', 'themeCSS'],
+};
+
+/**
+ * Our own pass over Mermaid's SVG: SVG elements only, no `foreignObject`, scripts or event
+ * handlers, no links (their labels stay), and URLs only to the diagram's own fragments.
+ */
+const SVG_CONFIG: PurifyConfig = {
+  USE_PROFILES: { svg: true, svgFilters: true },
+  FORBID_TAGS: ['foreignObject', 'script', 'a'],
+  ALLOWED_URI_REGEXP: /^#/,
+};
+
+// Both load with the first diagram, never before (they are heavy).
+let mermaid: Promise<Mermaid> | undefined;
+let purify: Promise<DOMPurify> | undefined;
+// Mermaid's configuration is global: one diagram at a time.
+let queue: Promise<unknown> = Promise.resolve();
+let drawn = 0;
+
+export function renderMermaid(source: string, scheme: ColorScheme): Promise<string> {
+  const run = queue.then(async () => {
+    const engine = await (mermaid ??= import('mermaid').then((module) => module.default));
+    engine.initialize({ ...MERMAID_CONFIG, theme: scheme === 'dark' ? 'dark' : 'default' });
+    return (await engine.render(`galeo-diagram-${++drawn}`, source)).svg;
+  });
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+export async function sanitizeSvg(svg: string): Promise<string> {
+  const instance = await (purify ??= import('dompurify').then((module) => module.default));
+  return instance.sanitize(svg, SVG_CONFIG);
+}

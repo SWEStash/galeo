@@ -5,6 +5,7 @@ import { ID_PREFIX } from '../../shared/markdown/ids';
 import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
 import { anchorAt, blockAtOrBefore, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
+import { attachDiagrams, type Diagrams } from './diagrams';
 import { mountDocumentHost, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import type { SourceLanguage } from './source-view';
@@ -178,6 +179,9 @@ export function DocumentView({
   }, []);
 
   const hasContent = useRef(false);
+  const diagrams = useRef<Diagrams | null>(null);
+  const shownScheme = useRef(scheme);
+  useEffect(() => () => diagrams.current?.dispose(), []);
   useLayoutEffect(() => {
     if (!rendered) return;
     const documentHost = host();
@@ -186,8 +190,13 @@ export function DocumentView({
     // anchored to the block at the top of the view, before anything paints (UX F7).
     const before = hasContent.current && view === 'rendered' && !waking ? placedBlocks(documentHost, element) : null;
     const top = element.scrollTop;
-    if ('html' in rendered) documentHost.setContent(rendered.html);
-    else documentHost.setReaderText(rendered.text);
+    diagrams.current?.dispose();
+    diagrams.current = null;
+    if ('html' in rendered) {
+      documentHost.setContent(rendered.html);
+      // Diagrams drawn before come back at once, before the place is kept below.
+      diagrams.current = attachDiagrams(documentHost.article, { scheme: shownScheme.current });
+    } else documentHost.setReaderText(rendered.text);
     if (before) {
       element.scrollTop = keptTopFor(before, top, placedBlocks(documentHost, element), { height: element.scrollHeight, viewport: element.clientHeight });
       element.dataset['reloadedAt'] = String(Date.now());
@@ -310,6 +319,8 @@ export function DocumentView({
 
   useLayoutEffect(() => {
     host().setScheme(scheme);
+    shownScheme.current = scheme;
+    diagrams.current?.setScheme(scheme);
   }, [scheme]);
 
   return (

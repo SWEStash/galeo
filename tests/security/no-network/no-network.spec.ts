@@ -159,6 +159,31 @@ test('rendering the whole payload corpus opens no connection (SR-07)', async () 
   expect(connects).toEqual([]);
 });
 
+test('drawing every diagram, hostile ones included, opens no connection (SR-07)', async () => {
+  const fixtures = path.resolve(import.meta.dirname, '../../fixtures');
+  const corpus = [path.join(fixtures, 'docs', 'mermaid.md'), path.join(fixtures, 'payloads', 'mermaid.payloads.md')]
+    .map((file) => readFileSync(file, 'utf8').replaceAll(/^%%%$/gm, ''))
+    .join('\n\n');
+  const connects = await connectsWhile(
+    (dir) => {
+      writeFileSync(path.join(dir, 'diagrams.md'), corpus);
+      return ['--', path.join(dir, 'diagrams.md')];
+    },
+    {},
+    async (_app, page) => {
+      // Diagrams are drawn as they come into view: show each one.
+      const diagrams = page.getByTestId('document').locator('.galeo-diagram');
+      await expect(diagrams.first()).toBeAttached();
+      for (const diagram of await diagrams.all()) {
+        await diagram.scrollIntoViewIfNeeded();
+        await expect(diagram).not.toHaveAttribute('data-state', 'pending');
+      }
+      await page.waitForTimeout(2_000);
+    },
+  );
+  expect(connects).toEqual([]);
+});
+
 test('a custom.css that loads remote files opens no connection (SR-06, SR-07)', async () => {
   const home = tempHome();
   try {

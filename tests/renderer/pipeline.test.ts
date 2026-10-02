@@ -103,6 +103,24 @@ describe('Markdown pipeline', () => {
     expect(doc.querySelector('pre code')?.textContent?.length).toBe(big.length);
   });
 
+  it('leaves a Mermaid block to the page as a diagram placeholder holding its source, never highlighted', async () => {
+    const source = 'graph TD\n  A[Start] --- B{Done?}\n';
+    const doc = dom((await render.markdown(`# Flow\n\n\`\`\`mermaid\n${source}\`\`\`\n\n\`\`\`ts\nconst a = 1;\n\`\`\`\n`)).html);
+    const diagram = doc.querySelector('div.galeo-diagram');
+    expect(diagram?.getAttribute('data-src-line')).toBe('3');
+    // The source shows as plain code until the page draws it.
+    expect(diagram?.querySelector('pre > code')?.textContent).toBe(source);
+    expect(diagram?.querySelector('.shiki')).toBeNull();
+    // Other code blocks are still highlighted, each keeping its own line.
+    expect(doc.querySelector('pre.shiki')?.getAttribute('data-src-line')).toBe('8');
+  });
+
+  it('keeps markup in a diagram source as text', async () => {
+    const { html } = await render.markdown('```mermaid\ngraph TD\n  A[<script>x()</script>] --> B\n```\n');
+    expect(html).toContain('A[&#x3C;script>x()&#x3C;/script>]');
+    expect(html).not.toContain('<script');
+  });
+
   it('collects the link set and the local image set, and never emits remote images', async () => {
     const markdown = [
       '[a](other.md) [b](https://example.com/x) [c](#top) [a again](other.md)',

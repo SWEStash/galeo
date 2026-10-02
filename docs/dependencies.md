@@ -63,8 +63,8 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | `rehype-raw`, `rehype-sanitize`, `rehype-slug`, `rehype-stringify` | 7 / 6 / 6 / 10 | MIT | 2023–2024 | 4–17 M | Raw HTML → allowlist sanitize (SR-02) → slugs → HTML string |
 | `shiki`, `@shikijs/rehype` | 4.4.x | MIT | 2026-08-10 | 21 M / 680 k | Code highlighting with the GitHub themes; grammars loaded per document |
 | `katex`, `rehype-katex` | 0.18.x / 7.0.x | MIT | 2026-09-23 / 2024-08-19 | 24 M / 6.8 M | Math (`trust: false`, limits; SR-03). **Exact version pin** |
-| `mermaid` | 12.0.x (see note) | MIT | 2026-09-10 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. **Note:** 12.0.0 is two weeks old; 11.17.2 is the mature line. Re-decide at Mermaid integration, taking 12.x if it has patch releases by then, else 11.17.x |
-| `dompurify` | 3.4.x | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
+| `mermaid` | 11.17.2 | MIT | 2026-08-25 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. 11.17.x is the mature line; 12.0.0 had no patch release when the owner chose the version (2026-09-29), so 12.x is on the watch list |
+| `dompurify` | 3.4.16 | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
 
 ### Runtime: source views (CodeMirror 6, ADR-003)
 
@@ -158,7 +158,8 @@ The about/licences view and the packages must include:
   advisory with no fixed npm 11 release, and a bundled copy can't be overridden, so the audit gate
   failed. Nothing ran it yet. Re-add it with the release workflow, once `npm audit` is clean on
   it; `.releaserc.json` stays for that.
-- **Mermaid 12.x vs 11.17.x**: decide when Mermaid is integrated (see the adopted table).
+- **Mermaid 12.x**: integrated on 11.17.2. Move to 12.x once it has patch releases and its changelog keeps
+  `securityLevel: 'strict'` and the size limits we set.
 - **TypeScript 7** friction with any tool: fall back to 6.0.3 for that tool.
 - **Maintainer health**: any adopted package with no release for over 12 months is re-vetted;
   small ones are replaced by own modules.

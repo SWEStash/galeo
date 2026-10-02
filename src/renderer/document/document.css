@@ -201,6 +201,16 @@ div.galeo-block-error {
   font-size: 0.8em;
 }
 
+/* Mermaid diagrams: the source shows as code until the diagram is drawn in its place. */
+.galeo-diagram {
+  margin: 0 0 var(--galeo-space-block);
+  overflow-x: auto;
+}
+.galeo-diagram-svg {
+  display: flex;
+  justify-content: center;
+}
+
 .galeo-remote-image,
 .galeo-image-refused {
   display: inline-block;

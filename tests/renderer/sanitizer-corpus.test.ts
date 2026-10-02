@@ -25,7 +25,7 @@ async function renderToFragment(text: string): Promise<DocumentFragment> {
 describe('sanitizer payload corpus', () => {
   it('has several cases from every payload file', () => {
     const perFile = Object.groupBy(cases, (c) => c.name.split(' ')[0]!);
-    expect(Object.keys(perFile)).toHaveLength(7);
+    expect(Object.keys(perFile)).toHaveLength(8);
     for (const group of Object.values(perFile)) expect(group!.length).toBeGreaterThanOrEqual(5);
   });
 

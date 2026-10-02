@@ -148,6 +148,27 @@ function frontmatterBlock({ value, lang }: { value: string; lang: string }): Ele
   };
 }
 
+/**
+ * Mermaid blocks are drawn by the page, lazily (ADR-003): here each becomes a placeholder holding
+ * its source as plain code, shown as such until the diagram replaces it. Runs after sanitizing and
+ * before Shiki, which would otherwise highlight it.
+ */
+const diagramPlaceholders = () => (tree: Root) => {
+  eachElement(tree, (node, index, parent) => {
+    const code = node.children[0];
+    if (node.tagName !== 'pre' || code?.type !== 'element' || !classesOf(code).includes('language-mermaid')) return;
+    const { dataSrcLine } = node.properties;
+    delete node.properties['dataSrcLine'];
+    code.properties['className'] = [];
+    parent.children[index] = {
+      type: 'element',
+      tagName: 'div',
+      properties: { className: ['galeo-diagram'], ...(dataSrcLine === undefined ? {} : { dataSrcLine }) },
+      children: [node],
+    };
+  });
+};
+
 // Parents in which a failed display formula stands as a block of its own.
 const BLOCK_PARENTS = new Set(['div', 'section', 'blockquote', 'li', 'td', 'th', 'details']);
 
@@ -230,6 +251,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
       .use(rehypeSanitize, SANITIZE_SCHEMA)
       .use(rehypeSlug, { prefix: ID_PREFIX })
       .use(annotate(collected))
+      .use(diagramPlaceholders)
       // KaTeX before Shiki, so Shiki never sees math as a code block; both run after sanitizing.
       .use(rehypeKatex, KATEX_OPTIONS)
       .use(explainMathErrors)
