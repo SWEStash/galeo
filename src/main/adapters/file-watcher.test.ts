@@ -141,6 +141,11 @@ describe('NodeFileWatcher', () => {
     const target = path.join(dir, 'plan.md');
     writeFileSync(target, '# plan');
     const { events } = watch(target);
+    // Only once the watch reports changes: macOS can miss what happens just after it starts.
+    await until(
+      () => writeFileSync(target, '# plan, again'),
+      () => expect(events).toContainEqual({ path: target, kind: 'change' }),
+    );
     rmSync(dir, { recursive: true, force: true });
     await vi.waitFor(() => expect(events.at(-1)).toEqual({ path: target, kind: 'lost' }), { timeout: 5_000 });
   });
