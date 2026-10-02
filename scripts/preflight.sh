@@ -28,6 +28,9 @@ npm test
 step 'build'
 npm run build
 
+step 'bundle check (heavy renderers load lazily)'
+npm run check:bundle
+
 step 'end-to-end tests'
 npm run headless -- npm run test:e2e
 

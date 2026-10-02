@@ -3,7 +3,7 @@ import { createRenderClient } from './client';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
 
-const result = (html: string): RenderResult => ({ html, outline: [], links: [], images: [], ms: 1, cached: false });
+const result = (html: string): RenderResult => ({ html, math: false, outline: [], links: [], images: [], ms: 1, cached: false });
 
 /** A worker that answers each request when told to, in any order. */
 class FakeWorker extends EventTarget {

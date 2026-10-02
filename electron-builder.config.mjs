@@ -5,7 +5,7 @@ export default {
   productName: 'galeo',
   directories: { output: 'release' },
   // The bundles are self-contained, so no node_modules ship.
-  files: ['out/**/*', '!out/tsc/**', '!**/*.map', 'package.json', '!node_modules/**/*'],
+  files: ['out/**/*', '!out/tsc/**', '!out/bundle/**', '!**/*.map', 'package.json', '!node_modules/**/*'],
   asar: true,
   npmRebuild: false,
   // Sets the fuses for every target, and puts the Linux binary behind its wrapper (ADR-009).

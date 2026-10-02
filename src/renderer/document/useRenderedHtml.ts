@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { RenderClient } from '../worker/client';
+import { loadMathStyles } from './host';
 
 export type RenderState =
   | { status: 'idle'; html: null }
@@ -24,10 +25,17 @@ export function useRenderedHtml(
     if (!client || text === null || !wanted) return;
     if (result?.text === text && result.attempt === attempt) return;
     let current = true;
-    client.markdown(text).then(
-      ({ html }) => current && setResult({ text, attempt, html }),
-      () => current && setResult({ text, attempt, html: null }),
-    );
+    client
+      .markdown(text)
+      // Math shows only once KaTeX's styles are in, never unstyled.
+      .then(async ({ html, math }) => {
+        if (math) await loadMathStyles();
+        return html;
+      })
+      .then(
+        (html) => current && setResult({ text, attempt, html }),
+        () => current && setResult({ text, attempt, html: null }),
+      );
     return () => {
       current = false;
     };

@@ -6,7 +6,7 @@ import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
 import { anchorAt, blockAtOrBefore, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
 import { attachDiagrams, type Diagrams } from './diagrams';
-import { mountDocumentHost, type ColorScheme, type DocumentHost } from './host';
+import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import type { SourceLanguage } from './source-view';
 
@@ -228,19 +228,30 @@ export function DocumentView({
     };
   }, [rendered, onResolveImage]);
 
+  // The editor loads the first time a source view shows; until then the rendered view stays.
+  const [sourceReady, setSourceReady] = useState(sourceViewLoaded);
+  useEffect(() => {
+    if (view !== 'source' || sourceReady) return;
+    let current = true;
+    void loadSourceView().then(() => current && setSourceReady(true));
+    return () => {
+      current = false;
+    };
+  }, [view, sourceReady]);
+
   const shownSource = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (view !== 'source' && !host().source) return;
+    if (!sourceReady || (view !== 'source' && !host().source)) return;
     host().showSource(source.text, source.language, wrap);
     if (shownSource.current !== null && shownSource.current !== source.text) container.current!.dataset['reloadedAt'] = String(Date.now());
     shownSource.current = source.text;
     if (view === 'source') markDocumentPaint();
-  }, [source.text, source.language, view, wrap]);
+  }, [source.text, source.language, view, wrap, sourceReady]);
 
   useLayoutEffect(() => {
     const documentHost = host();
     const previous = shownView.current;
-    if (previous === view) return;
+    if (previous === view || (view === 'source' && !sourceReady)) return;
     const line =
       previous === 'rendered'
         ? renderedTopLine(documentHost, container.current!)
@@ -252,7 +263,7 @@ export function DocumentView({
     if (line === undefined) return;
     if (view === 'source') documentHost.source?.scrollToLine(line);
     else scrollRenderedTo(documentHost, line);
-  }, [view]);
+  }, [view, sourceReady]);
 
   useLayoutEffect(() => {
     if (!waking || !initialPosition) return;
@@ -269,7 +280,7 @@ export function DocumentView({
       return;
     }
     setWaking(false);
-  }, [waking, initialPosition, view, rendered, source.text]);
+  }, [waking, initialPosition, view, rendered, source.text, sourceReady]);
 
   // Report where the reader is once scrolling pauses, from whichever view scrolls. The place is
   // taken at each scroll, while the view is laid out: by the time the report goes, the tab may be
@@ -302,7 +313,7 @@ export function DocumentView({
       report();
       scroller.removeEventListener('scroll', onScroll);
     };
-  }, [view, rendered]);
+  }, [view, rendered, sourceReady]);
 
   useEffect(() => {
     const renderedBytes = rendered ? 2 * ('html' in rendered ? rendered.html.length : rendered.text.length) : 0;
@@ -315,7 +326,7 @@ export function DocumentView({
     if (!follow || view !== 'source' || !sourceView) return;
     sourceView.scrollToEnd();
     return sourceView.onScrollUp(() => onFollowEnded?.());
-  }, [follow, view, source.text, onFollowEnded]);
+  }, [follow, view, source.text, onFollowEnded, sourceReady]);
 
   useLayoutEffect(() => {
     host().setScheme(scheme);

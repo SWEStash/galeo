@@ -71,6 +71,11 @@ describe('Markdown pipeline', () => {
     expect(doc.querySelector('code.language-math')).toBeNull();
   });
 
+  it('says whether a document has math, so the page loads the math styles only then', async () => {
+    expect((await render.markdown(fixture('math.md'))).math).toBe(true);
+    expect((await render.markdown(fixture('basic.md'))).math).toBe(false);
+  });
+
   it('shows invalid math as an inline error box with its message and source, rendering the rest', async () => {
     const doc = dom((await render.markdown('Before $\\frac{1}{$ after\n\n$$\n\\sqrt{\n$$\n\n# Still here\n')).html);
     const errors = [...doc.querySelectorAll('.galeo-block-error')];

@@ -36,6 +36,7 @@ jobs:
       - run: npm run boundaries
       - run: npm test
       - run: npm run build
+      - run: npm run check:bundle
       # Ubuntu 24.04 restricts unprivileged user namespaces; allow them for the Electron binary
       # so it runs sandboxed, as the .deb does. Never --no-sandbox.
       - name: Allow the Chromium sandbox

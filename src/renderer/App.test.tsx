@@ -289,7 +289,8 @@ describe('App', () => {
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># hi</p>'));
     await press({ key: 'u', ctrlKey: true });
-    expect(shadow.querySelector<HTMLElement>('article')?.hidden).toBe(true);
+    // The editor loads the first time a source view shows.
+    await vi.waitFor(() => expect(shadow.querySelector<HTMLElement>('article')?.hidden).toBe(true));
     expect(shadow.querySelector('.cm-editor')?.textContent).toContain('# hi');
     await press({ key: 'u', ctrlKey: true });
     expect(shadow.querySelector<HTMLElement>('article')?.hidden).toBe(false);

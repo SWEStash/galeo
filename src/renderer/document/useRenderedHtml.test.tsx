@@ -1,8 +1,15 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { RenderClient } from '../worker/client';
 import { useRenderedHtml, type RenderState } from './useRenderedHtml';
+
+const styles = vi.hoisted(() => {
+  let resolve = () => {};
+  const loaded = new Promise<void>((done) => (resolve = done));
+  return { load: vi.fn(() => loaded), resolve: () => resolve() };
+});
+vi.mock('./host', () => ({ loadMathStyles: styles.load }));
 
 let root: Root | undefined;
 
@@ -12,9 +19,10 @@ afterEach(() => {
 
 /** A worker whose renders finish only when the test says. */
 function manualClient() {
-  const pending: { text: string; resolve: (html: string) => void }[] = [];
+  const pending: { text: string; resolve: (html: string, math?: boolean) => void }[] = [];
   const client = {
-    markdown: (text: string) => new Promise<{ html: string }>((resolve) => pending.push({ text, resolve: (html) => resolve({ html }) })),
+    markdown: (text: string) =>
+      new Promise<{ html: string; math: boolean }>((resolve) => pending.push({ text, resolve: (html, math = false) => resolve({ html, math }) })),
   } as unknown as RenderClient;
   return { client, pending };
 }
@@ -46,5 +54,17 @@ describe('useRenderedHtml', () => {
     const { client } = manualClient();
     const { seen } = await mount(client, '# one');
     expect(seen.at(-1)).toMatchObject({ status: 'pending', html: null });
+  });
+
+  it('hands over a document with math once the math styles are in, and never loads them for one without', async () => {
+    const { client, pending } = manualClient();
+    const { seen, rerender } = await mount(client, '# plain');
+    await act(async () => pending[0]!.resolve('<h1>plain</h1>'));
+    expect(styles.load).not.toHaveBeenCalled();
+    await rerender('$x$');
+    await act(async () => pending[1]!.resolve('<span class="katex"></span>', true));
+    expect(seen.at(-1)).toMatchObject({ status: 'pending', html: '<h1>plain</h1>' });
+    await act(async () => styles.resolve());
+    expect(seen.at(-1)).toMatchObject({ status: 'done', html: '<span class="katex"></span>' });
   });
 });

@@ -1,7 +1,6 @@
-import katexCss from 'katex/dist/katex.min.css?inline';
 import type { ViewMode } from '../../shared/formats';
 import documentCss from './document.css?inline';
-import { createSourceView, type SourceLanguage, type SourceView } from './source-view';
+import type { SourceLanguage, SourceView } from './source-view';
 import { textParagraphs } from './text-reader';
 
 export type ColorScheme = 'light' | 'dark';
@@ -14,7 +13,7 @@ export interface DocumentHost {
   setContent(html: string): void;
   /** Shows plain text in the reading column (the `.txt` reader), as text nodes only. */
   setReaderText(text: string): void;
-  /** The source view, created on first use and updated in place afterwards. */
+  /** The source view, created on first use and updated in place afterwards (after `loadSourceView`). */
   showSource(text: string, language: SourceLanguage, wrap: boolean): SourceView;
   readonly source: SourceView | null;
   /** Shows one view; the other stays mounted (hidden) so switching back is instant. */
@@ -37,15 +36,36 @@ export function setTrustedHtml(target: Element | ShadowRoot, html: string): void
 let sharedSheets: CSSStyleSheet[] | undefined;
 
 /**
- * Constructable sheets shared by every document: KaTeX's layout, the document theme, then the
- * user's global and profile CSS (ADR-006), so changing one sheet restyles every tab at once.
+ * Constructable sheets shared by every document: KaTeX's layout (once a document has math), the
+ * document theme, then the user's global and profile CSS (ADR-006), so changing one sheet
+ * restyles every tab at once.
  */
 function documentSheets(): CSSStyleSheet[] {
-  return (sharedSheets ??= [katexCss, documentCss, '', ''].map((css) => {
+  return (sharedSheets ??= ['', documentCss, '', ''].map((css) => {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(css);
     return sheet;
   }));
+}
+
+let sourceViews: typeof import('./source-view') | null = null;
+let sourceViewsLoading: Promise<void> | undefined;
+
+/** Whether the source view's editor (CodeMirror) has loaded. */
+export const sourceViewLoaded = (): boolean => sourceViews !== null;
+
+/** Loads the editor, the first time any document shows its source. */
+export function loadSourceView(): Promise<void> {
+  return (sourceViewsLoading ??= import('./source-view').then((module) => {
+    sourceViews = module;
+  }));
+}
+
+let mathStyles: Promise<void> | undefined;
+
+/** Loads KaTeX's styles into every document, the first time a document has math. */
+export function loadMathStyles(): Promise<void> {
+  return (mathStyles ??= import('katex/dist/katex.min.css?inline').then(({ default: css }) => documentSheets()[0]!.replaceSync(css)));
 }
 
 /**
@@ -101,7 +121,8 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
     },
     showSource(text, language, wrap) {
       if (!source) {
-        source = createSourceView({ root, parent: sourceParent, text, language, wrap });
+        if (!sourceViews) throw new Error('showSource needs loadSourceView first');
+        source = sourceViews.createSourceView({ root, parent: sourceParent, text, language, wrap });
       } else {
         if (text !== sourceText) source.setText(text);
         source.setWrap(wrap);

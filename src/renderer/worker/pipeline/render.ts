@@ -1,7 +1,5 @@
-import rehypeShikiFromHighlighter from '@shikijs/rehype/core';
 import type { Element, Root } from 'hast';
 import type { Root as MdastRoot } from 'mdast';
-import rehypeKatex from 'rehype-katex';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
 import rehypeSlug from 'rehype-slug';
@@ -13,7 +11,7 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { classesOf, eachElement, textOf } from '../../../shared/markdown/hast';
-import { CODE_THEMES, loadHighlighter, type Highlighter } from './highlighter';
+import type { Highlighter } from './highlighter';
 import { ID_PREFIX } from '../../../shared/markdown/ids';
 import { compactUrl, isLocalReference, isNetworkPathReference } from '../../../shared/markdown/urls';
 import { SANITIZE_SCHEMA } from '../../../shared/markdown/sanitize-schema';
@@ -34,6 +32,8 @@ export interface OutlineEntry {
 
 export interface RenderResult {
   html: string;
+  /** It holds math: the page loads KaTeX's styles before showing it. */
+  math: boolean;
   outline: OutlineEntry[];
   /** Link targets (`href`) in document order, without duplicates. */
   links: string[];
@@ -232,15 +232,42 @@ export interface Renderer {
 }
 
 /** The Markdown pipeline (ADR-003), with a bounded cache keyed by content hash. */
+/** Whether the sanitized tree holds math for KaTeX. */
+function hasMath(tree: Root): boolean {
+  let found = false;
+  eachElement(tree, (node) => {
+    found ||= classesOf(node).some((name) => name === 'math-inline' || name === 'math-display');
+  });
+  return found;
+}
+
+/** Whether it holds a code block for Shiki (math blocks are KaTeX's). */
+function hasCode(tree: Root): boolean {
+  let found = false;
+  eachElement(tree, (node) => {
+    const code = node.children[0];
+    found ||=
+      node.tagName === 'pre' &&
+      code?.type === 'element' &&
+      classesOf(code).some((name) => name.startsWith('language-') && name !== 'language-math');
+  });
+  return found;
+}
+
+// KaTeX and Shiki are heavy: each loads with the first document that needs it (ADR-003).
+const loadKatex = () => import('rehype-katex').then((module) => module.default);
+const loadShiki = () => Promise.all([import('./highlighter'), import('@shikijs/rehype/core')]);
+
+/** The Markdown pipeline (ADR-003), with a bounded cache keyed by content hash. */
 export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } = {}): Renderer {
-  let highlighter: Promise<Highlighter> | undefined;
+  let shiki: Promise<{ highlighter: Highlighter; themes: { light: string; dark: string }; rehypeShiki: typeof import('@shikijs/rehype/core').default }> | undefined;
   const cache = new Map<string, Omit<RenderResult, 'cached'>>();
 
   async function run(text: string): Promise<Omit<RenderResult, 'cached'>> {
     const started = performance.now();
     const collected: Collected = { frontmatter: null, highlighted: [], outline: [], links: new Set(), images: new Set() };
-    const shiki = await (highlighter ??= loadHighlighter());
-    const file = await unified()
+    // First the document as sanitized HTML, which says what else it needs…
+    const parse = unified()
       .use(remarkParse)
       .use(remarkGfm)
       .use(remarkFrontmatter, ['yaml', 'toml'])
@@ -251,24 +278,27 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
       .use(rehypeSanitize, SANITIZE_SCHEMA)
       .use(rehypeSlug, { prefix: ID_PREFIX })
       .use(annotate(collected))
-      .use(diagramPlaceholders)
-      // KaTeX before Shiki, so Shiki never sees math as a code block; both run after sanitizing.
-      .use(rehypeKatex, KATEX_OPTIONS)
-      .use(explainMathErrors)
-      .use(noteCodeLines(collected))
-      .use(() =>
-        rehypeShikiFromHighlighter(shiki, {
-          themes: CODE_THEMES,
-          defaultColor: false,
-          lazy: true,
-          fallbackLanguage: 'text',
-        }),
-      )
-      .use(restoreCodeLines(collected))
-      .use(rehypeStringify)
-      .process(text);
+      .use(diagramPlaceholders);
+    const tree = (await parse.run(parse.parse(text))) as Root;
+    // …then math and code, both after sanitizing; KaTeX before Shiki, so Shiki never sees math as a code block.
+    const finish = unified();
+    const math = hasMath(tree);
+    if (math) finish.use(await loadKatex(), KATEX_OPTIONS).use(explainMathErrors);
+    if (hasCode(tree)) {
+      const { highlighter, themes, rehypeShiki } = await (shiki ??= loadShiki().then(async ([module, rehype]) => ({
+        highlighter: await module.loadHighlighter(),
+        themes: module.CODE_THEMES,
+        rehypeShiki: rehype.default,
+      })));
+      finish
+        .use(noteCodeLines(collected))
+        .use(() => rehypeShiki(highlighter, { themes, defaultColor: false, lazy: true, fallbackLanguage: 'text' }))
+        .use(restoreCodeLines(collected));
+    }
+    const html = finish.use(rehypeStringify).stringify((await finish.run(tree)) as Root);
     return {
-      html: String(file),
+      html,
+      math,
       outline: collected.outline,
       links: [...collected.links],
       images: [...collected.images],

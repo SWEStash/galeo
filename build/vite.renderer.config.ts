@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
+import { bundleGraph } from './bundle-graph';
 
 // Performance marks exist only in builds made with GALEO_PERF=1 (tests/perf).
 const define = { __GALEO_PERF__: JSON.stringify(process.env['GALEO_PERF'] === '1') };
@@ -30,7 +31,7 @@ export default defineConfig({
   define,
   root: 'src/renderer',
   base: './',
-  plugins: [react()],
+  plugins: [react(), bundleGraph('window')],
   build: {
     outDir: '../../out/renderer',
     emptyOutDir: true,
@@ -39,6 +40,6 @@ export default defineConfig({
     // No `data:` assets: the CSP allows fonts only from the app itself.
     assetsInlineLimit: 0,
   },
-  worker: { format: 'es', plugins: () => [workerEntries()] },
+  worker: { format: 'es', plugins: () => [workerEntries(), bundleGraph('worker')] },
   server: { host: '127.0.0.1', strictPort: false },
 });
