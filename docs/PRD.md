@@ -233,9 +233,10 @@ live in the [UX specification](design/ux.md).
   | Scrolling a long document with Mermaid diagrams | no dropped-frame jank at 60 Hz |
   | Memory, 3 profiles / ~20 tabs / ≤3 warm per window | baseline recorded in v0.1, must not regress |
 
-- **Large and odd files**: Markdown above a size threshold (initially 5 MB) opens in source view
-  with a banner; logs of 100 MB+ open in source view without freezing the UI; binary files
-  (NUL bytes / invalid text encoding) show a "can't display" state. Encoding: UTF-8, then byte
+- **Large and odd files**: Markdown above a size threshold (initially 5 MB), or too slow to render
+  within its budget (2 s), opens in source view with a banner and "Render anyway"; logs of 100 MB+
+  open in source view without freezing the UI; binary files (NUL bytes / invalid text encoding)
+  show a "can't display" state. Encoding: UTF-8, then byte
   order marks (UTF-16/32), then a Windows-1252 fallback with a banner and "Reopen with encoding…".
 - **Platform**: official: Ubuntu 26.04 LTS, GNOME, Wayland (primary) and X11; x86_64. Package: `.deb`
   (official; installs the AppArmor profile Chromium's sandbox needs on Ubuntu 24.04+), `galeo` on `PATH`,

@@ -85,13 +85,16 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
   useEffect(markFirstPaint, []);
 
   useEffect(() => {
-    const worker = spawnRenderWorker();
-    worker.addEventListener('message', (event: MessageEvent<unknown>) => {
-      if (event.data === 'ready') setWorkerReady(true);
+    const client = createRenderClient(() => {
+      const worker = spawnRenderWorker();
+      worker.addEventListener('message', (event: MessageEvent<unknown>) => {
+        if (event.data === 'ready') setWorkerReady(true);
+      });
+      worker.postMessage('ping');
+      return worker;
     });
-    worker.postMessage('ping');
-    setClient(createRenderClient(worker));
-    return () => worker.terminate();
+    setClient(client);
+    return () => client.dispose();
   }, []);
 
   // One overlay at a time: quick open or the palette.

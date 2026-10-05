@@ -33,7 +33,7 @@ Every diagram uses these names exactly.
 | **Window Renderer** | One sandboxed renderer process per window: Chrome UI + Document Host (ADR-002) |
 | **Chrome UI** | React + React Aria app UI: tab bar, quick open, palette, find, outline, profile menu, settings, status bar (ADR-006) |
 | **Document Host** | Owns one Shadow-DOM container per tab; inserts rendered HTML, mounts CodeMirror, renders Mermaid lazily, runs find (ADR-003) |
-| **Render Worker** | One Web Worker per window running the unified pipeline + Shiki + KaTeX (ADR-003) |
+| **Render Worker** | One Web Worker per window running the unified pipeline + Shiki + KaTeX (ADR-003); a render over its budget (2 s) is refused and the worker replaced, so the tab shows source |
 | **Format Registry** | Descriptors mapping files to source and rendered views (ADR-003) |
 | **Tab Record** | Plain data for a tab: path, view, scroll anchor, file identity, history (ADR-002) |
 | **Profile** | A named context: windows + session + settings (ADR-005) |

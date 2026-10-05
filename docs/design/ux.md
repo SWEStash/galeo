@@ -258,7 +258,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 | **Too large to render** | Markdown > threshold (5 MB) | Source view + banner "Large file shown as source" | Render anyway |
 | **Unknown encoding** | Invalid UTF-8, detection unsure | Content shown with replacement chars + banner naming the guessed encoding | Reopen with encoding… |
 | **Partial render error** | E.g. Mermaid/KaTeX syntax error or over-limit diagram | Only the failing block shows an inline error box with the message and its source; rest renders | — |
-| **Too slow to render** | Parse exceeded its budget (2 s); the worker was restarted | Source view + banner "Too slow to render — showing source" | Try again · Stay in source |
+| **Too slow to render** | Parse exceeded its budget (2 s); the worker was restarted | Source view + banner "Too slow to render — showing source" | Render anyway (waits up to 60 s) |
 | **Crashed** | This tab was rendering when the window's renderer crashed | Tab shows `⚠`; panel "This document crashed the viewer and won't be rendered automatically" | Try again · Open as source |
 | **Remote content blocked** | Remote image/iframe in Markdown | Placeholder with host name | Copy URL |
 

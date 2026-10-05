@@ -258,7 +258,12 @@ export function DocumentPane({
           {onChooseEncoding && <EncodingMenu onChoose={onChooseEncoding}>Reopen with encoding…</EncodingMenu>}
         </DocumentBanner>
       )}
-      {render.status === 'failed' && <DocumentBanner kind="render-failed" onAction={render.retry} />}
+      {render.status === 'failed' &&
+        (render.reason === 'slow' ? (
+          <DocumentBanner kind="render-slow" onAction={render.renderAnyway} />
+        ) : (
+          <DocumentBanner kind="render-failed" onAction={render.retry} />
+        ))}
       {loading && <DocumentLoading />}
       {find.open && (
         <FindBar result={findResult} focusToken={find.token} onQuery={runFind} onStep={stepFind} onClose={closeFind} />

@@ -73,12 +73,13 @@ export function DocumentLoading() {
   );
 }
 
-export type BannerKind = 'too-large' | 'encoding' | 'render-failed';
+export type BannerKind = 'too-large' | 'encoding' | 'render-failed' | 'render-slow';
 
 const BANNERS: Record<BannerKind, { text: (detail?: string) => string; action?: string }> = {
   'too-large': { text: () => 'Large file shown as source', action: 'Render anyway' },
   encoding: { text: (encoding) => `Not valid UTF-8: shown as ${encoding}, the likeliest encoding` },
   'render-failed': { text: () => "This document couldn't be rendered — showing source", action: 'Try again' },
+  'render-slow': { text: () => 'Too slow to render — showing source', action: 'Render anyway' },
 };
 
 export function DocumentBanner({

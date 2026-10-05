@@ -565,6 +565,28 @@ describe('App', () => {
     expect(container.querySelector('[data-banner="render-failed"]')).toBeNull();
   });
 
+  it('shows the source of a document too slow to render, and renders it anyway on request', { timeout: 10_000 }, async () => {
+    workerMode = 'hang';
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    const container = await renderApp();
+    // The render budget runs out (2 s); the worker is replaced.
+    const banner = await vi.waitFor(
+      () => {
+        const shown = container.querySelector<HTMLElement>('[data-banner="render-slow"]');
+        expect(shown).not.toBeNull();
+        return shown!;
+      },
+      { timeout: 4000 },
+    );
+    expect(banner.textContent).toContain('Too slow to render — showing source');
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector<HTMLElement>('.galeo-source')?.hidden).toBe(false));
+    workerMode = 'answer';
+    await act(async () => banner.querySelector('button')!.click());
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
+    expect(container.querySelector('[data-banner="render-slow"]')).toBeNull();
+  });
+
   it('shows a loading skeleton only once rendering takes longer than 150 ms', async () => {
     workerMode = 'hang';
     stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });

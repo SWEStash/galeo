@@ -1,9 +1,9 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { RenderClient } from '../worker/client';
+import { RENDER_ANYWAY_BUDGET_MS, RenderTimeout, type RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
-import { useRenderedHtml, type RenderState } from './useRenderedHtml';
+import { useRenderedHtml } from './useRenderedHtml';
 
 const styles = vi.hoisted(() => {
   let resolve = () => {};
@@ -20,18 +20,23 @@ afterEach(() => {
 
 /** A worker whose renders finish only when the test says. */
 function manualClient() {
-  const pending: { text: string; resolve: (html: string, math?: boolean, outline?: OutlineEntry[]) => void }[] = [];
+  const pending: {
+    text: string;
+    budgetMs: number | undefined;
+    resolve: (html: string, math?: boolean, outline?: OutlineEntry[]) => void;
+    reject: (error: Error) => void;
+  }[] = [];
   const client = {
-    markdown: (text: string) =>
-      new Promise<{ html: string; math: boolean; outline: OutlineEntry[] }>((resolve) =>
-        pending.push({ text, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
+    markdown: (text: string, options?: { budgetMs?: number }) =>
+      new Promise<{ html: string; math: boolean; outline: OutlineEntry[] }>((resolve, reject) =>
+        pending.push({ text, budgetMs: options?.budgetMs, reject, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
       ),
   } as unknown as RenderClient;
   return { client, pending };
 }
 
 async function mount(client: RenderClient, text: string) {
-  const seen: RenderState[] = [];
+  const seen: ReturnType<typeof useRenderedHtml>[] = [];
   function Probe({ text }: { text: string }) {
     seen.push(useRenderedHtml(client, text, true));
     return null;
@@ -51,6 +56,28 @@ describe('useRenderedHtml', () => {
     expect(seen.at(-1)).toMatchObject({ status: 'pending', html: '<h1>one</h1>' });
     await act(async () => pending[1]!.resolve('<h1>two</h1>'));
     expect(seen.at(-1)).toMatchObject({ status: 'done', html: '<h1>two</h1>' });
+  });
+
+  it('says a render over its budget was too slow, and renders anyway with the longer budget', async () => {
+    const { client, pending } = manualClient();
+    const { seen } = await mount(client, '# big');
+    expect(pending[0]!.budgetMs).toBeUndefined();
+    await act(async () => pending[0]!.reject(new RenderTimeout(2000)));
+    expect(seen.at(-1)).toMatchObject({ status: 'failed', reason: 'slow' });
+    await act(async () => seen.at(-1)!.renderAnyway());
+    expect(pending[1]).toMatchObject({ text: '# big', budgetMs: RENDER_ANYWAY_BUDGET_MS });
+    expect(seen.at(-1)).toMatchObject({ status: 'pending' });
+    await act(async () => pending[1]!.resolve('<h1>big</h1>'));
+    expect(seen.at(-1)).toMatchObject({ status: 'done', html: '<h1>big</h1>' });
+  });
+
+  it('says a render that broke failed, and tries again with the usual budget', async () => {
+    const { client, pending } = manualClient();
+    const { seen } = await mount(client, '# one');
+    await act(async () => pending[0]!.reject(new Error('boom')));
+    expect(seen.at(-1)).toMatchObject({ status: 'failed', reason: 'error' });
+    await act(async () => seen.at(-1)!.retry());
+    expect(pending[1]).toMatchObject({ text: '# one', budgetMs: undefined });
   });
 
   it('has no HTML while the first render is pending', async () => {

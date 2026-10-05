@@ -305,7 +305,8 @@ entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument h
   detected.
 - Parsing and rendering run off the UI thread where possible. Time budgets (initially 2 s) are
   enforced by **terminating and respawning the worker**, both the renderer's render worker and
-  main's link/image extraction worker; the tab falls back to source view.
+  main's link/image extraction worker; the tab falls back to source view. The reader can ask to
+  render it anyway, under a longer budget (60 s) that is enforced the same way.
 - Mermaid (`maxTextSize`, `maxEdges`) and KaTeX (`maxExpand`, `maxSize`) have limits; one failing
   block shows an inline error.
 - The own file watcher watches only open files (via their parent directories), coalesces events,
