@@ -151,6 +151,8 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
                     id={tab.id}
                     active={tab.id === view.active}
                     rendered={view.rendered.has(tab.id)}
+                    crashed={view.crashed.has(tab.id)}
+                    path={tab.path}
                     staleReads={view.reads.get(tab.id) ?? 0}
                     zoom={view.zooms.get(tab.id) ?? 1}
                     store={store}

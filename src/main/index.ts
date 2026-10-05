@@ -18,6 +18,7 @@ import { route, type Route, type RouteRequest, type RouteWorld } from '../core/r
 import type { SessionFile, WindowBounds } from '../core/session/model';
 import { DEFAULT_SETTINGS, settingSources } from '../core/settings/model';
 import { openConfigFile } from '../core/settings/open-config';
+import { CrashRecovery } from '../core/tabs/crashes';
 import { WarmTabs } from '../core/tabs/lifecycle';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
@@ -203,6 +204,7 @@ function start(initialMode: StartupMode): void {
   const warmLimits = (current: Settings) => ({ count: current.warmTabs, bytes: current.warmMegabytes * MIB });
   const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
   const reads = new ReadIdentities(fs);
+  const crashes = new CrashRecovery(Date.now);
   const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
     const contents = webContents.fromId(windowId);
     if (contents) sendEvent(contents, event, payload);
@@ -314,6 +316,10 @@ function start(initialMode: StartupMode): void {
       const closed = documents.exportWindow(windowId);
       if (closed.tabs.length > 0) profile.keepClosed({ state: closed, bounds: windowBounds(window), at: documents.stamp() });
     });
+    window.webContents.on('render-process-gone', (_event, details) => {
+      if (details.reason === 'clean-exit' || quitting || window.isDestroyed()) return;
+      recoverFromCrash(window, details.reason);
+    });
     window.on('closed', () => {
       profile.windows.splice(profile.windows.indexOf(window), 1);
       focusOrder = focusOrder.filter((id) => id !== windowId);
@@ -323,6 +329,7 @@ function start(initialMode: StartupMode): void {
       }
       documents.closeWindow(windowId);
       warm.closeWindow(windowId);
+      crashes.closeWindow(windowId);
       images.closeWindow(windowId);
       quickOpen.close(windowId);
       drops.closeWindow(windowId);
@@ -338,6 +345,43 @@ function start(initialMode: StartupMode): void {
     // Asked once the page has loaded: a launch's files are in the window by then.
     reportColdStart(window, { document: () => documents.list(windowId).length > 0 });
     return window;
+  };
+
+  /**
+   * A window's renderer went away (ADR-002): the tab it was rendering is marked crashed, so it isn't
+   * rendered again until the reader asks, and the page comes back with its tabs from the registry,
+   * only the shown one rendered. A window that keeps crashing is left as it is.
+   */
+  const recoverFromCrash = (window: BrowserWindow, reason: string) => {
+    const windowId = window.webContents.id;
+    const { tab, reload } = crashes.crashed(windowId);
+    crashingForTests.delete(windowId);
+    console.warn(`galeo: window ${windowId} renderer gone (${reason})${tab ? ', crashed while rendering a tab' : ''}`);
+    if (tab) documents.markCrashed(tab, windowId);
+    if (!reload) return console.warn(`galeo: window ${windowId} crashed repeatedly; not reloaded`);
+    for (const id of warm.warm(windowId)) warm.forget(windowId, id);
+    for (const record of documents.list(windowId)) reads.forget(record.id);
+    const active = documents.snapshot(windowId).active;
+    if (active) warm.activated(windowId, active);
+    window.webContents.reload();
+  };
+  /**
+   * Unpackaged test runs crash a window's renderer as it starts rendering the file
+   * `globalThis.__galeoCrashOnRendering` names. The page goes on until the crash lands, so its later
+   * reports are ignored, as a crash in the middle of rendering would never have sent them.
+   */
+  const crashingForTests = new Set<number>();
+  const crashesForTests: Pick<CrashRecovery, 'rendering' | 'rendered'> = {
+    rendering: (windowId, id) => {
+      crashes.rendering(windowId, id);
+      const wanted = (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering;
+      if (!wanted || documents.get(id, windowId)?.path !== wanted) return;
+      crashingForTests.add(windowId);
+      webContents.fromId(windowId)?.forcefullyCrashRenderer();
+    },
+    rendered: (windowId, id) => {
+      if (!crashingForTests.has(windowId)) crashes.rendered(windowId, id);
+    },
   };
 
   /** The profile last worked in, where launches go when no window is open (ADR-005). */
@@ -675,6 +719,7 @@ function start(initialMode: StartupMode): void {
           tabs: documents,
           warm,
           reads,
+          crashes: app.isPackaged ? crashes : crashesForTests,
           resync: pushSnapshot,
           closed: (id) => links.forget(id),
           demote,

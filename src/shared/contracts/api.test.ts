@@ -37,7 +37,9 @@ describe('buildApi', () => {
     expect(Object.keys(api.tabs)).toEqual([
       'snapshot',
       'activated',
+      'rendering',
       'rendered',
+      'renderAgain',
       'position',
       'zoom',
       'viewState',

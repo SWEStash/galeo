@@ -91,6 +91,7 @@ export function TabBar({
               status={view.statuses.get(tab.id)}
               hibernated={!view.rendered.has(tab.id)}
               reloaded={view.reloaded.has(tab.id)}
+              crashed={view.crashed.has(tab.id)}
               onClose={() => store.close(tab.id)}
             />
           )}
@@ -109,8 +110,9 @@ export function TabBar({
 }
 
 /** Tab indicators (UX F4): always a glyph with words, never colour alone; the words are in the tab's name. */
-function indicators(status: TabStatus | undefined, reloaded: boolean): { glyph: string; words: string }[] {
+function indicators(status: TabStatus | undefined, reloaded: boolean, crashed: boolean): { glyph: string; words: string }[] {
   const shown = [];
+  if (crashed) shown.push({ glyph: '⚠', words: 'crashed the viewer' });
   if (reloaded) shown.push({ glyph: '↻', words: 'reloaded from disk' });
   if (status?.follow) shown.push({ glyph: '⇣', words: 'following the end' });
   if (status?.state === 'missing') shown.push({ glyph: '✕', words: 'file missing' });
@@ -123,6 +125,7 @@ function TabItem({
   status,
   hibernated,
   reloaded,
+  crashed,
   onClose,
 }: {
   tab: DocumentRecord;
@@ -130,6 +133,7 @@ function TabItem({
   status: TabStatus | undefined;
   hibernated: boolean;
   reloaded: boolean;
+  crashed: boolean;
   onClose: () => void;
 }) {
   const { dragProps, isDragging } = useDrag({
@@ -152,7 +156,7 @@ function TabItem({
       <span className="tab-label" title={tab.path} {...dragProps} onAuxClick={onAuxClick}>
         {label}
       </span>
-      {indicators(status, reloaded).map(({ glyph, words }) => (
+      {indicators(status, reloaded, crashed).map(({ glyph, words }) => (
         <span key={glyph} className="tab-indicator" data-indicator={words} title={words}>
           <span aria-hidden="true">{glyph}</span>
           <span className="visually-hidden">, {words}</span>

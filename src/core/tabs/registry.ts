@@ -25,6 +25,8 @@ interface Stored {
   zoom?: number;
   /** The window's settings tab: no file, never in the session. */
   settings?: true;
+  /** It was rendering when its window's renderer crashed: not rendered again until the reader asks. */
+  crashed?: true;
 }
 
 /** A tab as a session keeps it: its history, where in it, and its zoom (absent at 100 %). */
@@ -111,6 +113,7 @@ export class TabRegistry {
         ...(position ? { position } : {}),
         ...(view ? { view } : {}),
         ...(follow ? { follow } : {}),
+        ...(record.crashed ? { crashed: true as const } : {}),
       };
     });
     return { revision: this.revisions.get(window) ?? 0, active: this.active.get(window) ?? null, tabs };
@@ -300,6 +303,24 @@ export class TabRegistry {
     order.splice(Math.min(position, order.length), 0, id);
     this.changed(window);
     return recordOf(record);
+  }
+
+  /** The tab was rendering when its window's renderer crashed (ADR-002). */
+  markCrashed(id: string, window: number): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    record.crashed = true;
+    this.changed(window);
+    return true;
+  }
+
+  /** The reader asked to render the tab again. */
+  clearCrashed(id: string, window: number): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    delete record.crashed;
+    this.changed(window);
+    return true;
   }
 
   private step(id: string, window: number, step: -1 | 1): HistoryEntry | null {

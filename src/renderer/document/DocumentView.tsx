@@ -35,6 +35,8 @@ export interface DocumentViewProps {
   onPosition?: ((position: ScrollAnchor) => void) | undefined;
   /** How much the shown content weighs (UTF-16 bytes), for the warm-tab budget (ADR-002). */
   onWeight?: ((bytes: number) => void) | undefined;
+  /** Content is about to go in: crash recovery's breadcrumb (ADR-002), cleared by `onWeight`. */
+  onRendering?: (() => void) | undefined;
   /** Scales the document (per tab), not the app around it. */
   zoom?: number;
   /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
@@ -104,6 +106,7 @@ export function DocumentView({
   initialPosition = null,
   onPosition,
   onWeight,
+  onRendering,
   zoom = 1,
   onHeading,
   ref,
@@ -195,6 +198,7 @@ export function DocumentView({
     const top = element.scrollTop;
     diagrams.current?.dispose();
     diagrams.current = null;
+    onRendering?.();
     if ('html' in rendered) {
       documentHost.setContent(rendered.html);
       // Diagrams drawn before come back at once, before the place is kept below.

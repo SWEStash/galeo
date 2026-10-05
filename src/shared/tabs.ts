@@ -11,6 +11,8 @@ export interface TabViewState {
 export interface TabView extends DocumentRecord, TabViewState {
   zoom?: number;
   position?: ScrollAnchor;
+  /** It was rendering when the window's renderer crashed: shown only when the reader asks (ADR-002). */
+  crashed?: true;
 }
 
 /** A window's tabs as main knows them, in order. A newer `revision` replaces an older snapshot (ADR-002). */

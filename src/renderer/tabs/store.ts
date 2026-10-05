@@ -3,6 +3,7 @@ import type { DocumentContent, DocumentRecord, TextEncoding } from '../../shared
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { zoomStep } from '../document/zoom';
 import type { ScrollAnchor, TabSnapshot, TabViewState } from '../../shared/tabs';
+import { ignoreClosedTab } from './closed-tab';
 
 /** What the tab bar and status bar show about a tab, as its document reports it. */
 export interface TabStatus {
@@ -29,6 +30,8 @@ export interface TabsView {
   zooms: ReadonlyMap<string, number>;
   /** Tabs that took a new version of their file from disk within the last second (UX F4 `↻`). */
   reloaded: ReadonlySet<string>;
+  /** Tabs that were rendering when the window's renderer crashed: not rendered until the reader asks (ADR-002). */
+  crashed: ReadonlySet<string>;
 }
 
 /** How long a tab shows that it reloaded. */
@@ -36,7 +39,18 @@ export const RELOADED_MS = 1000;
 
 export type TabsApi = Pick<
   GaleoApi['tabs'],
-  'snapshot' | 'activated' | 'close' | 'move' | 'reopenClosed' | 'position' | 'zoom' | 'viewState' | 'onChanged' | 'onDemote' | 'onStale'
+  | 'snapshot'
+  | 'activated'
+  | 'close'
+  | 'move'
+  | 'reopenClosed'
+  | 'position'
+  | 'zoom'
+  | 'viewState'
+  | 'renderAgain'
+  | 'onChanged'
+  | 'onDemote'
+  | 'onStale'
 >;
 
 export interface TabStore {
@@ -62,6 +76,8 @@ export interface TabStore {
   zoom(id: string, direction: 'in' | 'out' | 'reset'): void;
   /** The tab now shows a new version of its file. */
   reloaded(id: string): void;
+  /** Renders a tab that crashed the window, in the source view if the reader picked it. */
+  renderAgain(id: string, view?: 'source'): void;
 }
 
 /**
@@ -79,6 +95,7 @@ export function createTabStore(api: TabsApi): TabStore {
     statuses: new Map(),
     zooms: new Map(),
     reloaded: new Set(),
+    crashed: new Set(),
   };
   const reloadTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const positions = new Map<string, ScrollAnchor>();
@@ -127,12 +144,13 @@ export function createTabStore(api: TabsApi): TabStore {
     const ids = snapshot.tabs.map((tab) => tab.id);
     // Main holds each tab's zoom, and the last position it heard of: what a restored tab starts from.
     const zooms = new Map(snapshot.tabs.flatMap((tab) => (tab.zoom ? [[tab.id, tab.zoom] as const] : [])));
+    const crashed = new Set(snapshot.tabs.flatMap((tab) => (tab.crashed ? [tab.id] : [])));
     for (const tab of snapshot.tabs) {
       if (tab.position && !positions.has(tab.id)) positions.set(tab.id, tab.position);
       // Main's is the entry the tab shows now: after a navigation, another entry's.
       viewStates.set(tab.id, { ...(tab.view ? { view: tab.view } : {}), ...(tab.follow ? { follow: tab.follow } : {}) });
     }
-    view = { ...view, zooms };
+    view = { ...view, zooms, crashed };
     if (wanted && ids.includes(wanted)) {
       const id = wanted;
       wanted = null;
@@ -199,6 +217,10 @@ export function createTabStore(api: TabsApi): TabStore {
       if (JSON.stringify(viewStates.get(id) ?? {}) === JSON.stringify(state)) return;
       viewStates.set(id, state);
       void api.viewState(id, state);
+    },
+    renderAgain(id, view) {
+      if (view) store.setViewState(id, { ...store.viewStateOf(id), view });
+      void api.renderAgain(id).catch(ignoreClosedTab);
     },
     reread,
     setStatus(id, status) {

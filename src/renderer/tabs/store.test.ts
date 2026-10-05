@@ -22,6 +22,7 @@ function setup(initial: TabSnapshot) {
     position: vi.fn().mockResolvedValue(undefined),
     zoom: vi.fn().mockResolvedValue(undefined),
     viewState: vi.fn().mockResolvedValue(undefined),
+    renderAgain: vi.fn().mockResolvedValue(undefined),
     onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {
       push = listener;
       return () => {};
@@ -225,6 +226,26 @@ describe('createTabStore', () => {
     expect(store.getSnapshot().zooms.get('b') ?? 1).toBe(1);
     store.zoom('a', 'reset');
     expect(store.getSnapshot().zooms.get('a') ?? 1).toBe(1);
+  });
+
+  it('knows which tabs crashed the window, as main says', async () => {
+    const { store, push } = setup({ revision: 1, active: 'a', tabs: [{ ...tab('a'), crashed: true }, tab('b')] });
+    await store.start();
+    expect([...store.getSnapshot().crashed]).toEqual(['a']);
+    push({ revision: 2, active: 'a', tabs: [tab('a'), tab('b')] });
+    expect(store.getSnapshot().crashed.size).toBe(0);
+  });
+
+  it('asks main to render a crashed tab again, in the source view when the reader picks it', async () => {
+    const { api, store } = setup({ revision: 1, active: 'a', tabs: [{ ...tab('a'), crashed: true }, { ...tab('b'), crashed: true }] });
+    await store.start();
+    store.renderAgain('a');
+    expect(api.viewState).not.toHaveBeenCalled();
+    expect(api.renderAgain).toHaveBeenCalledWith('a');
+    store.renderAgain('b', 'source');
+    expect(store.viewStateOf('b')).toEqual({ view: 'source' });
+    expect(api.viewState).toHaveBeenCalledWith('b', { view: 'source' });
+    expect(api.renderAgain).toHaveBeenLastCalledWith('b');
   });
 
   it("takes zoom and last positions from main's snapshots (a restored session)", async () => {

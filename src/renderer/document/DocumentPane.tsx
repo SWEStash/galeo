@@ -43,6 +43,8 @@ export interface DocumentPaneProps {
   initialPosition?: ScrollAnchor | null;
   onPosition?: (position: ScrollAnchor) => void;
   onWeight?: (bytes: number) => void;
+  /** Content is about to go in (crash recovery's breadcrumb). */
+  onRendering?: () => void;
   /** What the tab bar and status bar show about this document. */
   onStatus?: (status: TabStatus) => void;
   onChooseEncoding?: (encoding: ChosenEncoding | null) => void;
@@ -82,6 +84,7 @@ export function DocumentPane({
   initialPosition = null,
   onPosition,
   onWeight,
+  onRendering,
   onStatus,
   onChooseEncoding,
   onContextMenu,
@@ -284,6 +287,7 @@ export function DocumentPane({
           initialPosition={initialPosition}
           onPosition={onPosition}
           onWeight={onWeight}
+          onRendering={onRendering}
           zoom={zoom}
           onHeading={showsOutline ? setHeading : undefined}
         />

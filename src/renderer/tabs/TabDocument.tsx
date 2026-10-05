@@ -26,6 +26,9 @@ export interface TabDocumentProps {
   active: boolean;
   /** False while hibernated: nothing is read or kept (ADR-002). */
   rendered: boolean;
+  /** The tab crashed the window: it isn't read or rendered until the reader asks (ADR-002). */
+  crashed: boolean;
+  path: string;
   /** Main's count of changes to the file; a new one reads it again. */
   staleReads: number;
   zoom: number;
@@ -38,7 +41,27 @@ export interface TabDocumentProps {
 
 /** One tab's content. A hibernated tab has none; it's read and rendered again when shown. */
 export function TabDocument(props: TabDocumentProps) {
-  return props.rendered ? <LiveTab {...props} /> : null;
+  if (!props.rendered) return null;
+  if (props.crashed) return <CrashedTab id={props.id} path={props.path} store={props.store} />;
+  return <LiveTab {...props} />;
+}
+
+/** A tab that was rendering when the window's renderer crashed (UX §4 "Crashed"). */
+function CrashedTab({ id, path, store }: { id: string; path: string; store: TabStore }) {
+  return (
+    <section className="document-state" data-testid="document-state" data-state="crashed" role="status">
+      <p className="document-state-title">This document crashed the viewer and won't be rendered automatically</p>
+      <p className="document-state-path">{path}</p>
+      <div className="document-state-actions">
+        <button type="button" onClick={() => store.renderAgain(id)}>
+          Try again
+        </button>
+        <button type="button" onClick={() => store.renderAgain(id, 'source')}>
+          Open as source
+        </button>
+      </div>
+    </section>
+  );
 }
 
 /** Where the next read lands after a navigation: a history entry's place, or null for the top. */
@@ -107,6 +130,7 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
 
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
   const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
+  const onRendering = useCallback(() => void window.galeo.tabs.rendering(id), [id]);
   const onStatus = useCallback((status: TabStatus) => store.setStatus(id, status), [id, store]);
   const onViewState = useCallback((state: TabViewState) => store.setViewState(id, state), [id, store]);
   const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id).catch(ignoreClosedTab), [id]);
@@ -137,6 +161,7 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
       initialPosition={initialPosition}
       onPosition={onPosition}
       onWeight={onWeight}
+      onRendering={onRendering}
       onStatus={onStatus}
       onChooseEncoding={chooseEncoding}
       onContextMenu={contextMenu}

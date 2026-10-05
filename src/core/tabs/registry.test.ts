@@ -400,4 +400,19 @@ describe('TabRegistry', () => {
       expect(tabs.reopenClosed(1)).toBeNull();
     });
   });
+
+  it('marks a tab that crashed the window until the reader asks to render it again; the session never keeps it', () => {
+    const changes: number[] = [];
+    const records = new TabRegistry(counterIds(), (window) => changes.push(window));
+    const { id } = records.open('/d/a.md', 1);
+    records.open('/d/b.md', 1);
+    expect(records.markCrashed(id, 2)).toBe(false);
+    expect(records.markCrashed(id, 1)).toBe(true);
+    expect(records.snapshot(1).tabs.map((tab) => tab.crashed ?? false)).toEqual([true, false]);
+    expect(JSON.stringify(records.exportWindow(1))).not.toContain('crashed');
+    expect(records.clearCrashed(id, 2)).toBe(false);
+    expect(records.clearCrashed(id, 1)).toBe(true);
+    expect(records.snapshot(1).tabs.every((tab) => !('crashed' in tab))).toBe(true);
+    expect(changes).toEqual([1, 1, 1, 1]);
+  });
 });

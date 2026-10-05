@@ -1,4 +1,5 @@
 import type { ReadIdentities } from '../../core/documents/identities';
+import type { CrashRecovery } from '../../core/tabs/crashes';
 import type { WarmTabs } from '../../core/tabs/lifecycle';
 import type { TabRegistry } from '../../core/tabs/registry';
 import type { Handlers } from '../ipc/register';
@@ -6,7 +7,9 @@ import type { Handlers } from '../ipc/register';
 type TabChannels =
   | 'tabs.snapshot'
   | 'tabs.activated'
+  | 'tabs.rendering'
   | 'tabs.rendered'
+  | 'tabs.renderAgain'
   | 'tabs.position'
   | 'tabs.zoom'
   | 'tabs.viewState'
@@ -18,6 +21,8 @@ export interface TabHandlerDeps {
   tabs: TabRegistry;
   warm: WarmTabs;
   reads: ReadIdentities;
+  /** Which tab each window is rendering, for crash recovery (ADR-002). */
+  crashes: Pick<CrashRecovery, 'rendering' | 'rendered'>;
   /** Sends the window main's snapshot again. */
   resync: (window: number) => void;
   /** Main drops what it kept for the tab (the text its links are checked against). */
@@ -37,7 +42,7 @@ export interface TabHandlerDeps {
  * step with main; it gets main's snapshot again instead of an error (ADR-002).
  */
 export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
-  const { tabs, warm, reads, resync, closed, demote, stale, positioned, closedWindows } = deps;
+  const { tabs, warm, reads, crashes, resync, closed, demote, stale, positioned, closedWindows } = deps;
   const demoteAll = (window: number, ids: string[]) => {
     if (ids.length > 0) demote(window, ids);
   };
@@ -50,10 +55,19 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
       const path = tabs.get(id, window)!.path;
       if (await reads.changed(id, path)) stale(window, id);
     },
+    'tabs.rendering': ([id], event) => {
+      const window = event.sender.id;
+      if (!tabs.get(id, window)) return resync(window);
+      crashes.rendering(window, id);
+    },
     'tabs.rendered': ([id, weight], event) => {
       const window = event.sender.id;
       if (!tabs.get(id, window)) return resync(window);
+      crashes.rendered(window, id);
       demoteAll(window, warm.rendered(window, id, weight));
+    },
+    'tabs.renderAgain': ([id], event) => {
+      if (!tabs.clearCrashed(id, event.sender.id)) resync(event.sender.id);
     },
     'tabs.position': ([id, position], event) => {
       if (tabs.setPosition(id, event.sender.id, position)) positioned(event.sender.id);

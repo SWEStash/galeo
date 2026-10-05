@@ -86,7 +86,9 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       close: vi.fn().mockResolvedValue(undefined),
       reopenClosed: vi.fn().mockResolvedValue(undefined),
       move: vi.fn().mockResolvedValue(undefined),
+      rendering: vi.fn().mockResolvedValue(undefined),
       rendered: vi.fn().mockResolvedValue(undefined),
+      renderAgain: vi.fn().mockResolvedValue(undefined),
       position: vi.fn().mockResolvedValue(undefined),
       zoom: vi.fn().mockResolvedValue(undefined),
       viewState: vi.fn().mockResolvedValue(undefined),
@@ -585,6 +587,55 @@ describe('App', () => {
     await act(async () => banner.querySelector('button')!.click());
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
     expect(container.querySelector('[data-banner="render-slow"]')).toBeNull();
+  });
+
+  it('tells main which tab it is about to render, before it reports it rendered', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
+    await vi.waitFor(() => expect(api.tabs.rendered).toHaveBeenCalled());
+    expect(api.tabs.rendering).toHaveBeenCalledWith('doc-1');
+    expect(api.tabs.rendering.mock.invocationCallOrder[0]).toBeLessThan(api.tabs.rendered.mock.invocationCallOrder.at(-1)!);
+  });
+
+  describe('a tab that crashed the window', () => {
+    const crashed = { id: 'doc-1', path: '/d/a.md', crashed: true } as DocumentRecord;
+    const crashPanel = (container: HTMLElement) =>
+      vi.waitFor(() => {
+        const panel = container.querySelector<HTMLElement>('[data-testid="document-state"][data-state="crashed"]');
+        expect(panel).not.toBeNull();
+        return panel!;
+      });
+    const button = (panel: HTMLElement, name: string) => [...panel.querySelectorAll('button')].find((each) => each.textContent === name)!;
+
+    it('is not read or rendered, says so, and is marked in the tab bar', async () => {
+      const api = stubBridge({}, { records: [crashed], content: readyContent('markdown', 'rendered', '# x') });
+      const container = await renderApp();
+      const panel = await crashPanel(container);
+      expect(panel.textContent).toContain("This document crashed the viewer and won't be rendered automatically");
+      expect(panel.textContent).toContain('/d/a.md');
+      expect(api.documents.read).not.toHaveBeenCalled();
+      expect(container.querySelector('[role="tab"]')?.textContent).toContain('crashed the viewer');
+    });
+
+    it('renders again on Try again', async () => {
+      const api = stubBridge({}, { records: [crashed], content: readyContent('markdown', 'rendered', '# x') });
+      const container = await renderApp();
+      await act(async () => button(await crashPanel(container), 'Try again').click());
+      expect(api.tabs.renderAgain).toHaveBeenCalledWith('doc-1');
+      expect(api.tabs.viewState).not.toHaveBeenCalled();
+      await act(async () => events.tabs!({ revision: 2, active: 'doc-1', tabs: [{ id: 'doc-1', path: '/d/a.md' }] }));
+      await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledWith('doc-1'));
+    });
+
+    it('opens in the source view on Open as source', async () => {
+      const api = stubBridge({}, { records: [crashed], content: readyContent('markdown', 'rendered', '# x') });
+      const container = await renderApp();
+      await act(async () => button(await crashPanel(container), 'Open as source').click());
+      expect(api.tabs.viewState).toHaveBeenCalledWith('doc-1', { view: 'source' });
+      expect(api.tabs.renderAgain).toHaveBeenCalledWith('doc-1');
+    });
   });
 
   it('shows a loading skeleton only once rendering takes longer than 150 ms', async () => {

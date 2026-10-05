@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ReadIdentities } from '../../../src/core/documents/identities';
+import { CrashRecovery } from '../../../src/core/tabs/crashes';
 import { WarmTabs } from '../../../src/core/tabs/lifecycle';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
@@ -21,7 +22,9 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
   const demoted: [number, string[]][] = [];
   const stale: [number, string][] = [];
   const positioned: number[] = [];
+  const crashes = new CrashRecovery(() => 0);
   const handlers = tabHandlers({
+    crashes,
     positioned: (window) => positioned.push(window),
     tabs,
     warm: new WarmTabs({ count: 1, bytes: 10 * MB }),
@@ -34,7 +37,7 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
   });
   const a = tabs.open('/d/a.md', 1).id;
   const b = tabs.open('/d/b.md', 1).id;
-  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, positioned: () => positioned };
+  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, crashes, positioned: () => positioned };
 }
 
 describe('tabHandlers', () => {
@@ -141,5 +144,33 @@ describe('tabHandlers', () => {
     expect(demoted).toEqual([]);
     expect(tabs.snapshot(1)).toEqual(before);
     expect(tabs.position(a, 1)).toBeNull();
+  });
+
+  it('keeps the tab a window is rendering until it reports it rendered, for crash recovery', () => {
+    const { handlers, crashes, a, b } = setup();
+    handlers['tabs.rendering']([a], from(1));
+    handlers['tabs.rendered']([b, 100], from(1));
+    handlers['tabs.rendering']([b], from(1));
+    handlers['tabs.rendered']([b, 100], from(1));
+    expect(crashes.crashed(1).tab).toBeNull();
+    handlers['tabs.rendering']([a], from(1));
+    expect(crashes.crashed(1).tab).toBe(a);
+  });
+
+  it("refuses a breadcrumb or a render-again for another window's tab, and sends the snapshot again", () => {
+    const { handlers, crashes, tabs, resynced, a } = setup();
+    handlers['tabs.rendering']([a], from(2));
+    expect(crashes.crashed(2).tab).toBeNull();
+    tabs.markCrashed(a, 1);
+    handlers['tabs.renderAgain']([a], from(2));
+    expect(tabs.snapshot(1).tabs[0]!.crashed).toBe(true);
+    expect(resynced).toEqual([2, 2]);
+  });
+
+  it('renders a crashed tab again when the reader asks', () => {
+    const { handlers, tabs, a } = setup();
+    tabs.markCrashed(a, 1);
+    handlers['tabs.renderAgain']([a], from(1));
+    expect(tabs.snapshot(1).tabs[0]!.crashed).toBeUndefined();
   });
 });

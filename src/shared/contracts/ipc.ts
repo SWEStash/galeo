@@ -91,7 +91,9 @@ export const CHANNELS = [
   'documents.contextMenu',
   'tabs.snapshot',
   'tabs.activated',
+  'tabs.rendering',
   'tabs.rendered',
+  'tabs.renderAgain',
   'tabs.position',
   'tabs.zoom',
   'tabs.viewState',
@@ -168,7 +170,11 @@ export interface Requests {
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
   'tabs.activated': [id: string];
   /** How much the tab's rendered content weighs (UTF-16 bytes of its HTML or text), for the warm budget. */
+  /** The page is about to insert the tab's document (crash recovery's breadcrumb, ADR-002). */
+  'tabs.rendering': [id: string];
   'tabs.rendered': [id: string, weight: number];
+  /** The reader asks to render a tab that crashed the window. */
+  'tabs.renderAgain': [id: string];
   /** Where the reader is in the tab, reported after scrolling settles. */
   'tabs.position': [id: string, position: ScrollAnchor];
   /** The tab's zoom (1 is 100 %), kept by main for the session. */
@@ -237,7 +243,9 @@ export interface Responses {
   'documents.contextMenu': void;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
+  'tabs.rendering': void;
   'tabs.rendered': void;
+  'tabs.renderAgain': void;
   'tabs.position': void;
   'tabs.zoom': void;
   'tabs.viewState': void;
