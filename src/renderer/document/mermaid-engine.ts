@@ -10,7 +10,8 @@ const MERMAID_CONFIG: MermaidConfig = {
   startOnLoad: false,
   securityLevel: 'strict',
   maxTextSize: 50_000,
-  maxEdges: 500,
+  // Layout runs on the UI thread at a few ms per edge: 200 edges keep the worst freeze under a second.
+  maxEdges: 200,
   htmlLabels: false,
   flowchart: { htmlLabels: false },
   suppressErrorRendering: true,
