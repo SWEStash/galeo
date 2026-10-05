@@ -40,6 +40,21 @@ stateDiagram-v2
   Idle --> [*]
 ```
 
+A flowchart with edge labels, line breaks, rounded and cylinder shapes, and a subgraph:
+
+```mermaid
+graph TD
+  User([User])
+  subgraph Services
+    Web["Web app<br/>(sign-in)"]
+    Api[API]
+  end
+  Store[(Database)]
+  User -->|opens| Web
+  Web -->|calls with a token<br/>signed by the app| Api
+  Api -.->|reads and writes| Store
+```
+
 One that can't be drawn:
 
 ```mermaid

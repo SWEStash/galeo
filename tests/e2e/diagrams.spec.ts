@@ -31,8 +31,8 @@ test('diagrams are drawn as they come into view, named for screen readers, with 
   const refused = refusals(window);
   try {
     await expect(shownDocument(window).locator('h1')).toBeVisible();
-    expect(await drawAll(window)).toBe(6);
-    const [flow, sequence, , , , broken] = await diagrams(window).all();
+    expect(await drawAll(window)).toBe(7);
+    const [flow, sequence, , , , , broken] = await diagrams(window).all();
     await expect(flow!).toHaveAttribute('role', 'img');
     await expect(flow!).toHaveAttribute('aria-label', 'Checkout flow');
     await expect(sequence!).toHaveAttribute('aria-label', 'Diagram');
@@ -43,6 +43,43 @@ test('diagrams are drawn as they come into view, named for screen readers, with 
     // Code that isn't a diagram is still highlighted.
     await expect(shownDocument(window).locator('pre.shiki')).toHaveCount(1);
     expect(refused).toEqual([]);
+  } finally {
+    await close();
+  }
+});
+
+test('drawn diagrams keep their size and shapes, with every label inside', async () => {
+  const { window, close } = await launchApp(['--', path.join(fixtures, 'docs', 'mermaid.md')]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await drawAll(window);
+    const drawn = await shownDocument(window)
+      .locator('.galeo-diagram[data-state="rendered"] .galeo-diagram-svg')
+      .evaluateAll((wrappers) =>
+        wrappers.map((wrapper) => {
+          const svg = wrapper.shadowRoot!.querySelector('svg')!;
+          const box = svg.getBoundingClientRect();
+          const shapes = [...svg.querySelectorAll('rect, path, circle, polygon')] as SVGGraphicsElement[];
+          const outside = ([...svg.querySelectorAll('text')] as SVGGraphicsElement[]).filter((text) => {
+            const own = text.getBoundingClientRect();
+            return own.top < box.top - 1 || own.bottom > box.bottom + 1 || own.left < box.left - 1 || own.right > box.right + 1;
+          });
+          return {
+            viewBox: svg.getAttribute('viewBox') !== null,
+            shapes: shapes.filter((shape) => {
+              const { width, height } = shape.getBBox();
+              return width > 0 || height > 0;
+            }).length,
+            outside: outside.map((text) => text.textContent),
+          };
+        }),
+      );
+    expect(drawn).toHaveLength(6);
+    for (const diagram of drawn) {
+      expect(diagram.viewBox).toBe(true);
+      expect(diagram.shapes).toBeGreaterThan(0);
+      expect(diagram.outside).toEqual([]);
+    }
   } finally {
     await close();
   }
@@ -88,7 +125,12 @@ test('hostile diagrams draw inert: no script, link, foreign content or outside U
           [...wrapper.shadowRoot!.querySelectorAll('*')].flatMap((element) => [
             ...(['a', 'foreignObject', 'script'].includes(element.localName) ? [`<${element.localName}>`] : []),
             ...[...element.attributes]
-              .filter((attribute) => attribute.name.startsWith('on') || (/href$/.test(attribute.name) && !attribute.value.startsWith('#')))
+              .filter(
+                (attribute) =>
+                  attribute.name.startsWith('on') ||
+                  (/href$/.test(attribute.name) && !attribute.value.startsWith('#')) ||
+                  /url\(\s*['"]?(?!#)/i.test(attribute.value),
+              )
               .map((attribute) => `${element.localName} ${attribute.name}="${attribute.value}"`),
           ]),
         ),

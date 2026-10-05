@@ -19,13 +19,23 @@ const MERMAID_CONFIG: MermaidConfig = {
 
 /**
  * Our own pass over Mermaid's SVG: SVG elements only, no `foreignObject`, scripts or event
- * handlers, no links (their labels stay), and URLs only to the diagram's own fragments.
+ * handlers, and no links (their labels stay). URLs are limited to the diagram's own fragments by
+ * `onlyFragments`, not `ALLOWED_URI_REGEXP`: DOMPurify tests that pattern against every attribute
+ * value, so it would also strip the geometry (`viewBox`, `d`, `x`, `transform`…).
  */
 const SVG_CONFIG: PurifyConfig = {
   USE_PROFILES: { svg: true, svgFilters: true },
   FORBID_TAGS: ['foreignObject', 'script', 'a'],
-  ALLOWED_URI_REGEXP: /^#/,
 };
+
+const URL_REFERENCE = /url\(\s*(['"]?)(.*?)\1\s*\)/gi;
+
+/** Drops an attribute that points anywhere but a fragment: `href="#m"` and `url(#m)` stay. */
+export function onlyFragments(_node: Element, data: { attrName: string; attrValue: string; keepAttr: boolean }): void {
+  const value = data.attrValue.trim();
+  if (/href$/i.test(data.attrName) && !value.startsWith('#')) data.keepAttr = false;
+  for (const [, , target] of value.matchAll(URL_REFERENCE)) if (!target!.trim().startsWith('#')) data.keepAttr = false;
+}
 
 // Both load with the first diagram, never before (they are heavy).
 let mermaid: Promise<Mermaid> | undefined;
@@ -46,5 +56,12 @@ export function renderMermaid(source: string, scheme: ColorScheme): Promise<stri
 
 export async function sanitizeSvg(svg: string): Promise<string> {
   const instance = await (purify ??= import('dompurify').then((module) => module.default));
-  return instance.sanitize(svg, SVG_CONFIG);
+  // Mermaid shares this instance (a second one would create a second `dompurify` Trusted Types
+  // policy), so the hook is there only while our synchronous pass runs.
+  instance.addHook('uponSanitizeAttribute', onlyFragments);
+  try {
+    return instance.sanitize(svg, SVG_CONFIG);
+  } finally {
+    instance.removeHook('uponSanitizeAttribute', onlyFragments);
+  }
 }
