@@ -34,7 +34,7 @@ scattered files; it remains the candidate for a future curated knowledge vault, 
 must not obstruct (plain files only, no sidecar metadata).
 
 **Personas**
-- **Owner (primary)**: solo developer on Ubuntu 24.04 GNOME (Wayland), several workspaces, one
+- **Owner (primary)**: solo developer on Ubuntu 26.04 GNOME (Wayland), several workspaces, one
   per client/project; lives in the terminal with coding agents; writes technical articles.
 - **Agent-heavy developer (secondary, public OSS audience)**: same workflow, same pile of Markdown.
 
@@ -237,8 +237,8 @@ live in the [UX specification](design/ux.md).
   with a banner; logs of 100 MB+ open in source view without freezing the UI; binary files
   (NUL bytes / invalid text encoding) show a "can't display" state. Encoding: UTF-8, then byte
   order marks (UTF-16/32), then a Windows-1252 fallback with a banner and "Reopen with encoding…".
-- **Platform**: official: Ubuntu 24.04 LTS, GNOME, Wayland (primary) and X11; x86_64. Package: `.deb`
-  (official; installs the AppArmor profile Chromium's sandbox needs on 24.04), `galeo` on `PATH`,
+- **Platform**: official: Ubuntu 26.04 LTS, GNOME, Wayland (primary) and X11; x86_64. Package: `.deb`
+  (official; installs the AppArmor profile Chromium's sandbox needs on Ubuntu 24.04+), `galeo` on `PATH`,
   `.desktop` file with MIME associations. AppImage as a secondary portable build for
   distributions without user-namespace restrictions (on Ubuntu 24.04+ it runs only if the user opts in to unsandboxed mode, with a warning). Previews
   (unsigned, unsupported): macOS `.dmg`/`.zip` (x64, arm64), Windows NSIS installer. No npm
