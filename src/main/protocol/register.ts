@@ -5,7 +5,7 @@ import { contentTypeFor, resolveAppAsset } from './app-assets';
 /** Must run before `app` is ready: `galeo:` is a standard, secure scheme for the app's own pages. */
 export function registerSchemes(): void {
   protocol.registerSchemesAsPrivileged([
-    { scheme: 'galeo', privileges: { standard: true, secure: true, supportFetchAPI: true } },
+    { scheme: 'galeo', privileges: { standard: true, secure: true, supportFetchAPI: true, codeCache: true } },
   ]);
 }
 
