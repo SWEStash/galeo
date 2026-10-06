@@ -35,6 +35,41 @@ describe('Markdown pipeline', () => {
     expect(doc.querySelector('a')?.hasAttribute('data-src-line')).toBe(false);
   });
 
+  it('counts the prose words only: not code blocks, math, diagrams, front matter or blocked images', async () => {
+    const text = [
+      '---',
+      'title: Not counted here',
+      '---',
+      '',
+      '# Two words',
+      '',
+      'Some *emphasised* prose with `inline code`.',
+      '',
+      '```js',
+      'const notCounted = 1;',
+      '```',
+      '',
+      '$$',
+      'x^2 + y^2',
+      '$$',
+      '',
+      'Inline $a+b$ math, and a ![remote](https://example.com/x.png) image.',
+      '',
+      '| Cell one | Cell two |',
+      '|---|---|',
+      '| three | four |',
+      '',
+      '```mermaid',
+      'graph TD; Alpha-->Beta',
+      '```',
+      '',
+      'Last<br>line',
+    ].join('\n');
+    const { words } = await render.markdown(text);
+    // 2 + 6 + 5 ("Inline math, and a image") + 6 (table) + 2.
+    expect(words).toBe(21);
+  });
+
   it('builds the outline from the headings', async () => {
     const { outline } = await render.markdown(fixture('basic.md'));
     expect(outline).toEqual([

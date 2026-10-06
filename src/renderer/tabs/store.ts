@@ -12,6 +12,8 @@ export interface TabStatus {
   view: ViewMode | null;
   encoding: TextEncoding | null;
   lines: number | null;
+  /** Words of prose (Markdown once rendered, and `.txt`); null where counting words means nothing. */
+  words: number | null;
   /** A log following its end. */
   follow: boolean;
 }

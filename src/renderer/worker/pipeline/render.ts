@@ -15,6 +15,7 @@ import type { Highlighter } from './highlighter';
 import { ID_PREFIX } from '../../../shared/markdown/ids';
 import { compactUrl, isLocalReference, isNetworkPathReference } from '../../../shared/markdown/urls';
 import { SANITIZE_SCHEMA } from '../../../shared/markdown/sanitize-schema';
+import { countWords } from '../../../shared/words';
 
 /** Code blocks longer than this are shown without highlighting (ADR-003: ~200 KB). */
 export const SHIKI_MAX_BLOCK_CHARS = 200_000;
@@ -39,6 +40,8 @@ export interface RenderResult {
   links: string[];
   /** Local image sources in document order, without duplicates; remote images never load. */
   images: string[];
+  /** Words of prose, for the status bar: code blocks, math, diagrams and front matter aren't counted. */
+  words: number;
   /** Parse and render time in milliseconds. */
   ms: number;
   cached: boolean;
@@ -236,6 +239,28 @@ export interface Renderer {
   markdown(text: string): Promise<RenderResult>;
 }
 
+// Inline elements run on within a word ("foo<em>bar</em>"); any other element separates words.
+const INLINE = new Set(['a', 'abbr', 'b', 'bdi', 'bdo', 'cite', 'code', 'data', 'del', 'dfn', 'em', 'i', 'ins', 'kbd', 'mark', 'q', 's', 'samp', 'small', 'span', 'strong', 'sub', 'sup', 'time', 'u', 'var']);
+// Not prose: code blocks, math source, diagram source, front matter, blocked-image notices.
+const NOT_PROSE = new Set(['math-inline', 'math-display', 'galeo-diagram', 'galeo-frontmatter', 'galeo-remote-image']);
+
+/** The words of the document's prose, from the sanitized tree before math and code are drawn. */
+function proseWords(tree: Root): number {
+  const parts: string[] = [];
+  const walk = (node: Root | Element) => {
+    for (const child of node.children) {
+      if (child.type === 'text') parts.push(child.value);
+      if (child.type !== 'element' || child.tagName === 'pre' || classesOf(child).some((name) => NOT_PROSE.has(name))) continue;
+      const inline = INLINE.has(child.tagName);
+      if (!inline) parts.push(' ');
+      walk(child);
+      if (!inline) parts.push(' ');
+    }
+  };
+  walk(tree);
+  return countWords(parts.join(''));
+}
+
 /** The Markdown pipeline (ADR-003), with a bounded cache keyed by content hash. */
 /** Whether the sanitized tree holds math for KaTeX. */
 function hasMath(tree: Root): boolean {
@@ -292,6 +317,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
       .use(annotate(collected))
       .use(diagramPlaceholders);
     const tree = (await parse.run(parse.parse(text))) as Root;
+    const words = proseWords(tree);
     // …then math and code, both after sanitizing; KaTeX before Shiki, so Shiki never sees math as a code block.
     const finish = unified();
     const math = hasMath(tree);
@@ -315,6 +341,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
       outline: collected.outline,
       links: [...collected.links],
       images: [...collected.images],
+      words,
       ms: performance.now() - started,
     };
   }

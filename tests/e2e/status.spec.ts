@@ -26,6 +26,40 @@ test('the status bar shows the path, view, read-only, encoding and line count, a
   }
 });
 
+test('the status bar counts the words of prose and their reading time, and follows a reload', async () => {
+  const home = tempHome();
+  const dir = path.join(home, 'docs');
+  mkdirSync(dir, { recursive: true });
+  const md = path.join(dir, 'words.md');
+  const prose = (count: number) => Array.from({ length: count }, (_, n) => `word${n}`).join(' ');
+  writeFileSync(md, `# Title here\n\n${prose(458)}\n\n\`\`\`js\nconst notCounted = 1;\n\`\`\`\n`);
+  const txt = path.join(dir, 'notes.txt');
+  writeFileSync(txt, 'One two three.\n');
+  const log = path.join(dir, 'app.log');
+  writeFileSync(log, '2026-10-06 INFO started\n');
+  const { window, close } = await launchApp(['--', md, txt, log], { home });
+  try {
+    const words = window.getByTestId('status-words');
+    await expect(words).toHaveText('460 words · 2 min');
+    // The source view of the same file keeps its count.
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(window.getByTestId('status-view')).toHaveText('Source');
+    await expect(words).toHaveText('460 words · 2 min');
+    await window.keyboard.press('ControlOrMeta+U');
+    writeFileSync(md, `# Title here\n\n${prose(8)}\n`);
+    await expect(words).toHaveText('10 words · < 1 min');
+    await window.keyboard.press('Control+Tab');
+    await expect(window.getByTestId('status-view')).toHaveText('Reader');
+    await expect(words).toHaveText('3 words · < 1 min');
+    await window.keyboard.press('Control+Tab');
+    await expect(window.getByTestId('status-view')).toHaveText('Source');
+    await expect(words).toHaveCount(0);
+  } finally {
+    await close();
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
 test("the path's menu, built by main, copies the path", async () => {
   const { app, window, close } = await launchApp(['--', basic], { env: { GALEO_TEST_MENU_CHOICE: 'copy-path' } });
   try {

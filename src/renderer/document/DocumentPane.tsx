@@ -17,6 +17,7 @@ import { FindBar } from './FindBar';
 import type { ColorScheme } from './host';
 import type { FindResult, SourceLanguage } from './source-view';
 import { useDelayed } from './useDelayed';
+import { countWords } from '../../shared/words';
 import { useRenderedHtml } from './useRenderedHtml';
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
@@ -230,6 +231,9 @@ export function DocumentPane({
   }, [onViewState, chosenView, follow]);
 
   const lines = useMemo(() => (ready ? countLines(ready.text) : null), [ready]);
+  // Markdown's prose is counted by the worker as it renders; `.txt` is all prose.
+  const textWords = useMemo(() => (ready?.format === 'text' ? countWords(ready.text) : null), [ready]);
+  const words = ready?.format === 'markdown' ? render.words : textWords;
   useEffect(() => {
     onStatus?.({
       state: content.state,
@@ -237,9 +241,10 @@ export function DocumentPane({
       view: ready ? view : null,
       encoding: ready?.encoding ?? null,
       lines,
+      words,
       follow,
     });
-  }, [onStatus, content.state, ready, view, lines, follow]);
+  }, [onStatus, content.state, ready, view, lines, words, follow]);
 
   if (!ready) {
     return (

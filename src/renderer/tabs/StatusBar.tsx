@@ -3,6 +3,7 @@ import type { ChosenEncoding } from '../../shared/contracts';
 import { EncodingMenu } from '../document/EncodingMenu';
 import { ENCODING_NAMES } from '../document/encodings';
 import { ignoreClosedTab } from './closed-tab';
+import { readingTime } from '../../shared/words';
 import type { TabStatus, TabStore, TabsView } from './store';
 
 const VIEW_NAMES = { rendered: 'Rendered', source: 'Source' } as const;
@@ -10,9 +11,17 @@ const VIEW_NAMES = { rendered: 'Rendered', source: 'Source' } as const;
 /** `.txt` shows its rendered view as reader text (UX F10). */
 const viewName = (status: TabStatus) => (status.format === 'text' && status.view === 'rendered' ? 'Reader' : VIEW_NAMES[status.view!]);
 
+/** "1,234 words · 5 min" ("1 word", and no time with nothing to read). */
+function wordsLabel(words: number): string {
+  const count = `${words.toLocaleString('en')} ${words === 1 ? 'word' : 'words'}`;
+  const time = readingTime(words);
+  return time ? `${count} · ${time}` : count;
+}
+
 /**
  * The status bar (UX §2): the shown tab's path (a menu to copy or reveal it), view, read-only,
- * encoding (a menu to reopen it with another), line count and zoom; then the window's messages.
+ * encoding (a menu to reopen it with another), line and word counts, and zoom; then the window's
+ * messages.
  */
 export function StatusBar({ view, store, children }: { view: TabsView; store: TabStore; children: ReactNode }) {
   const tab = view.tabs.find((each) => each.id === view.active);
@@ -42,6 +51,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
         </EncodingMenu>
       )}
       {status?.lines != null && <span data-testid="status-lines">{status.lines.toLocaleString('en')} ln</span>}
+      {status?.words != null && <span data-testid="status-words">{wordsLabel(status.words)}</span>}
       {zoom !== 1 && <span data-testid="status-zoom">{Math.round(zoom * 100)}%</span>}
       {/* Said once, politely: the shown file took a new version from disk (UX §7). */}
       <span className="status-reloaded" data-testid="status-reloaded" role="status">

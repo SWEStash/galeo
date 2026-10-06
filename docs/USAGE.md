@@ -44,8 +44,11 @@ the file into the window in front of you) when you want it here.
   shows `↻` for a moment. F5 or Ctrl+R reloads by hand.
 - **Views**: Ctrl+U switches a Markdown file between rendered and source; Alt+Z toggles wrapping;
   logs open in source view, and End follows the end of a growing log.
-- **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- / Ctrl+0), and
-  every command by name in the **palette** (Ctrl+Shift+P).
+- **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
+  Ctrl+0), and every command by name in the **palette** (Ctrl+Shift+P).
+- **Status bar**: the path (click to copy it or reveal it in Files), the view, the encoding, the
+  line count and, for Markdown and `.txt`, the word count and reading time. Markdown counts its
+  prose only: code blocks, math, diagrams and front matter aren't words.
 - **Diagrams and math**: math is typeset with the document (KaTeX); Mermaid diagrams draw as you
   scroll towards them. A diagram that can't be drawn (a syntax error, or over 200 edges) shows its
   error and its source.

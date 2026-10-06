@@ -36,7 +36,7 @@ class FakeWorker extends EventTarget {
         workerMode === 'links'
           ? `<p>${request.text.replace(/\[([^\]]*)\]\(([^)]*)\)/g, '<a href="$2">$1</a>')}</p><h2 id="user-content-goals">Goals</h2>`
           : `<p>${request.text}</p>`;
-      const result = { html, outline: [], links: [], images: [], ms: 1, cached: false };
+      const result = { html, outline: [], links: [], images: [], words: 0, ms: 1, cached: false };
       reply({ type: 'rendered', id: request.id, result });
     }
   }
