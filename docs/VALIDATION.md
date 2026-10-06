@@ -59,3 +59,23 @@ Electron 44.4.5. Recorded 2026-10-05.
   and of GNOME's own Alt keys (Alt+Tab, Alt+Esc, Alt+Space, Alt+F1–F10, Alt+Print). Checked against
   `gsettings` on Ubuntu 26.04 (GNOME's `wm`, `shell`, `mutter` and `media-keys` bindings) on
   2026-10-05: galeo's Alt keys are Alt+Z and Alt+←/→, which GNOME doesn't bind.
+
+## Desktop and Wayland (manual)
+
+On the reference platform with the installed `.deb`; Playwright runs under X11 and can't show
+these.
+
+| Check | Result |
+|---|---|
+| Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log` | |
+| `galeo file.md` from a terminal (the `.deb`'s `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | |
+| Drop files from Files onto the document area: they open after the shown tab, the first one shown | Pass (2026-10-05) |
+| Drop onto a tab (the caret between tabs): they open at the caret | Pass (2026-10-05) |
+| Drop onto the empty tab-bar space (the window-drag region) | Pass (2026-10-05) |
+| Drop a folder: quick open opens on it | Pass (2026-10-05) |
+| `galeo file.md` while galeo is on another workspace: GNOME's "galeo is ready" notice, no workspace switch | Pass (2026-10-05, Ubuntu 26.04) |
+| Live reload from a real editor or agent: in place, no jump, `↻` for about a second | Pass (2026-10-05) |
+| Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
+| Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
+| Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
+| Outline follows the scroll; Esc returns focus to the document | Pass (2026-10-05) |
