@@ -27,9 +27,10 @@ Record the date, the build and the result of each row.
 | Every overlay traps focus and gives it back | Ctrl+P, Ctrl+Shift+P, Ctrl+F, Ctrl+Shift+O, About, Settings (Ctrl+,), profile menu (Ctrl+Shift+M): Tab stays inside, Esc returns to the document | |
 | Focus is always visible | Tab through the tab bar, status bar, Settings and dialogs in light and dark | |
 | Source and log views scroll by keyboard | Ctrl+U, then Tab into the text; arrows, PgUp/PgDn, Home/End; End follows a log | |
-| Orca names the tab bar and tabs | Orca on; tabs are announced with their names and indicators (↻, ✕, ⚠ as words) | |
-| Orca reads a document | Headings (H to jump), lists, task checkboxes (named by their item), tables, links, code | |
-| Orca announces changes | Quick open's result count, "↻ Reloaded", find's "n of m", the status messages | |
+| Orca: tabs | Turn Orca on (Super+Alt+S). Open three files, press Ctrl+Tab: Orca says each tab's name and "tab, n of 3"; on a file being rewritten it adds "reloaded from disk", on a deleted one "file missing" | |
+| Orca: reading a document | Click into a document and use Orca's browse keys: H jumps heading to heading and reads them, L list by list, T to a table (it reads the header cells with each cell), K link by link; a task item reads as "checkbox, checked" plus its text | |
+| Orca: overlays | Ctrl+P: Orca says "Quick open", then the result count ("3 results"); arrows read each result. Ctrl+Shift+P reads each command with its keys. Ctrl+F, type: it says "n of m". Esc: focus is back on the document | |
+| Orca: status messages | Save a shown file from an editor: it says "Reloaded". In the palette, choose "Toggle edit mode": it says "Press Ctrl+E" | |
 | Zoom 200 % | Ctrl+= to 200 % on a long document: no clipped text in the chrome | |
 
 ## Performance
