@@ -15,6 +15,12 @@ const LICENCE_FROM_FILE = { khroma: 'MIT' };
 const ALLOWED = new Set(['MIT', 'ISC', 'BSD-2-Clause', 'BSD-3-Clause', 'Apache-2.0', '0BSD', 'Unlicense']);
 
 /**
+ * Packages the owner allowed under a non-permissive licence (docs/dependencies.md, "Licence"), shipped
+ * unmodified, with where their source is: EPL-2.0 asks recipients to be told.
+ */
+const EXCEPTIONS = { elkjs: { license: 'EPL-2.0', source: 'https://github.com/kieler/elkjs' } };
+
+/**
  * `files` reads the install: `listDir(dir)`, `readText(path)`, `readJson(path)`, with paths as the
  * lock file writes them (`node_modules/…`).
  */
@@ -28,6 +34,8 @@ export function collectNotices(lock, files) {
       const terms = files.listDir(key).filter((file) => TERMS_FILE.test(file)).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
       const author = typeof manifest.author === 'object' ? manifest.author?.name : manifest.author;
       const texts = terms.length > 0 ? terms.map((file) => files.readText(`${key}/${file}`)) : [`Licensed under ${license}${author ? ` by ${author}` : ''}.`];
+      const exception = EXCEPTIONS[name];
+      if (exception?.license === license) texts.push(`The source code of ${name} ${entry.version}, unmodified, is available at ${exception.source}.`);
       return { name, version: entry.version, license, texts };
     })
     .sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
@@ -36,6 +44,7 @@ export function collectNotices(lock, files) {
 /** Packages whose licence isn't permissive, or is unknown: `name@version: licence`. */
 export function licenceProblems(notices) {
   return notices
+    .filter(({ name, license }) => EXCEPTIONS[name]?.license !== license)
     .filter(({ license }) => !license.replace(/[()]/g, '').split(' OR ').some((option) => ALLOWED.has(option.trim())))
     .map(({ name, version, license }) => `${name}@${version}: ${license}`);
 }

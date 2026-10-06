@@ -22,7 +22,9 @@ rejected, so later additions follow the same bar.
    that signals community trust.
 4. **Licence.** Runtime dependencies must be permissive and MIT-compatible (MIT, ISC, BSD,
    Apache-2.0; OFL for fonts). Copyleft (GPL, LGPL) is not allowed at runtime. MPL-2.0 is allowed
-   only as a dev dependency.
+   only as a dev dependency. **Named exceptions** (owner, one package and one licence each, shipped
+   unmodified, enforced by `scripts/lib/licences.mjs`): `elkjs` under EPL-2.0, Mermaid 12's layout
+   engine (2026-10-06); About tells where its source is, as EPL-2.0 asks.
 5. **Weight.** Anything heavy loads lazily in the renderer (ADR-003). Packages with native
    modules are avoided, since they need rebuilding for Electron.
 6. **Hygiene** (SR-10): commit `package-lock.json`; CI uses `npm ci`; install scripts are
