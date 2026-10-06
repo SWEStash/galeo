@@ -23,15 +23,15 @@ Record the date, the build and the result of each row.
 
 | Check | How | Result |
 |---|---|---|
-| Open, read and close documents without a mouse | `galeo` a file; Ctrl+P, type, Enter; Ctrl+Tab between tabs; Ctrl+W | |
-| Every overlay traps focus and gives it back | Ctrl+P, Ctrl+Shift+P, Ctrl+F, Ctrl+Shift+O, About, Settings (Ctrl+,), profile menu (Ctrl+Shift+M): Tab stays inside, Esc returns to the document | |
-| Focus is always visible | Tab through the tab bar, status bar, Settings and dialogs in light and dark | |
-| Source and log views scroll by keyboard | Ctrl+U, then Tab into the text; arrows, PgUp/PgDn, Home/End; End follows a log | |
-| Orca: tabs | Turn Orca on (Super+Alt+S). Open three files, press Ctrl+Tab: Orca says each tab's name and "tab, n of 3"; on a file being rewritten it adds "reloaded from disk", on a deleted one "file missing" | |
-| Orca: reading a document | Click into a document and use Orca's browse keys: H jumps heading to heading and reads them, L list by list, T to a table (it reads the header cells with each cell), K link by link; a task item reads as "checkbox, checked" plus its text | |
-| Orca: overlays | Ctrl+P: Orca says "Quick open", then the result count ("3 results"); arrows read each result. Ctrl+Shift+P reads each command with its keys. Ctrl+F, type: it says "n of m". Esc: focus is back on the document | |
-| Orca: status messages | Save a shown file from an editor: it says "Reloaded". In the palette, choose "Toggle edit mode": it says "Press Ctrl+E" | |
-| Zoom 200 % | Ctrl+= to 200 % on a long document: no clipped text in the chrome | |
+| Open, read and close documents without a mouse | `galeo` a file; Ctrl+P, type, Enter; Ctrl+Tab between tabs; Ctrl+W | Pass (2026-10-06, `.deb`) |
+| Every overlay traps focus and gives it back | Ctrl+P, Ctrl+Shift+P, Ctrl+F, Ctrl+Shift+O, About, Settings (Ctrl+,), profile menu (Ctrl+Shift+M): Tab stays inside, Esc returns to the document | Pass (2026-10-06, `.deb`) |
+| Focus is always visible | Tab through the tab bar, status bar, Settings and dialogs in light and dark | Pass (2026-10-06, `.deb`) |
+| Source and log views scroll by keyboard | Ctrl+U, then Tab into the text; arrows, PgUp/PgDn, Home/End; End follows a log | Pass (2026-10-06, `.deb`) |
+| Orca: tabs | Turn Orca on (Super+Alt+S). Open three files, press Ctrl+Tab: Orca says each tab's name and "tab, n of 3"; on a file being rewritten it adds "reloaded from disk", on a deleted one "file missing" | Pass (2026-10-06, `.deb`) |
+| Orca: reading a document | Click into a document and use Orca's browse keys: H jumps heading to heading and reads them, L list by list, T to a table (it reads the header cells with each cell), K link by link; a task item reads as "checkbox, checked" plus its text | Pass (2026-10-06, `.deb`) |
+| Orca: overlays | Ctrl+P: Orca says "Quick open", then the result count ("3 results"); arrows read each result. Ctrl+Shift+P reads each command with its keys. Ctrl+F, type: it says "n of m". Esc: focus is back on the document | Pass (2026-10-06, `.deb`) |
+| Orca: status messages | Save a shown file from an editor: it says "Reloaded". In the palette, choose "Toggle edit mode": it says "Press Ctrl+E" | Pass (2026-10-06, `.deb`) |
+| Zoom 200 % | Ctrl+= to 200 % on a long document: no clipped text in the chrome | Pass (2026-10-06, `.deb`) |
 
 ## Performance
 
@@ -79,4 +79,5 @@ these.
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
+| Installed `.deb` (Trusted Types enforced): a document with Mermaid diagrams and math draws in full, with no Trusted Types errors | Pass (2026-10-06) |
 | Outline follows the scroll; Esc returns focus to the document | Pass (2026-10-05) |
