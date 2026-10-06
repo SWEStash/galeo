@@ -61,7 +61,7 @@
     "@lezer/highlight": "1.2.5",
     "@shikijs/rehype": "4.5.0",
     "dompurify": "3.4.16",
-    "katex": "0.18.9",
+    "katex": "0.19.0",
     "mermaid": "11.17.2",
     "react": "19.3.0",
     "react-aria-components": "1.21.1",
