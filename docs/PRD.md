@@ -151,7 +151,7 @@ must not obstruct (plain files only, no sidecar metadata).
       index is persisted.
 14. **Themes and typography.** As a reader, I want light/dark/follow-system themes, font family
     and size, line width, and a custom CSS file per profile or global.
-    - AC: Bundled themes meet WCAG AA contrast; Ctrl+= / Ctrl+- / Ctrl+0 zoom per tab.
+    - AC: Bundled themes meet WCAG AA contrast; Ctrl++ (or Ctrl+=) / Ctrl+- / Ctrl+0 zoom per tab.
 15. **Zero network, enforced.** As the owner, I want a guarantee that no document or feature makes
     network requests, so that private client documents never leak.
     - AC: An automated test opens documents with remote images, iframes, scripts and fonts and

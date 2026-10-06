@@ -41,4 +41,9 @@ describe('formatKeys', () => {
     expect(formatKeys(['Alt+Left', 'Alt+Right'], 'linux')).toEqual(['Alt+←', 'Alt+→']);
     expect(formatKeys(['CmdOrCtrl+Shift+PageUp', 'CmdOrCtrl+PageDown'], 'linux')).toEqual(['Ctrl+Shift+PgUp', 'Ctrl+PgDn']);
   });
+
+  it('writes the Plus key as +', () => {
+    expect(formatKeys(['CmdOrCtrl+Plus'], 'linux')).toEqual(['Ctrl++']);
+    expect(formatKeys(['CmdOrCtrl+Plus'], 'darwin')).toEqual(['⌘+']);
+  });
 });

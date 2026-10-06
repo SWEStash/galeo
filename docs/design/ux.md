@@ -289,7 +289,7 @@ the native menu on the active tab.
 | Move tab left / right | Ctrl+Shift+PgUp / Ctrl+Shift+PgDn | |
 | Profile menu | Ctrl+Shift+M | |
 | Settings | Ctrl+, | |
-| Zoom in / out / reset | Ctrl+= / Ctrl+- / Ctrl+0 | Per tab; scales the document, not the app |
+| Zoom in / out / reset | Ctrl++ (or Ctrl+=) / Ctrl+- / Ctrl+0 | Per tab; scales the document, not the app. + counts with or without Shift, so it works on every layout |
 | Full screen | F11 | |
 | Quit | Ctrl+Shift+Q | Ctrl+Q not bound (avoid accidental quit) |
 | Edit mode (v0.2) | Ctrl+E | |

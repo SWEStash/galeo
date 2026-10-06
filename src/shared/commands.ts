@@ -50,7 +50,7 @@ export const COMMANDS = {
 // macOS writes modifiers as symbols, in this order, with no separator.
 const MAC_MODIFIERS: Record<string, string> = { Ctrl: '⌃', Alt: '⌥', Shift: '⇧', Cmd: '⌘', CmdOrCtrl: '⌘' };
 const MAC_ORDER = ['⌃', '⌥', '⇧', '⌘'];
-const KEY_NAMES: Record<string, string> = { Left: '←', Right: '→', Up: '↑', Down: '↓', PageUp: 'PgUp', PageDown: 'PgDn' };
+const KEY_NAMES: Record<string, string> = { Left: '←', Right: '→', Up: '↑', Down: '↓', PageUp: 'PgUp', PageDown: 'PgDn', Plus: '+' };
 
 /** Accelerators as a reader sees them on `platform`: `Ctrl+Shift+P`, or `⇧⌘P` on macOS. */
 export function formatKeys(accelerators: readonly string[], platform: Platform): string[] {

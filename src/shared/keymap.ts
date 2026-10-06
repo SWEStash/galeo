@@ -28,7 +28,8 @@ const BASE = {
   moveTabRight: ['CmdOrCtrl+Shift+PageDown'],
   profileMenu: ['CmdOrCtrl+Shift+M'],
   settings: ['CmdOrCtrl+,'],
-  zoomIn: ['CmdOrCtrl+='],
+  /** Ctrl++ as most apps; Ctrl+= too, on layouts where = needs no Shift. */
+  zoomIn: ['CmdOrCtrl+Plus', 'CmdOrCtrl+='],
   zoomOut: ['CmdOrCtrl+-'],
   zoomReset: ['CmdOrCtrl+0'],
   fullScreen: ['F11'],
@@ -57,7 +58,10 @@ export interface KeyEventLike {
 }
 
 // Accelerator key names (Electron's) that differ from `KeyboardEvent.key`.
-const KEY_NAMES: Record<string, string> = { Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown' };
+const KEY_NAMES: Record<string, string> = { Left: 'ArrowLeft', Right: 'ArrowRight', Up: 'ArrowUp', Down: 'ArrowDown', Plus: '+' };
+
+// Keys some layouts type with Shift and others without (+ on US vs Spanish): Shift doesn't count.
+const SHIFT_EITHER_WAY = new Set(['Plus']);
 
 function matches(accelerator: string, event: KeyEventLike, platform: Platform): boolean {
   const parts = accelerator.split('+');
@@ -73,7 +77,7 @@ function matches(accelerator: string, event: KeyEventLike, platform: Platform): 
   return (
     event.ctrlKey === wanted.ctrl &&
     event.altKey === wanted.alt &&
-    event.shiftKey === wanted.shift &&
+    (SHIFT_EITHER_WAY.has(key) || event.shiftKey === wanted.shift) &&
     event.metaKey === wanted.meta &&
     event.key.toLowerCase() === (KEY_NAMES[key] ?? key).toLowerCase()
   );

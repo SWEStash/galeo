@@ -68,18 +68,21 @@ test('Reopen with encoding reads the file again as chosen, and the status bar sa
   }
 });
 
-test('zoom is per tab: Ctrl+= zooms this tab only, Ctrl+0 resets it', async () => {
+test('zoom is per tab: Ctrl++ (or Ctrl+=) zooms this tab only, Ctrl+0 resets it', async () => {
   const { window, close } = await launchApp(['--', basic, path.join(docs, 'gfm.md')]);
   try {
     await expect(shownDocument(window)).toBeVisible();
-    await window.keyboard.press('ControlOrMeta+Equal');
+    // Ctrl++ on a US layout, where + is Shift+=.
+    await window.keyboard.press('ControlOrMeta+Shift+Equal');
     await expect(window.getByTestId('status-zoom')).toHaveText('110%');
-    await expect(shownDocument(window)).toHaveCSS('zoom', '1.1');
+    await window.keyboard.press('ControlOrMeta+Equal');
+    await expect(window.getByTestId('status-zoom')).toHaveText('125%');
+    await expect(shownDocument(window)).toHaveCSS('zoom', '1.25');
     await window.keyboard.press('Control+Tab');
     await expect(shownDocument(window)).toBeVisible();
     await expect(window.getByTestId('status-zoom')).toHaveCount(0);
     await window.keyboard.press('Control+Tab');
-    await expect(window.getByTestId('status-zoom')).toHaveText('110%');
+    await expect(window.getByTestId('status-zoom')).toHaveText('125%');
     await window.keyboard.press('ControlOrMeta+0');
     await expect(window.getByTestId('status-zoom')).toHaveCount(0);
   } finally {

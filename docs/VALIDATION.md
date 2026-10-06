@@ -31,7 +31,7 @@ Record the date, the build and the result of each row.
 | Orca: reading a document | Click into a document and use Orca's browse keys: H jumps heading to heading and reads them, L list by list, T to a table (it reads the header cells with each cell), K link by link; a task item reads as "checkbox, checked" plus its text | Pass (2026-10-06, `.deb`) |
 | Orca: overlays | Ctrl+P: Orca says "Quick open", then the result count ("3 results"); arrows read each result. Ctrl+Shift+P reads each command with its keys. Ctrl+F, type: it says "n of m". Esc: focus is back on the document | Pass (2026-10-06, `.deb`) |
 | Orca: status messages | Save a shown file from an editor: it says "Reloaded". In the palette, choose "Toggle edit mode": it says "Press Ctrl+E" | Pass (2026-10-06, `.deb`) |
-| Zoom 200 % | Ctrl+= to 200 % on a long document: no clipped text in the chrome | Pass (2026-10-06, `.deb`) |
+| Zoom 200 % | Ctrl++ to 200 % on a long document: no clipped text in the chrome | Pass (2026-10-06, `.deb`) |
 
 ## Performance
 

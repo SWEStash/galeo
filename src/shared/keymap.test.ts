@@ -89,6 +89,17 @@ describe('commandFor', () => {
     expect(commandFor(key({ key: '=', ctrlKey: true }), 'linux')).toBe('zoomIn');
   });
 
+  it('zooms in with Ctrl++ whether or not the layout needs Shift for +, and with Ctrl+= where = is unshifted', () => {
+    expect(keymap('linux').zoomIn[0]).toBe('CmdOrCtrl+Plus');
+    expect(commandFor(key({ key: '+', ctrlKey: true }), 'linux')).toBe('zoomIn');
+    expect(commandFor(key({ key: '+', ctrlKey: true, shiftKey: true }), 'linux')).toBe('zoomIn');
+    expect(commandFor(key({ key: '+', metaKey: true, shiftKey: true }), 'darwin')).toBe('zoomIn');
+    expect(commandFor(key({ key: '=', ctrlKey: true }), 'linux')).toBe('zoomIn');
+    // Where = needs Shift (Spanish layouts: Shift+0), Ctrl+Shift+0 is not a zoom key.
+    expect(commandFor(key({ key: '=', ctrlKey: true, shiftKey: true }), 'linux')).toBeNull();
+    expect(commandFor(key({ key: '+', ctrlKey: true, altKey: true }), 'linux')).toBeNull();
+  });
+
   it('returns null for keys with no command', () => {
     expect(commandFor(key({ key: 'q', ctrlKey: true }), 'linux')).toBeNull();
     expect(commandFor(key({ key: 'Shift', shiftKey: true }), 'linux')).toBeNull();

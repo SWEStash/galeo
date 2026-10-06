@@ -36,7 +36,7 @@ const KEYBOARD_MAP: [label: string, keys: string[], macKeys: string[]][] = [
   ['Move tab right', ['Ctrl+Shift+PgDn'], ['⇧⌘PgDn']],
   ['Profile menu', ['Ctrl+Shift+M'], ['⇧⌘M']],
   ['Settings', ['Ctrl+,'], ['⌘,']],
-  ['Zoom in', ['Ctrl+='], ['⌘=']],
+  ['Zoom in', ['Ctrl++', 'Ctrl+='], ['⌘+', '⌘=']],
   ['Zoom out', ['Ctrl+-'], ['⌘-']],
   ['Reset zoom', ['Ctrl+0'], ['⌘0']],
   ['Full screen', ['F11'], ['F11']],

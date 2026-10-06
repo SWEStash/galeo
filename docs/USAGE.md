@@ -44,7 +44,7 @@ the file into the window in front of you) when you want it here.
   shows `↻` for a moment. F5 or Ctrl+R reloads by hand.
 - **Views**: Ctrl+U switches a Markdown file between rendered and source; Alt+Z toggles wrapping;
   logs open in source view, and End follows the end of a growing log.
-- **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl+= / Ctrl+- / Ctrl+0), and
+- **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- / Ctrl+0), and
   every command by name in the **palette** (Ctrl+Shift+P).
 - **Diagrams and math**: math is typeset with the document (KaTeX); Mermaid diagrams draw as you
   scroll towards them. A diagram that can't be drawn (a syntax error, or over 200 edges) shows its
