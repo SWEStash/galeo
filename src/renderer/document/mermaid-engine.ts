@@ -14,6 +14,9 @@ const MERMAID_CONFIG: MermaidConfig = {
   maxEdges: 200,
   htmlLabels: false,
   flowchart: { htmlLabels: false },
+  // Flat, like the rest of the app (Mermaid 12's default `neo` look adds shadows); the layout is
+  // Mermaid 12's default, ELK.
+  look: 'classic',
   suppressErrorRendering: true,
   secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'htmlLabels', 'themeCSS'],
 };

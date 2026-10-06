@@ -65,7 +65,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | `rehype-raw`, `rehype-sanitize`, `rehype-slug`, `rehype-stringify` | 7 / 6 / 6 / 10 | MIT | 2023–2024 | 4–17 M | Raw HTML → allowlist sanitize (SR-02) → slugs → HTML string |
 | `shiki`, `@shikijs/rehype` | 4.5.x | MIT | 2026-10-01 | 21 M / 680 k | Code highlighting with the GitHub themes; grammars loaded per document |
 | `katex`, `rehype-katex` | 0.19.x / 7.0.x | MIT | 2026-10-01 / 2024-08-19 | 24 M / 6.8 M | Math (`trust: false`, limits; SR-03). **Exact version pin**; `rehype-katex` asks for `^0.16`, so an `overrides` entry in `package.json` makes it render with the pinned `katex` (without it, math ran on a nested older copy and only the stylesheet followed the pin) |
-| `mermaid` | 11.17.2 | MIT | 2026-08-25 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. 11.17.x is the mature line; 12.0.0 had no patch release when the owner chose the version (2026-09-29), so 12.x is on the watch list |
+| `mermaid` | 12.1.0 | MIT | 2026-10-02 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. On 12.x since 2026-10-06 (owner): ELK layout (12's default; brings `elkjs`, EPL-2.0, allowed by name under "Licence"), `look: 'classic'` |
 | `dompurify` | 3.4.16 | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
 
 ### Runtime: source views (CodeMirror 6, ADR-003)
@@ -163,8 +163,6 @@ about/licences view and the packages must include:
   advisory with no fixed npm 11 release, and a bundled copy can't be overridden, so the audit gate
   failed. Nothing ran it yet. Re-add it with the release workflow, once `npm audit` is clean on
   it; `.releaserc.json` stays for that.
-- **Mermaid 12.x**: integrated on 11.17.2. Move to 12.x once it has patch releases and its changelog keeps
-  `securityLevel: 'strict'` and the size limits we set.
 - **TypeScript 7** friction with any tool: fall back to 6.0.3 for that tool.
 - **Maintainer health**: any adopted package with no release for over 12 months is re-vetted;
   small ones are replaced by own modules.
