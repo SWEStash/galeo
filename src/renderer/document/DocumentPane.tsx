@@ -122,6 +122,10 @@ export function DocumentPane({
   const documentHandle = useRef<DocumentHandle>(null);
   const [viewer, setViewer] = useState<{ svg: string; name: string; returnFocus: () => void } | null>(null);
   const closeViewer = useCallback(() => setViewer(null), []);
+  // The viewer is the shown tab's: switching tabs closes it.
+  useEffect(() => {
+    if (!active) setViewer(null);
+  }, [active]);
   // Back to the diagram's Expand button once the viewer is gone: the modal's own restore can't
   // reach into the document's shadow root.
   const returnFocus = useRef<(() => void) | null>(null);

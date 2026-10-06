@@ -136,7 +136,7 @@ test('diagrams draw at their natural size, never larger; a wide one keeps readab
 });
 
 test('a diagram opens in a full-window viewer that zooms and pans, and Esc gives focus back', async () => {
-  const { app, window, close } = await launchApp(['--', path.join(fixtures, 'docs', 'mermaid.md')]);
+  const { app, window, close } = await launchApp(['--', path.join(fixtures, 'docs', 'mermaid.md'), path.join(fixtures, 'docs', 'basic.md')]);
   const refused = refusals(window);
   try {
     await expect(shownDocument(window).locator('h1')).toBeVisible();
@@ -174,6 +174,11 @@ test('a diagram opens in a full-window viewer that zooms and pans, and Esc gives
     await window.keyboard.press('Escape');
     await expect(viewer).toHaveCount(0);
     await expect(expand).toBeFocused();
+    // The viewer belongs to its tab: showing another tab closes it.
+    await expand.click();
+    await expect(viewer).toBeVisible();
+    await window.keyboard.press('Control+Tab');
+    await expect(viewer).toHaveCount(0);
     expect(refused).toEqual([]);
   } finally {
     await close();

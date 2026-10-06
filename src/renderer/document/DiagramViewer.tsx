@@ -38,7 +38,7 @@ export function DiagramViewer({ svg, name, onClose }: { svg: string; name: strin
     if (drawn && width > 0 && height > 0) {
       natural.current = { width, height };
       // Its own size, scaled by the stage: not the document's fit-the-column sizing.
-      drawn.removeAttribute('style');
+      drawn.style.removeProperty('max-width');
       drawn.setAttribute('width', String(width));
       drawn.setAttribute('height', String(height));
     }
