@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
 import { loadNotices, type Notices } from './notices';
 
-/** galeo's version and licence, and the notices of what it ships (M5.6). */
+/** galeo's version and licence, and the notices of what it ships (docs/dependencies.md). */
 export function AboutDialog({ version, onClose }: { version: string; onClose: () => void }) {
   const [notices, setNotices] = useState<Notices | null>(null);
   useEffect(() => {

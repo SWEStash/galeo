@@ -5,7 +5,7 @@ import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { launchApp } from '../helpers/launch';
 
-// axe on the surfaces the other suites don't check, in both colour schemes (M5.3). The tab bar,
+// axe on the surfaces the other suites don't check, in both colour schemes. The tab bar,
 // palette, quick open, find bar, outline, settings, status bar, profile menu and dialogs, empty
 // window and About are checked where they are tested.
 

@@ -76,7 +76,6 @@ test('a large document shown as source after its budget renders once the reader 
 test('every pathological document ends rendered or as source, within the budget', async () => {
   const names = Object.keys(PATHOLOGICAL);
   const { window, close } = await launchApp(['--', ...names.map(write)]);
-  const outcomes: Record<string, string> = {};
   // The page's longest stall per document (the worker's work never blocks it).
   await window.evaluate(() => {
     const w = window as { __galeoLongest?: number };
@@ -94,7 +93,6 @@ test('every pathological document ends rendered or as source, within the budget'
       const start = Date.now();
       await expect.poll(() => settled(window), { timeout: 15_000 }).not.toBeUndefined();
       const stall = await longest();
-      outcomes[name] = `${await settled(window)} in ${Date.now() - start} ms, longest task ${Math.round(stall)} ms`;
       // Diagram layout and the source view's highlighting run on the page; nothing may freeze it for long.
       expect(stall, name).toBeLessThan(1500);
       // The 2 s budget, plus reading, posting and drawing the result on a busy machine.
@@ -103,7 +101,6 @@ test('every pathological document ends rendered or as source, within the budget'
       await window.keyboard.press('Control+Tab');
     }
   } finally {
-    console.log(JSON.stringify(outcomes, null, 1));
     await close();
   }
 });

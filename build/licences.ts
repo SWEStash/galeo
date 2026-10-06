@@ -13,7 +13,7 @@ const files = {
 };
 
 /**
- * `virtual:licences`: the notices the About dialog shows, gathered at build time (M5.6): the
+ * `virtual:licences`: the notices the About dialog shows, gathered at build time: the
  * runtime packages' terms (grouped where identical), the vendored fonts' OFL texts and Electron's
  * licence. The build fails on a runtime package whose licence isn't permissive.
  */
