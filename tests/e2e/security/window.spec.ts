@@ -181,3 +181,67 @@ test('unknown launch options exit with status 2 and say why', () => {
   expect(result.status).toBe(2);
   expect(result.stderr).toContain('unknown option: --bogus');
 });
+
+test.describe('Trusted Types (ADR-010)', () => {
+  const fixture = (name: string) => path.resolve(import.meta.dirname, '../../fixtures/docs', name);
+
+  test('the page refuses HTML no policy made, and only the allowed policies can be created', async () => {
+    const { window: page, close } = await launchApp();
+    try {
+      await expect(page.getByTestId('app-root')).toHaveAttribute('data-worker', 'ready');
+      const outcomes = await page.evaluate(() => {
+        const attempt = (action: () => void) => {
+          try {
+            action();
+            return 'allowed';
+          } catch {
+            return 'refused';
+          }
+        };
+        const element = document.createElement('div');
+        return {
+          markup: attempt(() => (element.innerHTML = '<img src=x>')),
+          text: attempt(() => (element.innerHTML = 'plain text')),
+          policy: attempt(() => (globalThis as unknown as { trustedTypes: { createPolicy(name: string, rules: object): unknown } }).trustedTypes.createPolicy('mine', {})),
+        };
+      });
+      expect(outcomes).toEqual({ markup: 'refused', text: 'allowed', policy: 'refused' });
+    } finally {
+      await close();
+    }
+  });
+
+  test('documents, diagrams, math, logs, source and the overlays render with no violation', async () => {
+    const { window, close } = await launchApp(['--', fixture('mermaid.md'), fixture('math.md'), fixture('sample.log'), fixture('gfm.md')]);
+    const violations: string[] = [];
+    window.on('console', (message) => {
+      if (/Trusted|trusted-types|require-trusted-types/.test(message.text())) violations.push(message.text());
+    });
+    try {
+      const shown = window.locator('[data-testid="tab-panel"][data-active="true"]');
+      const diagrams = shown.locator('.galeo-diagram');
+      await expect(diagrams.first()).toHaveAttribute('data-state', 'rendered');
+      for (const diagram of await diagrams.all()) {
+        await diagram.scrollIntoViewIfNeeded();
+        await expect(diagram).not.toHaveAttribute('data-state', 'pending');
+      }
+      const show = (name: RegExp) => window.getByRole('tab', { name }).click();
+      await show(/math\.md/);
+      await expect(shown.getByTestId('document').locator('.katex').first()).toBeVisible();
+      await show(/sample\.log/);
+      await expect(shown.getByTestId('document').locator('.cm-editor')).toBeVisible();
+      await show(/gfm\.md/);
+      await expect(shown.getByTestId('document').locator('article table').first()).toBeVisible();
+      await window.keyboard.press('ControlOrMeta+U');
+      await expect(shown.getByTestId('document').locator('.cm-editor')).toBeVisible();
+      await window.keyboard.press('ControlOrMeta+P');
+      await expect(window.getByTestId('quick-open')).toBeVisible();
+      await window.keyboard.press('Escape');
+      await window.keyboard.press('ControlOrMeta+Shift+P');
+      await window.keyboard.press('Escape');
+      expect(violations).toEqual([]);
+    } finally {
+      await close();
+    }
+  });
+});

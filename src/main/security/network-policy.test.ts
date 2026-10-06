@@ -43,18 +43,19 @@ describe('isRequestAllowed', () => {
 
 describe('appResponseHeaders', () => {
   it('sends the strict CSP on every app response (SR-02)', () => {
-    const headers = appResponseHeaders({ isPackaged: true });
-    expect(headers['Content-Security-Policy']).toBe(APP_CSP);
+    const headers = appResponseHeaders();
+    expect(headers['Content-Security-Policy']).toContain(APP_CSP);
     expect(APP_CSP).toContain("default-src 'none'");
     expect(APP_CSP).toContain("script-src 'self'");
     expect(APP_CSP).not.toMatch(/unsafe-eval|wasm-unsafe-eval/);
   });
 
-  it('reports Trusted Types violations in development builds only', () => {
-    expect(appResponseHeaders({ isPackaged: false })['Content-Security-Policy-Report-Only']).toBe(
-      "require-trusted-types-for 'script'; trusted-types galeo-document",
+  it('enforces Trusted Types with only the policies the page needs (ADR-010)', () => {
+    const headers = appResponseHeaders();
+    expect(headers['Content-Security-Policy']).toBe(
+      `${APP_CSP}; require-trusted-types-for 'script'; trusted-types galeo-document galeo-worker dompurify default`,
     );
-    expect(appResponseHeaders({ isPackaged: true })).not.toHaveProperty('Content-Security-Policy-Report-Only');
+    expect(headers).not.toHaveProperty('Content-Security-Policy-Report-Only');
   });
 });
 

@@ -11,7 +11,8 @@
   [006](decisions/ADR-006-renderer-ui-framework.md) ·
   [007](decisions/ADR-007-platform-seam.md) ·
   [008](decisions/ADR-008-packaging-and-distribution.md) ·
-  [009](decisions/ADR-009-sandbox-unavailable-launcher.md)
+  [009](decisions/ADR-009-sandbox-unavailable-launcher.md) ·
+  [010](decisions/ADR-010-trusted-types-enforcement.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in

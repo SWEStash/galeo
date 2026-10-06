@@ -597,7 +597,7 @@ function start(initialMode: StartupMode): void {
         recordBlockedRequest,
       );
     }
-    registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(runtime), (url) =>
+    registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(), (url) =>
       serveImage(url, { lookup: (id) => images.lookup(id), fs }),
     );
     let restoring = false;

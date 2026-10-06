@@ -1,6 +1,7 @@
 # ADR-004 — Security posture: layered content isolation, verified capabilities, enforced zero network
 
-- Status: Accepted (2026-09-25, with review amendments)
+- Status: Accepted (2026-09-25, with review amendments; the Trusted Types clause superseded by
+  [ADR-010](ADR-010-trusted-types-enforcement.md))
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [Threat model](../security/threat-model.md) (SR-01…SR-17), [ADR-002](ADR-002-window-and-tab-model.md),
@@ -27,7 +28,7 @@ has to assume **the renderer may be compromised** and still protect files and th
 Five layers. Each holds even if the one before it fails.
 
 1. **Inert content.** Allowlist sanitizing of author HTML, a strict CSP with no inline scripts and
-   no `eval`, and Mermaid/KaTeX in strict modes (SR-02, SR-03). **Trusted Types**: the Document
+   no `eval`, and Mermaid/KaTeX in strict modes (SR-02, SR-03). *(Trusted Types superseded by ADR-010.)* **Trusted Types**: the Document
    Host inserts HTML only through one policy (`galeo-document`); development builds run Trusted Types
    in report-only mode to surface library violations (React, CodeMirror, Mermaid); release builds
    enforce it from v0.1, and any library exception needed is recorded in this ADR. Documents render inside a **Shadow DOM container**, so content styles and ids

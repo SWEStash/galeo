@@ -182,9 +182,10 @@ default); with `--no-sandbox`, every window shows the unsandboxed warning; a sec
 **SR-02 — Content is inert.** A strict Content-Security-Policy on app pages:
 `default-src 'none'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' galeo: data:; font-src 'self'; connect-src 'self'`
 (no `'unsafe-eval'` or `'wasm-unsafe-eval'`; Shiki uses its JavaScript regex engine).
-No inline scripts, no `eval`. **Trusted Types**: the Document Host inserts HTML only through one
-policy (`galeo-document`); report-only in development builds, enforced in release builds, with any
-library exception recorded in ADR-004.
+No inline scripts, no `eval`. **Trusted Types**, enforced in every build: the Document Host
+inserts HTML only through one policy (`galeo-document`); the only other policies are the render
+worker's script URL (`galeo-worker`), DOMPurify's own (`dompurify`) and a `default` that passes text
+with no markup (ADR-010).
 Raw HTML in Markdown passes an allowlist sanitizer: no `script`, `style`, `iframe`, `object`,
 `embed`, `form`, `base`, `meta` or `link` (prefetch and preconnect hints open connections the CSP
 doesn't cover), no `svg`, `math`, `picture` or `source`; no event-handler attributes; no `style`

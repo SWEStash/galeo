@@ -15,13 +15,11 @@ export const APP_CSP = [
   "frame-ancestors 'none'",
 ].join('; ');
 
-/** Trusted Types: report-only while developing, enforced in release builds later. */
-const TRUSTED_TYPES = "require-trusted-types-for 'script'; trusted-types galeo-document";
+/** Trusted Types, enforced: only these policies may create HTML or script URLs (ADR-010). */
+const TRUSTED_TYPES = "require-trusted-types-for 'script'; trusted-types galeo-document galeo-worker dompurify default";
 
-export function appResponseHeaders({ isPackaged }: { isPackaged: boolean }): Record<string, string> {
-  const headers: Record<string, string> = { 'Content-Security-Policy': APP_CSP };
-  if (!isPackaged) headers['Content-Security-Policy-Report-Only'] = TRUSTED_TYPES;
-  return headers;
+export function appResponseHeaders(): Record<string, string> {
+  return { 'Content-Security-Policy': `${APP_CSP}; ${TRUSTED_TYPES}` };
 }
 
 export interface NetworkPolicy {
