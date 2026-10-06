@@ -15,17 +15,27 @@ function inPage<T>(app: ElectronApplication, script: string): Promise<T> {
 const PANEL = `document.querySelector('[data-testid="tab-panel"][data-active="true"]')`;
 const tabText = (name: string) => `[...document.querySelectorAll('[role=tab]')].find((tab) => tab.textContent.includes('${name}'))`;
 
-/** Opens two documents, then crashes the renderer as it starts inserting gfm.md (a test hook in main). */
+/**
+ * Opens two documents, then crashes the renderer as it starts inserting gfm.md (a test hook in
+ * main). From the switch on, everything goes through main: Playwright follows a page whose
+ * renderer dies badly (an action under way never completes on some runners, throws on others).
+ */
 async function crashOnGfm() {
   const launched = await launchApp(['--', fixture('basic.md'), fixture('gfm.md')]);
   const { app, window } = launched;
   await expect(window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"] article h1')).toBeVisible();
   await app.evaluate((_, file) => ((globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering = file), fixture('gfm.md'));
-  const crashed = window.waitForEvent('crash');
-  // The click itself may never complete: the renderer dies under it (it hangs on some runners and
-  // throws on others). The crash is what to wait for.
-  void window.getByRole('tab', { name: /gfm\.md/ }).click().catch(() => {});
-  await crashed;
+  const gone = app.evaluate(
+    ({ BrowserWindow }) =>
+      new Promise<string>((resolve) => BrowserWindow.getAllWindows()[0]!.webContents.once('render-process-gone', (_event, details) => resolve(details.reason))),
+  );
+  // Ctrl+Tab shows gfm.md, which the renderer starts to insert.
+  await app.evaluate(({ BrowserWindow }) => {
+    const contents = BrowserWindow.getAllWindows()[0]!.webContents;
+    contents.sendInputEvent({ type: 'keyDown', keyCode: 'Tab', modifiers: ['control'] });
+    contents.sendInputEvent({ type: 'keyUp', keyCode: 'Tab', modifiers: ['control'] });
+  });
+  expect(await gone).toBe('crashed');
   await app.evaluate(() => delete (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering);
   // The same window loads its page again: a new renderer process, slow on a busy machine.
   await expect
