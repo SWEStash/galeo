@@ -24,6 +24,17 @@ describe('createSourceView', () => {
     source.destroy();
   });
 
+  it('is a named, focusable text: "Log" for logs, "Source" otherwise (WCAG 4.1.2, 2.1.1)', () => {
+    for (const [language, name] of [['log', 'Log'], ['markdown', 'Source'], [null, 'Source']] as const) {
+      const { root, parent } = shadowContainer();
+      const source = createSourceView({ root, parent, text: 'x', language, wrap: false });
+      const content = parent.querySelector('.cm-content')!;
+      expect(content.getAttribute('aria-label')).toBe(name);
+      expect(content.getAttribute('tabindex')).toBe('0');
+      source.destroy();
+    }
+  });
+
   it('toggles line wrapping', () => {
     const { root, parent } = shadowContainer();
     const source = createSourceView({ root, parent, text: 'x', language: null, wrap: false });

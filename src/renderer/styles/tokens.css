@@ -19,6 +19,8 @@
   --galeo-color-fg: #1f2328;
   --galeo-color-muted: #59636e;
   --galeo-color-border: #d1d9e0;
+  /* The edge of a text field, which is what shows it is one: 3:1 (WCAG 1.4.11). */
+  --galeo-color-control-border: #818b98;
   --galeo-color-link: #0969da;
   --galeo-color-code-bg: #f6f8fa;
   --galeo-color-focus: #0969da;
@@ -37,6 +39,7 @@
   --galeo-color-fg: #e6edf3;
   --galeo-color-muted: #9198a1;
   --galeo-color-border: #3d444d;
+  --galeo-color-control-border: #6e7681;
   --galeo-color-link: #4493f8;
   --galeo-color-code-bg: #161b22;
   --galeo-color-focus: #4493f8;

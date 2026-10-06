@@ -97,6 +97,8 @@ export function createSourceView(options: {
       doc: options.text,
       extensions: [
         EditorState.readOnly.of(true),
+        // A named text; a stop of its own on Tab, so the keyboard can reach and scroll it.
+        EditorView.contentAttributes.of({ 'aria-label': options.language === 'log' ? 'Log' : 'Source', tabindex: '0' }),
         lineNumbers(),
         highlightActiveLineGutter(),
         keymap.of(standardKeymap),

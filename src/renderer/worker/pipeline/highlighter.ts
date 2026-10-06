@@ -5,6 +5,15 @@ import { bundledLanguages } from 'shiki/langs';
 /** The code themes, matching the blog's (ADR-003). */
 export const CODE_THEMES = { light: 'github-light', dark: 'github-dark' } as const;
 
+/**
+ * The themes' colours that read below 4.5:1 on a code block (WCAG 1.4.3), replaced by the nearest
+ * shades of GitHub's current palette that pass.
+ */
+export const CODE_COLOR_REPLACEMENTS: Record<string, Record<string, string>> = {
+  'github-light': { '#22863a': '#116329', '#d73a49': '#cf222e', '#e36209': '#953800' },
+  'github-dark': { '#6a737d': '#8b949e' },
+};
+
 // Built from `shiki/core` rather than `shiki`, whose default engine is WebAssembly (the CSP has no
 // 'wasm-unsafe-eval'). Each grammar is its own chunk, loaded the first time a document uses it.
 // A forgiving engine skips the few patterns JavaScript regexes can't express.

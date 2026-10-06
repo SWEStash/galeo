@@ -166,7 +166,7 @@ body,
 
 .field input {
   padding: 5px 8px;
-  border: 1px solid var(--galeo-color-border);
+  border: 1px solid var(--galeo-color-control-border);
   border-radius: 4px;
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
@@ -361,7 +361,7 @@ body,
   box-sizing: border-box;
   padding: 10px 12px;
   border: none;
-  border-bottom: 1px solid var(--galeo-color-border);
+  border-bottom: 1px solid var(--galeo-color-control-border);
   background: transparent;
   color: var(--galeo-color-fg);
   font: 15px var(--galeo-font-ui);
@@ -659,7 +659,7 @@ button:focus-visible {
 .find-bar input {
   width: 16em;
   padding: 3px 6px;
-  border: 1px solid var(--galeo-color-border);
+  border: 1px solid var(--galeo-color-control-border);
   border-radius: 4px;
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
@@ -887,7 +887,7 @@ button:focus-visible {
 
 .field textarea {
   padding: 5px 8px;
-  border: 1px solid var(--galeo-color-border);
+  border: 1px solid var(--galeo-color-control-border);
   border-radius: 4px;
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);

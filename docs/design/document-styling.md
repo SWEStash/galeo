@@ -61,4 +61,5 @@ The fonts ship with the app (no web fonts), each with a system fallback.
 | `.galeo-text-reader` | The `.txt` reader view (paragraphs keep their line breaks) |
 
 Code blocks are highlighted with the `github-light` and `github-dark` themes, emitted as
-`--shiki-light` / `--shiki-dark` variables on each token.
+`--shiki-light` / `--shiki-dark` variables on each token. The few theme colours that read below
+4.5:1 on a code block are replaced by GitHub's current, darker (or, in dark, lighter) shades.

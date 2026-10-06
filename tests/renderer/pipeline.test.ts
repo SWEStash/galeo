@@ -52,6 +52,21 @@ describe('Markdown pipeline', () => {
     expect(doc.querySelector('section[data-footnotes] li')?.textContent).toContain('The footnote text.');
   });
 
+  it('draws code in the accessible shades of the themes, never the low-contrast originals', async () => {
+    const { html } = await render.markdown('```ts\nconst greeting = "hello";\n```\n');
+    expect(html.toLowerCase()).toContain('--shiki-light:#cf222e');
+    expect(html.toLowerCase()).not.toContain('#d73a49');
+  });
+
+  it("names each task-list checkbox after its own item's text, not its sub-items'", async () => {
+    const doc = dom((await render.markdown('- [x] Write the *plan*\n  - [ ] nested step\n\n- [ ] Ship it\n')).html);
+    expect([...doc.querySelectorAll('input[type="checkbox"]')].map((box) => box.getAttribute('aria-label'))).toEqual([
+      'Write the plan',
+      'nested step',
+      'Ship it',
+    ]);
+  });
+
   it('shows frontmatter as a collapsed, highlighted block of escaped text, outside the outline', async () => {
     const { html, outline } = await render.markdown(fixture('frontmatter.md'));
     const doc = dom(html);

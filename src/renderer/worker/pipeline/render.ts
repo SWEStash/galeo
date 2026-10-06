@@ -94,6 +94,11 @@ const annotate = (collected: Collected) => () => (tree: Root) => {
       }
     }
     if (node.tagName === 'pre') unhighlightIfHuge(node);
+    // A task-list checkbox is named by its item (WCAG 4.1.2): its own text, not its sub-items'.
+    if (node.tagName === 'input' && node.properties['type'] === 'checkbox') {
+      const own = parent.children.filter((child) => !(child.type === 'element' && (child.tagName === 'ul' || child.tagName === 'ol')));
+      node.properties['ariaLabel'] = own.map((child) => textOf(child)).join('').trim();
+    }
   });
   if (collected.frontmatter) tree.children.unshift(frontmatterBlock(collected.frontmatter));
 };
@@ -260,7 +265,14 @@ const loadShiki = () => Promise.all([import('./highlighter'), import('@shikijs/r
 
 /** The Markdown pipeline (ADR-003), with a bounded cache keyed by content hash. */
 export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } = {}): Renderer {
-  let shiki: Promise<{ highlighter: Highlighter; themes: { light: string; dark: string }; rehypeShiki: typeof import('@shikijs/rehype/core').default }> | undefined;
+  let shiki:
+    | Promise<{
+        highlighter: Highlighter;
+        themes: { light: string; dark: string };
+        colorReplacements: Record<string, Record<string, string>>;
+        rehypeShiki: typeof import('@shikijs/rehype/core').default;
+      }>
+    | undefined;
   const cache = new Map<string, Omit<RenderResult, 'cached'>>();
 
   async function run(text: string): Promise<Omit<RenderResult, 'cached'>> {
@@ -285,14 +297,15 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
     const math = hasMath(tree);
     if (math) finish.use(await loadKatex(), KATEX_OPTIONS).use(explainMathErrors);
     if (hasCode(tree)) {
-      const { highlighter, themes, rehypeShiki } = await (shiki ??= loadShiki().then(async ([module, rehype]) => ({
+      const { highlighter, themes, colorReplacements, rehypeShiki } = await (shiki ??= loadShiki().then(async ([module, rehype]) => ({
         highlighter: await module.loadHighlighter(),
         themes: module.CODE_THEMES,
+        colorReplacements: module.CODE_COLOR_REPLACEMENTS,
         rehypeShiki: rehype.default,
       })));
       finish
         .use(noteCodeLines(collected))
-        .use(() => rehypeShiki(highlighter, { themes, defaultColor: false, lazy: true, fallbackLanguage: 'text' }))
+        .use(() => rehypeShiki(highlighter, { themes, colorReplacements, defaultColor: false, lazy: true, fallbackLanguage: 'text' }))
         .use(restoreCodeLines(collected));
     }
     const html = finish.use(rehypeStringify).stringify((await finish.run(tree)) as Root);

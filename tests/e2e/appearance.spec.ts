@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -106,6 +107,8 @@ test('an oversized custom.css is left untouched and reported; the last good CSS 
     saveFile(file, `/* ${'x'.repeat(1024 * 1024)} */ article { color: rgb(0, 0, 200) !important; }`);
     await expect(window.getByTestId('settings-notice')).toContainText(file);
     expect(await articleStyle(window, 'color')).toBe('rgb(200, 0, 0)');
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="settings-notice"]').analyze();
+    expect(results.violations).toEqual([]);
   } finally {
     await close();
     removeTempHome(home);
