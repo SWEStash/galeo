@@ -380,6 +380,7 @@ function start(initialMode: StartupMode): void {
   const crashesForTests: Pick<CrashRecovery, 'rendering' | 'rendered'> = {
     rendering: (windowId, id) => {
       crashes.rendering(windowId, id);
+      ((globalThis as { __galeoRenderingSeen?: string[] }).__galeoRenderingSeen ??= []).push(documents.get(id, windowId)?.path ?? id);
       const wanted = (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering;
       if (!wanted || documents.get(id, windowId)?.path !== wanted) return;
       crashingForTests.add(windowId);

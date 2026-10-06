@@ -32,10 +32,20 @@ async function crashOnGfm() {
       contents.once('render-process-gone', (_event, details) => resolve(details.reason)),
     );
   });
-  launchSecond(home, ['--', fixture('gfm.md')]);
-  const gone = app.evaluate(() => (globalThis as { __galeoGone?: Promise<string> }).__galeoGone!);
+  const second = launchSecond(home, ['--', fixture('gfm.md')]);
+  const gone = await app.evaluate(
+    (_, ms) => Promise.race([(globalThis as { __galeoGone?: Promise<string> }).__galeoGone!, new Promise<string>((resolve) => setTimeout(() => resolve('no crash'), ms))]),
+    20_000,
+  );
+  if (gone === 'no crash') {
+    // What to look at when a runner never crashes: did the second launch hand over, and what did
+    // the window show and start to render?
+    const seen = await app.evaluate(() => (globalThis as { __galeoRenderingSeen?: string[] }).__galeoRenderingSeen ?? []);
+    const tabs = await inPage<string>(app, `[...document.querySelectorAll('[role=tab]')].map((tab) => tab.textContent + ' ' + tab.getAttribute('aria-selected')).join(' | ')`).catch(String);
+    throw new Error(`no crash: second launch ${second.status}/${second.signal} ${String(second.stderr).slice(-500)}; tabs ${tabs}; rendering seen ${JSON.stringify(seen)}`);
+  }
   // `crashed` on Linux and Windows, `killed` on macOS: main recovers from anything but a clean exit.
-  expect(await gone).not.toBe('clean-exit');
+  expect(gone).not.toBe('clean-exit');
   await app.evaluate(() => delete (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering);
   // The same window loads its page again: a new renderer process, slow on a busy machine.
   await expect
