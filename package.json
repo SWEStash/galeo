@@ -54,6 +54,12 @@
   "overrides": {
     "rehype-katex": {
       "katex": "$katex"
+    },
+    "mermaid": {
+      "katex": "$katex"
+    },
+    "micromark-extension-math": {
+      "katex": "$katex"
     }
   },
   "dependencies": {
