@@ -44,7 +44,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 
 | Package | Version | Licence | Last publish | Weekly dl | Role / notes |
 |---|---|---|---|---|---|
-| `electron` | 44.4.5 | MIT | 2026-09-24 | 6.9 M | Shell (ADR-001). Chromium 152, Node 24 |
+| `electron` | 44.5.1 | MIT | 2026-09-30 | 6.9 M | Shell (ADR-001). Chromium 152, Node 24 |
 | `zod` | 4.6.x | MIT | 2026-09-25 | 274 M | Runtime schemas for IPC, settings and sessions (SR-11, SR-17). Main only: the preload and renderer import its inferred types, never its code |
 | unified pipeline (`remark-parse`, `remark-gfm`, `remark-rehype`, `rehype-raw`, `rehype-sanitize`, …) | see the renderer pipeline table | MIT | — | — | Link and image extraction in main for capability checks (ADR-004): the **same** parse and sanitizer as the renderer, up to sanitizing, shared from `src/shared/markdown/`, so main's link set is the page's link set (a fuzz test compares them). This replaced the planned separate `mdast-util-from-markdown` extractor (2026-09-27), which would have needed its own raw-HTML handling |
 
@@ -63,8 +63,8 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | `remark-parse`, `remark-gfm`, `remark-frontmatter`, `remark-math`, `remark-rehype` | 11 / 4 / 5 / 6 / 11 | MIT | 2023–2025 | 5–49 M | Markdown → mdast → hast. The usual Astro/MDX set |
 | `remark-mdx` | 3.1.x | MIT | 2025-08-29 | 12 M | v0.2: MDX parse only (never evaluated) |
 | `rehype-raw`, `rehype-sanitize`, `rehype-slug`, `rehype-stringify` | 7 / 6 / 6 / 10 | MIT | 2023–2024 | 4–17 M | Raw HTML → allowlist sanitize (SR-02) → slugs → HTML string |
-| `shiki`, `@shikijs/rehype` | 4.4.x | MIT | 2026-08-10 | 21 M / 680 k | Code highlighting with the GitHub themes; grammars loaded per document |
-| `katex`, `rehype-katex` | 0.18.x / 7.0.x | MIT | 2026-09-23 / 2024-08-19 | 24 M / 6.8 M | Math (`trust: false`, limits; SR-03). **Exact version pin** |
+| `shiki`, `@shikijs/rehype` | 4.5.x | MIT | 2026-10-01 | 21 M / 680 k | Code highlighting with the GitHub themes; grammars loaded per document |
+| `katex`, `rehype-katex` | 0.19.x / 7.0.x | MIT | 2026-10-01 / 2024-08-19 | 24 M / 6.8 M | Math (`trust: false`, limits; SR-03). **Exact version pin**; `rehype-katex` asks for `^0.16`, so an `overrides` entry in `package.json` makes it render with the pinned `katex` (without it, math ran on a nested older copy and only the stylesheet followed the pin) |
 | `mermaid` | 11.17.2 | MIT | 2026-08-25 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. 11.17.x is the mature line; 12.0.0 had no patch release when the owner chose the version (2026-09-29), so 12.x is on the watch list |
 | `dompurify` | 3.4.16 | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
 
@@ -96,7 +96,7 @@ installed as npm packages. They are plain assets with no code and change rarely.
 | `@types/react`, `@types/react-dom` | 19.3.x | MIT | 2026-09 | React types (React ships none) for the renderer typecheck (added 2026-09-26) |
 | `vite` | 8.3.x | MIT | 2026-09-24 | Builds all four bundles: main and preload (library/SSR builds), renderer, worker (ADR-008). A small own dev script (`scripts/dev.mjs`) restarts Electron when main or preload rebuild |
 | `@vitejs/plugin-react` | 6.1.x | MIT | 2026-09 | JSX + fast refresh for Vite 8 (1 dependency; its Babel/compiler peers are optional and not used) |
-| `electron-builder` | 26.15.x | MIT | 2026-09-07 | Packaging: `.deb` (official) + AppImage (secondary), and unsigned macOS `.dmg`/`.zip` and Windows NSIS previews. **Verified**: its configuration schema has `electronFuses` (fuses at package time, SR-08), and its v26 `.deb` post-install installs an AppArmor `userns` profile on Ubuntu 24.04+ |
+| `electron-builder` | 26.17.x | MIT | 2026-09-26 | Packaging: `.deb` (official) + AppImage (secondary), and unsigned macOS `.dmg`/`.zip` and Windows NSIS previews. **Verified**: its configuration schema has `electronFuses` (fuses at package time, SR-08), and its v26 `.deb` post-install installs an AppArmor `userns` profile on Ubuntu 24.04+ |
 | `@electron/fuses` | 2.1.x | MIT | 2026-06-29 | Reading fuses back from the packaged binary in CI (SR-08) |
 | `happy-dom` | 20.14.x | MIT | 2026-09 | DOM environment for the `renderer` vitest project. Lighter and faster than jsdom; renderer tests are unit-level, so its missing layout APIs don't matter (added 2026-09-26) |
 | `vitest` | 5.0.x | MIT | 2026-09-25 | Unit and renderer tests (Node ≥ 22.12; the project pins Node 24) |
