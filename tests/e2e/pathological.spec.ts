@@ -58,15 +58,17 @@ test('a document the worker cannot finish in time shows its source, and the wind
 });
 
 test('a large document shown as source after its budget renders once the reader asks', async () => {
+  test.setTimeout(120_000);
   const file = path.join(dir, 'big-prose.md');
-  // About 1 MB of ordinary prose: a few seconds of work, over the automatic budget.
-  writeFileSync(file, 'Lorem ipsum dolor sit amet, *consectetur* adipiscing `elit`.\n\n'.repeat(16_000));
+  // About 2.5 MB of ordinary prose (under the 5 MB limit): well over the automatic budget even on a
+  // fast machine, well within Render anyway's.
+  writeFileSync(file, 'Lorem ipsum dolor sit amet, *consectetur* adipiscing `elit`.\n\n'.repeat(40_000));
   const { window, close } = await launchApp(['--', file]);
   try {
     const banner = shownPanel(window).locator('[data-banner="render-slow"]');
     await expect(banner).toBeVisible({ timeout: 10_000 });
     await banner.getByRole('button', { name: 'Render anyway' }).click();
-    await expect(shownPanel(window).getByTestId('document').locator('article p').first()).toBeVisible({ timeout: 60_000 });
+    await expect(shownPanel(window).getByTestId('document').locator('article p').first()).toBeVisible({ timeout: 90_000 });
     await expect(banner).toHaveCount(0);
   } finally {
     await close();

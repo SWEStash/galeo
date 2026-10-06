@@ -50,6 +50,8 @@ for (const scheme of SCHEMES) {
         await expect(shownPanel(window).getByTestId('document').locator('.cm-editor')).toBeVisible();
         expect(await violations(window, '[data-testid="tab-panel"][data-active="true"]'), 'log').toEqual([]);
         await window.getByRole('tab', { name: /basic\.md/ }).click();
+        // The woken tab takes its keys once its document is in.
+        await expect(shownPanel(window).getByTestId('document').locator('article h1')).toBeVisible();
         await window.keyboard.press('ControlOrMeta+U');
         await expect(shownPanel(window).getByTestId('document').locator('.cm-editor')).toBeVisible();
         expect(await violations(window, '[data-testid="tab-panel"][data-active="true"]'), 'source').toEqual([]);
