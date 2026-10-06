@@ -372,7 +372,7 @@ function start(initialMode: StartupMode): void {
     window.webContents.reload();
   };
   /**
-   * Unpackaged test runs crash a window's renderer as it starts rendering the file
+   * Unpackaged test runs kill a window's renderer as it starts rendering the file
    * `globalThis.__galeoCrashOnRendering` names. The page goes on until the crash lands, so its later
    * reports are ignored, as a crash in the middle of rendering would never have sent them.
    */
@@ -384,7 +384,10 @@ function start(initialMode: StartupMode): void {
       const wanted = (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering;
       if (!wanted || documents.get(id, windowId)?.path !== wanted) return;
       crashingForTests.add(windowId);
-      webContents.fromId(windowId)?.forcefullyCrashRenderer();
+      // Killed by the OS, after this handler: forcefullyCrashRenderer can leave a renderer hung
+      // instead of gone (seen on a Linux CI runner), and then main never hears it went.
+      const contents = webContents.fromId(windowId);
+      if (contents) setImmediate(() => process.kill(contents.getOSProcessId(), 'SIGKILL'));
     },
     rendered: (windowId, id) => {
       if (!crashingForTests.has(windowId)) crashes.rendered(windowId, id);

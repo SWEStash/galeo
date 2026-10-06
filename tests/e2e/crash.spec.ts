@@ -41,7 +41,11 @@ async function crashOnGfm() {
     // What to look at when a runner never crashes: did the second launch hand over, and what did
     // the window show and start to render?
     const seen = await app.evaluate(() => (globalThis as { __galeoRenderingSeen?: string[] }).__galeoRenderingSeen ?? []);
-    const tabs = await inPage<string>(app, `[...document.querySelectorAll('[role=tab]')].map((tab) => tab.textContent + ' ' + tab.getAttribute('aria-selected')).join(' | ')`).catch(String);
+    // The page may be hung rather than gone: give it 3 s to answer.
+    const tabs = await Promise.race([
+      inPage<string>(app, `[...document.querySelectorAll('[role=tab]')].map((tab) => tab.textContent + ' ' + tab.getAttribute('aria-selected')).join(' | ')`).catch(String),
+      new Promise<string>((resolve) => setTimeout(() => resolve('(page not answering)'), 3000)),
+    ]);
     throw new Error(`no crash: second launch ${second.status}/${second.signal} ${String(second.stderr).slice(-500)}; tabs ${tabs}; rendering seen ${JSON.stringify(seen)}`);
   }
   // `crashed` on Linux and Windows, `killed` on macOS: main recovers from anything but a clean exit.
