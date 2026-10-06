@@ -67,8 +67,8 @@ these.
 
 | Check | Result |
 |---|---|
-| Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log` | |
-| `galeo file.md` from a terminal (the `.deb`'s `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | |
+| Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log` | Pass (2026-10-06) |
+| `galeo file.md` from a terminal (the `.deb`'s `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06) |
 | Drop files from Files onto the document area: they open after the shown tab, the first one shown | Pass (2026-10-05) |
 | Drop onto a tab (the caret between tabs): they open at the caret | Pass (2026-10-05) |
 | Drop onto the empty tab-bar space (the window-drag region) | Pass (2026-10-05) |
