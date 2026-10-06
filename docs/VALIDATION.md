@@ -9,10 +9,11 @@ Wayland) before each release.
 ### Automated
 
 - **axe** (`@axe-core/playwright`) on every surface, in the e2e suite: tab bar, document (prose,
-  GFM, code, math, diagrams) and source and log views in light and dark, document states and
-  banners in both schemes, find bar, quick open, palette, About, outline, Settings, status bar,
-  profile menu and dialogs, empty window, settings notices, the sandbox-unavailable window, and
-  the crash-loop message (axe-core run in the page through main, as Playwright loses a crashed page).
+  GFM, code, math, diagrams, a wide scrolling diagram) and source and log views in light and dark,
+  document states and banners in both schemes, find bar, quick open, palette, About, outline, the
+  diagram viewer (both schemes), Settings, status bar, profile menu and dialogs, empty window,
+  settings notices, the sandbox-unavailable window, and the crash-loop message (axe-core run in the
+  page through main, as Playwright loses a crashed page).
   The drop overlay is decorative (`aria-hidden`); quick open is the keyboard way to open files.
 - **Contrast** (`tests/unit/design/colour-contrast.test.ts`): text tokens at 4.5:1 and focus ring
   and text-field borders at 3:1 on the page and on panels, in both schemes; the 8 accent presets

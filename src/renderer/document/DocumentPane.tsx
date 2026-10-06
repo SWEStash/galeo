@@ -18,6 +18,7 @@ import type { ColorScheme } from './host';
 import type { FindResult, SourceLanguage } from './source-view';
 import { useDelayed } from './useDelayed';
 import { countWords } from '../../shared/words';
+import { DiagramViewer } from './DiagramViewer';
 import { useRenderedHtml } from './useRenderedHtml';
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
@@ -119,6 +120,19 @@ export function DocumentPane({
   }, []);
 
   const documentHandle = useRef<DocumentHandle>(null);
+  const [viewer, setViewer] = useState<{ svg: string; name: string; returnFocus: () => void } | null>(null);
+  const closeViewer = useCallback(() => setViewer(null), []);
+  // Back to the diagram's Expand button once the viewer is gone: the modal's own restore can't
+  // reach into the document's shadow root.
+  const returnFocus = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    if (viewer) returnFocus.current = viewer.returnFocus;
+    else if (returnFocus.current) {
+      const back = returnFocus.current;
+      returnFocus.current = null;
+      requestAnimationFrame(back);
+    }
+  }, [viewer]);
   const [find, setFind] = useState({ open: false, token: 0, query: '', caseSensitive: false });
   const [findResult, setFindResult] = useState<FindResult>(NO_MATCHES);
   const runFind = useCallback((query: string, caseSensitive: boolean) => {
@@ -295,11 +309,13 @@ export function DocumentPane({
           onRendering={onRendering}
           zoom={zoom}
           onHeading={showsOutline ? setHeading : undefined}
+          onExpandDiagram={setViewer}
         />
         {showsOutline && (
           <OutlinePanel entries={render.outline} current={heading} onChoose={goToHeading} onClose={closeOutline} autoFocus={focusOutline} />
         )}
       </div>
+      {viewer && <DiagramViewer svg={viewer.svg} name={viewer.name} onClose={closeViewer} />}
     </>
   );
 }

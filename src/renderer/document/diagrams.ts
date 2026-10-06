@@ -12,6 +12,11 @@ export interface DiagramOptions {
   observe?: (element: Element, onVisible: () => void) => () => void;
   /** Drawn SVGs by scheme and source. */
   cache?: Map<string, string>;
+  /**
+   * The reader asked to see a diagram larger. `returnFocus` focuses its Expand button afterwards,
+   * the one there by then (a redraw, e.g. on a scheme change, replaces it).
+   */
+  onExpand?: (diagram: { svg: string; name: string; returnFocus: () => void }) => void;
 }
 
 export interface Diagrams {
@@ -92,8 +97,8 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
   let live = true;
   const sources = new Map<HTMLElement, string>();
   const stops = new Map<HTMLElement, () => void>();
-  // A diagram wider than the column scrolls sideways: while it does, it takes focus, so the
-  // keyboard can scroll it too (WCAG 2.1.1).
+  // A diagram wider than the column scrolls sideways: while it does, its scroller takes focus, so
+  // the keyboard can scroll it too (WCAG 2.1.1).
   const sized = new ResizeObserver((entries) => {
     for (const { target } of entries) {
       const element = target as HTMLElement;
@@ -109,6 +114,10 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     stops.delete(element);
   };
 
+  /**
+   * A drawn diagram: a figure named by the diagram's title, holding the drawing (an image of that
+   * name, in a scroller of its own) and an Expand button, which stays put while the drawing scrolls.
+   */
   const show = (element: HTMLElement, svg: string) => {
     const wrapper = document.createElement('div');
     wrapper.className = 'galeo-diagram-svg';
@@ -117,17 +126,36 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     const drawn = shadow.querySelector('svg');
     const natural = drawn?.viewBox.baseVal?.width ?? 0;
     if (drawn && natural > 0) drawn.style.minWidth = `${Math.round(natural * MIN_DIAGRAM_SCALE)}px`;
-    element.replaceChildren(wrapper);
-    sized.observe(element);
-    element.setAttribute('role', 'img');
-    element.setAttribute('aria-label', shadow.querySelector('svg > title')?.textContent?.trim() || 'Diagram');
+    const name = shadow.querySelector('svg > title')?.textContent?.trim() || 'Diagram';
+    wrapper.setAttribute('role', 'img');
+    wrapper.setAttribute('aria-label', name);
+    const scroller = document.createElement('div');
+    scroller.className = 'galeo-diagram-scroll';
+    scroller.append(wrapper);
+    const expand = document.createElement('button');
+    expand.type = 'button';
+    expand.className = 'galeo-diagram-expand';
+    expand.setAttribute('aria-label', 'Expand diagram');
+    expand.title = 'Expand diagram';
+    expand.textContent = '⤢';
+    const returnFocus = () => element.querySelector<HTMLElement>('.galeo-diagram-expand')?.focus();
+    expand.addEventListener('click', () => options.onExpand?.({ svg, name, returnFocus }));
+    unobserveScroller(element);
+    element.replaceChildren(scroller, expand);
+    sized.observe(scroller);
+    element.setAttribute('role', 'figure');
+    element.setAttribute('aria-label', name);
     element.dataset['state'] = 'rendered';
   };
 
+  const unobserveScroller = (element: HTMLElement) => {
+    const scroller = element.querySelector('.galeo-diagram-scroll');
+    if (scroller) sized.unobserve(scroller);
+  };
+
   const fail = (element: HTMLElement, message: string, source: string) => {
+    unobserveScroller(element);
     element.replaceChildren(errorBox(message, source));
-    sized.unobserve(element);
-    element.removeAttribute('tabindex');
     element.removeAttribute('role');
     element.removeAttribute('aria-label');
     element.dataset['state'] = 'error';

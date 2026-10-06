@@ -39,6 +39,8 @@ export interface DocumentViewProps {
   onRendering?: (() => void) | undefined;
   /** Scales the document (per tab), not the app around it. */
   zoom?: number;
+  /** A diagram's Expand button: show it in the viewer (`returnFocus` after it closes). */
+  onExpandDiagram?: ((diagram: { svg: string; name: string; returnFocus: () => void }) => void) | undefined;
   /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
   onHeading?: ((id: string | null) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
@@ -109,6 +111,7 @@ export function DocumentView({
   onRendering,
   zoom = 1,
   onHeading,
+  onExpandDiagram,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -186,6 +189,8 @@ export function DocumentView({
 
   const hasContent = useRef(false);
   const diagrams = useRef<Diagrams | null>(null);
+  const expandListener = useRef(onExpandDiagram);
+  expandListener.current = onExpandDiagram;
   const shownScheme = useRef(scheme);
   useEffect(() => () => diagrams.current?.dispose(), []);
   useLayoutEffect(() => {
@@ -202,7 +207,10 @@ export function DocumentView({
     if ('html' in rendered) {
       documentHost.setContent(rendered.html);
       // Diagrams drawn before come back at once, before the place is kept below.
-      diagrams.current = attachDiagrams(documentHost.article, { scheme: shownScheme.current });
+      diagrams.current = attachDiagrams(documentHost.article, {
+        scheme: shownScheme.current,
+        onExpand: (diagram) => expandListener.current?.(diagram),
+      });
     } else documentHost.setReaderText(rendered.text);
     if (before) {
       element.scrollTop = keptTopFor(before, top, placedBlocks(documentHost, element), { height: element.scrollHeight, viewport: element.clientHeight });

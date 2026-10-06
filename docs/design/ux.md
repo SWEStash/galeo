@@ -53,6 +53,7 @@ ADR-002…007).
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices) | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document, right side | Ctrl+Shift+O (toggle) |
+| **Diagram viewer** | One Mermaid diagram filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 % | A diagram's ⤢ Expand button (on hover or keyboard focus) / Esc, focus back on the button (owner, 2026-10-06) |
 | **Profile menu** | Switch / new / rename / delete profile, open profile settings | Click profile chip or Ctrl+Shift+M |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
 
@@ -334,8 +335,10 @@ this map only.
 ## 7. Accessibility (target: WCAG 2.2 AA)
 
 - **Semantic structure**: rendered documents keep real HTML semantics (headings, lists, tables
-  with header cells, `<figure>`/`alt` for images; Mermaid diagrams get an accessible name from the
-  diagram title or "Diagram", with the source available via the source view).
+  with header cells, `<figure>`/`alt` for images; a Mermaid diagram is a figure named by its title
+  or "Diagram", holding the drawing as an image of that name and an Expand button, with the
+  source available via the source view; a diagram wider than the column scrolls sideways and
+  takes keyboard focus while it does).
 - **Tabs**: ARIA `tablist`/`tab`/`tabpanel`; ←/→ move between tabs when the tab bar has focus,
   Enter/Space activates, Delete closes; indicators exposed as text in the accessible name
   ("plan.md, unsaved changes").

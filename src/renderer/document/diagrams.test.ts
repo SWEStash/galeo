@@ -41,7 +41,7 @@ function setup(sources: string[], render: DiagramOptions['render'] = async (sour
 }
 
 describe('attachDiagrams', () => {
-  it('draws a diagram only once it comes into view, as an image named by its title', async () => {
+  it('draws a diagram only once it comes into view, as a figure and image named by its title', async () => {
     const { observer, engine, placeholders, svgOf } = setup(['graph TD; A---B']);
     expect(engine).not.toHaveBeenCalled();
     expect(placeholders[0]!.dataset['state']).toBe('pending');
@@ -51,8 +51,10 @@ describe('attachDiagrams', () => {
 
     expect(engine).toHaveBeenCalledWith('graph TD; A---B', 'light');
     expect(svgOf(placeholders[0]!)).toContain('Checkout flow');
-    expect(placeholders[0]!.getAttribute('role')).toBe('img');
+    expect(placeholders[0]!.getAttribute('role')).toBe('figure');
     expect(placeholders[0]!.getAttribute('aria-label')).toBe('Checkout flow');
+    const image = placeholders[0]!.querySelector('[role="img"]')!;
+    expect(image.getAttribute('aria-label')).toBe('Checkout flow');
     expect(placeholders[0]!.dataset['state']).toBe('rendered');
     expect(observer.watched.size).toBe(0);
   });
@@ -61,6 +63,21 @@ describe('attachDiagrams', () => {
     const { observer, placeholders } = setup(['pie']);
     await observer.show();
     expect(placeholders[0]!.getAttribute('aria-label')).toBe('Diagram');
+  });
+
+  it('expands a drawn diagram with its own SVG and name, from its Expand button', async () => {
+    const onExpand = vi.fn();
+    const root = article('graph TD');
+    const observer = fakeObserver();
+    attachDiagrams(root, { scheme: 'light', render: async () => '<svg><title>Flow</title></svg>', sanitize: (svg) => svg, observe: observer.observe, cache: new Map(), onExpand });
+    await observer.show();
+    const button = root.querySelector<HTMLButtonElement>('.galeo-diagram button')!;
+    expect(button.getAttribute('aria-label')).toBe('Expand diagram');
+    button.click();
+    expect(onExpand).toHaveBeenCalledWith({ svg: '<svg><title>Flow</title></svg>', name: 'Flow', returnFocus: expect.any(Function) });
+    button.blur();
+    onExpand.mock.calls[0]![0].returnFocus();
+    expect(root.ownerDocument.activeElement === button || (root.getRootNode() as Document | ShadowRoot).activeElement === button).toBe(true);
   });
 
   it('inserts only what the sanitizer returns', async () => {

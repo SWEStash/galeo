@@ -51,7 +51,9 @@ the file into the window in front of you) when you want it here.
   prose only: code blocks, math, diagrams and front matter aren't words.
 - **Diagrams and math**: math is typeset with the document (KaTeX); Mermaid diagrams draw as you
   scroll towards them. A diagram that can't be drawn (a syntax error, or over 200 edges) shows its
-  error and its source.
+  error and its source. A diagram too wide for the column scrolls sideways; its ⤢ button (shown
+  on hover, or reached with Tab) opens it in a viewer: + and − or the wheel zoom, drag or the
+  arrow keys pan, 0 fits it, 1 shows it at 100 %, Esc closes.
 - **Large or slow documents**: Markdown over 5 MB, or that takes more than 2 s to render, opens as
   source with a banner; **Render anyway** renders it (and waits up to a minute).
 - **A document that crashed the window**: the window comes back with its tabs, and that tab shows

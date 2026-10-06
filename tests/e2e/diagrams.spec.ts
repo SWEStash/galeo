@@ -34,8 +34,11 @@ test('diagrams are drawn as they come into view, named for screen readers, with 
     await expect(shownDocument(window).locator('h1')).toBeVisible();
     expect(await drawAll(window)).toBe(7);
     const [flow, sequence, , , , , broken] = await diagrams(window).all();
-    await expect(flow!).toHaveAttribute('role', 'img');
+    // A named figure: the drawing (an image of the same name) and its Expand button.
+    await expect(flow!).toHaveAttribute('role', 'figure');
     await expect(flow!).toHaveAttribute('aria-label', 'Checkout flow');
+    await expect(flow!.locator('.galeo-diagram-svg')).toHaveAttribute('role', 'img');
+    await expect(flow!.locator('.galeo-diagram-svg')).toHaveAttribute('aria-label', 'Checkout flow');
     await expect(sequence!).toHaveAttribute('aria-label', 'Diagram');
     await expect(flow!.locator('svg')).toBeVisible();
     await expect(broken!).toHaveAttribute('data-state', 'error');
@@ -96,8 +99,9 @@ function labelScales(window: Page) {
         const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
         const label = parseFloat(getComputedStyle(svg.querySelector('text')!).fontSize) * scale;
         const body = parseFloat(getComputedStyle(element.closest('article')!.querySelector('p')!).fontSize);
-        const left = element.querySelector('.galeo-diagram-svg')!.getBoundingClientRect().left - element.getBoundingClientRect().left;
-        return { ratio: label / body, scrolls: element.scrollWidth > element.clientWidth + 1, left };
+        const scroller = element.querySelector('.galeo-diagram-scroll')!;
+        const left = element.querySelector('.galeo-diagram-svg')!.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
+        return { ratio: label / body, scrolls: scroller.scrollWidth > scroller.clientWidth + 1, left };
       }),
     );
 }
@@ -118,14 +122,59 @@ test('diagrams draw at their natural size, never larger; a wide one keeps readab
     expect(tall!.ratio).toBeLessThanOrEqual(1);
     expect(tall!.scrolls).toBe(false);
     // The keyboard reaches and scrolls the wide one (it takes focus only while it scrolls).
-    const blocks = diagrams(window);
-    await expect(blocks.first()).toHaveAttribute('tabindex', '0');
-    await expect(blocks.last()).not.toHaveAttribute('tabindex');
-    await blocks.first().focus();
+    const scrollers = diagrams(window).locator('.galeo-diagram-scroll');
+    await expect(scrollers.first()).toHaveAttribute('tabindex', '0');
+    await expect(scrollers.last()).not.toHaveAttribute('tabindex');
+    await scrollers.first().focus();
     await window.keyboard.press('ArrowRight');
-    await expect.poll(() => blocks.first().evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await expect.poll(() => scrollers.first().evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
     const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]').analyze();
     expect(results.violations).toEqual([]);
+  } finally {
+    await close();
+  }
+});
+
+test('a diagram opens in a full-window viewer that zooms and pans, and Esc gives focus back', async () => {
+  const { app, window, close } = await launchApp(['--', path.join(fixtures, 'docs', 'mermaid.md')]);
+  const refused = refusals(window);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await drawAll(window);
+    const expand = diagrams(window).first().getByRole('button', { name: 'Expand diagram' });
+    await expand.focus();
+    await window.keyboard.press('Enter');
+    const viewer = window.getByRole('dialog', { name: 'Checkout flow' });
+    await expect(viewer).toBeVisible();
+    const stage = viewer.getByTestId('diagram-stage');
+    const scale = async () => Number(await stage.getAttribute('data-scale'));
+    await expect(stage.locator('.galeo-viewer-svg')).toBeVisible();
+    const fitted = await scale();
+    await window.keyboard.press('+');
+    await expect.poll(scale).toBeGreaterThan(fitted);
+    await window.keyboard.press('0');
+    await expect.poll(scale).toBeCloseTo(fitted, 5);
+    await window.keyboard.press('1');
+    await expect.poll(scale).toBe(1);
+    // The wheel zooms around the pointer; dragging pans.
+    const box = (await viewer.getByTestId('diagram-viewport').boundingBox())!;
+    await window.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await window.mouse.wheel(0, -400);
+    await expect.poll(scale).toBeGreaterThan(1);
+    const before = Number(await stage.getAttribute('data-x'));
+    await window.mouse.down();
+    await window.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2, { steps: 4 });
+    await window.mouse.up();
+    await expect.poll(async () => Number(await stage.getAttribute('data-x'))).toBeCloseTo(before + 120, 0);
+    for (const scheme of ['light', 'dark'] as const) {
+      await app.evaluate(({ nativeTheme }, value) => (nativeTheme.themeSource = value), scheme);
+      const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[role="dialog"]').analyze();
+      expect(results.violations, scheme).toEqual([]);
+    }
+    await window.keyboard.press('Escape');
+    await expect(viewer).toHaveCount(0);
+    await expect(expand).toBeFocused();
+    expect(refused).toEqual([]);
   } finally {
     await close();
   }

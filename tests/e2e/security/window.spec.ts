@@ -211,7 +211,7 @@ test.describe('Trusted Types (ADR-010)', () => {
     }
   });
 
-  test('documents, diagrams, math, logs, source and the overlays render with no violation', async () => {
+  test('documents, diagrams and their viewer, math, logs, source and the overlays render with no violation', async () => {
     const { window, close } = await launchApp(['--', fixture('mermaid.md'), fixture('math.md'), fixture('sample.log'), fixture('gfm.md')]);
     const violations: string[] = [];
     window.on('console', (message) => {
@@ -225,6 +225,11 @@ test.describe('Trusted Types (ADR-010)', () => {
         await diagram.scrollIntoViewIfNeeded();
         await expect(diagram).not.toHaveAttribute('data-state', 'pending');
       }
+      // The diagram viewer inserts the same SVG into a shadow root of its own.
+      await diagrams.first().scrollIntoViewIfNeeded();
+      await diagrams.first().getByRole('button', { name: 'Expand diagram' }).click();
+      await expect(window.getByTestId('diagram-stage').locator('.galeo-viewer-svg')).toBeVisible();
+      await window.keyboard.press('Escape');
       const show = (name: RegExp) => window.getByRole('tab', { name }).click();
       await show(/math\.md/);
       await expect(shown.getByTestId('document').locator('.katex').first()).toBeVisible();

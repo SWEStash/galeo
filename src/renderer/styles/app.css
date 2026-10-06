@@ -1019,6 +1019,64 @@ button:focus-visible {
   width: min(640px, calc(100vw - 32px));
 }
 
+/* The diagram viewer fills the window, less a margin; the diagram pans and zooms inside. */
+.modal.diagram-viewer {
+  width: calc(100vw - 48px);
+  height: calc(100vh - 48px);
+}
+.diagram-viewer-keys {
+  height: 100%;
+}
+.diagram-viewer-dialog {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 0;
+  gap: 0;
+}
+.diagram-viewer-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.diagram-viewer-bar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--galeo-color-border);
+}
+.diagram-viewer-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.diagram-viewer-zoom {
+  min-width: 4em;
+  color: var(--galeo-color-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.diagram-viewer-viewport {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.diagram-viewer-viewport:active {
+  cursor: grabbing;
+}
+.diagram-viewer-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
 .dialog h3 {
   margin: 4px 0 0;
   font-size: 14px;
