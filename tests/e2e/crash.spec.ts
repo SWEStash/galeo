@@ -22,7 +22,9 @@ async function crashOnGfm() {
   await expect(window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"] article h1')).toBeVisible();
   await app.evaluate((_, file) => ((globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering = file), fixture('gfm.md'));
   const crashed = window.waitForEvent('crash');
-  await window.getByRole('tab', { name: /gfm\.md/ }).click();
+  // The click itself may never complete: the renderer dies under it (it hangs on some runners and
+  // throws on others). The crash is what to wait for.
+  void window.getByRole('tab', { name: /gfm\.md/ }).click().catch(() => {});
   await crashed;
   await app.evaluate(() => delete (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering);
   // The same window loads its page again: a new renderer process, slow on a busy machine.
@@ -33,6 +35,7 @@ async function crashOnGfm() {
 }
 
 test('a window whose renderer crashes comes back with its tabs, the one it was rendering marked crashed', async () => {
+  test.setTimeout(60_000);
   const { app, close } = await crashOnGfm();
   try {
     expect(await inPage(app, `${PANEL}.querySelector('.document-state-title').textContent`)).toBe(
@@ -52,6 +55,7 @@ test('a window whose renderer crashes comes back with its tabs, the one it was r
 });
 
 test('a crashed tab can be opened as source instead', async () => {
+  test.setTimeout(60_000);
   const { app, close } = await crashOnGfm();
   try {
     await inPage(app, `[...${PANEL}.querySelectorAll('button')].find((button) => button.textContent === 'Open as source').click()`);
