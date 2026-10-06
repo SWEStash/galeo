@@ -8,7 +8,7 @@ export interface DiagramOptions {
   render?: (source: string, scheme: ColorScheme) => Promise<string>;
   /** Our own pass over the drawn SVG before it's inserted (SR-03). */
   sanitize?: (svg: string) => string | Promise<string>;
-  /** Calls `onVisible` once `element` is about to scroll into view; returns a stop function. */
+  /** Calls `onVisible` once `element` should be drawn (it nears the view); returns a stop function. */
   observe?: (element: Element, onVisible: () => void) => () => void;
   /** Drawn SVGs by scheme and source. */
   cache?: Map<string, string>;
@@ -25,13 +25,34 @@ export interface Diagrams {
 const CACHE = new Map<string, string>();
 const CACHE_ENTRIES = 64;
 
-// Diagrams start drawing a little before they scroll into view.
+/**
+ * A diagram within 200 px of the view draws at once; one within two screens of it draws when the
+ * page is idle, so it is usually drawn before it is reached and its drawing (Mermaid lays out on
+ * this thread) doesn't land in the middle of a scroll. The margins are the document's scroll
+ * container's: the shadow host the article sits in.
+ */
 function observeVisible(element: Element, onVisible: () => void): () => void {
-  const observer = new IntersectionObserver((entries) => {
-    if (entries.some((entry) => entry.isIntersecting)) onVisible();
-  }, { rootMargin: '200px 0px' });
-  observer.observe(element);
-  return () => observer.disconnect();
+  const root = (element.getRootNode() as ShadowRoot).host ?? null;
+  let idle: number | undefined;
+  const stop = () => {
+    near.disconnect();
+    ahead.disconnect();
+    if (idle !== undefined) cancelIdleCallback(idle);
+  };
+  const draw = () => {
+    stop();
+    onVisible();
+  };
+  const near = new IntersectionObserver((entries) => entries.some((entry) => entry.isIntersecting) && draw(), { root, rootMargin: '200px 0px' });
+  const ahead = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) idle ??= requestIdleCallback(draw);
+    },
+    { root, rootMargin: '200% 0px' },
+  );
+  near.observe(element);
+  ahead.observe(element);
+  return stop;
 }
 
 function remember(cache: Map<string, string>, key: string, svg: string): void {
