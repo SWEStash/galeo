@@ -361,7 +361,9 @@ Each is decided when the feature that needs it is built.
 - [ ] Which dropped file becomes active when dropping many (current spec: the first) — decide with drag and drop.
 - [x] Tab overflow with many tabs: tabs shrink to a minimum width, then the strip scrolls, keeping the
       shown tab in view; a grip at the bar's end always drags the window (decided with the tab bar,
-      2026-09-28).
+      2026-09-28). While the tabs overflow, `‹` `›` buttons at the strip's ends scroll it, and the mouse
+      wheel over the strip scrolls it sideways, never switching tabs (owner, 2026-10-06). The buttons are
+      for the mouse; the keyboard has Ctrl+Tab and Ctrl+1–9.
 - [x] Profile accent palette: 8 fixed presets, each 3:1 on the tab bar in both schemes; no free picker
       (decided with profiles, 2026-09-29).
 - [x] `.txt` default view: reader, with Ctrl+U for the monospace source (decided with the text/log views, 2026-09-27).

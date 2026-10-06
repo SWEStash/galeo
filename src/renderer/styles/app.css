@@ -321,6 +321,25 @@ body,
   -webkit-app-region: drag;
 }
 
+.tab-scroll {
+  flex: none;
+  align-self: stretch;
+  width: 22px;
+  border: none;
+  background: transparent;
+  color: var(--galeo-color-fg);
+  font-size: 18px;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+}
+.tab-scroll:hover:not(:disabled) {
+  background: var(--galeo-color-code-bg);
+}
+.tab-scroll:disabled {
+  color: var(--galeo-color-muted);
+  opacity: 0.5;
+}
+
 .tab-new {
   flex: none;
   align-self: center;

@@ -3,6 +3,7 @@ import { isTextDropItem, Tab, TabList, useDrag, useDrop } from 'react-aria-compo
 import type { DocumentRecord } from '../../shared/documents';
 import { tabLabels } from '../../shared/tab-labels';
 import type { TabStatus, TabStore, TabsView } from './store';
+import { insertion, overflowEdges, wheelScroll } from './strip';
 
 /** A tab being dragged within the tab bar; nothing else accepts it. */
 const TAB_TYPE = 'application/x-galeo-tab';
@@ -30,6 +31,40 @@ export function TabBar({
   const listRef = useRef<HTMLDivElement>(null);
   const labels = tabLabels(view.tabs.map((tab) => tab.path));
   const [caret, setCaret] = useState<{ index: number; left: number } | null>(null);
+  const [edges, setEdges] = useState({ overflows: false, canLeft: false, canRight: false });
+
+  // ‹ › show while the tabs overflow; the wheel scrolls the strip sideways and never switches tabs.
+  useEffect(() => {
+    const strip = listRef.current!;
+    const measure = () =>
+      setEdges((now) => {
+        const next = overflowEdges(strip);
+        return next.overflows === now.overflows && next.canLeft === now.canLeft && next.canRight === now.canRight ? now : next;
+      });
+    const onWheel = (event: WheelEvent) => {
+      const delta = wheelScroll(event, strip.clientWidth);
+      if (delta === 0 || !overflowEdges(strip).overflows) return;
+      event.preventDefault();
+      strip.scrollLeft += delta;
+    };
+    const resized = new ResizeObserver(measure);
+    resized.observe(strip);
+    for (const child of strip.children) resized.observe(child);
+    strip.addEventListener('scroll', measure, { passive: true });
+    strip.addEventListener('wheel', onWheel, { passive: false });
+    measure();
+    return () => {
+      resized.disconnect();
+      strip.removeEventListener('scroll', measure);
+      strip.removeEventListener('wheel', onWheel);
+    };
+  }, [view.tabs]);
+
+  const scrollBy = (direction: -1 | 1) => {
+    const strip = listRef.current!;
+    const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    strip.scrollBy({ left: direction * strip.clientWidth * 0.8, behavior: smooth ? 'smooth' : 'auto' });
+  };
 
   // When tabs overflow, the strip scrolls so the shown tab stays in view.
   useEffect(() => {
@@ -40,12 +75,8 @@ export function TabBar({
 
   const insertionAt = (x: number) => {
     const list = listRef.current!;
-    const box = list.getBoundingClientRect();
     const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')].map((tab) => tab.getBoundingClientRect());
-    const index = tabs.findIndex((tab) => box.left + x < tab.left + tab.width / 2);
-    const at = index < 0 ? tabs.length : index;
-    const edge = at < tabs.length ? tabs[at]!.left : (tabs.at(-1)?.right ?? box.left);
-    return { index: at, left: edge - box.left };
+    return insertion(x, { left: list.getBoundingClientRect().left, scrollLeft: list.scrollLeft }, tabs);
   };
 
   const { dropProps } = useDrop({
@@ -82,6 +113,7 @@ export function TabBar({
   return (
     <div className="tab-bar" data-testid="tab-bar">
       {start}
+      {edges.overflows && <ScrollButton direction={-1} disabled={!edges.canLeft} onScroll={scrollBy} />}
       <div className="tab-strip" ref={listRef} {...dropProps} onKeyDown={onKeyDown}>
         <TabList aria-label="Open documents" className="tab-list" items={view.tabs.map((tab, index) => ({ ...tab, label: tab.kind === 'settings' ? 'Settings' : labels[index]! }))}>
           {(tab) => (
@@ -98,6 +130,7 @@ export function TabBar({
         </TabList>
         {caret && <div className="tab-caret" data-testid="tab-caret" style={{ left: caret.left }} />}
       </div>
+      {edges.overflows && <ScrollButton direction={1} disabled={!edges.canRight} onScroll={scrollBy} />}
       {onOpenFile && (
         <button type="button" className="tab-new" data-testid="tab-new" aria-label="Open file… (Ctrl+P)" title="Open file… (Ctrl+P)" onClick={onOpenFile}>
           +
@@ -106,6 +139,19 @@ export function TabBar({
       {/* Tabs never cover this: the window can always be dragged, however many are open. */}
       <div className="window-grip" data-testid="window-grip" />
     </div>
+  );
+}
+
+/**
+ * ‹ or › at an end of an overflowing strip. A mouse affordance, out of the Tab order: the keyboard
+ * moves along the tabs with Ctrl+Tab and Ctrl+1–9.
+ */
+function ScrollButton({ direction, disabled, onScroll }: { direction: -1 | 1; disabled: boolean; onScroll: (direction: -1 | 1) => void }) {
+  const name = direction < 0 ? 'Scroll tabs left' : 'Scroll tabs right';
+  return (
+    <button type="button" className="tab-scroll" tabIndex={-1} aria-label={name} title={name} disabled={disabled} onClick={() => onScroll(direction)}>
+      <span aria-hidden="true">{direction < 0 ? '‹' : '›'}</span>
+    </button>
   );
 }
 

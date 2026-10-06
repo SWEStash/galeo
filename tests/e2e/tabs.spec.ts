@@ -176,3 +176,45 @@ test('when tabs overflow, they shrink, then the strip scrolls with the shown tab
     await close();
   }
 });
+
+test('overflowing tabs scroll without a keyboard: ‹ › buttons and the wheel move the strip, never the shown tab', async () => {
+  const many = Array.from({ length: 30 }, (_, n) => path.join(docs, `overflow-${n}.md`));
+  const { window, close } = await launchApp(['--', ...many]);
+  const strip = window.locator('.tab-strip');
+  const scrollLeft = () => strip.evaluate((element) => element.scrollLeft);
+  try {
+    await expect(window.getByRole('tab')).toHaveCount(30);
+    const left = window.getByRole('button', { name: 'Scroll tabs left' });
+    const right = window.getByRole('button', { name: 'Scroll tabs right' });
+    // The first tab is shown, so the strip is at its start.
+    await expect(left).toBeDisabled();
+    await expect(right).toBeEnabled();
+    const shownTab = await selected(window).textContent();
+    await right.click();
+    await expect.poll(scrollLeft).toBeGreaterThan(100);
+    await expect(left).toBeEnabled();
+    await expect(selected(window)).toHaveText(shownTab!);
+    // The mouse wheel over the strip scrolls it back, and still doesn't switch tabs.
+    const before = await scrollLeft();
+    await strip.hover();
+    await window.mouse.wheel(0, -2000);
+    await expect.poll(scrollLeft).toBeLessThan(before);
+    await expect(selected(window)).toHaveText(shownTab!);
+    // Mouse affordances only: Ctrl+Tab and Ctrl+1–9 are the keyboard's way along the tabs.
+    await expect(left).toHaveAttribute('tabindex', '-1');
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-bar"]').analyze();
+    expect(results.violations).toEqual([]);
+  } finally {
+    await close();
+  }
+});
+
+test('tabs that fit show no scroll buttons', async () => {
+  const { window, close } = await launchApp(['--', path.join(docs, 'basic.md'), path.join(docs, 'gfm.md')]);
+  try {
+    await expect(window.getByRole('tab')).toHaveCount(2);
+    await expect(window.getByRole('button', { name: /Scroll tabs/ })).toHaveCount(0);
+  } finally {
+    await close();
+  }
+});
