@@ -225,13 +225,19 @@ live in the [UX specification](design/ux.md).
 
   | Metric | Target |
   |---|---|
-  | Cold start → first document painted | < 500 ms |
+  | Cold start → first document painted | < 500 ms (v0.1: < 1300 ms, window < 850 ms; see below) |
   | Open new tab (≈50 KB Markdown, no diagrams) → first paint | < 100 ms |
   | Switch to a warm tab | next frame, no visible re-render |
   | Wake a hibernated tab → painted at saved scroll position | < 150 ms |
   | Live reload after file change → updated view | < 500 ms |
-  | Scrolling a long document with Mermaid diagrams | no dropped-frame jank at 60 Hz |
+  | Scrolling a long document with Mermaid diagrams | no dropped-frame jank at 60 Hz (v0.1: reported, see below) |
   | Memory, 3 profiles / ~20 tabs / ≤3 warm per window | baseline recorded in v0.1, must not regress |
+
+  v0.1 budgets (owner, 2026-10-05): on the reference laptop (Intel i7-8565U, Ubuntu 26.04), a typical
+  cold start (galeo not running, its caches from earlier launches kept) paints the window in
+  about 750 ms and the 50 KB document in about 1170 ms, so v0.1 holds 850 ms and 1300 ms; the
+  500 ms target returns in v0.1.x. Diagrams draw ahead in idle time; frames dropped while reading
+  past them are recorded, not gated. Numbers: `docs/VALIDATION.md`.
 
 - **Large and odd files**: Markdown above a size threshold (initially 5 MB), or too slow to render
   within its budget (2 s), opens in source view with a banner and "Render anyway"; logs of 100 MB+

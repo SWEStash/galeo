@@ -31,3 +31,21 @@ Record the date, the build and the result of each row.
 | Orca reads a document | Headings (H to jump), lists, task checkboxes (named by their item), tables, links, code | |
 | Orca announces changes | Quick open's result count, "↻ Reloaded", find's "n of m", the status messages | |
 | Zoom 200 % | Ctrl+= to 200 % on a long document: no clipped text in the chrome | |
+
+## Performance
+
+`GALEO_PERF=1 npm run build`, then `GALEO_PERF_ENFORCE=1 npm run headless -- npm run test:perf`, on its
+own (a long test run beforehand heats the laptop and slows it). Medians of 10 runs; a cold start is
+a typical launch: galeo not running, its caches from earlier launches kept.
+
+Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performance profile;
+Electron 44.4.5. Recorded 2026-10-05.
+
+| Metric | Budget | Measured |
+|---|---|---|
+| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 770 ms (p95 794) |
+| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1181–1185 ms |
+| Switch to a warm tab | 17 ms (one frame) | 16.3 ms (p95 17.0) |
+| Wake a hibernated tab | 150 ms | 66 ms (p95 94) |
+| Reading past 40 diagrams (a screen, then a pause) | reported | p95 33 ms; 15–20 of 472 frames over 34 ms |
+| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1257 MB (baseline, `tests/perf/memory-baseline.json`) |

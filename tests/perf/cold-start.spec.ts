@@ -27,8 +27,10 @@ interface Report {
 /**
  * One cold start of the built app, launched directly (a Playwright launch holds back `ready`
  * until it has connected, which would be measured too). The app writes its marks and quits.
+ * Config and state are fresh each time; `cache` (Chromium's caches, the compiled code among
+ * them) is kept across a test's runs, as on a reader's machine between launches.
  */
-async function coldStartOnce(files: string[] = []): Promise<Report> {
+async function coldStartOnce(cache: string, files: string[] = []): Promise<Report> {
   const home = mkdtempSync(path.join(tmpdir(), 'galeo-perf-'));
   const out = path.join(home, 'report.json');
   try {
@@ -40,7 +42,7 @@ async function coldStartOnce(files: string[] = []): Promise<Report> {
         GALEO_PERF_OUT: out,
         XDG_CONFIG_HOME: path.join(home, 'config'),
         XDG_STATE_HOME: path.join(home, 'state'),
-        XDG_CACHE_HOME: path.join(home, 'cache'),
+        XDG_CACHE_HOME: cache,
       },
     });
     // A run that never reports would stall the suite; stop it and say so.
@@ -65,10 +67,22 @@ async function coldStartOnce(files: string[] = []): Promise<Report> {
 
 const since = (report: Report, mark: string) => report.marks[mark]! - report.marks['process-start']!;
 
+/** A typical launch: galeo not running, its caches from earlier launches still there. */
+async function typicalLaunches(files: string[] = []): Promise<Report[]> {
+  const cache = mkdtempSync(path.join(tmpdir(), 'galeo-perf-cache-'));
+  try {
+    await coldStartOnce(cache, files); // fills the caches; not recorded
+    const runs: Report[] = [];
+    for (let i = 0; i < RUNS; i++) runs.push(await coldStartOnce(cache, files));
+    return runs;
+  } finally {
+    rmSync(cache, { recursive: true, force: true });
+  }
+}
+
 test('cold start to first paint of the blank window', async () => {
-  test.setTimeout(RUNS * 20_000);
-  const runs: Report[] = [];
-  for (let i = 0; i < RUNS; i++) runs.push(await coldStartOnce());
+  test.setTimeout((RUNS + 1) * 20_000);
+  const runs = await typicalLaunches();
 
   const firstPaint = summarize(runs.map((r) => since(r, 'first-paint')));
   const result = {
@@ -97,9 +111,8 @@ test('cold start to first paint of the blank window', async () => {
 });
 
 test('cold start to first paint of the 50 KB reference document', async () => {
-  test.setTimeout(RUNS * 20_000);
-  const runs: Report[] = [];
-  for (let i = 0; i < RUNS; i++) runs.push(await coldStartOnce([REFERENCE]));
+  test.setTimeout((RUNS + 1) * 20_000);
+  const runs = await typicalLaunches([REFERENCE]);
 
   const documentPaint = summarize(runs.map((r) => since(r, 'document-paint')));
   const result = {

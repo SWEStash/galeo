@@ -1,0 +1,6 @@
+{
+  "$comment": "Memory at the reference workload (3 profiles, 20 tabs, at most 3 warm per window), summed over every process: the v0.1 baseline from the owner's machine. GALEO_PERF_ENFORCE=1 fails 10 % above it.",
+  "memoryMB": 1257,
+  "measuredAt": "2026-10-05",
+  "machine": "Intel i7-8565U, 45 GB, Ubuntu 26.04, Electron 44.4.5"
+}
