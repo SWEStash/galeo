@@ -44,9 +44,9 @@ harmless. Copy the `.deb` to `/tmp` first to avoid it.
 
 Run `npm run preflight` and push only when it ends with "all green". On a busy machine it may end
 with "all green except the performance smoke": push then only if its medians are close to the ones
-recorded before, since CI's runner is faster. CI also runs macOS and Windows
-on every push. They don't block, but a failure there is fixed in the next commit. Tests must hold on
-all three, and these differences have broken them before:
+recorded before, since CI's runner is faster. CI runs Linux only for now: the macOS and Windows job
+is off until a stable Linux package (ADR-011). The code stays portable, and when that job comes back
+these differences have broken tests before:
 
 - **Folders**: on macOS and Windows the state folder sits inside the config folder (`appDirs`).
   Paths use `\` on Windows; build them with `path.join`, never with `/`.

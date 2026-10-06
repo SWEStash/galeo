@@ -75,7 +75,9 @@ jobs:
             test-results/
           retention-days: 7
 
+  # Off until a stable Linux package (ADR-011); the job is kept to switch back on.
   previews:
+    if: false
     name: ${{ matrix.name }} (preview)
     strategy:
       fail-fast: false

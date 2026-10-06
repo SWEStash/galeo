@@ -52,7 +52,8 @@ The sibling projects use semantic-release on `main` with Conventional Commits.
     badge and a title suffix), so a wrapper or a crafted `.desktop` file that adds the flag is
     visible. Every other SR-01…SR-17 layer stays on (context isolation, CSP, sanitizer, network
     guard, Trusted Types).
-- **macOS and Windows previews** from the same config, built on CI runners for each OS:
+- *(Deferred by ADR-011: no macOS/Windows CI or previews until a stable Linux package.)*
+  **macOS and Windows previews** from the same config, built on CI runners for each OS:
   macOS `.dmg`/`.zip` (x64 + arm64), Windows NSIS installer. They are **unsigned** and labelled
   *preview*: unsupported, and the release notes say macOS Gatekeeper and Windows SmartScreen will
   warn. They get OS file associations from the bundle/installer, and "Install `galeo` command"

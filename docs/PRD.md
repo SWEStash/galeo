@@ -57,8 +57,9 @@ must not obstruct (plain files only, no sidecar metadata).
 - No accounts, sync, telemetry, cloud features, AI features, or automatic update checks.
 - The app itself makes **no network requests** (external links open in the system browser).
 - Not a replacement for `astro dev`: MDX components are shown as placeholders, not executed.
-- macOS/Windows are not *officially* supported in v0.1–v0.2. The code is portable by design and
-  tested in CI on all three OSes; unsigned macOS/Windows **preview** builds are published.
+- macOS/Windows are not *officially* supported in v0.1–v0.2. The code is portable by design;
+  CI on macOS/Windows and unsigned **preview** builds are deferred until a stable Linux package
+  (ADR-011).
 - No sidecar files next to user documents; galeo never writes into user folders except when
   the user explicitly saves an edit (v0.2).
 
