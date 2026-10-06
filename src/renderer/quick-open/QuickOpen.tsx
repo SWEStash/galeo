@@ -29,6 +29,8 @@ export function QuickOpen({ platform, onClose }: { platform: Platform; onClose: 
   const [results, setResults] = useState<QuickOpenResults | null>(null);
   const latest = useRef({ token: '', query: '' });
   const newWindow = useRef(false);
+  /** Enter came before main answered what was typed: it opens the first result of that answer. */
+  const enterPending = useRef(false);
   const input = useRef<HTMLInputElement>(null);
 
   // The field takes the focus (after the dialog's own focus handling, which runs first).
@@ -79,6 +81,13 @@ export function QuickOpen({ platform, onClose }: { platform: Platform; onClose: 
     if (event.key !== 'Enter') return;
     // Read by the choice Enter makes a moment later: Ctrl+Enter (⌘ on macOS) opens a new window.
     newWindow.current = platform === 'darwin' ? event.metaKey : event.ctrlKey;
+    // The list still answers an earlier query (the reader typed faster than main answered).
+    if (results?.query !== query) {
+      event.preventDefault();
+      event.stopPropagation();
+      enterPending.current = true;
+      return;
+    }
     // Nothing chosen (the field changed without typing, as after going into a folder, or the option
     // chosen before is gone with the results it was in): the first one.
     const first = sections[0]?.entries[0];
@@ -89,6 +98,13 @@ export function QuickOpen({ platform, onClose }: { platform: Platform; onClose: 
       choose(first.id);
     }
   };
+
+  useEffect(() => {
+    if (!enterPending.current || results?.query !== query) return;
+    enterPending.current = false;
+    const first = sections[0]?.entries[0];
+    if (first) choose(first.id);
+  });
 
   const count = results?.sections.reduce((sum, section) => sum + section.entries.length, 0) ?? 0;
   const searching = results?.sections.some((section) => section.walking) ?? false;
