@@ -79,9 +79,11 @@ export function QuickOpen({ platform, onClose }: { platform: Platform; onClose: 
     if (event.key !== 'Enter') return;
     // Read by the choice Enter makes a moment later: Ctrl+Enter (⌘ on macOS) opens a new window.
     newWindow.current = platform === 'darwin' ? event.metaKey : event.ctrlKey;
-    // Nothing chosen yet (the field changed without typing, as after going into a folder): the first one.
+    // Nothing chosen (the field changed without typing, as after going into a folder, or the option
+    // chosen before is gone with the results it was in): the first one.
     const first = sections[0]?.entries[0];
-    if (first && !input.current?.getAttribute('aria-activedescendant')) {
+    const chosen = input.current?.getAttribute('aria-activedescendant');
+    if (first && (!chosen || !document.getElementById(chosen))) {
       event.preventDefault();
       event.stopPropagation();
       choose(first.id);

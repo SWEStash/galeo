@@ -121,10 +121,11 @@ test('a typed folder path lists its files and folders; choosing a folder goes in
     try {
       await window.getByTestId('tab-new').click();
       await expect(field(window)).toBeFocused();
-      await field(window).fill(`${root}/`);
+      // Typed key by key, as a reader does (typing highlights the first option).
+      await field(window).pressSequentially(`${root}/`);
       await expect(option(window, 'docs/')).toBeVisible();
       await expect(option(window, '.local/')).toBeVisible();
-      await field(window).fill(`${root}/do`);
+      await field(window).pressSequentially('do');
       await expect(option(window, 'docs/')).toBeVisible();
       await window.keyboard.press('Enter');
       await expect(field(window)).toHaveValue(`${root}/docs/`);
