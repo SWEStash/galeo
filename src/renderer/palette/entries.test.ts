@@ -38,6 +38,7 @@ describe('paletteEntries', () => {
       ['Open with default app…', 'openWithDefaultApp'],
       ['Restore previous session', 'restorePrevious'],
       ['Clear recent files', 'clearRecent'],
+      ['About galeo', 'about'],
     ] as const) {
       expect(byLabel('linux', label), label).toMatchObject({ keys: [], action: { kind } });
     }

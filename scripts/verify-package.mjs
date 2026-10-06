@@ -3,7 +3,7 @@
 // its arguments. Playwright can't drive the packaged app: its fuses refuse --inspect.
 import { FuseV1Options, FuseVersion, flipFuses, getCurrentFuseWire } from '@electron/fuses';
 import { spawnSync } from 'node:child_process';
-import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FUSES } from '../packaging/fuses.mjs';
@@ -38,11 +38,23 @@ const failures = [];
 const { fuses, entry, resources } = packagedApp();
 
 // A release bundle must not carry the performance harness hooks (builds made with GALEO_PERF=1).
-if (readFileSync(path.join(resources, 'app.asar')).includes('GALEO_PERF_OUT')) {
+const asar = readFileSync(path.join(resources, 'app.asar'));
+if (asar.includes('GALEO_PERF_OUT')) {
   failures.push('bundle: built with GALEO_PERF=1 (perf hooks present); rebuild without it');
 } else {
   console.log('bundle: no perf hooks');
 }
+
+// The About dialog's notices (docs/dependencies.md "Licence notices to ship"): the packages' terms
+// and the fonts' OFL in the bundle, Chromium's and Electron's licences beside the app (Linux and
+// Windows; the macOS preview's app bundle keeps them elsewhere).
+const besideApp = process.platform === 'darwin' ? [] : ['LICENSES.chromium.html', 'LICENSE.electron.txt'];
+const missingNotices = [
+  ...['react-aria-components', 'Apache License', 'SIL OPEN FONT LICENSE'].filter((text) => !asar.includes(text)).map((text) => `"${text}" not in the bundle`),
+  ...besideApp.filter((file) => !existsSync(path.join(resources, '..', file))).map((file) => `${file} not packaged`),
+];
+if (missingNotices.length) failures.push(...missingNotices.map((problem) => `notices: ${problem}`));
+else console.log('notices: packages, fonts, Chromium and Electron licences');
 
 // The .deb's AppArmor profile must grant user namespaces to the Electron binary itself, not to
 // the wrapper in front of it (ADR-009).

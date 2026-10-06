@@ -20,7 +20,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run test:no-network` | Zero-network proof on Linux: the built app runs under `strace` and must make no network `connect()` (needs `strace`) |
 | `npm run test:perf` | Cold-start timings (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the PRD budgets |
 | `npm run package` | Build, then package for the current OS into `release/` (Linux: `.deb` and AppImage) |
-| `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon |
+| `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon, the licence notices |
 | `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop |
 | `npm run boundaries` | Check the import rules below (`scripts/check-boundaries.mjs`) |
 | `npm run check:bundle` | After `npm run build`: what the window and the render worker load up front, failing if KaTeX, Shiki, CodeMirror, Mermaid or DOMPurify is among it (they load with the first document that needs them) |

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
+import { AboutDialog } from './about/AboutDialog';
 import type { Command, Platform } from '../shared/keymap';
 import { CommandsProvider, useCommands, useDispatcher } from './commands/useCommands';
 import type { PaletteEntry } from './palette/entries';
@@ -50,7 +51,7 @@ export function App() {
   return (
     <CommandsProvider platform={info.platform}>
       <OutlineProvider>
-        <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} />
+        <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} version={info.version} />
       </OutlineProvider>
     </CommandsProvider>
   );
@@ -59,7 +60,7 @@ export function App() {
 /** Status-bar messages go away on their own. */
 const MESSAGE_MS = 4000;
 
-function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platform: Platform; appImage: boolean }) {
+function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boolean; platform: Platform; appImage: boolean; version: string }) {
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
   const { view, store } = useTabs();
@@ -97,8 +98,8 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
     return () => client.dispose();
   }, []);
 
-  // One overlay at a time: quick open or the palette.
-  const [overlay, setOverlay] = useState<'quickOpen' | 'palette' | null>(null);
+  // One overlay at a time: quick open, the palette or About.
+  const [overlay, setOverlay] = useState<'quickOpen' | 'palette' | 'about' | null>(null);
   const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
   const closeOverlay = useCallback(() => {
     setOverlay(null);
@@ -108,7 +109,8 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
   useTabShortcuts(store, openQuickOpen);
   useCommands({ commandPalette: () => setOverlay('palette') });
   const [recentRevision, setRecentRevision] = useState(0);
-  const runEntry = usePaletteActions(store, setMessage, () => setRecentRevision((revision) => revision + 1));
+  const openAbout = useCallback(() => setOverlay('about'), []);
+  const runEntry = usePaletteActions(store, setMessage, () => setRecentRevision((revision) => revision + 1), openAbout);
   const choose = useCallback(
     (entry: PaletteEntry) => {
       closeOverlay();
@@ -178,6 +180,7 @@ function MainView({ sandboxed, platform, appImage }: { sandboxed: boolean; platf
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
       {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} />}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}
+      {overlay === 'about' && <AboutDialog version={version} onClose={closeOverlay} />}
     </>
   );
 }
@@ -225,7 +228,7 @@ function useTabShortcuts(store: TabStore, openQuickOpen: () => void) {
 }
 
 /** What a palette entry does in this window, besides running a command. */
-function usePaletteActions(store: TabStore, say: (message: string) => void, recentCleared: () => void) {
+function usePaletteActions(store: TabStore, say: (message: string) => void, recentCleared: () => void, openAbout: () => void) {
   const dispatcher = useDispatcher();
   return useCallback(
     (entry: PaletteEntry) => {
@@ -244,13 +247,14 @@ function usePaletteActions(store: TabStore, say: (message: string) => void, rece
           if (latest) void window.galeo.session.restorePrevious(latest.snapshot);
           else say('No previous session to restore');
         });
-      } else {
+      } else if (action.kind === 'about') openAbout();
+      else {
         void window.galeo.recent.clear().then(() => {
           recentCleared();
           say('Recent files cleared');
         });
       }
     },
-    [dispatcher, store, say, recentCleared],
+    [dispatcher, store, say, recentCleared, openAbout],
   );
 }

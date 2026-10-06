@@ -10,3 +10,13 @@ declare module '*?worker&url' {
   const url: string;
   export default url;
 }
+
+// The third-party notices, gathered at build time (build/licences.ts).
+declare module 'virtual:licences' {
+  const notices: {
+    packages: { packages: { name: string; version: string; license: string }[]; texts: string[] }[];
+    fonts: { name: string; text: string }[];
+    electron: string;
+  };
+  export default notices;
+}

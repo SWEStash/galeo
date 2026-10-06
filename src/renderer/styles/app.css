@@ -995,3 +995,31 @@ button:focus-visible {
   font: 600 16px var(--galeo-font-ui);
   pointer-events: none;
 }
+
+.modal.about {
+  width: min(640px, calc(100vw - 32px));
+}
+
+.dialog h3 {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.about-notices {
+  max-height: min(50vh, 420px);
+  overflow: auto;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  padding: 4px 8px;
+}
+
+.about-notices summary {
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.about-notices pre {
+  margin: 4px 0 8px;
+  white-space: pre-wrap;
+  font: 12px var(--galeo-font-code);
+}

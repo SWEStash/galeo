@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import { licences } from './build/licences';
 
 export default defineConfig({
   define: { __GALEO_PERF__: 'false' },
@@ -18,6 +19,8 @@ export default defineConfig({
         },
       },
       {
+        // `virtual:licences`, which the About dialog loads, as the build makes it.
+        plugins: [licences()],
         test: {
           name: 'renderer',
           environment: 'happy-dom',

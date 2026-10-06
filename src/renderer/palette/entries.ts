@@ -8,7 +8,8 @@ export type PaletteAction =
   | { kind: 'hint'; message: string }
   | { kind: 'openWithDefaultApp' }
   | { kind: 'restorePrevious' }
-  | { kind: 'clearRecent' };
+  | { kind: 'clearRecent' }
+  | { kind: 'about' };
 
 export interface PaletteEntry {
   id: string;
@@ -45,6 +46,7 @@ export function paletteEntries(platform: Platform): PaletteEntry[] {
     { id: 'openWithDefaultApp', label: 'Open with default app…', group: 'File', keys: [], action: { kind: 'openWithDefaultApp' } },
     { id: 'restorePrevious', label: 'Restore previous session', group: 'App', keys: [], action: { kind: 'restorePrevious' } },
     { id: 'clearRecent', label: 'Clear recent files', group: 'File', keys: [], action: { kind: 'clearRecent' } },
+    { id: 'about', label: 'About galeo', group: 'App', keys: [], action: { kind: 'about' } },
   );
   return entries;
 }

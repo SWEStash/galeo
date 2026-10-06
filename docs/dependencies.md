@@ -144,7 +144,10 @@ so they carry the tests those packages would have had).
 
 ## Licence notices to ship
 
-The about/licences view and the packages must include:
+`build/licences.ts` gathers them at build time from `package-lock.json` (every runtime package's
+licence, licence and notice files) for the About dialog (palette: "About galeo"), and fails the
+build on a runtime licence that isn't permissive; `verify:package` checks they are packaged. The
+about/licences view and the packages must include:
 - the MIT/ISC/BSD notices of runtime dependencies (generated at build time);
 - the **Apache-2.0** NOTICE files (`react-aria-components` and its `@react-aria/*` and
   `@internationalized/*` dependencies, `dompurify` under its Apache option);

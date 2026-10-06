@@ -113,3 +113,25 @@ test('a capability entry names its key and grants nothing; the key itself still 
     await close();
   }
 });
+
+test('About galeo shows its version and every notice it ships, and passes axe', async () => {
+  const { window, close } = await launchApp(['--', basic]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await run(window, 'about');
+    const about = window.getByTestId('about');
+    await expect(about.getByRole('heading', { level: 2 })).toHaveText(/^galeo \d+\.\d+\.\d+/);
+    const notices = about.getByTestId('about-notices');
+    await expect(notices.locator('summary', { hasText: 'react-aria-components' })).toHaveCount(1);
+    await expect(notices.locator('summary', { hasText: 'dompurify' })).toContainText('Apache-2.0');
+    await expect(notices.locator('summary', { hasText: '(font)' })).toHaveCount(3);
+    await expect(notices.locator('summary').first()).toHaveText('Electron · MIT');
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="about"]').analyze();
+    expect(results.violations).toEqual([]);
+    await window.keyboard.press('Escape');
+    await expect(about).toHaveCount(0);
+    await expect(shownDocument(window)).toBeFocused();
+  } finally {
+    await close();
+  }
+});

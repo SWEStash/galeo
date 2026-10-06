@@ -50,7 +50,7 @@ ADR-002…007).
 | **Document area** | Rendered or source view of the active tab | Always visible |
 | **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, line count, live-reload indicator | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
-| **Command palette** | Every command by name, with its shortcut | Ctrl+Shift+P / Esc |
+| **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices) | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document, right side | Ctrl+Shift+O (toggle) |
 | **Profile menu** | Switch / new / rename / delete profile, open profile settings | Click profile chip or Ctrl+Shift+M |
