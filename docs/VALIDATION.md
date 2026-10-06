@@ -42,16 +42,17 @@ own (a long test run beforehand heats the laptop and slows it). Medians of 10 ru
 a typical launch: galeo not running, its caches from earlier launches kept.
 
 Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performance profile;
-Electron 44.4.5. Recorded 2026-10-05.
+Electron 44.5.1, Mermaid 12.1.0. Recorded 2026-10-06 (memory re-baselined by the owner after the Electron and
+Mermaid updates: 1257 → 1377 MB; the earlier figures were on Electron 44.4.5 and Mermaid 11.17.2).
 
 | Metric | Budget | Measured |
 |---|---|---|
-| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 770 ms (p95 794) |
-| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1181–1185 ms |
-| Switch to a warm tab | 17 ms (one frame) | 16.3 ms (p95 17.0) |
-| Wake a hibernated tab | 150 ms | 66 ms (p95 94) |
-| Reading past 40 diagrams (a screen, then a pause) | reported | p95 33 ms; 15–20 of 472 frames over 34 ms |
-| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1257 MB (baseline, `tests/perf/memory-baseline.json`) |
+| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 727 ms (p95 1049) |
+| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1246 ms (p95 1499) |
+| Switch to a warm tab | 17 ms (one frame) | 16.4 ms (p95 23.5) |
+| Wake a hibernated tab | 150 ms | 84 ms (p95 119) |
+| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.8 ms; 0 of 432 frames over 34 ms |
+| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1377 MB (baseline, `tests/perf/memory-baseline.json`) |
 
 ## Keyboard map (UX §5)
 
