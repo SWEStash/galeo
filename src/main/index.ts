@@ -792,8 +792,11 @@ function start(initialMode: StartupMode): void {
   });
 }
 
-/** Input events that are the reader pressing a key, clicking or tapping: each earns an input credit. */
-const REAL_INPUT = new Set<Electron.InputEvent['type']>(['rawKeyDown', 'keyDown', 'char', 'mouseDown', 'gestureTap', 'touchStart']);
+/**
+ * The reader pressing a key, clicking or tapping: one event each, so each earns one input credit (a
+ * key press also sends `char`, not counted; Chromium sends `rawKeyDown` or `keyDown` per press).
+ */
+const REAL_INPUT = new Set<Electron.InputEvent['type']>(['rawKeyDown', 'keyDown', 'mouseDown', 'gestureTap', 'touchStart']);
 
 /**
  * Flashes the window's taskbar entry (GNOME: "galeo is ready") until it's focused. Unpackaged
