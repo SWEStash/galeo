@@ -135,6 +135,27 @@ test('diagrams draw at their natural size, never larger; a wide one keeps readab
   }
 });
 
+test("in dark mode, a diagram with its author's own colours is drawn light on a light panel", async () => {
+  const { app, window, close } = await launchApp(['--', path.join(fixtures, 'docs', 'mermaid-sizes.md')]);
+  try {
+    await app.evaluate(({ nativeTheme }) => (nativeTheme.themeSource = 'dark'));
+    await expect(window.locator('html')).toHaveAttribute('data-scheme', 'dark');
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await drawAll(window);
+    const [wide, tall] = await diagrams(window).all();
+    // The wide flow sets fills (style … fill:#ffffff); the tall chain leaves colours to the theme.
+    await expect(wide!).toHaveAttribute('data-panel', 'light');
+    await expect(tall!).not.toHaveAttribute('data-panel');
+    expect(await wide!.locator('.galeo-diagram-scroll').evaluate((element) => getComputedStyle(element).backgroundColor)).toBe('rgb(255, 255, 255)');
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]').analyze();
+    expect(results.violations).toEqual([]);
+    await wide!.getByRole('button', { name: 'Expand diagram' }).click();
+    await expect(window.getByTestId('diagram-viewport')).toHaveAttribute('data-panel', 'light');
+  } finally {
+    await close();
+  }
+});
+
 test('a diagram opens in a full-window viewer that zooms and pans, and Esc gives focus back', async () => {
   const { app, window, close } = await launchApp(['--', path.join(fixtures, 'docs', 'mermaid.md'), path.join(fixtures, 'docs', 'basic.md')]);
   const refused = refusals(window);

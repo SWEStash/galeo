@@ -1070,6 +1070,10 @@ button:focus-visible {
 .diagram-viewer-viewport:active {
   cursor: grabbing;
 }
+/* A diagram drawn light for its own colours keeps its light panel in dark mode. */
+.diagram-viewer-viewport[data-panel='light'] {
+  background: #ffffff;
+}
 .diagram-viewer-stage {
   position: absolute;
   top: 0;

@@ -40,7 +40,7 @@ export interface DocumentViewProps {
   /** Scales the document (per tab), not the app around it. */
   zoom?: number;
   /** A diagram's Expand button: show it in the viewer (`returnFocus` after it closes). */
-  onExpandDiagram?: ((diagram: { svg: string; name: string; returnFocus: () => void }) => void) | undefined;
+  onExpandDiagram?: ((diagram: { svg: string; name: string; panel: boolean; returnFocus: () => void }) => void) | undefined;
   /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
   onHeading?: ((id: string | null) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */

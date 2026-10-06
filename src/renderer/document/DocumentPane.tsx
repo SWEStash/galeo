@@ -120,7 +120,7 @@ export function DocumentPane({
   }, []);
 
   const documentHandle = useRef<DocumentHandle>(null);
-  const [viewer, setViewer] = useState<{ svg: string; name: string; returnFocus: () => void } | null>(null);
+  const [viewer, setViewer] = useState<{ svg: string; name: string; panel: boolean; returnFocus: () => void } | null>(null);
   const closeViewer = useCallback(() => setViewer(null), []);
   // The viewer is the shown tab's: switching tabs closes it.
   useEffect(() => {
@@ -319,7 +319,7 @@ export function DocumentPane({
           <OutlinePanel entries={render.outline} current={heading} onChoose={goToHeading} onClose={closeOutline} autoFocus={focusOutline} />
         )}
       </div>
-      {viewer && <DiagramViewer svg={viewer.svg} name={viewer.name} onClose={closeViewer} />}
+      {viewer && <DiagramViewer svg={viewer.svg} name={viewer.name} panel={viewer.panel} onClose={closeViewer} />}
     </>
   );
 }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { attachDiagrams, type DiagramOptions } from './diagrams';
+import { attachDiagrams, setsOwnColours, type DiagramOptions } from './diagrams';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -74,7 +74,7 @@ describe('attachDiagrams', () => {
     const button = root.querySelector<HTMLButtonElement>('.galeo-diagram button')!;
     expect(button.getAttribute('aria-label')).toBe('Expand diagram');
     button.click();
-    expect(onExpand).toHaveBeenCalledWith({ svg: '<svg><title>Flow</title></svg>', name: 'Flow', returnFocus: expect.any(Function) });
+    expect(onExpand).toHaveBeenCalledWith({ svg: '<svg><title>Flow</title></svg>', name: 'Flow', panel: false, returnFocus: expect.any(Function) });
     button.blur();
     onExpand.mock.calls[0]![0].returnFocus();
     expect(root.ownerDocument.activeElement === button || (root.getRootNode() as Document | ShadowRoot).activeElement === button).toBe(true);
@@ -119,6 +119,18 @@ describe('attachDiagrams', () => {
     expect(placeholders[0]!.dataset['state']).toBe('error');
   });
 
+  it('in dark, draws a diagram that sets its own colours with the light theme, on a light panel', async () => {
+    // `---`, not `-->`: happy-dom mangles `-->` in markup.
+    const coloured = 'graph TD; A---B\nstyle A fill:#ffffff';
+    const { observer, engine, diagrams, placeholders } = setup([coloured, 'graph TD; C---D']);
+    diagrams.setScheme('dark');
+    await observer.show();
+    expect(engine).toHaveBeenCalledWith(coloured, 'light');
+    expect(engine).toHaveBeenCalledWith('graph TD; C---D', 'dark');
+    expect(placeholders[0]!.dataset['panel']).toBe('light');
+    expect(placeholders[1]!.dataset['panel']).toBeUndefined();
+  });
+
   it('draws visible diagrams again in a new scheme', async () => {
     const { observer, engine, diagrams, placeholders } = setup(['graph TD']);
     await observer.show();
@@ -138,5 +150,19 @@ describe('attachDiagrams', () => {
     finish('<svg></svg>');
     await Promise.resolve();
     expect(svgOf(placeholders[0]!)).toBeNull();
+  });
+});
+
+describe('setsOwnColours', () => {
+  it('sees colours an author sets on nodes, classes and links', () => {
+    expect(setsOwnColours('graph TD\n  A-->B\n  style A fill:#ffffff,stroke:#333')).toBe(true);
+    expect(setsOwnColours('graph TD\n  classDef hot color:#f00')).toBe(true);
+    expect(setsOwnColours('graph TD\n  linkStyle 0 stroke:#2b6cb0')).toBe(true);
+  });
+
+  it('ignores widths and diagrams that leave colours to the theme', () => {
+    expect(setsOwnColours('graph TD\n  A-->B\n  linkStyle 0 stroke-width:2px')).toBe(false);
+    expect(setsOwnColours('graph TD\n  A[fill the form]-->B')).toBe(false);
+    expect(setsOwnColours('pie\n  "Dogs" : 60')).toBe(false);
   });
 });

@@ -68,3 +68,7 @@ Code blocks are highlighted with the `github-light` and `github-dark` themes, em
 Diagrams draw at Mermaid's natural size, where labels are about the body text's size, and are
 never enlarged. A diagram wider than the column shrinks to fit, down to 75 %; past that it keeps
 that size and its block scrolls sideways (and takes keyboard focus, so arrow keys scroll it).
+In dark mode, a diagram whose source sets its own colours (`style`, `classDef` or `linkStyle` with
+a fill, colour or stroke) is drawn with the light theme on a white panel
+(`.galeo-diagram[data-panel='light']`), as its author chose those colours for a light page; the
+viewer keeps the panel.

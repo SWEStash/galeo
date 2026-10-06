@@ -13,10 +13,11 @@ export interface DiagramOptions {
   /** Drawn SVGs by scheme and source. */
   cache?: Map<string, string>;
   /**
-   * The reader asked to see a diagram larger. `returnFocus` focuses its Expand button afterwards,
-   * the one there by then (a redraw, e.g. on a scheme change, replaces it).
+   * The reader asked to see a diagram larger. `panel`: it is drawn light on a light panel in dark
+   * mode. `returnFocus` focuses its Expand button afterwards, the one there by then (a redraw, e.g.
+   * on a scheme change, replaces it).
    */
-  onExpand?: (diagram: { svg: string; name: string; returnFocus: () => void }) => void;
+  onExpand?: (diagram: { svg: string; name: string; panel: boolean; returnFocus: () => void }) => void;
 }
 
 export interface Diagrams {
@@ -32,6 +33,17 @@ export interface Diagrams {
  * seen), so past this it keeps its size and its block scrolls sideways.
  */
 export const MIN_DIAGRAM_SCALE = 0.75;
+
+// `style A fill:#fff`, `classDef x color:red`, `linkStyle 0 stroke:#333`: not `stroke-width`.
+const OWN_COLOURS = /^\s*(style|classDef|linkStyle)\b.*\b(fill|color|stroke)\s*:/m;
+
+/**
+ * Whether a diagram's source sets its own colours. Its author chose them for a light page, so in
+ * dark mode it is drawn with the light theme on a light panel, where they read as intended.
+ */
+export function setsOwnColours(source: string): boolean {
+  return OWN_COLOURS.test(source);
+}
 
 /** A window's drawn diagrams, shared by its documents (least recently used dropped first). */
 const CACHE = new Map<string, string>();
@@ -107,7 +119,10 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     }
   });
 
-  const keyOf = (element: HTMLElement, forScheme: ColorScheme) => `${forScheme}\n${sources.get(element)}`;
+  /** The scheme a diagram is drawn in: the app's, but light for one that sets its own colours. */
+  const drawnIn = (element: HTMLElement, appScheme: ColorScheme): ColorScheme =>
+    appScheme === 'dark' && setsOwnColours(sources.get(element)!) ? 'light' : appScheme;
+  const keyOf = (element: HTMLElement, appScheme: ColorScheme) => `${drawnIn(element, appScheme)}\n${sources.get(element)}`;
 
   const unwatch = (element: HTMLElement) => {
     stops.get(element)?.();
@@ -138,13 +153,16 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     expand.setAttribute('aria-label', 'Expand diagram');
     expand.title = 'Expand diagram';
     expand.textContent = '⤢';
+    const panel = drawnIn(element, scheme) !== scheme;
     const returnFocus = () => element.querySelector<HTMLElement>('.galeo-diagram-expand')?.focus();
-    expand.addEventListener('click', () => options.onExpand?.({ svg, name, returnFocus }));
+    expand.addEventListener('click', () => options.onExpand?.({ svg, name, panel, returnFocus }));
     unobserveScroller(element);
     element.replaceChildren(scroller, expand);
     sized.observe(scroller);
     element.setAttribute('role', 'figure');
     element.setAttribute('aria-label', name);
+    if (panel) element.dataset['panel'] = 'light';
+    else delete element.dataset['panel'];
     element.dataset['state'] = 'rendered';
   };
 
@@ -158,6 +176,7 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     element.replaceChildren(errorBox(message, source));
     element.removeAttribute('role');
     element.removeAttribute('aria-label');
+    delete element.dataset['panel'];
     element.dataset['state'] = 'error';
   };
 
@@ -169,7 +188,7 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     const stale = () => !live || !element.isConnected || wanted !== scheme;
     try {
       let svg = cache.get(key);
-      if (svg === undefined) svg = await sanitize(await render(source, wanted));
+      if (svg === undefined) svg = await sanitize(await render(source, drawnIn(element, wanted)));
       remember(cache, key, svg);
       if (!stale()) show(element, svg);
     } catch (error) {

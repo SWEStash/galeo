@@ -11,9 +11,9 @@ const ARROW_PAN = 40;
  * A diagram in a full-window viewer: it opens fitted to the window, then zooms (buttons, + and -,
  * the wheel around the pointer) and pans (dragging, the arrow keys). 0 fits it again, 1 shows it at
  * its natural size. The SVG is the one already checked and drawn in the document, in a shadow
- * root of its own.
+ * root of its own; one drawn light for its own colours keeps its light panel in dark mode.
  */
-export function DiagramViewer({ svg, name, onClose }: { svg: string; name: string; onClose: () => void }) {
+export function DiagramViewer({ svg, name, panel, onClose }: { svg: string; name: string; panel: boolean; onClose: () => void }) {
   const viewport = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
   const natural = useRef({ width: 1, height: 1 });
@@ -119,6 +119,7 @@ export function DiagramViewer({ svg, name, onClose }: { svg: string; name: strin
               <div
                 ref={viewport}
                 className="diagram-viewer-viewport"
+                data-panel={panel ? 'light' : undefined}
                 data-testid="diagram-viewport"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
