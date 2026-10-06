@@ -1,6 +1,6 @@
 # ADR-010 — Trusted Types enforced in every build, with three library policies
 
-- Status: Proposed (2026-10-05)
+- Status: Accepted (2026-10-05)
 - Date: 2026-10-05
 - Deciders: project owner
 - Supersedes: the Trusted Types clause of [ADR-004](ADR-004-security-and-zero-network.md) "Inert
