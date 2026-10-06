@@ -52,6 +52,7 @@ const baseInfo: AppInfo = {
   sandboxed: true,
   sandboxUnavailable: null,
   appImage: false,
+  crashLoop: false,
 };
 
 /** Pushes an event to the page, as main would. */
@@ -150,7 +151,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         return () => {};
       }),
     },
-    window: { command: vi.fn().mockResolvedValue(undefined) },
+    window: { command: vi.fn().mockResolvedValue(undefined), retryAfterCrashes: vi.fn().mockResolvedValue(undefined) },
   } satisfies GaleoApi;
   Object.defineProperty(window, 'galeo', { value: api, configurable: true });
   return api;
@@ -914,5 +915,19 @@ describe('App', () => {
     const quit = [...container.querySelectorAll('button')].find((b) => b.textContent === 'Quit');
     await act(async () => quit?.click());
     expect(api.app.resolveSandboxUnavailable).toHaveBeenCalledWith('quit');
+  });
+
+  it('shows only the crash-loop message in a window that kept crashing: Try again or Close window', async () => {
+    const api = stubBridge({ crashLoop: true }, { records: [{ id: 'doc-1', path: '/d/x.md' }], content: readyContent('markdown', 'rendered', 'x') });
+    const container = await renderApp();
+    expect(container.querySelector('[data-testid="app-root"]')).toBeNull();
+    expect(container.querySelector('h1')?.textContent).toBe("This window's viewer kept crashing");
+    expect(api.documents.read).not.toHaveBeenCalled();
+    const button = (name: string) => [...container.querySelectorAll('button')].find((each) => each.textContent === name)!;
+    expect(document.activeElement).toBe(button('Try again'));
+    await act(async () => button('Try again').click());
+    expect(api.window.retryAfterCrashes).toHaveBeenCalledOnce();
+    await act(async () => button('Close window').click());
+    expect(api.window.command).toHaveBeenCalledWith('closeWindow');
   });
 });

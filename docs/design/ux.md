@@ -243,6 +243,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 | **Settings file invalid** | A hand edit broke `settings.json`, `profile.json` or a session file | Non-modal notice naming the file (and line, when known): "Your file was left untouched; using the last valid settings". Actions: Open file · Dismiss |
 | **Starting** | Window appears with tab bar immediately; active tab paints first; others stay hibernated |
 | **Sandbox unavailable** (app-level, at startup) | Chromium's sandbox can't start (e.g. the AppImage on Ubuntu 24.04+) | A small error window naming the detected cause and the fix (on Ubuntu 24.04+: install the `.deb`). Actions: **Quit** (default) · Run without sandbox (states the risk: a malicious document could then act with your user's full permissions; applies to this launch only) |
+| **Crash loop** | The window's renderer crashed 3 times within a minute | Instead of its tabs: "This window's viewer kept crashing" — galeo stopped reloading it; the tabs are kept. Actions: **Try again** (default; the tabs come back, the one being rendered marked crashed) · Close window. If even this message crashes, the window stays down |
 | **Running unsandboxed** (app-level, persistent) | Started with `--no-sandbox` or "Run without sandbox" | Every window: a warning badge "Unsandboxed" in the status bar (icon + text; its tooltip explains the risk and how to go back: restart without the flag, or install the `.deb`) and " — unsandboxed" in the window title. Not dismissable |
 
 ### Document-level

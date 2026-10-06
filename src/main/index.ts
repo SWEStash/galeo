@@ -356,21 +356,30 @@ function start(initialMode: StartupMode): void {
   /**
    * A window's renderer went away (ADR-002): the tab it was rendering is marked crashed, so it isn't
    * rendered again until the reader asks, and the page comes back with its tabs from the registry,
-   * only the shown one rendered. A window that keeps crashing is left as it is.
+   * only the shown one rendered. A window that keeps crashing comes back showing the crash-loop
+   * message instead (UX §4), and is left down if even that crashes.
    */
   const recoverFromCrash = (window: BrowserWindow, reason: string) => {
     const windowId = window.webContents.id;
-    const { tab, reload } = crashes.crashed(windowId);
+    const { tab, then } = crashes.crashed(windowId);
     crashingForTests.delete(windowId);
     console.warn(`galeo: window ${windowId} renderer gone (${reason})${tab ? ', crashed while rendering a tab' : ''}`);
     if (tab) documents.markCrashed(tab, windowId);
-    if (!reload) return console.warn(`galeo: window ${windowId} crashed repeatedly; not reloaded`);
+    if (then === 'stay-down') return console.warn(`galeo: window ${windowId} crashed again on the crash-loop message; left down`);
+    if (then === 'give-up') console.warn(`galeo: window ${windowId} crashed repeatedly; showing the crash-loop message`);
+    reloadWithTabs(window, { activate: then === 'reload' });
+  };
+
+  /** The window's page loads again, its tabs hibernated but for the shown one (unless it shows the crash loop). */
+  const reloadWithTabs = (window: BrowserWindow, { activate }: { activate: boolean }) => {
+    const windowId = window.webContents.id;
     for (const id of warm.warm(windowId)) warm.forget(windowId, id);
     for (const record of documents.list(windowId)) reads.forget(record.id);
     const active = documents.snapshot(windowId).active;
-    if (active) warm.activated(windowId, active);
+    if (active && activate) warm.activated(windowId, active);
     window.webContents.reload();
   };
+
   /**
    * Unpackaged test runs kill a window's renderer as it starts rendering the file
    * `globalThis.__galeoCrashOnRendering` names. The page goes on until the crash lands, so its later
@@ -607,13 +616,14 @@ function start(initialMode: StartupMode): void {
     let restoring = false;
     registerIpc(
       {
-        'app.info': () => ({
+        'app.info': (_args, event) => ({
           name: app.getName(),
           version: app.getVersion(),
           platform: keymapPlatform(process.platform),
           sandboxed,
           sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
           appImage: appImagePath() !== null,
+          crashLoop: crashes.gaveUp(event.sender.id),
         }),
         'app.installLauncher': async () => {
           const appImage = appImagePath();
@@ -707,6 +717,11 @@ function start(initialMode: StartupMode): void {
           const profile = profileOf(event.sender.id);
           const window = profile?.windows.find((each) => each.webContents.id === event.sender.id);
           if (profile && window) mainKey(command, profile, window);
+        },
+        'window.retryAfterCrashes': (_args, event) => {
+          const window = profileOf(event.sender.id)?.windows.find((each) => each.webContents.id === event.sender.id);
+          if (!window || !crashes.retry(event.sender.id)) throw new Error('not showing the crash loop');
+          reloadWithTabs(window, { activate: true });
         },
         'documents.pathMenu': ([id], event) => {
           if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');

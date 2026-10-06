@@ -70,3 +70,33 @@ export function SandboxUnavailable({
     </main>
   );
 }
+
+/**
+ * A window whose renderer crashed 3 times within a minute (UX §4): main stopped reloading its tabs
+ * and shows this instead. No document is rendered here, so it can't hit the same crash.
+ */
+export function CrashLoop({ onRetry, onClose }: { onRetry: () => void; onClose: () => void }) {
+  const retry = useRef<HTMLButtonElement>(null);
+  // The profile's settings aren't loaded on this screen: it follows the desktop's scheme.
+  useColorScheme('system');
+  useEffect(() => retry.current?.focus(), []);
+  return (
+    <main className="document-state" data-testid="crash-loop" aria-labelledby="crash-loop-title">
+      <h1 id="crash-loop-title" className="document-state-title">
+        This window's viewer kept crashing
+      </h1>
+      <p className="document-state-detail">
+        It crashed 3 times in a minute, so galeo stopped reloading it. Your tabs are kept: Try again
+        brings them back without rendering the one that crashed.
+      </p>
+      <div className="document-state-actions">
+        <button ref={retry} type="button" onClick={onRetry}>
+          Try again
+        </button>
+        <button type="button" onClick={onClose}>
+          Close window
+        </button>
+      </div>
+    </main>
+  );
+}

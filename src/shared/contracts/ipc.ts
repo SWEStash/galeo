@@ -74,6 +74,8 @@ export interface AppInfo {
   sandboxUnavailable: SandboxCause | null;
   /** Running as an AppImage, which can install its own command-line launcher (ADR-008). */
   appImage: boolean;
+  /** This window's renderer crashed repeatedly: it shows the crash-loop message, not its tabs (UX §4). */
+  crashLoop: boolean;
 }
 
 /** Renderer → main request/response channels, named `<group>.<method>`. */
@@ -124,6 +126,7 @@ export const CHANNELS = [
   'settings.openNoticeFile',
   'tabs.openSettings',
   'window.command',
+  'window.retryAfterCrashes',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -225,6 +228,8 @@ export interface Requests {
   'tabs.openSettings': [];
   /** A window command from the palette, for the sender's window (keys reach main without the page). */
   'window.command': [command: WindowCommand];
+  /** The crash-loop message's "Try again": the sender's window reloads with its tabs. Refused otherwise. */
+  'window.retryAfterCrashes': [];
 }
 
 /** Resolved value of each channel. */
@@ -279,6 +284,7 @@ export interface Responses {
   'settings.openNoticeFile': void;
   'tabs.openSettings': string;
   'window.command': void;
+  'window.retryAfterCrashes': void;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */

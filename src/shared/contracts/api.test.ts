@@ -28,7 +28,7 @@ describe('buildApi', () => {
     const api = buildApi(vi.fn(), noSubscribe);
 
     expect(Object.keys(api)).toEqual(['app', 'documents', 'tabs', 'settings', 'session', 'recent', 'drops', 'quickOpen', 'profiles', 'window']);
-    expect(Object.keys(api.window)).toEqual(['command']);
+    expect(Object.keys(api.window)).toEqual(['command', 'retryAfterCrashes']);
     // Registered by the preload only: the page never gets a way to name dropped paths (SR-12).
     expect(Object.keys(api.drops)).toEqual(['open', 'onReceived']);
     expect(Object.keys(api.quickOpen)).toEqual(['start', 'query', 'open', 'close', 'onResults']);

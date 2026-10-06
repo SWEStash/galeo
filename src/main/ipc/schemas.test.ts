@@ -175,7 +175,7 @@ describe('settings, profile and app channel arguments (SR-11)', () => {
     }
   });
 
-  it.each(['profiles.list', 'profiles.delete', 'profiles.created', 'tabs.openSettings', 'app.installLauncher'] as const)('%s takes nothing', (channel) => {
+  it.each(['profiles.list', 'profiles.delete', 'profiles.created', 'tabs.openSettings', 'app.installLauncher', 'window.retryAfterCrashes'] as const)('%s takes nothing', (channel) => {
     expect(accepts(channel, [])).toBe(true);
     expect(accepts(channel, ['acme'])).toBe(false);
   });

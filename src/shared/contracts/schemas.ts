@@ -90,4 +90,5 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'settings.openNoticeFile': z.tuple([z.int().min(0).max(100)]),
   'tabs.openSettings': z.tuple([]),
   'window.command': z.tuple([z.enum(WINDOW_COMMANDS)]),
+  'window.retryAfterCrashes': z.tuple([]),
 };

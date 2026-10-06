@@ -320,7 +320,8 @@ entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument h
   root, and detects loops.
 - Before inserting a document, the renderer sends main a "rendering tab X" breadcrumb. If a
   renderer crashes, galeo reloads the window with its tabs hibernated and marks the
-  breadcrumb tab "crashed" so it is not auto-rendered again.
+  breadcrumb tab "crashed" so it is not auto-rendered again. After 3 crashes within a minute it
+  stops reloading the tabs and shows a crash-loop message (Try again · Close window).
 *AC*: a fuzz/pathological corpus in CI finishes within budgets without hangs; a crash-recovery
 e2e test.
 

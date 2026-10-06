@@ -18,7 +18,7 @@ import { ProfileChip } from './profiles/ProfileChip';
 import { useProfiles } from './profiles/useProfiles';
 import { accentOf } from '../shared/accents';
 import { useSettings } from './settings/useSettings';
-import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
+import { CrashLoop, SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
 import { tabAction } from './tabs/commands';
 import type { TabStore } from './tabs/store';
 import { EmptyWindow } from './tabs/EmptyWindow';
@@ -48,6 +48,7 @@ export function App() {
 
   if (!info) return null;
   if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
+  if (info.crashLoop) return <CrashLoop onRetry={() => void window.galeo.window.retryAfterCrashes()} onClose={() => void window.galeo.window.command('closeWindow')} />;
   return (
     <CommandsProvider platform={info.platform}>
       <OutlineProvider>
