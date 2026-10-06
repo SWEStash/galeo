@@ -35,7 +35,8 @@ async function crashOnGfm() {
     contents.sendInputEvent({ type: 'keyDown', keyCode: 'Tab', modifiers: ['control'] });
     contents.sendInputEvent({ type: 'keyUp', keyCode: 'Tab', modifiers: ['control'] });
   });
-  expect(await gone).toBe('crashed');
+  // `crashed` on Linux and Windows, `killed` on macOS: main recovers from anything but a clean exit.
+  expect(await gone).not.toBe('clean-exit');
   await app.evaluate(() => delete (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering);
   // The same window loads its page again: a new renderer process, slow on a busy machine.
   await expect
