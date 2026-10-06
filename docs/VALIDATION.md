@@ -49,3 +49,13 @@ Electron 44.4.5. Recorded 2026-10-05.
 | Wake a hibernated tab | 150 ms | 66 ms (p95 94) |
 | Reading past 40 diagrams (a screen, then a pause) | reported | p95 33 ms; 15–20 of 472 frames over 34 ms |
 | Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1257 MB (baseline, `tests/perf/memory-baseline.json`) |
+
+## Keyboard map (UX §5)
+
+- **Conformance**: `tests/e2e/palette.spec.ts` checks that the palette lists every v0.1 row of the
+  UX §5 map with its keys, on Linux and macOS (go to tab 1–8 as eight entries; the find bar's
+  Enter/Shift+Enter in `find.spec`). Save, split view and find & replace are v0.2.
+- **GNOME conflicts**: `src/shared/keymap.test.ts` keeps the Linux map free of Super, of Ctrl+Alt,
+  and of GNOME's own Alt keys (Alt+Tab, Alt+Esc, Alt+Space, Alt+F1–F10, Alt+Print). Checked against
+  `gsettings` on Ubuntu 26.04 (GNOME's `wm`, `shell`, `mutter` and `media-keys` bindings) on
+  2026-10-05: galeo's Alt keys are Alt+Z and Alt+←/→, which GNOME doesn't bind.

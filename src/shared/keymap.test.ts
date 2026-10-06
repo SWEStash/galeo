@@ -27,6 +27,20 @@ describe('keymap', () => {
     expect(keymap('linux').goToLastTab).toEqual(['CmdOrCtrl+9']);
   });
 
+  it("leaves GNOME's own keys alone on Linux: no Super, no Ctrl+Alt, none of its Alt keys (UX §5)", () => {
+    // GNOME's defaults without Super: Alt+Tab/Esc/Space/F1–F10/Print, and Ctrl+Alt+anything.
+    const gnome = /^(Alt\+(Tab|Escape|Space|Print|F([1-9]|10))|Shift\+Alt\+(Tab|Escape|F6))$/;
+    for (const accelerators of Object.values(keymap('linux'))) {
+      for (const accelerator of accelerators) {
+        const parts = accelerator.split('+');
+        expect(parts, accelerator).not.toContain('Super');
+        expect(parts, accelerator).not.toContain('Meta');
+        expect(parts.includes('Alt') && (parts.includes('CmdOrCtrl') || parts.includes('Ctrl')), accelerator).toBe(false);
+        expect(accelerator).not.toMatch(gnome);
+      }
+    }
+  });
+
   it('binds each accelerator to a single command', () => {
     for (const platform of ['linux', 'darwin', 'win32'] as const) {
       const all = Object.values(keymap(platform)).flat();
