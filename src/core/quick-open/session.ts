@@ -77,11 +77,16 @@ export class QuickOpen {
     return Promise.resolve();
   }
 
-  async query(window: number, token: string, query: string): Promise<QuickOpenResults> {
+  /**
+   * `mayList` says whether a typed folder may be listed now (the reader just typed it): any folder
+   * on the disk is beyond what the window was given (threat T6).
+   */
+  async query(window: number, token: string, query: string, mayList: () => boolean = () => true): Promise<QuickOpenResults> {
     const session = this.sessions.get(window);
     if (!session || session.token !== token) return { token, query, sections: [] };
     session.query = query;
     const typed = typedFolder(query, this.deps.home);
+    if (typed && !mayList()) return this.offer(window, session, query, []);
     const sections = typed ? [await this.pathSection(typed.folder, typed.filter, typed.shown)] : this.sections(session, query);
     return this.offer(window, session, query, sections);
   }

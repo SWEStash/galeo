@@ -137,7 +137,7 @@ flowchart LR
     coal[Coalescing watcher<br/>quiet window · rate cap · poll fallback]
     dw[Document watches<br/>open tabs' files → stale]
     qoc[Quick open<br/>git root · bounded walk · fuzzy match]
-    grants[Grants<br/>quick-open ids · drop tokens · images]
+    grants[Grants<br/>quick-open ids · drop tokens · images · input credits]
   end
   subgraph adapt[Adapters · Electron + Node]
     inst[InstanceChannel<br/>requestSingleInstanceLock]

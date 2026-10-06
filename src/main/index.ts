@@ -2,6 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, Menu, webContents } from 'electr
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
+import { InputCredits } from '../core/documents/input-credits';
 import { ImageGrants } from '../core/documents/images';
 import { ReadIdentities } from '../core/documents/identities';
 import { DocumentLinks } from '../core/documents/links';
@@ -205,6 +206,7 @@ function start(initialMode: StartupMode): void {
   const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
   const reads = new ReadIdentities(fs);
   const crashes = new CrashRecovery(Date.now);
+  const input = new InputCredits(Date.now);
   const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
     const contents = webContents.fromId(windowId);
     if (contents) sendEvent(contents, event, payload);
@@ -316,6 +318,9 @@ function start(initialMode: StartupMode): void {
       const closed = documents.exportWindow(windowId);
       if (closed.tabs.length > 0) profile.keepClosed({ state: closed, bounds: windowBounds(window), at: documents.stamp() });
     });
+    window.webContents.on('input-event', (_event, event) => {
+      if (REAL_INPUT.has(event.type)) input.received(windowId);
+    });
     window.webContents.on('render-process-gone', (_event, details) => {
       if (details.reason === 'clean-exit' || quitting || window.isDestroyed()) return;
       recoverFromCrash(window, details.reason);
@@ -330,6 +335,7 @@ function start(initialMode: StartupMode): void {
       documents.closeWindow(windowId);
       warm.closeWindow(windowId);
       crashes.closeWindow(windowId);
+      input.closeWindow(windowId);
       images.closeWindow(windowId);
       quickOpen.close(windowId);
       drops.closeWindow(windowId);
@@ -744,6 +750,7 @@ function start(initialMode: StartupMode): void {
         }),
         ...quickOpenHandlers({
           quickOpen,
+          input,
           request: (windowId) => {
             const profile = profileOf(windowId);
             if (!profile) return null;
@@ -784,6 +791,9 @@ function start(initialMode: StartupMode): void {
     });
   });
 }
+
+/** Input events that are the reader pressing a key, clicking or tapping: each earns an input credit. */
+const REAL_INPUT = new Set<Electron.InputEvent['type']>(['rawKeyDown', 'keyDown', 'char', 'mouseDown', 'gestureTap', 'touchStart']);
 
 /**
  * Flashes the window's taskbar entry (GNOME: "galeo is ready") until it's focused. Unpackaged

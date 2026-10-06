@@ -121,7 +121,7 @@ test('a typed folder path lists its files and folders; choosing a folder goes in
     try {
       await window.getByTestId('tab-new').click();
       await expect(field(window)).toBeFocused();
-      // Typed key by key, as a reader does (typing highlights the first option).
+      // Typed, not filled in: main lists a typed folder only for real key presses (T6).
       await field(window).pressSequentially(`${root}/`);
       await expect(option(window, 'docs/')).toBeVisible();
       await expect(option(window, '.local/')).toBeVisible();
@@ -163,11 +163,14 @@ test('main opens only what it offered this window, and nothing once quick open c
         const results = await api.query(token, 'readme');
         const offered = results.sections[0]!.entries[0]!.id;
         const forged = await api.open(token, secret, false).then(() => 'opened', () => 'refused');
+        // Offered, but asked for without the reader pressing anything (T6).
+        const unasked = await api.open(token, offered, false).then(() => 'opened', () => 'refused');
+        const listed = (await api.query(token, '/etc/')).sections.length;
         await api.close(token);
         const stale = await api.open(token, offered, false).then(() => 'opened', () => 'refused');
-        return [forged, stale];
+        return [forged, unasked, listed, stale];
       }, '/etc/passwd');
-      expect(refused).toEqual(['refused', 'refused']);
+      expect(refused).toEqual(['refused', 'refused', 0, 'refused']);
       await expect(page.getByRole('tab')).toHaveCount(1);
     } finally {
       await close();

@@ -151,7 +151,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T9 | Mitigate | SR-15 |
 | T10 | Mitigate | SR-16 |
 | T11 | **Accept.** Same-user processes already have equal privilege; the channel only opens files, which is intended behaviour. Owner: project owner. | SR-13 (argv handled as data) |
-| T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo; exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner. | SR-12 (drop grants from the preload's isolated world) |
+| T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo, or, while the reader types, spend their key presses on quick-open listings and opens of its choosing; exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner. | SR-12 (drop grants from the preload's isolated world; quick-open input credits) |
 | T14 | Mitigate | SR-17 |
 | T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
@@ -277,7 +277,11 @@ Electron's event object.
 **SR-12 — Capability-scoped file access.** Main reads files only when the request follows a user
 action it can attribute: CLI/open-file events, drop grants created in the preload's isolated
 world (`event.isTrusted`), a quick-open selection from the result list main sent, session
-restore, or a link whose target main finds in the source of the tab's document (ADR-004). Link
+restore, or a link whose target main finds in the source of the tab's document (ADR-004).
+Quick open lists a typed folder (`~/…`, `/…`), and opens any selection, only by spending a
+credit of real input to that window: each key press, click or tap main observes (`input-event`)
+earns one, for a second, at most five held. A compromised page can then neither list folders
+nor open files on its own, only once per key the reader presses. Link
 and image extraction runs in a worker thread in main with a time budget, so hostile input cannot
 stall main.
 Local images are served only after main finds their `src` in the document's image set, through
