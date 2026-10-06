@@ -206,9 +206,14 @@ div.galeo-block-error {
   margin: 0 0 var(--galeo-space-block);
   overflow-x: auto;
 }
+.galeo-diagram:focus-visible {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 2px;
+}
 .galeo-diagram-svg {
   display: flex;
-  justify-content: center;
+  /* Centred when it fits; a wider one starts at the left edge, where its block's scroll starts. */
+  justify-content: safe center;
 }
 
 .galeo-remote-image,

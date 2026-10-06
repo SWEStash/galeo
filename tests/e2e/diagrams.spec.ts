@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { launchApp } from '../helpers/launch';
@@ -80,6 +81,51 @@ test('drawn diagrams keep their size and shapes, with every label inside', async
       expect(diagram.shapes).toBeGreaterThan(0);
       expect(diagram.outside).toEqual([]);
     }
+  } finally {
+    await close();
+  }
+});
+
+/** Each drawn diagram's label size on screen against the body text, and whether its block scrolls sideways. */
+function labelScales(window: Page) {
+  return shownDocument(window)
+    .locator('.galeo-diagram[data-state="rendered"]')
+    .evaluateAll((elements) =>
+      elements.map((element) => {
+        const svg = element.querySelector('.galeo-diagram-svg')!.shadowRoot!.querySelector('svg')!;
+        const scale = svg.getBoundingClientRect().width / svg.viewBox.baseVal.width;
+        const label = parseFloat(getComputedStyle(svg.querySelector('text')!).fontSize) * scale;
+        const body = parseFloat(getComputedStyle(element.closest('article')!.querySelector('p')!).fontSize);
+        const left = element.querySelector('.galeo-diagram-svg')!.getBoundingClientRect().left - element.getBoundingClientRect().left;
+        return { ratio: label / body, scrolls: element.scrollWidth > element.clientWidth + 1, left };
+      }),
+    );
+}
+
+test('diagrams draw at their natural size, never larger; a wide one keeps readable labels and scrolls sideways', async () => {
+  const { window, close } = await launchApp(['--', path.join(fixtures, 'docs', 'mermaid-sizes.md')]);
+  try {
+    await window.setViewportSize({ width: 1000, height: 800 });
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    expect(await drawAll(window)).toBe(2);
+    const [wide, tall] = await labelScales(window);
+    // Mermaid's labels are 16 px against the 17 px body: about 0.94 at natural size.
+    expect(wide!.ratio).toBeGreaterThanOrEqual(0.7);
+    expect(wide!.scrolls).toBe(true);
+    // Scrolled to its start, nothing of it is cut off on the left.
+    expect(wide!.left).toBeGreaterThanOrEqual(0);
+    expect(tall!.ratio).toBeGreaterThanOrEqual(0.9);
+    expect(tall!.ratio).toBeLessThanOrEqual(1);
+    expect(tall!.scrolls).toBe(false);
+    // The keyboard reaches and scrolls the wide one (it takes focus only while it scrolls).
+    const blocks = diagrams(window);
+    await expect(blocks.first()).toHaveAttribute('tabindex', '0');
+    await expect(blocks.last()).not.toHaveAttribute('tabindex');
+    await blocks.first().focus();
+    await window.keyboard.press('ArrowRight');
+    await expect.poll(() => blocks.first().evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]').analyze();
+    expect(results.violations).toEqual([]);
   } finally {
     await close();
   }

@@ -21,6 +21,13 @@ export interface Diagrams {
   dispose(): void;
 }
 
+/**
+ * How far a diagram may shrink to fit the column. Mermaid draws labels at about body size and never
+ * enlarges a diagram; a wide one would otherwise shrink until its labels can't be read (4.6 px
+ * seen), so past this it keeps its size and its block scrolls sideways.
+ */
+export const MIN_DIAGRAM_SCALE = 0.75;
+
 /** A window's drawn diagrams, shared by its documents (least recently used dropped first). */
 const CACHE = new Map<string, string>();
 const CACHE_ENTRIES = 64;
@@ -85,6 +92,15 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
   let live = true;
   const sources = new Map<HTMLElement, string>();
   const stops = new Map<HTMLElement, () => void>();
+  // A diagram wider than the column scrolls sideways: while it does, it takes focus, so the
+  // keyboard can scroll it too (WCAG 2.1.1).
+  const sized = new ResizeObserver((entries) => {
+    for (const { target } of entries) {
+      const element = target as HTMLElement;
+      if (element.scrollWidth > element.clientWidth + 1) element.tabIndex = 0;
+      else element.removeAttribute('tabindex');
+    }
+  });
 
   const keyOf = (element: HTMLElement, forScheme: ColorScheme) => `${forScheme}\n${sources.get(element)}`;
 
@@ -98,7 +114,11 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     wrapper.className = 'galeo-diagram-svg';
     const shadow = wrapper.attachShadow({ mode: 'open' });
     setTrustedHtml(shadow, svg);
+    const drawn = shadow.querySelector('svg');
+    const natural = drawn?.viewBox.baseVal?.width ?? 0;
+    if (drawn && natural > 0) drawn.style.minWidth = `${Math.round(natural * MIN_DIAGRAM_SCALE)}px`;
     element.replaceChildren(wrapper);
+    sized.observe(element);
     element.setAttribute('role', 'img');
     element.setAttribute('aria-label', shadow.querySelector('svg > title')?.textContent?.trim() || 'Diagram');
     element.dataset['state'] = 'rendered';
@@ -106,6 +126,8 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
 
   const fail = (element: HTMLElement, message: string, source: string) => {
     element.replaceChildren(errorBox(message, source));
+    sized.unobserve(element);
+    element.removeAttribute('tabindex');
     element.removeAttribute('role');
     element.removeAttribute('aria-label');
     element.dataset['state'] = 'error';
@@ -158,6 +180,7 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     dispose() {
       live = false;
       for (const element of [...stops.keys()]) unwatch(element);
+      sized.disconnect();
     },
   };
 }

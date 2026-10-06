@@ -59,7 +59,12 @@ The fonts ship with the app (no web fonts), each with a system fallback.
 | `.galeo-frontmatter` | The collapsible frontmatter block |
 | `.galeo-remote-image` | Placeholder for a blocked remote image (`data-host`, `data-url`) |
 | `.galeo-text-reader` | The `.txt` reader view (paragraphs keep their line breaks) |
+| `.galeo-diagram` | A Mermaid diagram's block (`data-state`: `pending`, `rendered`, `error`); the SVG is in a shadow root of its own |
 
 Code blocks are highlighted with the `github-light` and `github-dark` themes, emitted as
 `--shiki-light` / `--shiki-dark` variables on each token. The few theme colours that read below
 4.5:1 on a code block are replaced by GitHub's current, darker (or, in dark, lighter) shades.
+
+Diagrams draw at Mermaid's natural size, where labels are about the body text's size, and are
+never enlarged. A diagram wider than the column shrinks to fit, down to 75 %; past that it keeps
+that size and its block scrolls sideways (and takes keyboard focus, so arrow keys scroll it).
