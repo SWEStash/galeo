@@ -70,7 +70,15 @@ test('Clear recent empties the list, on disk too', async () => {
       await empty.getByRole('button', { name: 'Clear recent' }).click();
       await expect(empty.getByRole('button', { name: /basic\.md/ })).toHaveCount(0);
       const recent = path.join(appDirs(home).state, 'profiles', 'default', 'recent.json');
-      await expect.poll(() => JSON.parse(readFileSync(recent, 'utf8')).files).toEqual([]);
+      // Written a moment after the click: until then the file may not be there yet.
+      const files = () => {
+        try {
+          return JSON.parse(readFileSync(recent, 'utf8')).files;
+        } catch {
+          return null;
+        }
+      };
+      await expect.poll(files).toEqual([]);
     } finally {
       await app.close();
     }

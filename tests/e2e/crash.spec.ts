@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { expect, test, type ElectronApplication } from '@playwright/test';
-import { launchApp } from '../helpers/launch';
+import { launchApp, launchSecond } from '../helpers/launch';
 
 const fixture = (name: string) => path.resolve(import.meta.dirname, '../fixtures/docs', name);
 
@@ -16,25 +16,24 @@ const PANEL = `document.querySelector('[data-testid="tab-panel"][data-active="tr
 const tabText = (name: string) => `[...document.querySelectorAll('[role=tab]')].find((tab) => tab.textContent.includes('${name}'))`;
 
 /**
- * Opens two documents, then crashes the renderer as it starts inserting gfm.md (a test hook in
- * main). From the switch on, everything goes through main: Playwright follows a page whose
- * renderer dies badly (an action under way never completes on some runners, throws on others).
+ * Opens basic.md, then gfm.md from a second launch (a new tab is always inserted, never shown warm),
+ * and crashes the renderer as it starts inserting gfm.md (a test hook in main). From then on
+ * everything goes through main: Playwright follows a page whose renderer dies badly.
  */
 async function crashOnGfm() {
-  const launched = await launchApp(['--', fixture('basic.md'), fixture('gfm.md')]);
-  const { app, window } = launched;
+  const launched = await launchApp(['--', fixture('basic.md')]);
+  const { app, window, home } = launched;
   await expect(window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"] article h1')).toBeVisible();
   await app.evaluate((_, file) => ((globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering = file), fixture('gfm.md'));
-  const gone = app.evaluate(
-    ({ BrowserWindow }) =>
-      new Promise<string>((resolve) => BrowserWindow.getAllWindows()[0]!.webContents.once('render-process-gone', (_event, details) => resolve(details.reason))),
-  );
-  // Ctrl+Tab shows gfm.md, which the renderer starts to insert.
+  // Listening before the second launch, which blocks this process until it has handed over.
   await app.evaluate(({ BrowserWindow }) => {
     const contents = BrowserWindow.getAllWindows()[0]!.webContents;
-    contents.sendInputEvent({ type: 'keyDown', keyCode: 'Tab', modifiers: ['control'] });
-    contents.sendInputEvent({ type: 'keyUp', keyCode: 'Tab', modifiers: ['control'] });
+    (globalThis as { __galeoGone?: Promise<string> }).__galeoGone = new Promise((resolve) =>
+      contents.once('render-process-gone', (_event, details) => resolve(details.reason)),
+    );
   });
+  launchSecond(home, ['--', fixture('gfm.md')]);
+  const gone = app.evaluate(() => (globalThis as { __galeoGone?: Promise<string> }).__galeoGone!);
   // `crashed` on Linux and Windows, `killed` on macOS: main recovers from anything but a clean exit.
   expect(await gone).not.toBe('clean-exit');
   await app.evaluate(() => delete (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering);
