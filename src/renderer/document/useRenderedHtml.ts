@@ -28,6 +28,8 @@ interface Attempt {
 
 /**
  * The worker's HTML for Markdown `text`, rendered only once `wanted` (the rendered view shows).
+ * `readerAsked`: the reader asked for this render (a document over the render limit opens as
+ * source), so it waits as long as Render anyway does.
  * A failure stays failed until `retry` (or `renderAnyway`, with the long budget, after a render
  * that was too slow). While a changed text renders, the last HTML stays.
  */
@@ -35,6 +37,7 @@ export function useRenderedHtml(
   client: RenderClient | null,
   text: string | null,
   wanted: boolean,
+  { readerAsked = false }: { readerAsked?: boolean } = {},
 ): RenderState & { retry: () => void; renderAnyway: () => void } {
   const [result, setResult] = useState<{
     text: string;
@@ -51,7 +54,7 @@ export function useRenderedHtml(
     if (result?.text === text && result.attempt === attempt) return;
     let current = true;
     client
-      .markdown(text, attempt.long ? { budgetMs: RENDER_ANYWAY_BUDGET_MS } : {})
+      .markdown(text, attempt.long || readerAsked ? { budgetMs: RENDER_ANYWAY_BUDGET_MS } : {})
       // Math shows only once KaTeX's styles are in, never unstyled.
       .then(async ({ html, math, outline, words }) => {
         if (math) await loadMathStyles();
@@ -66,7 +69,7 @@ export function useRenderedHtml(
     return () => {
       current = false;
     };
-  }, [client, text, wanted, result, attempt]);
+  }, [client, text, wanted, result, attempt, readerAsked]);
 
   const retry = useCallback(() => setAttempt(({ count }) => ({ count: count + 1, long: false })), []);
   const renderAnyway = useCallback(() => setAttempt(({ count }) => ({ count: count + 1, long: true })), []);

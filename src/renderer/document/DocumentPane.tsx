@@ -106,7 +106,8 @@ export function DocumentPane({
   // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
   const renderable = ready?.format === 'markdown' || ready?.format === 'text';
   const markdown = ready?.format === 'markdown' ? ready.text : null;
-  const render = useRenderedHtml(client, markdown, wantedView === 'rendered');
+  // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
+  const render = useRenderedHtml(client, markdown, wantedView === 'rendered', { readerAsked: ready?.banner === 'too-large' });
   // A document that failed to render shows its source instead.
   const view = wantedView === 'rendered' && render.status === 'failed' ? 'source' : wantedView;
   const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending' && render.html === null, LOADING_DELAY_MS);

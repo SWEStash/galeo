@@ -58,7 +58,7 @@ test('a folder is not a document', async () => {
   await expectState(dir, 'not-a-file', "This isn't a regular file");
 });
 
-test('Markdown over the render limit opens as source; rendering it anyway shows the skeleton', async () => {
+test('Markdown over the render limit opens as source; rendering it anyway waits on the long budget, with the skeleton', async () => {
   const file = path.join(dir, 'big.md');
   writeFileSync(file, `# Big\n\n${'A line of an oversized plan.\n'.repeat(200_000)}`);
   const { window, close } = await launchApp(['--', file]);
@@ -71,8 +71,13 @@ test('Markdown over the render limit opens as source; rendering it anyway shows 
     await expect(window.getByTestId('document').locator('.cm-editor')).toBeVisible();
     await banner.getByRole('button', { name: 'Render anyway' }).click();
     await expect(banner).toHaveCount(0);
-    // Several megabytes take the worker well over 150 ms, so the skeleton shows while it works.
+    // Several megabytes take the worker well over 150 ms, so the skeleton shows while it works…
     await expect(window.getByTestId('document-loading')).toBeVisible(heavy);
+    // …and keeps working well past the usual 2 s budget: the reader asked for this render, so it
+    // gets Render anyway's 60 s (one 200,000-line paragraph takes the GFM parser longer than that).
+    await window.waitForTimeout(5_000);
+    await expect(window.getByTestId('document-loading')).toBeVisible();
+    await expect(window.locator('[data-banner="render-slow"]')).toHaveCount(0);
   } finally {
     await close();
   }

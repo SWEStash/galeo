@@ -35,10 +35,10 @@ function manualClient() {
   return { client, pending };
 }
 
-async function mount(client: RenderClient, text: string) {
+async function mount(client: RenderClient, text: string, options?: { readerAsked?: boolean }) {
   const seen: ReturnType<typeof useRenderedHtml>[] = [];
   function Probe({ text }: { text: string }) {
-    seen.push(useRenderedHtml(client, text, true));
+    seen.push(useRenderedHtml(client, text, true, options));
     return null;
   }
   root = createRoot(document.createElement('div'));
@@ -69,6 +69,12 @@ describe('useRenderedHtml', () => {
     expect(seen.at(-1)).toMatchObject({ status: 'pending' });
     await act(async () => pending[1]!.resolve('<h1>big</h1>'));
     expect(seen.at(-1)).toMatchObject({ status: 'done', html: '<h1>big</h1>' });
+  });
+
+  it('gives a render the reader asked for (an over-limit document) the longer budget from the start', async () => {
+    const { client, pending } = manualClient();
+    await mount(client, '# huge', { readerAsked: true });
+    expect(pending[0]).toMatchObject({ text: '# huge', budgetMs: RENDER_ANYWAY_BUDGET_MS });
   });
 
   it('says a render that broke failed, and tries again with the usual budget', async () => {
