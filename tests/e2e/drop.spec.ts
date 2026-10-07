@@ -73,6 +73,26 @@ test('files dropped before the first tab open at the start of the tab bar', asyn
   });
 });
 
+test('files dropped on the tab bar open where the caret is: between two tabs, or after the last', async () => {
+  await withTree(async (file, home) => {
+    const { window, close } = await launchApp(['--', file('shown.md'), file('other.md')], { home });
+    try {
+      await expect(shownDocument(window).locator('h1')).toHaveText('Shown');
+      // Past the middle of the first tab: the caret goes after it.
+      const first = (await window.getByRole('tab').first().boundingBox())!;
+      await dropFiles(window, [file('first.md')], { x: first.x + first.width - 4, y: first.y + first.height / 2 });
+      await expect(window.getByRole('tab')).toHaveCount(3);
+      expect(await tabNames(window)).toEqual(['shown.md', 'first.md', 'other.md']);
+      const last = (await window.getByRole('tab').last().boundingBox())!;
+      await dropFiles(window, [file('second.md')], { x: last.x + last.width - 4, y: last.y + last.height / 2 });
+      await expect(window.getByRole('tab')).toHaveCount(4);
+      expect(await tabNames(window)).toEqual(['shown.md', 'first.md', 'other.md', 'second.md']);
+    } finally {
+      await close();
+    }
+  });
+});
+
 test('a dropped folder opens quick open on it; a binary file opens in its can’t-display state', async () => {
   await withTree(async (file, home) => {
     const { window, close } = await launchApp(['--', file('shown.md')], { home });
