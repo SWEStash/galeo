@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { onlyFragments } from './mermaid-engine';
+import { describe, expect, it, vi } from 'vitest';
+import { DARK_PIE, onlyFragments, renderMermaid } from './mermaid-engine';
+
+const engine = vi.hoisted(() => ({ initialize: vi.fn(), render: vi.fn(async () => ({ svg: '<svg></svg>' })) }));
+vi.mock('mermaid', () => ({ default: engine }));
 
 /** Whether the hook keeps an attribute with this name and value. */
 function kept(attrName: string, attrValue: string): boolean {
@@ -26,5 +29,15 @@ describe('onlyFragments', () => {
     expect(kept('fill', 'url(https://example.com/x.png)')).toBe(false);
     expect(kept('style', 'fill: url(#ok); background: URL("https://example.com/y.png")')).toBe(false);
     expect(kept('filter', "url('data:image/svg+xml,x')")).toBe(false);
+  });
+});
+
+describe('renderMermaid', () => {
+  it("draws the dark theme with our pie colours, and the light theme as Mermaid's default", async () => {
+    await renderMermaid('pie\n"a": 1', 'dark');
+    expect(engine.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: 'dark', themeVariables: DARK_PIE }));
+    await renderMermaid('pie\n"a": 1', 'light');
+    expect(engine.initialize).toHaveBeenLastCalledWith(expect.not.objectContaining({ themeVariables: expect.anything() }));
+    expect(engine.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: 'default' }));
   });
 });

@@ -22,6 +22,30 @@ const MERMAID_CONFIG: MermaidConfig = {
 };
 
 /**
+ * Pie slices for the dark theme. Mermaid's own start near-black (`#0b0000`) and are drawn at 70 %
+ * opacity, so some vanish on the page; these are opaque mid-tones that stand out on it, with
+ * labels in the page's colour (`--galeo-color-bg`, dark). Mermaid needs literal colours, not tokens.
+ */
+export const DARK_PIE = {
+  pie1: '#4493f8',
+  pie2: '#3fb950',
+  pie3: '#db6d28',
+  pie4: '#ab7df8',
+  pie5: '#f85149',
+  pie6: '#d29922',
+  pie7: '#db61a2',
+  pie8: '#39c5cf',
+  pie9: '#79c0ff',
+  pie10: '#7ee787',
+  pie11: '#ffa657',
+  pie12: '#d2a8ff',
+  pieOpacity: '1',
+  pieSectionTextColor: '#0d1117',
+  pieStrokeColor: '#0d1117',
+  pieOuterStrokeColor: '#0d1117',
+};
+
+/**
  * Our own pass over Mermaid's SVG: SVG elements only, no `foreignObject`, scripts or event
  * handlers, and no links (their labels stay). URLs are limited to the diagram's own fragments by
  * `onlyFragments`, not `ALLOWED_URI_REGEXP`: DOMPurify tests that pattern against every attribute
@@ -51,7 +75,7 @@ let drawn = 0;
 export function renderMermaid(source: string, scheme: ColorScheme): Promise<string> {
   const run = queue.then(async () => {
     const engine = await (mermaid ??= import('mermaid').then((module) => module.default));
-    engine.initialize({ ...MERMAID_CONFIG, theme: scheme === 'dark' ? 'dark' : 'default' });
+    engine.initialize({ ...MERMAID_CONFIG, ...(scheme === 'dark' ? { theme: 'dark', themeVariables: DARK_PIE } : { theme: 'default' }) });
     return (await engine.render(`galeo-diagram-${++drawn}`, source)).svg;
   });
   queue = run.catch(() => undefined);

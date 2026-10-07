@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import githubDark from 'shiki/themes/github-dark.mjs';
 import githubLight from 'shiki/themes/github-light.mjs';
+import { DARK_PIE } from '../../../src/renderer/document/mermaid-engine';
 import { CODE_COLOR_REPLACEMENTS } from '../../../src/renderer/worker/pipeline/highlighter';
 import { ACCENTS } from '../../../src/shared/accents';
 import { contrast } from '../../helpers/contrast';
@@ -51,3 +52,16 @@ describe('code highlighting (ADR-003 themes, WCAG 2.1 AA)', () => {
   });
 });
 
+
+describe("Mermaid's pie charts in the dark theme (WCAG 2.1 AA)", () => {
+  const slices = Array.from({ length: 12 }, (_, n) => DARK_PIE[`pie${n + 1}` as keyof typeof DARK_PIE]);
+
+  it('fills every slice opaquely, so its colour is what shows', () => {
+    expect(DARK_PIE.pieOpacity).toBe('1');
+  });
+
+  it.each(slices.map((colour, n) => [n + 1, colour]))('slice %i (%s) stands out 3:1 on the page, and its label reads at 4.5:1', (_n, colour) => {
+    for (const surface of SURFACES) expect(contrast(colour, SCHEMES.dark[surface]!), `on ${surface}`).toBeGreaterThanOrEqual(3);
+    expect(contrast(DARK_PIE.pieSectionTextColor, colour)).toBeGreaterThanOrEqual(4.5);
+  });
+});
