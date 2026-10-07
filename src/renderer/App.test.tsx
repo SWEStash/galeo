@@ -351,6 +351,28 @@ describe('App', () => {
     await vi.waitFor(() => expect(metrics()).toBe('3 ln · 2 words · < 1 min'));
   });
 
+  it('zooms the shown tab with Ctrl and the wheel: up zooms in, down zooms out', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a') });
+    const container = await renderApp();
+    await documentShadow(container);
+    const zoom = () => container.querySelector('[data-testid="status-zoom"]')?.textContent;
+    const turn = (deltaY: number, ctrlKey = true) => {
+      const event = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true });
+      // happy-dom's WheelEvent leaves out the modifier keys it's given.
+      Object.defineProperty(event, 'ctrlKey', { value: ctrlKey });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    expect(turn(-120)).toBe(true);
+    await vi.waitFor(() => expect(zoom()).toBe('110%'));
+    expect(api.tabs.zoom).toHaveBeenLastCalledWith('doc-1', 1.1);
+    turn(120);
+    await vi.waitFor(() => expect(zoom()).toBeUndefined());
+    // Without Ctrl the wheel scrolls, as always.
+    expect(turn(-120, false)).toBe(false);
+    expect(zoom()).toBeUndefined();
+  });
+
   it('shows a log with level badges and follows its end on End until scrolled up', async () => {
     stubBridge({}, { records: [{ id: 'doc-1', path: '/d/app.log' }], content: readyContent('log', 'source', 'INFO a\nERROR b\n') });
     const container = await renderApp();

@@ -45,7 +45,7 @@ the file into the window in front of you) when you want it here.
 - **Views**: Ctrl+U switches a Markdown file between rendered and source; Alt+Z toggles wrapping;
   logs open in source view, and End follows the end of a growing log.
 - **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
-  Ctrl+0), and every command by name in the **palette** (Ctrl+Shift+P).
+  Ctrl+0, or Ctrl and the wheel), and every command by name in the **palette** (Ctrl+Shift+P).
 - **Status bar**: the path (click to copy it or reveal it in Files), the view, the encoding, the
   line count (in the source view) and, for Markdown and `.txt`, the word count and reading time.
   Markdown counts its prose only: code blocks, math, diagrams and front matter aren't words.

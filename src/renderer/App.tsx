@@ -26,6 +26,7 @@ import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
 import { TabDocument } from './tabs/TabDocument';
 import { useTabs } from './tabs/useTabs';
+import { wheelZoom } from './tabs/wheel-zoom';
 import { QuickOpen } from './quick-open/QuickOpen';
 import { DropArea } from './tabs/DropArea';
 import { useFileDrops } from './tabs/useFileDrops';
@@ -205,6 +206,19 @@ function useTabShortcuts(store: TabStore, openQuickOpen: () => void) {
     else store.reopenClosed();
     return true;
   };
+  // Ctrl and the wheel zoom too, unless something under the pointer took the wheel (the viewer).
+  useEffect(() => {
+    let pending = 0;
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey || event.defaultPrevented) return;
+      event.preventDefault();
+      const turned = wheelZoom(pending, event);
+      pending = turned.pending;
+      if (turned.step) zoom(turned.step)();
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [store]);
   useCommands({
     zoomIn: zoom('in'),
     zoomOut: zoom('out'),

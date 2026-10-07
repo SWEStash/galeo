@@ -127,6 +127,30 @@ test('zoom is per tab: Ctrl++ (or Ctrl+=) zooms this tab only, Ctrl+0 resets it'
   }
 });
 
+test('Ctrl and the wheel zoom the shown tab: up zooms in, down zooms out, over the tab bar too', async () => {
+  const { window, close } = await launchApp(['--', basic]);
+  try {
+    await expect(shownDocument(window)).toBeVisible();
+    const over = async (selector: string) => {
+      const box = (await window.locator(selector).first().boundingBox())!;
+      await window.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    };
+    await over('[data-testid="document"]');
+    await window.keyboard.down('Control');
+    await window.mouse.wheel(0, -120);
+    await expect(window.getByTestId('status-zoom')).toHaveText('110%');
+    await window.mouse.wheel(0, -120);
+    await expect(window.getByTestId('status-zoom')).toHaveText('125%');
+    await over('[role="tab"]');
+    await window.mouse.wheel(0, 120);
+    await expect(window.getByTestId('status-zoom')).toHaveText('110%');
+    await window.keyboard.up('Control');
+    await expect(shownDocument(window)).toHaveCSS('zoom', '1.1');
+  } finally {
+    await close();
+  }
+});
+
 test('tabs with the same file name show the parent that tells them apart, and the full path on hover', async () => {
   const dir = tempHome();
   for (const folder of ['acme', 'beta']) {

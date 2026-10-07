@@ -42,6 +42,8 @@ export function TabBar({
         return next.overflows === now.overflows && next.canLeft === now.canLeft && next.canRight === now.canRight ? now : next;
       });
     const onWheel = (event: WheelEvent) => {
+      // Ctrl and the wheel zoom, wherever the pointer is.
+      if (event.ctrlKey) return;
       const delta = wheelScroll(event, strip.clientWidth);
       if (delta === 0 || !overflowEdges(strip).overflows) return;
       event.preventDefault();
