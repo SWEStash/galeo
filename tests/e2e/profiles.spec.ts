@@ -120,6 +120,29 @@ test('switching to a stopped profile starts it with its session', async () => {
   }
 });
 
+test("the page cannot delete its profile, clear recent files or install the launcher on its own (T6)", async () => {
+  const home = tempHome();
+  const { app, close } = await launchApp(['--', basic], { home });
+  try {
+    const opened = app.waitForEvent('window');
+    expect(launchSecond(home, ['--profile', 'Old', '--', gfm]).status).toBe(0);
+    const old = await opened;
+    await expect.poll(() => paths(old)).toEqual([gfm]);
+    // Long after any input, so no credit is left.
+    await old.waitForTimeout(1100);
+    const refusals = await old.evaluate(async () => {
+      const reason = (call: Promise<unknown>) => call.then(() => 'done', (error: Error) => error.message);
+      return [await reason(window.galeo.profiles.delete()), await reason(window.galeo.recent.clear()), await reason(window.galeo.app.installLauncher())];
+    });
+    for (const refusal of refusals) expect(refusal).toMatch(/no input/);
+    expect(existsSync(path.join(appDirs(home).config, 'profiles', 'old'))).toBe(true);
+    expect(app.windows()).toHaveLength(2);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
 test('deleting a profile asks first, closes its windows and removes only its own folders', async () => {
   const home = tempHome();
   const { app, window, close } = await launchApp(['--', basic], { home });

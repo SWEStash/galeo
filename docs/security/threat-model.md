@@ -284,9 +284,10 @@ restore, or a link whose target main finds in the source of the tab's document (
 Quick open lists a typed folder (`~/…`, `/…`), and opens any selection, only by spending a
 credit of real input to that window: each key press, click or tap main observes (`input-event`)
 earns one, for a second, at most five held. Following a link the document has spends one too,
-whether it opens a file, moves to an anchor or opens the browser. A compromised page can then
-neither list folders, open files nor follow links on its own, only once per key the reader
-presses. Link
+whether it opens a file, moves to an anchor or opens the browser, and so do deleting the
+window's profile, clearing recent files and installing the AppImage launcher. A compromised page
+can then neither list folders, open files, follow links nor make those changes on its own, only
+once per key the reader presses. Link
 and image extraction runs in a worker thread in main with a time budget, so hostile input cannot
 stall main.
 Local images are served only after main finds their `src` in the document's image set, through

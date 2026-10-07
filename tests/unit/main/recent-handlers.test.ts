@@ -10,13 +10,13 @@ import { FakeFileSystem } from '../../helpers/fakes';
 
 const from = (id: number) => ({ sender: { id } }) as WindowIpcEvent;
 
-async function setup(count = 3) {
+async function setup(count = 3, input = true) {
   const fs = new FakeFileSystem();
   let n = 0;
   const recent = new RecentFiles({ fs, utf8, path: '/s/recent.json', parse: (data) => ({ ok: true, value: data as never }), now: () => n++ });
   for (let i = 0; i < count; i++) await recent.add(`/d/f${i}.md`);
   const tabs = new TabRegistry(() => `tab-${++n}`);
-  const handlers = recentHandlers({ recent: () => recent, selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
+  const handlers = recentHandlers({ recent: () => recent, input: { spend: () => input }, selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
   return { recent, tabs, handlers };
 }
 
@@ -55,6 +55,12 @@ describe('recentHandlers', () => {
     expect(await handlers['recent.list']([], from(1))).toEqual([]);
   });
 
+  it("clears only on the reader's input, never on the page's own (T6)", async () => {
+    const { handlers, recent } = await setup(3, false);
+    await expect(handlers['recent.clear']([], from(1))).rejects.toThrow('no input');
+    expect(recent.list()).toHaveLength(3);
+  });
+
   it("uses the list of the sender's profile, and none for a window without one", async () => {
     const fs = new FakeFileSystem();
     let n = 0;
@@ -65,7 +71,7 @@ describe('recentHandlers', () => {
     };
     const [a, b] = [await listOf('a'), await listOf('b')];
     const tabs = new TabRegistry(() => `tab-${++n}`);
-    const handlers = recentHandlers({ recent: (window) => ({ 1: a, 2: b })[window], selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
+    const handlers = recentHandlers({ recent: (window) => ({ 1: a, 2: b })[window], input: { spend: () => true }, selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
     expect((await handlers['recent.list']([], from(2))).map((file) => file.path)).toEqual(['/d/b.md']);
     await handlers['recent.clear']([], from(1));
     expect(a.list()).toEqual([]);

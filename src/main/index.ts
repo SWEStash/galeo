@@ -627,7 +627,9 @@ function start(initialMode: StartupMode): void {
           appImage: appImagePath() !== null,
           crashLoop: crashes.gaveUp(event.sender.id),
         }),
-        'app.installLauncher': async () => {
+        // Changes beyond the page (a launcher, a profile) only on the reader's input (T6).
+        'app.installLauncher': async (_args, event) => {
+          if (!input.spend(event.sender.id)) throw new Error('no input');
           const appImage = appImagePath();
           if (!appImage) throw new Error('not an AppImage');
           const home = app.getPath('home');
@@ -673,6 +675,7 @@ function start(initialMode: StartupMode): void {
           return enqueue(() => updateProfile(profile, name, accent));
         },
         'profiles.delete': (_args, event) => {
+          if (!input.spend(event.sender.id)) throw new Error('no input');
           const profile = profileOf(event.sender.id);
           if (!profile || profile.id === DEFAULT_PROFILE) throw new Error('not deletable');
           return enqueue(() => removeProfile(profile.id, []));
@@ -761,7 +764,7 @@ function start(initialMode: StartupMode): void {
             },
           },
         }),
-        ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
+        ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, input, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
         ...dropHandlers({
           drops,
           fs,
