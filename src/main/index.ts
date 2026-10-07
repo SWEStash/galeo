@@ -149,8 +149,11 @@ function start(initialMode: StartupMode): void {
     clipboard,
     showMenu: (windowId, items) => showNativeMenu(windowId, items, app.isPackaged),
   });
+  // Real input per window: what lets a request reach beyond the window's own grants (T6).
+  const input = new InputCredits(Date.now);
   const links = new DocumentLinks({
     records: documents,
+    input,
     fs,
     images,
     tasks: new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js')),
@@ -206,7 +209,6 @@ function start(initialMode: StartupMode): void {
   const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
   const reads = new ReadIdentities(fs);
   const crashes = new CrashRecovery(Date.now);
-  const input = new InputCredits(Date.now);
   const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
     const contents = webContents.fromId(windowId);
     if (contents) sendEvent(contents, event, payload);

@@ -34,6 +34,7 @@ export type DocumentContent =
 /** Why a link wasn't followed; the page shows it in the status bar. */
 export type RefusalReason =
   | 'not-in-document'
+  | 'no-input'
   | 'scheme'
   | 'host'
   | 'malformed'

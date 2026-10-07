@@ -92,6 +92,27 @@ test('the page cannot open a URL or file the document does not link to (SR-04, S
   }
 });
 
+test("the page cannot follow even the document's own links without the reader's input (T6)", async () => {
+  const { app, window: page, close } = await launchApp(['--', index], { env });
+  try {
+    await expect(heading(page)).toBeVisible();
+    // Long after any input, so no credit is left from the launch.
+    await page.waitForTimeout(1100);
+    const results = await page.evaluate(async () => {
+      const { tabs: [record] } = await window.galeo.tabs.snapshot();
+      const follow = (href: string, where: 'current' | 'background') => window.galeo.documents.followLink(record!.id, href, where);
+      return [await follow('https://example.org/page?x=1', 'current'), await follow('mailto:someone@example.org', 'current')];
+    });
+    expect(results).toEqual(Array(2).fill({ kind: 'refused', reason: 'no-input' }));
+    expect(await opened(app)).toEqual([]);
+    // The reader's own click still follows it.
+    await page.getByTestId('document').getByRole('link', { name: 'Mail' }).click();
+    await expect.poll(() => opened(app)).toEqual(['mailto:someone@example.org']);
+  } finally {
+    await close();
+  }
+});
+
 test('a burst of external opens is stopped once the user blocks it', async () => {
   const { app, window, close } = await launchApp(['--', index], { env });
   try {

@@ -12,6 +12,7 @@ import type { TabStatus, TabStore } from './store';
 
 const REFUSALS: Record<RefusalReason, string> = {
   'not-in-document': "This link can't be opened",
+  'no-input': "This link can't be opened",
   scheme: 'Only web and email links open outside galeo',
   host: "Links to another host by '//' can't be opened",
   malformed: 'This link is malformed',

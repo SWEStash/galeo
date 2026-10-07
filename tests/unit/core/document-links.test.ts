@@ -13,7 +13,7 @@ const DOC = [
   '<a href="//evil.example/x">far</a> [s1](https://a.example) [s2](https://b.example) [s3](https://c.example) [s4](https://d.example)',
 ].join('\n\n');
 
-function setup(options: { burst?: boolean; references?: (text: string) => References } = {}) {
+function setup(options: { burst?: boolean; references?: (text: string) => References; input?: boolean } = {}) {
   const clock = new FakeClock(1_000_000);
   let n = 0;
   const records = new TabRegistry(() => `id-${++n}`);
@@ -26,8 +26,10 @@ function setup(options: { burst?: boolean; references?: (text: string) => Refere
     '/d/folder.png/inner.txt': 'x',
   });
   const asked: number[] = [];
+  const spent: number[] = [];
   const links = new DocumentLinks({
     records,
+    input: { spend: (window) => (spent.push(window), options.input ?? true) },
     fs,
     images: new ImageGrants(() => `img-${++n}`),
     tasks,
@@ -47,10 +49,28 @@ function setup(options: { burst?: boolean; references?: (text: string) => Refere
   });
   const { id } = records.open('/d/plan.md', 1);
   links.remember(id, 1, '/d/plan.md', DOC);
-  return { clock, records, tasks, shell, links, id, asked, fs };
+  return { clock, records, tasks, shell, links, id, asked, fs, spent };
 }
 
 describe('DocumentLinks.follow', () => {
+  it("follows a link only on the reader's input: one credit per link, none for one it refuses (T6)", async () => {
+    const page = setup({ input: false });
+    for (const href of ['next.md', '#intro', 'https://example.org/a']) {
+      expect(await page.links.follow(page.id, 1, href)).toEqual({ kind: 'refused', reason: 'no-input' });
+    }
+    expect(await page.links.follow(page.id, 1, 'next.md', 'background')).toEqual({ kind: 'refused', reason: 'no-input' });
+    expect(page.spent).toEqual([1, 1, 1, 1]);
+    expect(page.shell.calls).toEqual([]);
+    expect(page.records.list(1)).toHaveLength(1);
+    expect(page.records.get(page.id, 1)?.path).toBe('/d/plan.md');
+
+    const reader = setup();
+    expect(await reader.links.follow(reader.id, 1, '/etc/passwd')).toEqual({ kind: 'refused', reason: 'not-in-document' });
+    expect(reader.spent).toEqual([]);
+    expect(await reader.links.follow(reader.id, 1, 'next.md')).toEqual({ kind: 'navigated', anchor: null });
+    expect(reader.spent).toEqual([1]);
+  });
+
   it('navigates the tab to a linked local file, anchor included', async () => {
     const { links, records, id } = setup();
     expect(await links.follow(id, 1, 'next.md#scope')).toEqual({ kind: 'navigated', anchor: 'scope' });

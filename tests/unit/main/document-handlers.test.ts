@@ -39,6 +39,7 @@ function setup(files: Record<string, string>, slow = '') {
   const records = new TabRegistry(() => `id-${++n}`);
   const links = new DocumentLinks({
     records,
+    input: { spend: () => true },
     fs,
     images: new ImageGrants(() => `img-${++n}`),
     tasks: new FakeTaskRunner({ references: (text) => extractReferences(text as string) }),

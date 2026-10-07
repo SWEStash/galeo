@@ -5,6 +5,7 @@ import { classifyLink, type LinkContext } from '../links/classify';
 import type { ExternalOpenLimiter } from '../links/limiter';
 import { FsError, type FileSystem, type OsShell, type TaskRunner } from '../ports';
 import { IMAGE_MAX_BYTES, imageTypeOf, type ImageGrants } from './images';
+import type { InputCredits } from './input-credits';
 import type { HistoryEntry, TabRegistry } from '../tabs/registry';
 
 /** Extraction runs in a worker thread; hostile Markdown gets this long before it's abandoned. */
@@ -12,6 +13,8 @@ const REFERENCES_TIMEOUT_MS = 2000;
 
 export interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
   records: TabRegistry;
+  /** The reader's input: following a link spends a credit of it (threat T6). */
+  input: Pick<InputCredits, 'spend'>;
   fs: FileSystem;
   images: ImageGrants;
   /** Runs the `references` task (the shared extractor) off the main thread. */
@@ -30,7 +33,8 @@ interface Read {
 
 /**
  * Following links (ADR-004): main checks each href against the links of the document it read
- * itself, so a compromised page can neither read other files nor build URLs for the browser.
+ * itself, so a compromised page can neither read other files nor build URLs for the browser, and
+ * follows one only on the reader's input.
  */
 export class DocumentLinks {
   private readonly reads = new Map<string, Read>();
@@ -52,6 +56,8 @@ export class DocumentLinks {
     const found = await this.references(id, window);
     if (found === 'unavailable') return refused('unavailable');
     if (!found || !found.references.links.includes(href)) return refused('not-in-document');
+    // A compromised page could otherwise pick among the document's own links on its own.
+    if (!this.deps.input.spend(window)) return refused('no-input');
     const { record } = found;
 
     const target = classifyLink(href, { ...this.deps, documentPath: record.path });
