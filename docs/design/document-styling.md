@@ -59,6 +59,7 @@ The fonts ship with the app (no web fonts), each with a system fallback.
 | `.galeo-frontmatter` | The collapsible frontmatter block |
 | `.galeo-remote-image` | Placeholder for a blocked remote image (`data-host`, `data-url`) |
 | `.galeo-text-reader` | The `.txt` reader view (paragraphs keep their line breaks) |
+| `.galeo-image` | A document image that opens in the viewer (larger than an icon), with its `.galeo-image-expand` button |
 | `.galeo-diagram` | A Mermaid diagram's block (`data-state`: `pending`, `rendered`, `error`); the SVG is in a shadow root of its own |
 
 Code blocks are highlighted with the `github-light` and `github-dark` themes, emitted as

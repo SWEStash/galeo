@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { launchApp } from '../helpers/launch';
@@ -62,6 +63,49 @@ test('the page gets no image the document does not show, and cannot guess one (A
       granted: 'loaded',
       fetched: 'blocked',
     });
+  } finally {
+    await close();
+  }
+});
+
+test('an image larger than an icon opens in the viewer, by a click or its Expand button; a linked one follows its link', async () => {
+  const zoom = path.resolve(import.meta.dirname, '../fixtures/docs/images/zoom.md');
+  const { window, close } = await launchApp(['--', zoom]);
+  try {
+    const document = window.getByTestId('document');
+    const chart = document.getByRole('img', { name: 'A bar chart' });
+    await expect.poll(() => chart.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBe(480);
+    // Two charts get a button; the 2 px dot is an icon and gets none.
+    await expect(document.getByRole('button', { name: 'Expand image' })).toHaveCount(2);
+
+    await chart.click();
+    const viewer = window.getByRole('dialog', { name: 'A bar chart' });
+    await expect(viewer).toBeVisible();
+    const stage = viewer.getByTestId('zoom-stage');
+    await expect(stage.locator('img')).toBeVisible();
+    await expect.poll(async () => Number(await stage.getAttribute('data-scale'))).toBeGreaterThan(1);
+    const fitted = Number(await stage.getAttribute('data-scale'));
+    await window.keyboard.press('-');
+    await expect.poll(async () => Number(await stage.getAttribute('data-scale'))).toBeLessThan(fitted);
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[role="dialog"]').analyze();
+    expect(results.violations).toEqual([]);
+    await window.keyboard.press('Escape');
+    await expect(viewer).toHaveCount(0);
+
+    // From the keyboard: the image's Expand button, and focus comes back to it.
+    const expand = document.getByRole('button', { name: 'Expand image' }).first();
+    await expand.focus();
+    await window.keyboard.press('Enter');
+    await expect(viewer).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(expand).toBeFocused();
+
+    // A linked image: its button opens the viewer, a click on it follows the link.
+    await document.getByRole('button', { name: 'Expand image' }).last().click();
+    await expect(window.getByRole('dialog', { name: 'A linked chart' })).toBeVisible();
+    await window.keyboard.press('Escape');
+    await document.getByRole('img', { name: 'A linked chart' }).click();
+    await expect(window.getByRole('tab', { selected: true })).toContainText('basic.md');
   } finally {
     await close();
   }

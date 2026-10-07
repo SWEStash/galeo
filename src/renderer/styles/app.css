@@ -1020,32 +1020,32 @@ button:focus-visible {
 }
 
 /* The diagram viewer fills the window, less a margin; the diagram pans and zooms inside. */
-.modal.diagram-viewer {
+.modal.zoom-viewer {
   width: calc(100vw - 48px);
   height: calc(100vh - 48px);
 }
-.diagram-viewer-keys {
+.zoom-viewer-keys {
   height: 100%;
 }
-.diagram-viewer-dialog {
+.zoom-viewer-dialog {
   box-sizing: border-box;
   height: 100%;
   padding: 0;
   gap: 0;
 }
-.diagram-viewer-body {
+.zoom-viewer-body {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
-.diagram-viewer-bar {
+.zoom-viewer-bar {
   display: flex;
   gap: 6px;
   align-items: center;
   padding: 8px 12px;
   border-bottom: 1px solid var(--galeo-color-border);
 }
-.diagram-viewer-title {
+.zoom-viewer-title {
   flex: 1;
   min-width: 0;
   margin: 0;
@@ -1054,27 +1054,31 @@ button:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.diagram-viewer-zoom {
+.zoom-viewer-zoom {
   min-width: 4em;
   color: var(--galeo-color-muted);
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
-.diagram-viewer-viewport {
+.zoom-viewer-viewport {
   position: relative;
   flex: 1;
   overflow: hidden;
   cursor: grab;
   touch-action: none;
 }
-.diagram-viewer-viewport:active {
+.zoom-viewer-viewport:active {
   cursor: grabbing;
 }
 /* A diagram drawn light for its own colours keeps its light panel in dark mode. */
-.diagram-viewer-viewport[data-panel='light'] {
+.zoom-viewer-viewport[data-panel='light'] {
   background: #ffffff;
 }
-.diagram-viewer-stage {
+.galeo-viewer-content > img {
+  display: block;
+  max-width: none;
+}
+.zoom-viewer-stage {
   position: absolute;
   top: 0;
   left: 0;

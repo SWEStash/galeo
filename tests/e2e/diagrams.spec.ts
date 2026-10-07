@@ -150,7 +150,7 @@ test("in dark mode, a diagram with its author's own colours is drawn light on a 
     const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]').analyze();
     expect(results.violations).toEqual([]);
     await wide!.getByRole('button', { name: 'Expand diagram' }).click();
-    await expect(window.getByTestId('diagram-viewport')).toHaveAttribute('data-panel', 'light');
+    await expect(window.getByTestId('zoom-viewport')).toHaveAttribute('data-panel', 'light');
   } finally {
     await close();
   }
@@ -167,9 +167,9 @@ test('a diagram opens in a full-window viewer that zooms and pans, and Esc gives
     await window.keyboard.press('Enter');
     const viewer = window.getByRole('dialog', { name: 'Checkout flow' });
     await expect(viewer).toBeVisible();
-    const stage = viewer.getByTestId('diagram-stage');
+    const stage = viewer.getByTestId('zoom-stage');
     const scale = async () => Number(await stage.getAttribute('data-scale'));
-    await expect(stage.locator('.galeo-viewer-svg')).toBeVisible();
+    await expect(stage.locator('.galeo-viewer-content')).toBeVisible();
     const fitted = await scale();
     await window.keyboard.press('+');
     await expect.poll(scale).toBeGreaterThan(fitted);
@@ -178,7 +178,7 @@ test('a diagram opens in a full-window viewer that zooms and pans, and Esc gives
     await window.keyboard.press('1');
     await expect.poll(scale).toBe(1);
     // The wheel zooms around the pointer; dragging pans.
-    const box = (await viewer.getByTestId('diagram-viewport').boundingBox())!;
+    const box = (await viewer.getByTestId('zoom-viewport').boundingBox())!;
     await window.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await window.mouse.wheel(0, -400);
     await expect.poll(scale).toBeGreaterThan(1);

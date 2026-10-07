@@ -1,5 +1,6 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
 import type { ImageResult } from '../../shared/documents';
+import { offerZoom, type ImageExpand } from './images';
 import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
 import type { ScrollAnchor } from '../../shared/tabs';
@@ -41,6 +42,8 @@ export interface DocumentViewProps {
   zoom?: number;
   /** A diagram's Expand button: show it in the viewer (`returnFocus` after it closes). */
   onExpandDiagram?: ((diagram: { svg: string; name: string; panel: boolean; returnFocus: () => void }) => void) | undefined;
+  /** An image's Expand button or a click on it: show it in the viewer. */
+  onExpandImage?: ((image: ImageExpand) => void) | undefined;
   /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
   onHeading?: ((id: string | null) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
@@ -112,6 +115,7 @@ export function DocumentView({
   zoom = 1,
   onHeading,
   onExpandDiagram,
+  onExpandImage,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -191,6 +195,8 @@ export function DocumentView({
   const diagrams = useRef<Diagrams | null>(null);
   const expandListener = useRef(onExpandDiagram);
   expandListener.current = onExpandDiagram;
+  const imageListener = useRef(onExpandImage);
+  imageListener.current = onExpandImage;
   const shownScheme = useRef(scheme);
   useEffect(() => () => diagrams.current?.dispose(), []);
   useLayoutEffect(() => {
@@ -229,6 +235,8 @@ export function DocumentView({
       void onResolveImage(src).then((result) => {
         if (!current || !image.isConnected) return;
         if (result.kind === 'image') {
+          // Larger than an icon, it can open in the viewer once its size is known.
+          image.addEventListener('load', () => offerZoom(image, (expand) => imageListener.current?.(expand)), { once: true });
           image.src = result.url;
           return;
         }

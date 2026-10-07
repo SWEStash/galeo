@@ -18,7 +18,8 @@ import type { ColorScheme } from './host';
 import type { FindResult, SourceLanguage } from './source-view';
 import { useDelayed } from './useDelayed';
 import { countWords } from '../../shared/words';
-import { DiagramViewer } from './DiagramViewer';
+import type { ImageExpand } from './images';
+import { ZoomViewer, type ZoomContent } from './ZoomViewer';
 import { useRenderedHtml } from './useRenderedHtml';
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
@@ -120,13 +121,22 @@ export function DocumentPane({
   }, []);
 
   const documentHandle = useRef<DocumentHandle>(null);
-  const [viewer, setViewer] = useState<{ svg: string; name: string; panel: boolean; returnFocus: () => void } | null>(null);
+  const [viewer, setViewer] = useState<{ content: ZoomContent; name: string; returnFocus: () => void } | null>(null);
+  const expandDiagram = useCallback(
+    ({ svg, name, panel, returnFocus }: { svg: string; name: string; panel: boolean; returnFocus: () => void }) =>
+      setViewer({ content: { kind: 'diagram', svg, panel }, name, returnFocus }),
+    [],
+  );
+  const expandImage = useCallback(
+    ({ url, name, returnFocus }: ImageExpand) => setViewer({ content: { kind: 'image', url }, name, returnFocus }),
+    [],
+  );
   const closeViewer = useCallback(() => setViewer(null), []);
   // The viewer is the shown tab's: switching tabs closes it.
   useEffect(() => {
     if (!active) setViewer(null);
   }, [active]);
-  // Back to the diagram's Expand button once the viewer is gone: the modal's own restore can't
+  // Back to the diagram's or image's Expand button once the viewer is gone: the modal's own restore can't
   // reach into the document's shadow root.
   const returnFocus = useRef<(() => void) | null>(null);
   useEffect(() => {
@@ -313,13 +323,14 @@ export function DocumentPane({
           onRendering={onRendering}
           zoom={zoom}
           onHeading={showsOutline ? setHeading : undefined}
-          onExpandDiagram={setViewer}
+          onExpandDiagram={expandDiagram}
+          onExpandImage={expandImage}
         />
         {showsOutline && (
           <OutlinePanel entries={render.outline} current={heading} onChoose={goToHeading} onClose={closeOutline} autoFocus={focusOutline} />
         )}
       </div>
-      {viewer && <DiagramViewer svg={viewer.svg} name={viewer.name} panel={viewer.panel} onClose={closeViewer} />}
+      {viewer && <ZoomViewer content={viewer.content} name={viewer.name} onClose={closeViewer} />}
     </>
   );
 }

@@ -53,7 +53,7 @@ ADR-002…007).
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices) | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document, right side | Ctrl+Shift+O (toggle) |
-| **Diagram viewer** | One Mermaid diagram filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 % | A diagram's ⤢ Expand button (on hover or keyboard focus) / Esc, focus back on the button (owner, 2026-10-06) |
+| **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 % | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
 | **Profile menu** | Switch / new / rename / delete profile, open profile settings | Click profile chip or Ctrl+Shift+M |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
 

@@ -224,8 +224,22 @@ div.galeo-block-error {
   /* Centred when it fits; a wider one starts at the left edge, where its block's scroll starts. */
   justify-content: safe center;
 }
-/* Shown on hover and on keyboard focus; it stays at the figure's corner while the drawing scrolls. */
-.galeo-diagram-expand {
+/* A document image that can open in the viewer: by its Expand button, or a click when it isn't a link. */
+.galeo-image {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+}
+.galeo-image > img {
+  cursor: zoom-in;
+}
+a .galeo-image > img {
+  cursor: pointer;
+}
+/* Shown on hover and on keyboard focus; on a diagram, it stays at the figure's corner while the
+   drawing scrolls. */
+.galeo-diagram-expand,
+.galeo-image-expand {
   position: absolute;
   top: 4px;
   right: 4px;
@@ -241,10 +255,13 @@ div.galeo-block-error {
   opacity: 0;
 }
 .galeo-diagram:hover .galeo-diagram-expand,
-.galeo-diagram-expand:focus-visible {
+.galeo-diagram-expand:focus-visible,
+.galeo-image:hover .galeo-image-expand,
+.galeo-image-expand:focus-visible {
   opacity: 1;
 }
-.galeo-diagram-expand:focus-visible {
+.galeo-diagram-expand:focus-visible,
+.galeo-image-expand:focus-visible {
   outline: 2px solid var(--galeo-color-focus);
   outline-offset: 1px;
 }

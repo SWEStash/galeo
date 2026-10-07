@@ -8,12 +8,18 @@ const STEP = 1.25;
 const ARROW_PAN = 40;
 
 /**
- * A diagram in a full-window viewer: it opens fitted to the window, then zooms (buttons, + and -,
- * the wheel around the pointer) and pans (dragging, the arrow keys). 0 fits it again, 1 shows it at
- * its natural size. The SVG is the one already checked and drawn in the document, in a shadow
- * root of its own; one drawn light for its own colours keeps its light panel in dark mode.
+ * What the viewer shows: a diagram's SVG (the one already checked and drawn in the document; with
+ * `panel`, drawn light for its own colours, on its light panel in dark mode), or a document image
+ * by the opaque URL main granted it (ADR-004).
  */
-export function DiagramViewer({ svg, name, panel, onClose }: { svg: string; name: string; panel: boolean; onClose: () => void }) {
+export type ZoomContent = { kind: 'diagram'; svg: string; panel: boolean } | { kind: 'image'; url: string };
+
+/**
+ * A diagram or image in a full-window viewer: it opens fitted to the window, then zooms (buttons,
+ * + and -, the wheel around the pointer) and pans (dragging, the arrow keys). 0 fits it again, 1
+ * shows it at its natural size.
+ */
+export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; name: string; onClose: () => void }) {
   const viewport = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
   const natural = useRef({ width: 1, height: 1 });
@@ -31,8 +37,21 @@ export function DiagramViewer({ svg, name, panel, onClose }: { svg: string; name
   };
 
   useLayoutEffect(() => {
+    if (content.kind === 'image') {
+      // Fitted once its size is known.
+      const image = document.createElement('img');
+      image.alt = '';
+      image.draggable = false;
+      image.addEventListener('load', () => {
+        natural.current = { width: image.naturalWidth, height: image.naturalHeight };
+        fitted();
+      });
+      image.src = content.url;
+      holder.current!.replaceChildren(image);
+      return;
+    }
     const shadow = holder.current!.shadowRoot ?? holder.current!.attachShadow({ mode: 'open' });
-    setTrustedHtml(shadow, svg);
+    setTrustedHtml(shadow, content.svg);
     const drawn = shadow.querySelector('svg');
     const { width, height } = drawn?.viewBox.baseVal ?? { width: 0, height: 0 };
     if (drawn && width > 0 && height > 0) {
@@ -43,7 +62,7 @@ export function DiagramViewer({ svg, name, panel, onClose }: { svg: string; name
       drawn.setAttribute('height', String(height));
     }
     fitted();
-  }, [svg, fitted]);
+  }, [content, fitted]);
 
   // The wheel zooms around the pointer; it must not scroll the page behind.
   useEffect(() => {
@@ -88,16 +107,16 @@ export function DiagramViewer({ svg, name, panel, onClose }: { svg: string; name
 
   return (
     <ModalOverlay className="modal-overlay" isOpen isDismissable onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <Modal className="modal diagram-viewer">
+      <Modal className="modal zoom-viewer">
         {/* Keys reach here from the dialog (focused when it opens) and every control in it. */}
-        <div className="diagram-viewer-keys" onKeyDown={onKeyDown}>
-          <Dialog className="dialog diagram-viewer-dialog" aria-label={name}>
-            <div className="diagram-viewer-body">
-              <div className="diagram-viewer-bar">
-                <Heading slot="title" className="diagram-viewer-title">
+        <div className="zoom-viewer-keys" onKeyDown={onKeyDown}>
+          <Dialog className="dialog zoom-viewer-dialog" aria-label={name}>
+            <div className="zoom-viewer-body">
+              <div className="zoom-viewer-bar">
+                <Heading slot="title" className="zoom-viewer-title">
                   {name}
                 </Heading>
-                <span className="diagram-viewer-zoom" aria-hidden="true">
+                <span className="zoom-viewer-zoom" aria-hidden="true">
                   {view ? `${Math.round(view.scale * 100)} %` : ''}
                 </span>
                 <Button aria-label="Zoom out (−)" onPress={() => zoomCentred(1 / STEP)}>
@@ -118,22 +137,22 @@ export function DiagramViewer({ svg, name, panel, onClose }: { svg: string; name
               </div>
               <div
                 ref={viewport}
-                className="diagram-viewer-viewport"
-                data-panel={panel ? 'light' : undefined}
-                data-testid="diagram-viewport"
+                className="zoom-viewer-viewport"
+                data-panel={content.kind === 'diagram' && content.panel ? 'light' : undefined}
+                data-testid="zoom-viewport"
                 onPointerDown={onPointerDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
               >
                 <div
-                  className="diagram-viewer-stage"
-                  data-testid="diagram-stage"
+                  className="zoom-viewer-stage"
+                  data-testid="zoom-stage"
                   data-scale={view?.scale}
                   data-x={view?.x}
                   style={view ? { transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})` } : { visibility: 'hidden' }}
                 >
-                  <div ref={holder} className="galeo-viewer-svg" />
+                  <div ref={holder} className="galeo-viewer-content" />
                 </div>
               </div>
             </div>

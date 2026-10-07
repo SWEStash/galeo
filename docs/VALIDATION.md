@@ -11,7 +11,7 @@ Wayland) before each release.
 - **axe** (`@axe-core/playwright`) on every surface, in the e2e suite: tab bar, document (prose,
   GFM, code, math, diagrams, a wide scrolling diagram) and source and log views in light and dark,
   document states and banners in both schemes, find bar, quick open, palette, About, outline, the
-  diagram viewer (both schemes), Settings, status bar, profile menu and dialogs, empty window,
+  viewer (a diagram in both schemes, and an image), Settings, status bar, profile menu and dialogs, empty window,
   settings notices, the sandbox-unavailable window, and the crash-loop message (axe-core run in the
   page through main, as Playwright loses a crashed page).
   The drop overlay is decorative (`aria-hidden`); quick open is the keyboard way to open files.

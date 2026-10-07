@@ -228,7 +228,7 @@ test.describe('Trusted Types (ADR-010)', () => {
       // The diagram viewer inserts the same SVG into a shadow root of its own.
       await diagrams.first().scrollIntoViewIfNeeded();
       await diagrams.first().getByRole('button', { name: 'Expand diagram' }).click();
-      await expect(window.getByTestId('diagram-stage').locator('.galeo-viewer-svg')).toBeVisible();
+      await expect(window.getByTestId('zoom-stage').locator('.galeo-viewer-content')).toBeVisible();
       await window.keyboard.press('Escape');
       const show = (name: RegExp) => window.getByRole('tab', { name }).click();
       await show(/math\.md/);
