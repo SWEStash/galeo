@@ -330,7 +330,7 @@ renders only its active tab. Budget: first document painted within 500 ms.
 | Warm switch within the next frame | Warm DOM kept (LRU budget); switching toggles visibility only |
 | Hibernated wake < 150 ms | Re-read and re-parse in the worker, hidden insert, anchor, reveal |
 | Live reload < 500 ms | Coalesced watcher per open file; re-parse in the worker; anchored re-insert |
-| Smooth scrolling with diagrams | Mermaid draws on intersection (200 px ahead), cached by scheme and source; a cached diagram comes back at once. Drawing one takes the UI thread for up to about 100 ms, which the perf suite records |
+| Smooth scrolling with diagrams | Mermaid draws a diagram within 200 px of the view at once, and one within two screens when the page is idle; cached by scheme and source; a cached diagram comes back at once. Drawing one takes the UI thread for up to about 100 ms, which the perf suite records |
 | Memory baseline | Renderers scale with windows, not tabs; warm budget with memory-pressure eviction |
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
