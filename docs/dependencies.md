@@ -44,7 +44,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 
 | Package | Version | Licence | Last publish | Weekly dl | Role / notes |
 |---|---|---|---|---|---|
-| `electron` | 44.6.0 | MIT | 2026-10-06 | 6.9 M | Shell (ADR-001). Chromium 152, Node 24 |
+| `electron` | 44.7.0 | MIT | 2026-10-07 | 6.9 M | Shell (ADR-001). Chromium 152, Node 24 |
 | `zod` | 4.6.x | MIT | 2026-09-25 | 274 M | Runtime schemas for IPC, settings and sessions (SR-11, SR-17). Main only: the preload and renderer import its inferred types, never its code |
 | unified pipeline (`remark-parse`, `remark-gfm`, `remark-rehype`, `rehype-raw`, `rehype-sanitize`, …) | see the renderer pipeline table | MIT | — | — | Link and image extraction in main for capability checks (ADR-004): the **same** parse and sanitizer as the renderer, up to sanitizing, shared from `src/shared/markdown/`, so main's link set is the page's link set (a fuzz test compares them). This replaced the planned separate `mdast-util-from-markdown` extractor (2026-09-27), which would have needed its own raw-HTML handling |
 
