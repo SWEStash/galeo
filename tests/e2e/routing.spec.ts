@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
@@ -8,11 +8,18 @@ const basic = path.join(docs, 'basic.md');
 const gfm = path.join(docs, 'gfm.md');
 const math = path.join(docs, 'math.md');
 const frontmatter = path.join(docs, 'frontmatter.md');
+const log = path.join(docs, 'sample.log');
 
 const snapshot = (page: Page) => page.evaluate(() => window.galeo.tabs.snapshot());
 const paths = async (page: Page) => (await snapshot(page)).tabs.map((tab) => tab.path);
 /** The file the page itself shows (its selected tab's tooltip is the path), not only what main says. */
 const shownPath = (page: Page) => page.getByRole('tab', { selected: true }).locator('.tab-label').getAttribute('title');
+/**
+ * Tells main the window of `profile` (its title names it) was focused. The test display has no
+ * window manager, so `focus()` sends no event: this runs main's own focus listener instead.
+ */
+const focusProfileWindow = (app: ElectronApplication, profile: string) =>
+  app.evaluate(({ BrowserWindow }, name) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(` — ${name} — `))!.emit('focus'), profile);
 
 test('a later launch adds its files to the running window as tabs, shows the first, and exits', async () => {
   const home = tempHome();
@@ -21,11 +28,66 @@ test('a later launch adds its files to the running window as tabs, shows the fir
     await expect.poll(() => paths(window)).toEqual([basic]);
     // The page shows its tab first, so what follows tests a window already showing one.
     await expect.poll(() => shownPath(window)).toBe(basic);
-    const second = launchSecond(home, ['--', gfm, math]);
+    const started = Date.now();
+    const second = launchSecond(home, ['--', gfm, log]);
     expect(second.status).toBe(0);
-    await expect.poll(() => paths(window)).toEqual([basic, gfm, math]);
+    // `galeo` hands over and returns at once (about 0.3 s here), not when the files are shown.
+    expect(Date.now() - started).toBeLessThan(3_000);
+    await expect.poll(() => paths(window)).toEqual([basic, gfm, log]);
     await expect.poll(() => shownPath(window)).toBe(gfm);
     expect(app.windows()).toHaveLength(1);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
+test('a launch without --profile adds to the window focused last, whichever profile it belongs to', async () => {
+  const home = tempHome();
+  const { app, window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect.poll(() => paths(window)).toEqual([basic]);
+    const opened = app.waitForEvent('window');
+    expect(launchSecond(home, ['--profile', 'acme', '--', gfm]).status).toBe(0);
+    const acme = await opened;
+    await expect.poll(() => paths(acme)).toEqual([gfm]);
+    // A new window takes the focus once shown, a little later; only then does the reader move on.
+    await expect
+      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(' — acme — '))!.isFocused()))
+      .toBe(true);
+    await focusProfileWindow(app, 'default');
+    expect(launchSecond(home, ['--', math]).status).toBe(0);
+    await expect.poll(() => paths(window)).toEqual([basic, math]);
+    await focusProfileWindow(app, 'acme');
+    expect(launchSecond(home, ['--', frontmatter]).status).toBe(0);
+    await expect.poll(() => paths(acme)).toEqual([gfm, frontmatter]);
+    expect(await paths(window)).toEqual([basic, math]);
+    expect(app.windows()).toHaveLength(2);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
+test('--profile of a stopped profile brings back its saved tabs and adds the files to them', async () => {
+  const home = tempHome();
+  const { app, window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect.poll(() => paths(window)).toEqual([basic]);
+    const opened = app.waitForEvent('window');
+    expect(launchSecond(home, ['--profile', 'work', '--', gfm]).status).toBe(0);
+    const work = await opened;
+    await expect.poll(() => paths(work)).toEqual([gfm]);
+    // Closing its only window stops the profile; default keeps running.
+    const gone = work.waitForEvent('close');
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(' — work — '))!.close());
+    await gone;
+    expect(app.windows()).toHaveLength(1);
+    const back = app.waitForEvent('window');
+    expect(launchSecond(home, ['--profile', 'work', '--', math]).status).toBe(0);
+    const restored = await back;
+    await expect.poll(() => paths(restored)).toEqual([gfm, math]);
+    expect(await paths(window)).toEqual([basic]);
   } finally {
     await close();
     removeTempHome(home);
