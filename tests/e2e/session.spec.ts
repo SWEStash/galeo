@@ -1,14 +1,16 @@
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { appDirs, launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { pressInMain } from '../helpers/keys';
+import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
 const basic = path.join(docs, 'basic.md');
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const selected = (window: Page) => window.getByRole('tab', { selected: true });
+const paths = async (page: Page) => (await page.evaluate(() => window.galeo.tabs.snapshot())).tabs.map((tab) => tab.path);
 const stateFile = (home: string, name: string) => path.join(appDirs(home).state, 'profiles', 'default', name);
 
 /** Waits until the session on disk names every path (the 2 s save after the last change). */
@@ -59,6 +61,77 @@ test('a restart brings the tabs back hibernated, the shown one first, each where
       expect(Math.abs((await view.evaluate((element) => element.scrollTop)) - left)).toBeLessThanOrEqual(2);
     } finally {
       await second.close();
+    }
+  });
+});
+
+test('a restart brings back 3 windows and 20 tabs, hibernated, each window where the reader left it, a deleted file missing', async () => {
+  test.setTimeout(120_000);
+  await withHome(async (home) => {
+    const dir = path.join(home, 'docs');
+    mkdirSync(dir);
+    const sections = (n: number) => Array.from({ length: 120 }, (_, i) => `## Section ${i}\n\nParagraph ${i} of document ${n}.\n`).join('\n');
+    const files = Array.from({ length: 20 }, (_, n) => {
+      const file = path.join(dir, `doc-${String(n + 1).padStart(2, '0')}.md`);
+      writeFileSync(file, `# Doc ${n + 1}\n\n${sections(n + 1)}`);
+      return file;
+    });
+    const groups = [files.slice(0, 7), files.slice(7, 14), files.slice(14)];
+    // Each window shows its first file, scrolled to its own place.
+    const left = new Map<string, number>();
+    const first = await launchApp(['--', ...groups[0]!], { home });
+    let quit = false;
+    try {
+      const { app } = first;
+      const windows = [first.window];
+      for (const group of groups.slice(1)) {
+        const opened = app.waitForEvent('window');
+        expect(launchSecond(home, ['--new-window', '--', ...group]).status).toBe(0);
+        windows.push(await opened);
+      }
+      for (const [index, window] of windows.entries()) {
+        await expect.poll(() => paths(window)).toEqual(groups[index]);
+        const view = shownDocument(window);
+        await expect(view.locator('h2').nth(3)).toBeVisible();
+        await view.evaluate((element, share) => (element.scrollTop = element.scrollHeight * share), 0.2 + 0.2 * index);
+        await expect(view).toHaveAttribute('data-position-line', /\d+/);
+        left.set(groups[index]![0]!, await view.evaluate((element) => element.scrollTop));
+      }
+      const exited = app.waitForEvent('close');
+      await pressInMain(app, first.window, 'Q', process.platform !== 'darwin');
+      await exited;
+      quit = true;
+    } finally {
+      if (!quit) await first.app.close();
+    }
+    // A tab the second window wasn't showing.
+    const deleted = groups[1]![3]!;
+    unlinkSync(deleted);
+
+    const again = await launchApp([], { home });
+    try {
+      const { app } = again;
+      await expect.poll(() => app.windows().length).toBe(3);
+      const restored = new Set<string>();
+      for (const window of app.windows()) {
+        const tabs = await paths(window);
+        restored.add(tabs.join());
+        // Only the shown tab is drawn; the other tabs wait hibernated.
+        const view = shownDocument(window);
+        await expect(view.locator('h2').first()).toBeAttached();
+        await expect(view).not.toHaveAttribute('data-waking');
+        await expect(window.getByTestId('document')).toHaveCount(1);
+        const top = left.get(tabs[0]!)!;
+        await expect.poll(async () => Math.abs((await view.evaluate((element) => element.scrollTop)) - top)).toBeLessThanOrEqual(2);
+        if (tabs.includes(deleted)) {
+          await window.getByRole('tab', { name: new RegExp(path.basename(deleted).replace('.', '\\.')) }).click();
+          await expect(window.getByTestId('document-state')).toContainText('File not found');
+          await expect(window.getByRole('tab', { name: /file missing/ })).toBeVisible();
+        }
+      }
+      expect([...restored].sort()).toEqual(groups.map((group) => group.join()).sort());
+    } finally {
+      await again.close();
     }
   });
 });
