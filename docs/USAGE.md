@@ -47,8 +47,8 @@ the file into the window in front of you) when you want it here.
 - **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
   Ctrl+0), and every command by name in the **palette** (Ctrl+Shift+P).
 - **Status bar**: the path (click to copy it or reveal it in Files), the view, the encoding, the
-  line count and, for Markdown and `.txt`, the word count and reading time. Markdown counts its
-  prose only: code blocks, math, diagrams and front matter aren't words.
+  line count (in the source view) and, for Markdown and `.txt`, the word count and reading time.
+  Markdown counts its prose only: code blocks, math, diagrams and front matter aren't words.
 - **Diagrams and math**: math is typeset with the document (KaTeX); Mermaid diagrams draw as you
   scroll towards them. A diagram that can't be drawn (a syntax error, or over 200 edges) shows its
   error and its source. A diagram too wide for the column scrolls sideways; its ⤢ button (shown

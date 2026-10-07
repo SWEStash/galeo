@@ -8,7 +8,7 @@ const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const basic = path.join(docs, 'basic.md');
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 
-test('the status bar shows the path, view, read-only, encoding and line count, and passes axe', async () => {
+test('the status bar shows the path, view, read-only, encoding and metrics, and passes axe', async () => {
   const { window, close } = await launchApp(['--', basic]);
   try {
     const bar = window.getByTestId('status-bar');
@@ -16,9 +16,11 @@ test('the status bar shows the path, view, read-only, encoding and line count, a
     await expect(bar.getByTestId('status-view')).toHaveText('Rendered');
     await expect(bar.getByTestId('status-mode')).toHaveText('Read-only');
     await expect(bar.getByTestId('status-encoding')).toHaveText('UTF-8');
-    await expect(bar.getByTestId('status-lines')).toHaveText(/^\d+ ln$/);
+    // The rendered view wraps to the window: no line count, only the words.
+    await expect(bar.getByTestId('status-metrics')).toHaveText(/^[\d,]+ words · .+ min$/);
     await window.keyboard.press('ControlOrMeta+U');
     await expect(bar.getByTestId('status-view')).toHaveText('Source');
+    await expect(bar.getByTestId('status-metrics')).toHaveText(/^\d+ ln · [\d,]+ words · .+ min$/);
     const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('.status-bar').analyze();
     expect(results.violations).toEqual([]);
   } finally {
@@ -26,7 +28,7 @@ test('the status bar shows the path, view, read-only, encoding and line count, a
   }
 });
 
-test('the status bar counts the words of prose and their reading time, and follows a reload', async () => {
+test('the status bar counts lines in the source view, the words of prose and their reading time, and follows a reload', async () => {
   const home = tempHome();
   const dir = path.join(home, 'docs');
   mkdirSync(dir, { recursive: true });
@@ -39,21 +41,22 @@ test('the status bar counts the words of prose and their reading time, and follo
   writeFileSync(log, '2026-10-06 INFO started\n');
   const { window, close } = await launchApp(['--', md, txt, log], { home });
   try {
-    const words = window.getByTestId('status-words');
-    await expect(words).toHaveText('460 words · 2 min');
-    // The source view of the same file keeps its count.
+    const metrics = window.getByTestId('status-metrics');
+    await expect(metrics).toHaveText('460 words · 2 min');
+    // The source view of the same file keeps its words and adds its lines.
     await window.keyboard.press('ControlOrMeta+U');
     await expect(window.getByTestId('status-view')).toHaveText('Source');
-    await expect(words).toHaveText('460 words · 2 min');
+    await expect(metrics).toHaveText('8 ln · 460 words · 2 min');
     await window.keyboard.press('ControlOrMeta+U');
     writeFileSync(md, `# Title here\n\n${prose(8)}\n`);
-    await expect(words).toHaveText('10 words · < 1 min');
+    await expect(metrics).toHaveText('10 words · < 1 min');
     await window.keyboard.press('Control+Tab');
     await expect(window.getByTestId('status-view')).toHaveText('Reader');
-    await expect(words).toHaveText('3 words · < 1 min');
+    await expect(metrics).toHaveText('3 words · < 1 min');
     await window.keyboard.press('Control+Tab');
     await expect(window.getByTestId('status-view')).toHaveText('Source');
-    await expect(words).toHaveCount(0);
+    // A log has lines and no prose.
+    await expect(metrics).toHaveText('2 ln');
   } finally {
     await close();
     rmSync(home, { recursive: true, force: true });

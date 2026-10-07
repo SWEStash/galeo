@@ -341,6 +341,16 @@ describe('App', () => {
     expect(shadow.querySelector<HTMLElement>('.galeo-source')?.hidden).toBe(false);
   });
 
+  it("counts lines only in a view that shows them, in the document's metrics with its words", async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a\n\nb') });
+    const container = await renderApp();
+    const metrics = () => container.querySelector('[data-testid="status-metrics"]')?.textContent;
+    // The reader view wraps its paragraphs to the window: the file's lines aren't what it shows.
+    await vi.waitFor(() => expect(metrics()).toBe('2 words · < 1 min'));
+    await press({ key: 'u', ctrlKey: true });
+    await vi.waitFor(() => expect(metrics()).toBe('3 ln · 2 words · < 1 min'));
+  });
+
   it('shows a log with level badges and follows its end on End until scrolled up', async () => {
     stubBridge({}, { records: [{ id: 'doc-1', path: '/d/app.log' }], content: readyContent('log', 'source', 'INFO a\nERROR b\n') });
     const container = await renderApp();

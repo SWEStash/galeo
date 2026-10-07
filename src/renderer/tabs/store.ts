@@ -11,6 +11,7 @@ export interface TabStatus {
   format: FormatId | null;
   view: ViewMode | null;
   encoding: TextEncoding | null;
+  /** The file's lines, in the source view only (the others wrap to the window). */
   lines: number | null;
   /** Words of prose (Markdown once rendered, and `.txt`); null where counting words means nothing. */
   words: number | null;

@@ -40,7 +40,7 @@ ADR-002…007).
 │                                                                          │
 │                                                                          │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ ~/plan.md  Rendered · Read-only  UTF-8  412 ln  2,310 words · 10 min     │  ← status bar
+│ ~/plan.md  Source · Read-only  UTF-8  412 ln · 2,310 words · 10 min      │  ← status bar
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -48,7 +48,7 @@ ADR-002…007).
 |---|---|---|
 | **Tab bar** (merged with title bar, client-side decorations) | Profile chip (name + accent colour, left edge), tabs, new-tab button, window controls | Always visible |
 | **Document area** | Rendered or source view of the active tab | Always visible |
-| **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, line count, word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator | Always visible; can be hidden in settings |
+| **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices) | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |

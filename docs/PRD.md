@@ -213,8 +213,8 @@ must not obstruct (plain files only, no sidecar metadata).
 ## User Experience
 
 A browser-like window: a tab bar with the profile name/colour at the left, the document below,
-and a slim status bar (path, view mode, read-only/edit state, encoding, line count). No sidebar
-by default; the outline is a toggle. Everything is keyboard-reachable; the core map is
+and a slim status bar (path, view mode, read-only/edit state, encoding, line count in source
+views). No sidebar by default; the outline is a toggle. Everything is keyboard-reachable; the core map is
 Ctrl+P (quick open), Ctrl+F (find), Ctrl+U (toggle source), Ctrl+E (edit mode, v0.2),
 Ctrl+\\ (split view, v0.2), Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+W, Ctrl+Shift+T, Ctrl+N (new window).
 Detailed flows, states (empty, loading, missing, binary, too large) and the full keyboard map

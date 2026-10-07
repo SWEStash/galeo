@@ -272,7 +272,8 @@ export function DocumentPane({
     onViewState?.({ ...(chosenView ? { view: chosenView } : {}), ...(follow ? { follow: true as const } : {}) });
   }, [onViewState, chosenView, follow]);
 
-  const lines = useMemo(() => (ready ? countLines(ready.text) : null), [ready]);
+  // Only the source view shows the file's lines; rendered and reader views wrap to the window.
+  const lines = useMemo(() => (ready && view === 'source' ? countLines(ready.text) : null), [ready, view]);
   // Markdown's prose is counted by the worker as it renders; `.txt` is all prose.
   const textWords = useMemo(() => (ready?.format === 'text' ? countWords(ready.text) : null), [ready]);
   const words = ready?.format === 'markdown' ? render.words : textWords;

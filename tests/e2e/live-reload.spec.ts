@@ -117,7 +117,7 @@ test('a followed log scrolls to its new end; a log not followed stays where it i
   try {
     await expect(shownDocument(window).locator('.cm-content')).toContainText('line 1');
     // The log's own line count: its pane has reported, so it hears keys now.
-    await expect(window.getByTestId('status-lines')).toHaveText('301 ln');
+    await expect(window.getByTestId('status-metrics')).toHaveText('301 ln');
     await window.keyboard.press('End');
     await expect(shownDocument(window)).toHaveAttribute('data-follow', 'on');
     appendFileSync(followed, lines(301, 400));
@@ -173,7 +173,7 @@ test("a restart brings each tab back in the view it was in, and a followed log s
       await first.window.keyboard.press('Control+Tab');
       await expect(shownDocument(first.window).locator('.cm-content')).toContainText('INFO start');
       // The log's own line count: its pane has reported, so it hears keys now.
-      await expect(first.window.getByTestId('status-lines')).toHaveText('3 ln');
+      await expect(first.window.getByTestId('status-metrics')).toHaveText('3 ln');
       await first.window.keyboard.press('End');
       await expect(shownDocument(first.window)).toHaveAttribute('data-follow', 'on');
       const session = path.join(appDirs(home).state, 'profiles', 'default', 'session.json');
