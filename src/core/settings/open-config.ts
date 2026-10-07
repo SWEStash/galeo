@@ -15,6 +15,6 @@ export async function openConfigFile(deps: { fs: FileSystem; shell: OsShell; utf
     await fs.writeFileAtomic(path, utf8.encode(template), { mode: 0o600 });
   }
   const stat = await fs.stat(path);
-  if (!canOpenWithDefaultApp({ path, kind: stat.kind, executable: stat.executable })) throw new Error(`not opened: ${path}`);
+  if (!canOpenWithDefaultApp({ path, target: await fs.realpath(path), kind: stat.kind, executable: stat.executable })) throw new Error(`not opened: ${path}`);
   await shell.openPath(path);
 }

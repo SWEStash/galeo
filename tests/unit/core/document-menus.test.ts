@@ -85,6 +85,15 @@ describe('DocumentMenus.document (SR-05)', () => {
     expect(shell.calls).toEqual([]);
   });
 
+  it('never opens a document that is a symlink to a launcher', async () => {
+    const { menus, shell, shown, fs, id } = setup('open-default', { '/d/notes.md': '# notes', '/d/run.sh': 'echo' });
+    fs.delete('/d/notes.md');
+    fs.symlink('/d/notes.md', '/d/run.sh');
+    await menus.document(id, 1);
+    expect(shown[0]!.items[0]).toMatchObject({ id: 'open-default', enabled: false });
+    expect(shell.calls).toEqual([]);
+  });
+
   it('checks the file again when the choice comes, not only when the menu opened', async () => {
     let choose: ((id: string | null) => void) | undefined;
     const { menus, shell, fs, id } = setup(null, undefined, () => new Promise((resolve) => (choose = resolve)));

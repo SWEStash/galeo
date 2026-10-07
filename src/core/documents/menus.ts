@@ -56,7 +56,7 @@ export class DocumentMenus {
   private async openable(path: string): Promise<boolean> {
     try {
       const stat = await this.deps.fs.stat(path);
-      return canOpenWithDefaultApp({ path, kind: stat.kind, executable: stat.executable });
+      return canOpenWithDefaultApp({ path, target: await this.deps.fs.realpath(path), kind: stat.kind, executable: stat.executable });
     } catch {
       return false;
     }
