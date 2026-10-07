@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import electronBinary from 'electron';
-import { launchApp } from '../../helpers/launch';
+import { launchApp, launchSecond } from '../../helpers/launch';
 
 test.describe('hardened windows (SR-01)', () => {
   test('renderers run sandboxed, with no Node in the page', async () => {
@@ -106,6 +106,25 @@ test.describe('sandbox state', () => {
       expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe(
         'default — galeo',
       );
+    } finally {
+      await close();
+    }
+  });
+
+  test('--no-sandbox in a later launch leaves the running instance sandboxed (SR-01)', async () => {
+    const { app, window: page, home, close } = await launchApp();
+    try {
+      await expect(page.getByTestId('app-root')).toHaveAttribute('data-worker', 'ready');
+      const opened = app.waitForEvent('window');
+      expect(launchSecond(home, ['--no-sandbox', '--new-window', '--', path.join(home, 'notes.md')]).status).toBe(0);
+      const second = await opened;
+      await expect(second.getByRole('tab')).toHaveCount(1);
+      for (const window of [page, second]) await expect(window.getByTestId('unsandboxed-badge')).toHaveCount(0);
+      // The running instance's own switches decide its windows' sandbox; the forwarded one is data.
+      expect(await app.evaluate(({ app }) => app.commandLine.hasSwitch('no-sandbox'))).toBe(false);
+      const titles = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((window) => window.getTitle()));
+      expect(titles).toHaveLength(2);
+      for (const title of titles) expect(title).not.toContain('unsandboxed');
     } finally {
       await close();
     }
