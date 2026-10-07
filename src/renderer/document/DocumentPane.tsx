@@ -62,6 +62,9 @@ export interface DocumentPaneProps {
   onViewState?: (state: TabViewState) => void;
 }
 
+/** How long after the viewer closes its Expand button may take focus back from the modal's restore. */
+const RETURN_FOCUS_FRAMES = 10;
+
 function countLines(text: string): number {
   let lines = 1;
   for (let at = text.indexOf('\n'); at !== -1; at = text.indexOf('\n', at + 1)) lines++;
@@ -137,16 +140,26 @@ export function DocumentPane({
   useEffect(() => {
     if (!active) setViewer(null);
   }, [active]);
-  // Back to the diagram's or image's Expand button once the viewer is gone: the modal's own restore can't
-  // reach into the document's shadow root.
+  // Back to the diagram's or image's Expand button once the viewer is gone. The modal restores focus
+  // itself a frame or more later (after its cleanup and any transition), to the document's shadow
+  // host, as it can't see the button inside; so for a few frames, focus left on the body or that
+  // host goes to the button. Focus the reader moved anywhere else stays.
   const returnFocus = useRef<(() => void) | null>(null);
   useEffect(() => {
-    if (viewer) returnFocus.current = viewer.returnFocus;
-    else if (returnFocus.current) {
-      const back = returnFocus.current;
-      returnFocus.current = null;
-      requestAnimationFrame(back);
+    if (viewer) {
+      returnFocus.current = viewer.returnFocus;
+      return;
     }
+    const back = returnFocus.current;
+    returnFocus.current = null;
+    if (!back) return;
+    let frames = 0;
+    let frame = requestAnimationFrame(function settle() {
+      const active = document.activeElement;
+      if (active === document.body || active?.classList.contains('document-view')) back();
+      if (++frames < RETURN_FOCUS_FRAMES) frame = requestAnimationFrame(settle);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [viewer]);
   const [find, setFind] = useState({ open: false, token: 0, query: '', caseSensitive: false });
   const [findResult, setFindResult] = useState<FindResult>(NO_MATCHES);
