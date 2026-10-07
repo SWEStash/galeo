@@ -161,8 +161,8 @@ about/licences view and the packages must include:
 - **semantic-release** (vetted 2026-09-25, removed 2026-09-29): it always installs
   `@semantic-release/npm`, which bundles `npm` and its `undici`. That `undici` had a high-severity
   advisory with no fixed npm 11 release, and a bundled copy can't be overridden, so the audit gate
-  failed. Nothing ran it yet. Re-add it with the release workflow, once `npm audit` is clean on
-  it; `.releaserc.json` stays for that.
+  failed. Nothing ran it yet. The release workflow's tooling is chosen when that workflow is
+  built, for the public repository ([ADR-012](decisions/ADR-012-hand-run-releases-until-public.md)).
 - **TypeScript 7** friction with any tool: fall back to 6.0.3 for that tool.
 - **Maintainer health**: any adopted package with no release for over 12 months is re-vetted;
   small ones are replaced by own modules.

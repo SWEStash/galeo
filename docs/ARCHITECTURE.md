@@ -13,7 +13,8 @@
   [008](decisions/ADR-008-packaging-and-distribution.md) ·
   [009](decisions/ADR-009-sandbox-unavailable-launcher.md) ·
   [010](decisions/ADR-010-trusted-types-enforcement.md) ·
-  [011](decisions/ADR-011-defer-macos-windows-ci.md)
+  [011](decisions/ADR-011-defer-macos-windows-ci.md) ·
+  [012](decisions/ADR-012-hand-run-releases-until-public.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -335,18 +336,18 @@ renders only its active tab. Budget: first document painted within 500 ms.
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
 
-## 8. Build, packaging and deployment (ADR-008)
+## 8. Build, packaging and deployment (ADR-008, ADR-012)
 
 ```
 source (src/shared · core · main · preload · renderer)
   └─ Vite 8 builds (main + preload as library builds, renderer, worker) · scripts/dev.mjs in development
       └─ electron-builder (fuses set) ─┬─ galeo_<v>_amd64.deb              (official)
-                                       ├─ galeo-<v>-x86_64.AppImage        (secondary; on Ubuntu 24.04+ unsandboxed, by opt-in)
+                                       ├─ galeo-<v>.AppImage               (secondary; on Ubuntu 24.04+ unsandboxed, by opt-in)
                                        ├─ galeo-<v>-{x64,arm64}.dmg/.zip   (macOS preview, deferred: ADR-011)
                                        └─ galeo-Setup-<v>.exe              (Windows preview, deferred: ADR-011)
           CI (Linux; macOS/Windows deferred, ADR-011): tests · package + fuse read-back · no-network
               harness and performance
-              └─ release cut by hand → GitHub Release (docs/RELEASING.md)
+              └─ release cut by hand, with SHA256SUMS → GitHub Release (docs/RELEASING.md, ADR-012)
 ```
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`

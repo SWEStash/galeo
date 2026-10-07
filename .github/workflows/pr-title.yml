@@ -1,7 +1,7 @@
 name: PR title
 
-# Squash merges use the PR title as the commit message, and semantic-release reads it, so it must
-# be a Conventional Commit.
+# Squash merges use the PR title as the commit message, and releases are versioned from commit
+# messages, so it must be a Conventional Commit.
 on:
   pull_request:
     types: [opened, edited, synchronize, reopened]

@@ -20,7 +20,8 @@ auto-update: a new release is how fixes, Electron's included, reach users.
 
 ## Release checklist
 
-Releases are cut by hand from `main` for now.
+Releases are cut by hand from `main` until the public repository
+([ADR-012](decisions/ADR-012-hand-run-releases-until-public.md)).
 
 1. **Green on this commit**: `npm run preflight` ends with "all green", and CI is green.
 2. **Performance**: `GALEO_PERF=1 npm run build`, then `GALEO_PERF_ENFORCE=1 npm run headless -- npm run
@@ -34,5 +35,6 @@ Releases are cut by hand from `main` for now.
    a breaking change → major). Set it in `package.json`, commit `chore(release): <version>`, tag
    `v<version>`.
 6. **Packages**: `npm run package` and `npm run headless -- npm run verify:package` for that
-   commit; publish the `.deb` and AppImage on a GitHub Release for the tag, with release notes
-   written for readers from the commit subjects.
+   commit, then the checksums: `(cd release && sha256sum galeo_*.deb galeo-*.AppImage >
+   SHA256SUMS)`. Publish the `.deb`, the AppImage and `SHA256SUMS` on a GitHub Release for the
+   tag, with release notes written for readers from the commit subjects.

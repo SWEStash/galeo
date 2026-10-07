@@ -14,7 +14,7 @@ updates:
         - electron-builder
         - '@electron/*'
     # Runtime dependencies ship in the app (fix → release); dev tooling doesn't (build → none).
-    # Electron is a devDependency but ships too: .releaserc.json releases its updates.
+    # Electron is a devDependency but ships too: its security updates go out in a release (SR-09).
     commit-message:
       prefix: fix
       prefix-development: build
