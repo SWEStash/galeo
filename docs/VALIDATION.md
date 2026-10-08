@@ -71,8 +71,9 @@ these.
 
 | Check | Result |
 |---|---|
-| Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log` | Pass (2026-10-06) |
-| `galeo file.md` from a terminal (the `.deb`'s `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06) |
+| Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log`; a `.markdown` opens too | Pass (2026-10-06; again after removing and reinstalling the `.deb`, 2026-10-07) |
+| `galeo file.md` from a terminal (the `.deb`'s `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06; `.deb` again on 2026-10-07) |
+| Two profiles' windows open: `galeo --profile acme a.md`, a double-click in Files, a drop from Files and a plain `galeo` each land in the right window (a plain one in the window focused last) | Pass (2026-10-07) |
 | Drop files from Files onto the document area: they open after the shown tab, the first one shown | Pass (2026-10-05) |
 | Drop onto a tab (the caret between tabs): they open at the caret | Pass (2026-10-05) |
 | Drop onto the empty tab-bar space (the window-drag region) | Pass (2026-10-05) |
@@ -84,3 +85,9 @@ these.
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
 | Installed `.deb` (Trusted Types enforced): a document with Mermaid diagrams and math draws in full, with no Trusted Types errors | Pass (2026-10-06) |
 | Outline follows the scroll; Esc returns focus to the document | Pass (2026-10-05) |
+| Zoom: Ctrl++ on an es-US layout; Ctrl+wheel over the document and the tab bar zooms the tab, and in the viewer zooms only the viewer | Pass (2026-10-07) |
+| Tab strip overflowing: ‹ › and the wheel scroll it sideways | Pass (2026-10-07) |
+| Status bar: rendered Markdown shows words and reading time, its source view adds the line count, a log shows its line count | Pass (2026-10-07) |
+| Diagrams in real articles: sized to the column (a wide one scrolls sideways), ⤢ opens the viewer, one with its own colours sits on a light panel in dark mode; a pie's slices all show in dark mode | Pass (2026-10-07) |
+| A document with math and diagrams draws both; a document's images open in the viewer | Pass (2026-10-07) |
+| Links open on a click; Delete profile and Clear recent still work (they need real input, SR-12) | Pass (2026-10-07) |
