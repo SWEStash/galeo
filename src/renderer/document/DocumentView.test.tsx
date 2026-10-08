@@ -77,3 +77,29 @@ describe('DocumentView', () => {
     expect(shadow.querySelectorAll('img')).toHaveLength(1);
   });
 });
+
+describe('DocumentView editing', () => {
+  it("makes the source editable on request and focuses it, reports the reader's edits and hands out the text", async () => {
+    // happy-dom can't follow CodeMirror's focus inside a shadow root: the call is ours, focusing for real is the e2e's.
+    const { EditorView } = await import('@codemirror/view');
+    const focus = vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const onEdit = vi.fn();
+    const handle = { current: null as import('./DocumentView').DocumentHandle | null };
+    const container = await render(<DocumentView {...props} view="source" rendered={null} scheme="light" editable onEdit={onEdit} ref={handle} />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-content')).not.toBeNull(), { timeout: 5_000 });
+    const content = shadow.querySelector('.cm-content')!;
+    await vi.waitFor(() => expect(content.getAttribute('aria-readonly')).toBeNull());
+    expect(focus).toHaveBeenCalled();
+
+    const view = EditorView.findFromDOM(shadow.querySelector<HTMLElement>('.cm-editor')!)!;
+    act(() => view.dispatch({ changes: { from: view.state.doc.length, insert: '!' }, userEvent: 'input.type' }));
+
+    expect(onEdit).toHaveBeenCalledOnce();
+    expect(handle.current?.sourceText()).toBe('# src!');
+
+    await act(async () => root!.render(<DocumentView {...props} view="source" rendered={null} scheme="light" editable={false} onEdit={onEdit} ref={handle} />));
+    expect(content.getAttribute('aria-readonly')).toBe('true');
+    focus.mockRestore();
+  });
+});

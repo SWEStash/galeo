@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChosenEncoding, FollowResult, HistoryResult } from '../../shared/contracts';
-import type { ImageResult, RefusalReason } from '../../shared/documents';
+import type { ImageResult, RefusalReason, SaveResult } from '../../shared/documents';
 import type { Platform } from '../../shared/keymap';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import { DocumentPane } from '../document/DocumentPane';
@@ -129,6 +129,24 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
     [id, moved],
   );
 
+  // Main's Ctrl+E for this tab (ADR-013): each one is a new request for the pane.
+  const [editRequest, setEditRequest] = useState<{ edit: 'granted' | 'leave'; token: number } | null>(null);
+  useEffect(
+    () =>
+      window.galeo.documents.onEditMode(({ id: tab, edit }) => {
+        if (tab === id) setEditRequest((last) => ({ edit, token: (last?.token ?? 0) + 1 }));
+      }),
+    [id],
+  );
+  // A request that fails on the way (the tab closed meanwhile) reads as a write that didn't happen.
+  const save = useCallback(
+    (text: string, base: string): Promise<SaveResult> =>
+      window.galeo.documents.save(id, text, base).catch((): SaveResult => ({ kind: 'failed', reason: 'unavailable' })),
+    [id],
+  );
+  const dirty = useCallback((isDirty: boolean) => void window.galeo.documents.dirty(id, isDirty).catch(ignoreClosedTab), [id]);
+  const leaveEdit = useCallback(() => void window.galeo.documents.leaveEdit(id).catch(ignoreClosedTab), [id]);
+
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
   const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
   const onRendering = useCallback(() => void window.galeo.tabs.rendering(id), [id]);
@@ -170,6 +188,11 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
       zoom={zoom}
       initialViewState={store.viewStateOf(id)}
       onViewState={onViewState}
+      editRequest={editRequest}
+      onSave={save}
+      onDirty={dirty}
+      onLeaveEdit={leaveEdit}
+      onMessage={onMessage}
     />
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
-import type { ImageResult } from '../../shared/documents';
+import type { ImageResult, SaveResult, TextEncoding } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
@@ -60,6 +60,30 @@ export interface DocumentPaneProps {
   initialViewState?: TabViewState;
   /** The reader chose another view, or started or stopped following a log. */
   onViewState?: (state: TabViewState) => void;
+  /** Main's word on edit mode for this tab (Ctrl+E, ADR-013); a new token is a new request. */
+  editRequest?: { edit: 'granted' | 'leave'; token: number } | null;
+  /** Saves the edited text, naming the version it was loaded from. */
+  onSave?: (text: string, base: string) => Promise<SaveResult>;
+  /** The tab in edit mode now has unsaved changes, or no longer has. */
+  onDirty?: (dirty: boolean) => void;
+  /** The page left edit mode: main takes the grant back. */
+  onLeaveEdit?: () => void;
+  /** A short message for the status bar. */
+  onMessage?: (message: string) => void;
+}
+
+/** What the status bar says when a save didn't write. */
+function notSaved(result: Exclude<SaveResult, { kind: 'saved' }>, encoding: TextEncoding): string {
+  switch (result.kind) {
+    case 'conflict':
+      return result.version === null ? 'Not saved: the file is gone' : 'Not saved: the file changed on disk';
+    case 'unencodable':
+      return `Not saved: ${ENCODING_NAMES[encoding]} can't hold “${result.character}” (line ${result.line})`;
+    case 'failed':
+      return { 'no-permission': 'Not saved: no permission to write this file', 'not-a-file': "Not saved: this isn't a regular file", unavailable: "Not saved: the file couldn't be written" }[result.reason];
+    case 'refused':
+      return result.reason === 'not-editable' ? "Not saved: this tab isn't in edit mode" : 'Not saved: press Ctrl+S to save';
+  }
 }
 
 /** How long after the viewer closes its Expand button may take focus back from the modal's restore. */
@@ -98,6 +122,11 @@ export function DocumentPane({
   zoom = 1,
   initialViewState = {},
   onViewState,
+  editRequest = null,
+  onSave,
+  onDirty,
+  onLeaveEdit,
+  onMessage,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
   // The document's own opening view until the user toggles it.
@@ -125,6 +154,68 @@ export function DocumentPane({
   }, []);
 
   const documentHandle = useRef<DocumentHandle>(null);
+
+  // Edit mode (ADR-013). While the text has unsaved changes, the editor keeps it: a new read of
+  // the file (it changed on disk) neither replaces it nor becomes the version a save names.
+  const [editing, setEditing] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const dirtyNow = useRef(false);
+  const edits = useRef(0);
+  const [pinnedText, setPinnedText] = useState('');
+  const base = useRef(ready?.version ?? null);
+  const readText = useRef(ready?.text ?? '');
+  readText.current = ready?.text ?? '';
+  useEffect(() => {
+    if (ready && !dirtyNow.current) base.current = ready.version;
+  }, [ready]);
+  const markDirty = (next: boolean) => {
+    if (next && !dirtyNow.current) setPinnedText(readText.current);
+    dirtyNow.current = next;
+    setDirty(next);
+  };
+  const edited = useCallback(() => {
+    edits.current++;
+    if (!dirtyNow.current) markDirty(true);
+  }, []);
+  const reportedDirty = useRef(false);
+  useEffect(() => {
+    if (dirty === reportedDirty.current) return;
+    reportedDirty.current = dirty;
+    onDirty?.(dirty);
+  }, [dirty, onDirty]);
+  useEffect(() => {
+    if (!editRequest) return;
+    if (editRequest.edit === 'granted') {
+      if (!ready) {
+        onLeaveEdit?.();
+        onMessage?.("This file can't be edited");
+        return;
+      }
+      setEditing(true);
+      setChosenView('source');
+    } else if (dirtyNow.current) {
+      onMessage?.('Save or discard your changes first');
+    } else {
+      setEditing(false);
+      onLeaveEdit?.();
+    }
+    // Only a new request acts; the callbacks may change on any render.
+  }, [editRequest?.token]);
+  const save = async () => {
+    const text = documentHandle.current?.sourceText();
+    if (!ready || !onSave || text == null || base.current === null) return;
+    const editsAtSave = edits.current;
+    const result = await onSave(text, base.current);
+    if (result.kind !== 'saved') {
+      if (result.kind === 'refused' && result.reason === 'not-editable') setEditing(false);
+      onMessage?.(notSaved(result, ready.encoding));
+      return;
+    }
+    base.current = result.version;
+    // Typing during the save stays unsaved.
+    if (edits.current === editsAtSave) markDirty(false);
+    onMessage?.('Saved');
+  };
   const [viewer, setViewer] = useState<{ content: ZoomContent; name: string; returnFocus: () => void } | null>(null);
   const expandDiagram = useCallback(
     ({ svg, name, panel, returnFocus }: { svg: string; name: string; panel: boolean; returnFocus: () => void }) =>
@@ -208,6 +299,10 @@ export function DocumentPane({
     {
       toggleSource: () => {
         if (!renderable) return false;
+        if (editing) {
+          onMessage?.('Leave edit mode (Ctrl+E) to see the rendered view');
+          return true;
+        }
         setChosenView(view === 'rendered' ? 'source' : 'rendered');
         return true;
       },
@@ -230,6 +325,11 @@ export function DocumentPane({
       findPrevious: step(-1),
       back: history('back'),
       forward: history('forward'),
+      save: () => {
+        if (!editing) return false;
+        void save();
+        return true;
+      },
       toggleOutline: () => {
         if (!outlined) return false;
         if (outlineOpen) closeOutline();
@@ -286,8 +386,10 @@ export function DocumentPane({
       lines,
       words,
       follow,
+      editing,
+      dirty,
     });
-  }, [onStatus, content.state, ready, view, lines, words, follow]);
+  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty]);
 
   if (!ready) {
     return (
@@ -323,7 +425,9 @@ export function DocumentPane({
         <DocumentView
           ref={documentHandle}
           rendered={rendered}
-          source={{ text: ready.text, language: SOURCE_LANGUAGES[ready.format] }}
+          source={{ text: dirty ? pinnedText : ready.text, language: SOURCE_LANGUAGES[ready.format] }}
+          editable={editing}
+          onEdit={edited}
           view={view}
           wrap={wrap}
           follow={follow}

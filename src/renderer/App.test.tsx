@@ -60,6 +60,7 @@ const events: {
   tabs?: (snapshot: TabSnapshot) => void;
   demote?: (ids: string[]) => void;
   stale?: (id: string) => void;
+  editMode?: (request: { id: string; edit: 'granted' | 'leave' }) => void;
   settings?: (state: SettingsState) => void;
   profiles?: (state: ProfilesState) => void;
 } = {};
@@ -83,7 +84,10 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       save: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-editable' }),
       dirty: vi.fn().mockResolvedValue(undefined),
       leaveEdit: vi.fn().mockResolvedValue(undefined),
-      onEditMode: vi.fn(() => () => {}),
+      onEditMode: vi.fn((listener: (request: { id: string; edit: 'granted' | 'leave' }) => void) => {
+        events.editMode = listener;
+        return () => {};
+      }),
     },
     tabs: {
       snapshot: vi.fn().mockResolvedValue({ revision: 1, active: null, tabs: documents.records ?? [] }),
@@ -966,5 +970,115 @@ describe('App', () => {
     expect(api.window.retryAfterCrashes).toHaveBeenCalledOnce();
     await act(async () => button('Close window').click());
     expect(api.window.command).toHaveBeenCalledWith('closeWindow');
+  });
+});
+
+describe('App editing', () => {
+  beforeAll(() => import('./App'), 30_000);
+
+  afterEach(() => {
+    act(() => roots.splice(0).forEach((root) => root.unmount()));
+    document.body.innerHTML = '';
+    vi.restoreAllMocks();
+  });
+
+  async function editing(text = '# hi') {
+    // happy-dom can't follow CodeMirror's focus inside a shadow root; focusing for real is the e2e's.
+    const { EditorView } = await import('@codemirror/view');
+    vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const content = { ...readyContent('markdown', 'rendered', text), path: '/d/a.md', version: 'v1' };
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'granted' }));
+    const editor = await vi.waitFor(() => {
+      const element = shadow.querySelector<HTMLElement>('.cm-editor');
+      expect(element?.querySelector('.cm-content')?.getAttribute('aria-readonly')).toBeNull();
+      return EditorView.findFromDOM(element!)!;
+    }, { timeout: 5_000 });
+    const type = (insert: string) => act(() => editor.dispatch({ changes: { from: editor.state.doc.length, insert }, userEvent: 'input.type' }));
+    const press = (key: string) => act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key, ctrlKey: true, bubbles: true, cancelable: true })));
+    const message = () => container.querySelector('[data-testid="status-message"]')?.textContent;
+    const tab = () => container.querySelector('[role="tab"]')?.textContent ?? '';
+    return { api, container, editor, type, press, message, tab };
+  }
+
+  it("opens main's grant as an editable source view, and marks it in the tab and the status bar", async () => {
+    const { container, tab } = await editing();
+    expect(container.querySelector('[data-testid="status-mode"]')?.textContent).toBe('Editing');
+    expect(tab()).toContain('edit mode');
+    expect(tab()).not.toContain('unsaved changes');
+  });
+
+  it('marks unsaved changes, saves them with Ctrl+S naming the version loaded, and says Saved', async () => {
+    const { api, type, press, message, tab } = await editing();
+    type('!');
+    await vi.waitFor(() => expect(tab()).toContain('unsaved changes'));
+    expect(api.documents.dirty).toHaveBeenCalledWith('doc-1', true);
+
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v2' });
+    await press('s');
+    expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# hi!', 'v1');
+    await vi.waitFor(() => expect(message()).toBe('Saved'));
+    expect(tab()).not.toContain('unsaved changes');
+    expect(api.documents.dirty).toHaveBeenLastCalledWith('doc-1', false);
+
+    // The next save names the version this one wrote.
+    type('?');
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v3' });
+    await press('s');
+    expect(api.documents.save).toHaveBeenLastCalledWith('doc-1', '# hi!?', 'v2');
+  });
+
+  it("says why a save didn't write, and keeps the changes unsaved", async () => {
+    const { api, type, press, message, tab } = await editing();
+    type('!');
+    const answers = [
+      [{ kind: 'conflict', version: 'v9' }, 'Not saved: the file changed on disk'],
+      [{ kind: 'conflict', version: null }, 'Not saved: the file is gone'],
+      [{ kind: 'unencodable', character: '😀', line: 3 }, "Not saved: UTF-8 can't hold “😀” (line 3)"],
+      [{ kind: 'failed', reason: 'no-permission' }, 'Not saved: no permission to write this file'],
+    ] as const;
+    for (const [result, text] of answers) {
+      api.documents.save.mockResolvedValueOnce(result);
+      await press('s');
+      await vi.waitFor(() => expect(message()).toBe(text));
+    }
+    expect(tab()).toContain('unsaved changes');
+  });
+
+  it('keeps unsaved text when the file changes on disk, and the version it was loaded from', async () => {
+    const { api, editor, type, press } = await editing();
+    type('!');
+    api.documents.read.mockResolvedValue({ ...readyContent('markdown', 'rendered', 'theirs'), path: '/d/a.md', version: 'v5' });
+    await act(async () => events.stale!('doc-1'));
+    await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(editor.state.doc.toString()).toBe('# hi!');
+    api.documents.save.mockResolvedValueOnce({ kind: 'conflict', version: 'v5' });
+    await press('s');
+    expect(api.documents.save).toHaveBeenLastCalledWith('doc-1', '# hi!', 'v1');
+  });
+
+  it('takes a change on disk into the editor while nothing is unsaved', async () => {
+    const { api, editor } = await editing();
+    api.documents.read.mockResolvedValue({ ...readyContent('markdown', 'rendered', 'theirs'), path: '/d/a.md', version: 'v5' });
+    await act(async () => events.stale!('doc-1'));
+    await vi.waitFor(() => expect(editor.state.doc.toString()).toBe('theirs'));
+  });
+
+  it('leaves edit mode on request when nothing is unsaved, and asks first otherwise', async () => {
+    const { api, container, type, message } = await editing();
+    type('!');
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
+    await vi.waitFor(() => expect(message()).toBe('Save or discard your changes first'));
+    expect(api.documents.leaveEdit).not.toHaveBeenCalled();
+
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v2' });
+    await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })));
+    await vi.waitFor(() => expect(message()).toBe('Saved'));
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
+    expect(api.documents.leaveEdit).toHaveBeenCalledWith('doc-1');
+    expect(container.querySelector('[data-testid="status-mode"]')?.textContent).toBe('Read-only');
   });
 });

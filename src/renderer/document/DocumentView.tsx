@@ -44,6 +44,10 @@ export interface DocumentViewProps {
   onExpandDiagram?: ((diagram: { svg: string; name: string; panel: boolean; returnFocus: () => void }) => void) | undefined;
   /** An image's Expand button or a click on it: show it in the viewer. */
   onExpandImage?: ((image: ImageExpand) => void) | undefined;
+  /** Edit mode (ADR-013): the source view takes the reader's typing, and focus when it starts. */
+  editable?: boolean;
+  /** The reader changed the source text (never for new text from the file). */
+  onEdit?: (() => void) | undefined;
   /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
   onHeading?: ((id: string | null) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
@@ -71,6 +75,8 @@ export interface DocumentHandle extends Finder {
   focus(): void;
   /** Scrolls the rendered view to an anchor ('' is the top); false if there's no such place. */
   scrollToAnchor(anchor: string): boolean;
+  /** The source view's text with the reader's edits, or null before it exists. */
+  sourceText(): string | null;
 }
 
 /** The source line at the top of the rendered view. */
@@ -116,6 +122,8 @@ export function DocumentView({
   onHeading,
   onExpandDiagram,
   onExpandImage,
+  editable = false,
+  onEdit,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -148,6 +156,7 @@ export function DocumentView({
         host().source?.clearFind();
       },
       focus: () => container.current?.focus(),
+      sourceText: () => host().source?.text() ?? null,
       scrollToAnchor: (anchor) => {
         if (!anchor) {
           container.current!.scrollTop = 0;
@@ -287,6 +296,22 @@ export function DocumentView({
     if (view === 'source') documentHost.source?.scrollToLine(line);
     else scrollRenderedTo(documentHost, line);
   }, [view, sourceReady]);
+
+  // After the view switch above (a hidden view can't take focus): edit mode makes the source view
+  // editable and puts the caret in it; reading makes it read-only again.
+  const editListener = useRef(onEdit);
+  editListener.current = onEdit;
+  useLayoutEffect(() => {
+    const sourceView = host().source;
+    if (!sourceReady || !sourceView) return;
+    sourceView.setEditable(editable);
+    if (editable && view === 'source') sourceView.view.focus();
+  }, [editable, sourceReady, view]);
+  useEffect(() => {
+    const sourceView = host().source;
+    if (!sourceReady || !sourceView) return;
+    return sourceView.onEdit(() => editListener.current?.());
+  }, [sourceReady, view]);
 
   useLayoutEffect(() => {
     if (!waking || !initialPosition) return;

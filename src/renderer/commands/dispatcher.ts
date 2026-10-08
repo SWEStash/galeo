@@ -39,7 +39,17 @@ export class CommandDispatcher {
   readonly onKey = (event: KeyboardEvent): void => {
     const command = commandFor(event, this.platform);
     if (!command) return;
-    const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement;
-    if (this.run(command, { typing, tabNumber: tabNumberFor(event, this.platform) })) event.preventDefault();
+    if (this.run(command, { typing: isTyping(event), tabNumber: tabNumberFor(event, this.platform) })) event.preventDefault();
   };
+}
+
+/**
+ * Whether the key goes into text: a field, or the source view in edit mode. The editor lives in a
+ * document's shadow root, so the key's own target is the first in its path; a read-only view is
+ * still content-editable to the browser, but CodeMirror marks it `aria-readonly`.
+ */
+function isTyping(event: KeyboardEvent): boolean {
+  const target = event.composedPath()[0] ?? event.target;
+  if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return true;
+  return target instanceof HTMLElement && target.isContentEditable && target.getAttribute('aria-readonly') !== 'true';
 }

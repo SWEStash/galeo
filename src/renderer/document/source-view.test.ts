@@ -165,3 +165,48 @@ describe('createSourceView', () => {
     source.destroy();
   });
 });
+
+describe('createSourceView editing', () => {
+  const type = (source: ReturnType<typeof createSourceView>, text: string) =>
+    source.view.dispatch(source.view.state.update({ changes: { from: source.view.state.doc.length, insert: text }, userEvent: 'input.type' }));
+
+  it('becomes editable on request, and says so to assistive tech', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a', language: 'markdown', wrap: false });
+    const content = parent.querySelector('.cm-content')!;
+    expect(content.getAttribute('aria-readonly')).toBe('true');
+    source.setEditable(true);
+    expect(source.view.state.readOnly).toBe(false);
+    expect(content.getAttribute('aria-readonly')).toBeNull();
+    source.setEditable(false);
+    expect(source.view.state.readOnly).toBe(true);
+    source.destroy();
+  });
+
+  it("tells about the reader's edits, not about new text from the file", () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a', language: 'markdown', wrap: false });
+    source.setEditable(true);
+    let edits = 0;
+    source.onEdit(() => edits++);
+    source.setText('from disk');
+    expect(edits).toBe(0);
+    type(source, '!');
+    expect(edits).toBe(1);
+    expect(source.text()).toBe('from disk!');
+    source.destroy();
+  });
+
+  it('undoes edits, but not new text from the file', async () => {
+    const { undo } = await import('@codemirror/commands');
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a', language: 'markdown', wrap: false });
+    source.setEditable(true);
+    source.setText('b');
+    type(source, '!');
+    undo(source.view);
+    expect(source.text()).toBe('b');
+    expect(undo(source.view)).toBe(false);
+    source.destroy();
+  });
+});

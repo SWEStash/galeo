@@ -35,8 +35,10 @@ const BASE = {
   fullScreen: ['F11'],
   // Ctrl+Q is left unbound to avoid accidental quits.
   quit: ['Ctrl+Shift+Q'],
-  /** Edit mode (v0.2); a capability key, so main owns it already. */
+  /** Edit mode; a capability key, so main owns it (ADR-013). */
   editMode: ['CmdOrCtrl+E'],
+  /** Saves the tab in edit mode. */
+  save: ['CmdOrCtrl+S'],
 } satisfies Record<string, string[]>;
 
 export type Command = keyof typeof BASE;

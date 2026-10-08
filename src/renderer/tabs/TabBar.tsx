@@ -164,6 +164,8 @@ function indicators(status: TabStatus | undefined, reloaded: boolean, crashed: b
   if (reloaded) shown.push({ glyph: '↻', words: 'reloaded from disk' });
   if (status?.follow) shown.push({ glyph: '⇣', words: 'following the end' });
   if (status?.state === 'missing') shown.push({ glyph: '✕', words: 'file missing' });
+  if (status?.editing) shown.push({ glyph: '✎', words: 'edit mode' });
+  if (status?.dirty) shown.push({ glyph: '●', words: 'unsaved changes' });
   return shown;
 }
 

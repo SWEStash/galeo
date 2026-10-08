@@ -42,6 +42,7 @@ const KEYBOARD_MAP: [label: string, keys: string[], macKeys: string[]][] = [
   ['Full screen', ['F11'], ['F11']],
   ['Quit', ['Ctrl+Shift+Q'], ['⌘Q']],
   ['Toggle edit mode', ['Ctrl+E'], ['⌘E']],
+  ['Save', ['Ctrl+S'], ['⌘S']],
 ];
 
 async function openPalette(window: Page) {

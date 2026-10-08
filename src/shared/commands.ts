@@ -45,6 +45,7 @@ export const COMMANDS = {
   fullScreen: { label: 'Full screen', group: 'Window', runs: 'main' },
   quit: { label: 'Quit', group: 'App', runs: 'main' },
   editMode: { label: 'Toggle edit mode', group: 'File', runs: 'capability' },
+  save: { label: 'Save', group: 'File', runs: 'page' },
 } as const satisfies Record<Command, CommandInfo>;
 
 // macOS writes modifiers as symbols, in this order, with no separator.

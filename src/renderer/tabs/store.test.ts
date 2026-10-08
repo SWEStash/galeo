@@ -206,7 +206,7 @@ describe('createTabStore', () => {
   it("keeps each tab's status for the tab bar and status bar, dropping closed tabs'", async () => {
     const { store, push } = setup(snapshot(1, ['a', 'b'], 'a'));
     await store.start();
-    const status = { state: 'ready' as const, format: 'markdown' as const, view: 'rendered' as const, encoding: 'utf-8' as const, lines: 12, words: 40, follow: false };
+    const status = { state: 'ready' as const, format: 'markdown' as const, view: 'rendered' as const, encoding: 'utf-8' as const, lines: 12, words: 40, follow: false, editing: false, dirty: false };
     store.setStatus('a', status);
     expect(store.getSnapshot().statuses.get('a')).toEqual(status);
     const before = store.getSnapshot();

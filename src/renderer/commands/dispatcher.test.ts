@@ -93,3 +93,31 @@ describe('CommandDispatcher', () => {
     expect(goTo).toHaveBeenCalledWith({ typing: false, tabNumber: 3 });
   });
 });
+
+describe('CommandDispatcher typing', () => {
+  function editorIn(readOnly: boolean) {
+    const host = document.createElement('div');
+    document.body.append(host);
+    const content = document.createElement('div');
+    content.contentEditable = 'true';
+    if (readOnly) content.setAttribute('aria-readonly', 'true');
+    host.attachShadow({ mode: 'open' }).append(content);
+    return { content, remove: () => host.remove() };
+  }
+
+  it('counts a key in an editable editor inside a document as typing, and one in a read-only source view as not', () => {
+    const { dispatcher, stop } = listening();
+    const contexts: boolean[] = [];
+    dispatcher.register('back', ({ typing }) => void contexts.push(typing));
+    const editable = editorIn(false);
+    const readOnly = editorIn(true);
+
+    keydown({ key: 'ArrowLeft', altKey: true, composed: true }, editable.content);
+    keydown({ key: 'ArrowLeft', altKey: true, composed: true }, readOnly.content);
+    stop();
+    editable.remove();
+    readOnly.remove();
+
+    expect(contexts).toEqual([true, false]);
+  });
+});

@@ -17,6 +17,10 @@ export interface TabStatus {
   words: number | null;
   /** A log following its end. */
   follow: boolean;
+  /** In edit mode (ADR-013). */
+  editing: boolean;
+  /** Edited, with changes not saved yet. */
+  dirty: boolean;
 }
 
 export interface TabsView {

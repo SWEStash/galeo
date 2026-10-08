@@ -1,4 +1,4 @@
-import { standardKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, standardKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import {
@@ -11,7 +11,7 @@ import {
   searchPanelOpen,
   setSearchQuery,
 } from '@codemirror/search';
-import { Compartment, EditorSelection, EditorState, type Extension } from '@codemirror/state';
+import { Annotation, Compartment, EditorSelection, EditorState, Transaction, type Extension } from '@codemirror/state';
 import { EditorView, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { logLevels } from './log-view';
@@ -43,6 +43,12 @@ export interface SourceView {
   find(query: string, options: { caseSensitive: boolean }): FindResult;
   findStep(direction: 1 | -1): FindResult;
   clearFind(): void;
+  /** Edit mode (ADR-013): the reader's typing changes the text; otherwise it's read-only. */
+  setEditable(editable: boolean): void;
+  /** The text as shown now, with the reader's edits. */
+  text(): string;
+  /** Calls `listener` after each edit of the reader's (never for new text from the file). */
+  onEdit(listener: () => void): () => void;
   /** Calls `listener` when the view scrolls up (the user leaving the end of a log). */
   onScrollUp(listener: () => void): () => void;
   destroy(): void;
@@ -70,14 +76,25 @@ const theme = EditorView.theme({
   '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--galeo-color-mark-current)', color: '#1f2328' },
 });
 
+/** Marks the file's own text arriving (`setText`), which isn't an edit and can't be undone. */
+const fromFile = Annotation.define<boolean>();
+
+/**
+ * Read-only, or editing: undo history and the editing keys, before the reading keys. The window's
+ * own keys still come first: the app takes them in the capture phase and CodeMirror skips a key
+ * already handled, so only keys the app declines (typing, Alt+arrows) reach the editor.
+ */
+const reading = (): Extension => EditorState.readOnly.of(true);
+const editing = (): Extension => [history(), keymap.of([...defaultKeymap, ...historyKeymap])];
+
 const LANGUAGES: Record<Exclude<SourceLanguage, null>, () => Extension> = {
   markdown: () => markdown(),
   log: () => logLevels(),
 };
 
 /**
- * A read-only CodeMirror view inside a document's shadow root (ADR-003). Only the standard
- * navigation keys are bound: CodeMirror's default keymap would take Ctrl+U, the view toggle.
+ * A CodeMirror view inside a document's shadow root (ADR-003), read-only unless the tab is in edit
+ * mode. Reading binds only the standard navigation keys.
  */
 export function createSourceView(options: {
   root: ShadowRoot;
@@ -88,6 +105,8 @@ export function createSourceView(options: {
   findCap?: number;
 }): SourceView {
   const wrapping = new Compartment();
+  const mode = new Compartment();
+  const editListeners = new Set<() => void>();
   const findCap = options.findCap ?? FIND_CAP;
   let total = { count: 0, capped: false };
   const view = new EditorView({
@@ -96,7 +115,12 @@ export function createSourceView(options: {
     state: EditorState.create({
       doc: options.text,
       extensions: [
-        EditorState.readOnly.of(true),
+        mode.of(reading()),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged && update.transactions.some((transaction) => transaction.docChanged && !transaction.annotation(fromFile))) {
+            for (const listener of editListeners) listener();
+          }
+        }),
         // A named text; a stop of its own on Tab, so the keyboard can reach and scroll it.
         EditorView.contentAttributes.of({ 'aria-label': options.language === 'log' ? 'Log' : 'Source', tabindex: '0' }),
         lineNumbers(),
@@ -188,7 +212,18 @@ export function createSourceView(options: {
       view.dispatch({
         changes: { from: start, to: old.length - end, insert: text.slice(start, text.length - end) },
         effects: view.scrollSnapshot(),
+        annotations: [fromFile.of(true), Transaction.addToHistory.of(false)],
       });
+    },
+    setEditable(editable) {
+      view.dispatch({ effects: mode.reconfigure(editable ? editing() : reading()) });
+    },
+    text() {
+      return view.state.doc.toString();
+    },
+    onEdit(listener) {
+      editListeners.add(listener);
+      return () => editListeners.delete(listener);
     },
     setWrap(wrap) {
       view.dispatch({ effects: wrapping.reconfigure(wrap ? EditorView.lineWrapping : []) });
