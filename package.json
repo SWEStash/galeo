@@ -1,6 +1,6 @@
 {
   "name": "galeo",
-  "version": "0.0.0-development",
+  "version": "0.1.0",
   "private": true,
   "description": "A fast, private desktop reader for Markdown, text and log files",
   "license": "MIT",
