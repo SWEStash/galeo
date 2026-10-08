@@ -51,7 +51,7 @@ function setup(files: Record<string, string>, slow = '') {
     parseUrl: () => null,
   });
   const opened: string[] = [];
-  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode, opened: (path, window) => opened.push(`${window}:${path}`) });
+  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode, hash: (bytes) => `#${bytes.byteLength}`, opened: (path, window) => opened.push(`${window}:${path}`) });
   return { fs, records, handlers, opened, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 

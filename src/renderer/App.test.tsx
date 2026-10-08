@@ -158,7 +158,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
 }
 
 function readyContent(format: 'markdown' | 'plain' | 'text' | 'log', view: 'rendered' | 'source', text: string): DocumentContent {
-  return { state: 'ready', path: '/d/x', format, view, banner: null, text, encoding: 'utf-8', guessedEncoding: false, size: text.length };
+  return { state: 'ready', path: '/d/x', format, view, banner: null, text, encoding: 'utf-8', guessedEncoding: false, size: text.length, version: 'v1' };
 }
 
 async function documentShadow(container: HTMLElement): Promise<ShadowRoot> {
@@ -276,6 +276,7 @@ describe('App', () => {
       encoding: 'utf-8',
       guessedEncoding: false,
       size: 5,
+      version: 'v1',
     };
     const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
     const container = await renderApp();

@@ -25,6 +25,8 @@ export type DocumentContent =
       /** Not valid UTF-8 and no byte order mark: the encoding banner names the guess. */
       guessedEncoding: boolean;
       size: number;
+      /** The content hash of the bytes read: a save names it, and main refuses if the file moved on (ADR-013). */
+      version: string;
     }
   | { state: 'empty'; path: string; format: FormatId }
   | { state: 'binary'; path: string; size: number }

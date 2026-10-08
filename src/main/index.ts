@@ -42,6 +42,7 @@ import { systemClock } from './adapters/clock';
 import { ElectronOsShell, RecordingOsShell } from './adapters/os-shell';
 import { WorkerThreadTaskRunner } from './adapters/task-runner';
 import { decodeWithPlatform } from './adapters/text-decoder';
+import { sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
@@ -742,6 +743,7 @@ function start(initialMode: StartupMode): void {
           reads,
           fs,
           decode: decodeWithPlatform,
+          hash: sha256,
           opened: (file, windowId) =>
             void profileOf(windowId)?.recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
         }),

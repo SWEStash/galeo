@@ -5,6 +5,7 @@ import { readDocument } from '../../core/documents/read';
 import type { TabRegistry } from '../../core/tabs/registry';
 import type { FileSystem } from '../../core/ports';
 import type { Decode, WhatwgEncoding } from '../../core/text/decode';
+import type { Hash } from '../../core/documents/read';
 import type { DocumentContent } from '../../shared/documents';
 import type { Handlers } from '../ipc/register';
 
@@ -26,10 +27,11 @@ export function documentHandlers(deps: {
   reads: ReadIdentities;
   fs: FileSystem;
   decode: Decode;
+  hash: Hash;
   /** A file was read (the profile's recent files keep it). */
   opened: (path: string, window: number) => void;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, opened } = deps;
+  const { records, links, reads, fs, decode, hash, opened } = deps;
   // The file each tab last counted as opened: re-reads of it (a wake, a changed file) aren't opens.
   const counted = new Map<string, string>();
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
@@ -38,7 +40,7 @@ export function documentHandlers(deps: {
   const read = async (id: string, window: number, path: string, encoding: WhatwgEncoding | null): Promise<DocumentContent> => {
     // The identity is taken first: a change during the read then shows as a change afterwards.
     await reads.remember(id, path);
-    const content = await readDocument(path, { fs, decode, encoding: encoding ?? undefined });
+    const content = await readDocument(path, { fs, decode, hash, encoding: encoding ?? undefined });
     if ((content.state === 'ready' || content.state === 'empty') && counted.get(id) !== path) {
       counted.set(id, path);
       opened(path, window);

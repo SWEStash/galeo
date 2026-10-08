@@ -6,8 +6,11 @@ import { FakeFileSystem } from '../../helpers/fakes/file-system';
 const decode: Decode = (bytes, encoding, { fatal }) =>
   new TextDecoder(encoding, { fatal, ignoreBOM: true }).decode(bytes);
 
+/** A stand-in content hash: the bytes themselves, readable in expectations. */
+const hash = (bytes: Uint8Array) => `#${[...bytes].join('.')}`;
+
 const read = (fs: FakeFileSystem, path: string, options: { renderAnyway?: boolean } = {}) =>
-  readDocument(path, { fs, decode, ...options });
+  readDocument(path, { fs, decode, hash, ...options });
 
 describe('readDocument', () => {
   it('reads Markdown, ready to render', async () => {
@@ -22,7 +25,16 @@ describe('readDocument', () => {
       encoding: 'utf-8',
       guessedEncoding: false,
       size: 5,
+      version: '#35.32.72.105.10',
     });
+  });
+
+  it("names the version it read by the content's hash, so a save can tell whether the file changed since", async () => {
+    const fs = new FakeFileSystem({ '/d/a.md': 'one', '/d/b.md': 'one', '/d/c.md': 'two' });
+    const [a, b, c] = await Promise.all(['/d/a.md', '/d/b.md', '/d/c.md'].map((path) => read(fs, path)));
+    expect(a).toMatchObject({ version: hash(new TextEncoder().encode('one')) });
+    expect(b).toMatchObject({ version: (a as { version: string }).version });
+    expect(c).not.toMatchObject({ version: (a as { version: string }).version });
   });
 
   it('opens a log in the source view', async () => {
