@@ -25,6 +25,7 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
   const natural = useRef({ width: 1, height: 1 });
   const [view, setView] = useState<View | null>(null);
   const drag = useRef<{ x: number; y: number } | null>(null);
+  const keys = useRef<HTMLDivElement>(null);
 
   const box = () => {
     const { width, height } = viewport.current!.getBoundingClientRect();
@@ -77,6 +78,19 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
     return () => element.removeEventListener('wheel', onWheel);
   }, []);
 
+  // The dialog takes focus a moment after it shows, and the modal only hears Esc from inside it: an Esc
+  // pressed before that, still on the Expand button that opened it, closes it here.
+  useEffect(() => {
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) return;
+      if (keys.current?.contains(event.target as Node)) return;
+      event.preventDefault();
+      onClose();
+    };
+    document.addEventListener('keydown', onEscape);
+    return () => document.removeEventListener('keydown', onEscape);
+  }, [onClose]);
+
   const onPointerDown = (event: PointerEvent) => {
     if (event.button !== 0) return;
     drag.current = { x: event.clientX, y: event.clientY };
@@ -109,7 +123,7 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
     <ModalOverlay className="modal-overlay" isOpen isDismissable onOpenChange={(isOpen) => !isOpen && onClose()}>
       <Modal className="modal zoom-viewer">
         {/* Keys reach here from the dialog (focused when it opens) and every control in it. */}
-        <div className="zoom-viewer-keys" onKeyDown={onKeyDown}>
+        <div ref={keys} className="zoom-viewer-keys" onKeyDown={onKeyDown}>
           <Dialog className="dialog zoom-viewer-dialog" aria-label={name}>
             <div className="zoom-viewer-body">
               <div className="zoom-viewer-bar">
