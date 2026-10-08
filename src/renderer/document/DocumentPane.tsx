@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
 import type { ImageResult, SaveResult, TextEncoding } from '../../shared/documents';
+import type { Editor } from '../edit/editors';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
@@ -70,6 +71,10 @@ export interface DocumentPaneProps {
   onLeaveEdit?: () => void;
   /** A short message for the status bar. */
   onMessage?: (message: string) => void;
+  /** While in edit mode, what close and quit can do with the edits; null once out of it. */
+  onEditor?: (editor: Editor | null) => void;
+  /** Leaving edit mode with unsaved changes: asks the reader; true once they are saved or discarded. */
+  onConfirmLeave?: () => Promise<boolean>;
 }
 
 /** What the status bar says when a save didn't write. */
@@ -127,6 +132,8 @@ export function DocumentPane({
   onDirty,
   onLeaveEdit,
   onMessage,
+  onEditor,
+  onConfirmLeave,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
   // The document's own opening view until the user toggles it.
@@ -165,6 +172,8 @@ export function DocumentPane({
   const base = useRef(ready?.version ?? null);
   const readText = useRef(ready?.text ?? '');
   readText.current = ready?.text ?? '';
+  const readVersion = useRef(ready?.version ?? null);
+  readVersion.current = ready?.version ?? null;
   useEffect(() => {
     if (ready && !dirtyNow.current) base.current = ready.version;
   }, [ready]);
@@ -194,28 +203,48 @@ export function DocumentPane({
       setEditing(true);
       setChosenView('source');
     } else if (dirtyNow.current) {
-      onMessage?.('Save or discard your changes first');
+      void onConfirmLeave?.().then((left) => {
+        if (!left) return;
+        setEditing(false);
+        onLeaveEdit?.();
+      });
     } else {
       setEditing(false);
       onLeaveEdit?.();
     }
     // Only a new request acts; the callbacks may change on any render.
   }, [editRequest?.token]);
-  const save = async () => {
+  /** True once the text is on disk and nothing typed meanwhile is left unsaved. */
+  const save = async (): Promise<boolean> => {
     const text = documentHandle.current?.sourceText();
-    if (!ready || !onSave || text == null || base.current === null) return;
+    if (!ready || !onSave || text == null || base.current === null) return false;
     const editsAtSave = edits.current;
     const result = await onSave(text, base.current);
     if (result.kind !== 'saved') {
       if (result.kind === 'refused' && result.reason === 'not-editable') setEditing(false);
       onMessage?.(notSaved(result, ready.encoding));
-      return;
+      return false;
     }
     base.current = result.version;
-    // Typing during the save stays unsaved.
-    if (edits.current === editsAtSave) markDirty(false);
     onMessage?.('Saved');
+    // Typing during the save stays unsaved.
+    if (edits.current !== editsAtSave) return false;
+    markDirty(false);
+    return true;
   };
+  /** Drops the edits: the editor shows the file as last read, and a save names that version. */
+  const discard = () => {
+    documentHandle.current?.replaceSource(readText.current);
+    base.current = readVersion.current;
+    markDirty(false);
+  };
+  const actions = useRef({ save, discard });
+  actions.current = { save, discard };
+  useEffect(() => {
+    if (!editing) return;
+    onEditor?.({ save: () => actions.current.save(), discard: () => actions.current.discard() });
+    return () => onEditor?.(null);
+  }, [editing, onEditor]);
   const [viewer, setViewer] = useState<{ content: ZoomContent; name: string; returnFocus: () => void } | null>(null);
   const expandDiagram = useCallback(
     ({ svg, name, panel, returnFocus }: { svg: string; name: string; panel: boolean; returnFocus: () => void }) =>

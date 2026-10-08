@@ -1,4 +1,5 @@
 import type { EditGrants } from '../../core/documents/edit-grants';
+import type { CloseAnswer } from '../../core/documents/unsaved';
 import type { ReadIdentities } from '../../core/documents/identities';
 import type { DocumentLinks } from '../../core/documents/links';
 import { MARKDOWN_RENDER_MAX_BYTES } from '../../core/formats/registry';
@@ -20,7 +21,8 @@ type DocumentChannels =
   | 'documents.resolveImage'
   | 'documents.save'
   | 'documents.dirty'
-  | 'documents.leaveEdit';
+  | 'documents.leaveEdit'
+  | 'documents.closeAnswer';
 
 /**
  * The document channels. Every request names a document by id and is scoped to the sending
@@ -37,10 +39,12 @@ export function documentHandlers(deps: {
   grants: EditGrants;
   /** The window's real input: a save spends one (ADR-004). */
   input: { spend(window: number): boolean };
+  /** Closes and quits waiting on the reader's word about unsaved changes. */
+  unsaved: { answer(window: number, answer: CloseAnswer): void };
   /** A file was read (the profile's recent files keep it). */
   opened: (path: string, window: number) => void;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, hash, grants, input, opened } = deps;
+  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened } = deps;
   // The file each tab last counted as opened: re-reads of it (a wake, a changed file) aren't opens.
   const counted = new Map<string, string>();
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
@@ -98,5 +102,6 @@ export function documentHandlers(deps: {
     },
     'documents.dirty': ([id, dirty], event) => grants.setDirty(id, event.sender.id, dirty),
     'documents.leaveEdit': ([id], event) => grants.revoke(id, event.sender.id),
+    'documents.closeAnswer': ([answer], event) => unsaved.answer(event.sender.id, answer),
   };
 }

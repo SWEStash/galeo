@@ -26,6 +26,7 @@ import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
 import { TabDocument } from './tabs/TabDocument';
 import { useTabs } from './tabs/useTabs';
+import { UnsavedPrompt, useConfirmUnsaved } from './edit/UnsavedPrompt';
 import { wheelZoom } from './tabs/wheel-zoom';
 import { QuickOpen } from './quick-open/QuickOpen';
 import { DropArea } from './tabs/DropArea';
@@ -53,7 +54,9 @@ export function App() {
   return (
     <CommandsProvider platform={info.platform}>
       <OutlineProvider>
-        <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} version={info.version} />
+        <UnsavedPrompt>
+          <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} version={info.version} />
+        </UnsavedPrompt>
       </OutlineProvider>
     </CommandsProvider>
   );
@@ -109,6 +112,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]')?.focus());
   }, []);
   useTabShortcuts(store, openQuickOpen);
+  useUnsavedGuards(store);
   useCommands({ commandPalette: () => setOverlay('palette') });
   const [recentRevision, setRecentRevision] = useState(0);
   const openAbout = useCallback(() => setOverlay('about'), []);
@@ -185,6 +189,33 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       {overlay === 'about' && <AboutDialog version={version} onClose={closeOverlay} />}
     </>
   );
+}
+
+/**
+ * Unsaved changes (ADR-013): closing a dirty tab asks first, and so does main before it closes the
+ * window, quits or deletes the profile, one dirty tab at a time, showing each.
+ */
+function useUnsavedGuards(store: TabStore) {
+  const confirm = useConfirmUnsaved();
+  useEffect(() => {
+    const nameOf = (id: string) => store.getSnapshot().tabs.find((tab) => tab.id === id)?.path.split('/').pop() ?? 'this file';
+    const ask = (id: string) => confirm(id, nameOf(id));
+    store.setCloseGuard(ask);
+    const stop = window.galeo.documents.onConfirmClose((ids) => {
+      void window.galeo.documents.closeAnswer('asking');
+      void (async () => {
+        for (const id of ids) {
+          store.activate(id);
+          if (!(await ask(id))) return window.galeo.documents.closeAnswer('cancel');
+        }
+        await window.galeo.documents.closeAnswer('proceed');
+      })();
+    });
+    return () => {
+      stop();
+      store.setCloseGuard(null);
+    };
+  }, [store, confirm]);
 }
 
 /** The tab shortcuts and per-tab zoom (UX §5), wherever the focus is. */

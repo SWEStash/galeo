@@ -61,6 +61,7 @@ const events: {
   demote?: (ids: string[]) => void;
   stale?: (id: string) => void;
   editMode?: (request: { id: string; edit: 'granted' | 'leave' }) => void;
+  confirmClose?: (ids: string[]) => void;
   settings?: (state: SettingsState) => void;
   profiles?: (state: ProfilesState) => void;
 } = {};
@@ -84,6 +85,11 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       save: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-editable' }),
       dirty: vi.fn().mockResolvedValue(undefined),
       leaveEdit: vi.fn().mockResolvedValue(undefined),
+      closeAnswer: vi.fn().mockResolvedValue(undefined),
+      onConfirmClose: vi.fn((listener: (ids: string[]) => void) => {
+        events.confirmClose = listener;
+        return () => {};
+      }),
       onEditMode: vi.fn((listener: (request: { id: string; edit: 'granted' | 'leave' }) => void) => {
         events.editMode = listener;
         return () => {};
@@ -1067,18 +1073,76 @@ describe('App editing', () => {
     await vi.waitFor(() => expect(editor.state.doc.toString()).toBe('theirs'));
   });
 
-  it('leaves edit mode on request when nothing is unsaved, and asks first otherwise', async () => {
-    const { api, container, type, message } = await editing();
-    type('!');
-    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
-    await vi.waitFor(() => expect(message()).toBe('Save or discard your changes first'));
-    expect(api.documents.leaveEdit).not.toHaveBeenCalled();
+  const dialog = () => document.querySelector<HTMLElement>('[data-testid="unsaved-dialog"]');
+  const choose = async (name: string) => {
+    const button = await vi.waitFor(() => [...dialog()!.querySelectorAll('button')].find((each) => each.textContent === name)!);
+    await act(async () => button.click());
+  };
 
-    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v2' });
-    await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })));
-    await vi.waitFor(() => expect(message()).toBe('Saved'));
+  it('leaves edit mode at once when nothing is unsaved', async () => {
+    const { api, container } = await editing();
     await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
     expect(api.documents.leaveEdit).toHaveBeenCalledWith('doc-1');
     expect(container.querySelector('[data-testid="status-mode"]')?.textContent).toBe('Read-only');
+    expect(dialog()).toBeNull();
+  });
+
+  it("asks before leaving edit mode with unsaved changes: Cancel stays, Don't save drops them, Save keeps them", async () => {
+    const { api, editor, container, type } = await editing();
+    type('!');
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
+    await vi.waitFor(() => expect(dialog()?.textContent).toContain('Save changes to a.md?'));
+    await choose('Cancel');
+    expect(api.documents.leaveEdit).not.toHaveBeenCalled();
+    expect(editor.state.doc.toString()).toBe('# hi!');
+
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
+    await choose("Don't save");
+    await vi.waitFor(() => expect(api.documents.leaveEdit).toHaveBeenCalledWith('doc-1'));
+    expect(editor.state.doc.toString()).toBe('# hi');
+    expect(container.querySelector('[data-testid="status-mode"]')?.textContent).toBe('Read-only');
+  });
+
+  it('saves on Save before leaving edit mode, and stays when the save fails', async () => {
+    const { api, type } = await editing();
+    type('!');
+    api.documents.save.mockResolvedValueOnce({ kind: 'conflict', version: 'v9' });
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
+    await choose('Save');
+    await vi.waitFor(() => expect(api.documents.save).toHaveBeenCalledOnce());
+    expect(api.documents.leaveEdit).not.toHaveBeenCalled();
+
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v2' });
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
+    await choose('Save');
+    await vi.waitFor(() => expect(api.documents.leaveEdit).toHaveBeenCalledWith('doc-1'));
+    expect(api.documents.save).toHaveBeenLastCalledWith('doc-1', '# hi!', 'v1');
+  });
+
+  it('asks before closing a tab with unsaved changes, and closes it only once agreed', async () => {
+    const { api, type, press } = await editing();
+    type('!');
+    await vi.waitFor(() => expect(api.documents.dirty).toHaveBeenCalledWith('doc-1', true));
+    await press('w');
+    await vi.waitFor(() => expect(dialog()).not.toBeNull());
+    await choose('Cancel');
+    expect(api.tabs.close).not.toHaveBeenCalled();
+    await press('w');
+    await choose("Don't save");
+    await vi.waitFor(() => expect(api.tabs.close).toHaveBeenCalledWith('doc-1'));
+  });
+
+  it("answers main's question before a close: asking at once, then the reader's choice", async () => {
+    const { api, type } = await editing();
+    type('!');
+    await act(async () => events.confirmClose!(['doc-1']));
+    expect(api.documents.closeAnswer).toHaveBeenCalledWith('asking');
+    await choose('Cancel');
+    await vi.waitFor(() => expect(api.documents.closeAnswer).toHaveBeenLastCalledWith('cancel'));
+
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v2' });
+    await act(async () => events.confirmClose!(['doc-1']));
+    await choose('Save');
+    await vi.waitFor(() => expect(api.documents.closeAnswer).toHaveBeenLastCalledWith('proceed'));
   });
 });

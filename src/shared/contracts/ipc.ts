@@ -94,6 +94,7 @@ export const CHANNELS = [
   'documents.save',
   'documents.dirty',
   'documents.leaveEdit',
+  'documents.closeAnswer',
   'tabs.snapshot',
   'tabs.activated',
   'tabs.rendering',
@@ -180,6 +181,11 @@ export interface Requests {
   'documents.dirty': [id: string, dirty: boolean];
   /** The page left edit mode (its text is saved or discarded): main takes the grant back. */
   'documents.leaveEdit': [id: string];
+  /**
+   * The page's answer to `documents.confirmClose`: `asking` at once (it put the question to the
+   * reader), then `proceed` (every tab saved or discarded) or `cancel`.
+   */
+  'documents.closeAnswer': [answer: 'asking' | 'proceed' | 'cancel'];
   /** The sender's tabs, as main knows them. */
   'tabs.snapshot': [];
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
@@ -261,6 +267,7 @@ export interface Responses {
   'documents.save': SaveResult;
   'documents.dirty': void;
   'documents.leaveEdit': void;
+  'documents.closeAnswer': void;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendering': void;
@@ -303,7 +310,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'documents.editMode', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'documents.editMode', 'documents.confirmClose', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -320,6 +327,8 @@ export interface Events {
    * the reader asks to leave it, which the page does once its text is saved or discarded (ADR-013).
    */
   'documents.editMode': { id: string; edit: 'granted' | 'leave' };
+  /** The window is closing (or the app quitting, or its profile going) with these tabs unsaved: ask the reader. */
+  'documents.confirmClose': string[];
   'settings.changed': SettingsState;
   /** A profile was created, renamed, recoloured, deleted, started or stopped. */
   'profiles.changed': ProfilesState;

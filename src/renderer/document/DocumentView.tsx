@@ -77,6 +77,8 @@ export interface DocumentHandle extends Finder {
   scrollToAnchor(anchor: string): boolean;
   /** The source view's text with the reader's edits, or null before it exists. */
   sourceText(): string | null;
+  /** Puts the file's text back in the source view, dropping the reader's edits. */
+  replaceSource(text: string): void;
 }
 
 /** The source line at the top of the rendered view. */
@@ -157,6 +159,7 @@ export function DocumentView({
       },
       focus: () => container.current?.focus(),
       sourceText: () => host().source?.text() ?? null,
+      replaceSource: (text) => host().source?.setText(text),
       scrollToAnchor: (anchor) => {
         if (!anchor) {
           container.current!.scrollTop = 0;

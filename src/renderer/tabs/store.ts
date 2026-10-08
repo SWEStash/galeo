@@ -67,7 +67,10 @@ export interface TabStore {
   start(): Promise<void>;
   stop(): void;
   activate(id: string): void;
+  /** Closes the tab; one with unsaved changes closes only if the guard agrees (ADR-013). */
   close(id: string): void;
+  /** What `close` asks before closing a tab with unsaved changes. */
+  setCloseGuard(guard: ((id: string) => Promise<boolean>) | null): void;
   /** Main owns the order: the new order shows once its snapshot arrives. */
   move(id: string, position: number): void;
   reopenClosed(): void;
@@ -135,6 +138,22 @@ export function createTabStore(api: TabsApi): TabStore {
     void api.activated(active).finally(() => reporting--);
   };
 
+  const closeNow = (id: string) => {
+    const index = view.tabs.findIndex((tab) => tab.id === id);
+    if (index < 0) return;
+    // Gone at once: a quick second close acts on what is shown now. Main hears of the close
+    // before the next activation, so its snapshot for that one no longer has the tab.
+    void api.close(id);
+    const tabs = view.tabs.filter((tab) => tab.id !== id);
+    if (id === view.active) {
+      const next = view.tabs[index + 1] ?? view.tabs[index - 1];
+      activateLocally(next?.id ?? null, tabs, view.revision);
+    } else {
+      set({ tabs });
+    }
+  };
+  let closeGuard: ((id: string) => Promise<boolean>) | null = null;
+
   const demote = (ids: string[]) => {
     const rendered = new Set(view.rendered);
     for (const id of ids) if (id !== view.active) rendered.delete(id);
@@ -197,19 +216,15 @@ export function createTabStore(api: TabsApi): TabStore {
       if (id === view.active || !view.tabs.some((tab) => tab.id === id)) return;
       activateLocally(id, view.tabs, view.revision);
     },
+    setCloseGuard(next) {
+      closeGuard = next;
+    },
     close(id) {
-      const index = view.tabs.findIndex((tab) => tab.id === id);
-      if (index < 0) return;
-      // Gone at once: a quick second close acts on what is shown now. Main hears of the close
-      // before the next activation, so its snapshot for that one no longer has the tab.
-      void api.close(id);
-      const tabs = view.tabs.filter((tab) => tab.id !== id);
-      if (id === view.active) {
-        const next = view.tabs[index + 1] ?? view.tabs[index - 1];
-        activateLocally(next?.id ?? null, tabs, view.revision);
-      } else {
-        set({ tabs });
+      if (closeGuard && view.statuses.get(id)?.dirty) {
+        void closeGuard(id).then((agreed) => agreed && closeNow(id));
+        return;
       }
+      closeNow(id);
     },
     move(id, position) {
       void api.move(id, position);

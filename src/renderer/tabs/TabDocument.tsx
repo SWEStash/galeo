@@ -6,6 +6,8 @@ import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import { DocumentPane } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
 import { useDocument } from '../document/useDocument';
+import { editors, type Editor } from '../edit/editors';
+import { useConfirmUnsaved } from '../edit/UnsavedPrompt';
 import type { RenderClient } from '../worker/client';
 import { ignoreClosedTab } from './closed-tab';
 import type { TabStatus, TabStore } from './store';
@@ -71,7 +73,7 @@ interface Arrival {
   position: ScrollAnchor | null;
 }
 
-function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme, onMessage }: TabDocumentProps) {
+function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, scheme, onMessage }: TabDocumentProps) {
   // A tab not shown has no layout to keep its place in: it takes a changed file when shown again.
   const [appliedReads, setAppliedReads] = useState(staleReads);
   useEffect(() => {
@@ -146,6 +148,9 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
   );
   const dirty = useCallback((isDirty: boolean) => void window.galeo.documents.dirty(id, isDirty).catch(ignoreClosedTab), [id]);
   const leaveEdit = useCallback(() => void window.galeo.documents.leaveEdit(id).catch(ignoreClosedTab), [id]);
+  const onEditor = useCallback((editor: Editor | null) => (editor ? editors.set(id, editor) : editors.delete(id)), [id]);
+  const confirm = useConfirmUnsaved();
+  const confirmLeave = useCallback(() => confirm(id, path.split('/').pop() ?? 'this file'), [confirm, id, path]);
 
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
   const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
@@ -193,6 +198,8 @@ function LiveTab({ id, active, staleReads, zoom, store, client, platform, scheme
       onDirty={dirty}
       onLeaveEdit={leaveEdit}
       onMessage={onMessage}
+      onEditor={onEditor}
+      onConfirmLeave={confirmLeave}
     />
   );
 }

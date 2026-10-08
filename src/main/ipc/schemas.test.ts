@@ -21,6 +21,11 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('documents.closeAnswer takes one of its three answers', () => {
+    for (const answer of ['asking', 'proceed', 'cancel']) expect(accepts('documents.closeAnswer', [answer])).toBe(true);
+    for (const bad of [[], ['yes'], [true], ['proceed', 'extra']]) expect(accepts('documents.closeAnswer', bad)).toBe(false);
+  });
+
   it('documents.dirty takes an id and a boolean', () => {
     expect(accepts('documents.dirty', [ID, true])).toBe(true);
     for (const bad of [[ID], [ID, 'yes'], [ID, 1], ['', false], [ID, true, 'extra']]) expect(accepts('documents.dirty', bad)).toBe(false);

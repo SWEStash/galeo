@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
 import { EditGrants } from '../core/documents/edit-grants';
+import { UnsavedChanges } from '../core/documents/unsaved';
 import { InputCredits } from '../core/documents/input-credits';
 import { ImageGrants } from '../core/documents/images';
 import { ReadIdentities } from '../core/documents/identities';
@@ -71,6 +72,8 @@ import { ownArgs, windowTitle } from './window/policy';
 const MIB = 1024 * 1024;
 /** How often each window's renderer memory is sampled for pressure demotion. */
 const PRESSURE_INTERVAL_MS = 30_000;
+/** How long a page has to say it is asking its reader about unsaved changes before a close counts as cancelled. */
+const UNSAVED_ACK_MS = 5000;
 /**
  * A window's renderer above this is under pressure. Generous until the performance pass sets it
  * from the measured baseline plus headroom (ADR-002): it should catch runaway documents only.
@@ -213,6 +216,21 @@ function start(initialMode: StartupMode): void {
   const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
   const reads = new ReadIdentities(fs);
   const crashes = new CrashRecovery(Date.now);
+  // Closing, quitting or deleting a profile with unsaved changes asks the reader first (ADR-013).
+  const unsaved = new UnsavedChanges({
+    dirty: (windowId) => grants.dirty(windowId),
+    ask: (windowId, ids) => {
+      const contents = webContents.fromId(windowId);
+      if (contents) BrowserWindow.fromWebContents(contents)?.focus();
+      sendTo(windowId, 'documents.confirmClose', ids);
+    },
+    clock: systemClock,
+    ackMs: UNSAVED_ACK_MS,
+  });
+  /** Windows whose reader already agreed to close them with unsaved changes. */
+  const agreedToClose = new Set<number>();
+  let agreedToQuit = false;
+
   const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
     const contents = webContents.fromId(windowId);
     if (contents) sendEvent(contents, event, payload);
@@ -332,7 +350,16 @@ function start(initialMode: StartupMode): void {
         if (tab) void reads.changed(id, tab.path).then((changed) => changed && sendTo(windowId, 'tabs.stale', id));
       }
     });
-    window.on('close', () => {
+    window.on('close', (event) => {
+      if (!quitting && !profile.discard && !agreedToClose.has(windowId) && grants.dirty(windowId).length > 0) {
+        event.preventDefault();
+        void unsaved.confirm([windowId]).then((proceed) => {
+          if (!proceed || window.isDestroyed()) return;
+          agreedToClose.add(windowId);
+          window.close();
+        });
+        return;
+      }
       if (quitting || profile.discard) return;
       // The profile's last window: what it holds now is what the save keeps, not the empty aftermath.
       if (profile.windows.length === 1) return void profile.keeper.holdForQuit();
@@ -359,6 +386,8 @@ function start(initialMode: StartupMode): void {
       crashes.closeWindow(windowId);
       input.closeWindow(windowId);
       grants.closeWindow(windowId);
+      unsaved.closeWindow(windowId);
+      agreedToClose.delete(windowId);
       images.closeWindow(windowId);
       quickOpen.close(windowId);
       drops.closeWindow(windowId);
@@ -611,6 +640,16 @@ function start(initialMode: StartupMode): void {
   app.on('before-quit', (event) => {
     if (savedOnQuit) return;
     event.preventDefault();
+    if (!agreedToQuit) {
+      // Unsaved changes anywhere: their readers decide first; a Cancel keeps the app running.
+      const windows = [...running.values()].flatMap((profile) => profile.windows.map((window) => window.webContents.id));
+      void unsaved.confirm(windows).then((proceed) => {
+        if (!proceed) return;
+        agreedToQuit = true;
+        app.quit();
+      });
+      return;
+    }
     quitting = true;
     // `stop` saves each running profile, and leaves one being deleted unsaved.
     const saves = [...running.values()].map((profile) => profile.stop());
@@ -695,10 +734,11 @@ function start(initialMode: StartupMode): void {
           const profile = ownProfile(event);
           return enqueue(() => updateProfile(profile, name, accent));
         },
-        'profiles.delete': (_args, event) => {
+        'profiles.delete': async (_args, event) => {
           if (!input.spend(event.sender.id)) throw new Error('no input');
           const profile = profileOf(event.sender.id);
           if (!profile || profile.id === DEFAULT_PROFILE) throw new Error('not deletable');
+          if (!(await unsaved.confirm(profile.windows.map((window) => window.webContents.id)))) return;
           return enqueue(() => removeProfile(profile.id, []));
         },
         'session.previous': (_args, event) => profileOf(event.sender.id)?.sessions.previous() ?? [],
@@ -766,6 +806,7 @@ function start(initialMode: StartupMode): void {
           hash: sha256,
           grants,
           input,
+          unsaved,
           opened: (file, windowId) =>
             void profileOf(windowId)?.recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
         }),

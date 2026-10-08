@@ -39,6 +39,7 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
   const grants = new EditGrants();
   const input = { left: credits, spend: () => input.left-- > 0 };
   const reads = new ReadIdentities(fs);
+  const answers: string[] = [];
   let n = 0;
   const records = new TabRegistry(() => `id-${++n}`);
   const links = new DocumentLinks({
@@ -64,9 +65,10 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
     hash: (bytes) => `#${new TextDecoder().decode(bytes)}`,
     grants,
     input,
+    unsaved: { answer: (window, answer) => void answers.push(`${window}:${answer}`) },
     opened: (path, window) => opened.push(`${window}:${path}`),
   });
-  return { fs, records, handlers, opened, grants, input, reads, id: records.open(Object.keys(files)[0]!, 1).id };
+  return { fs, records, handlers, opened, grants, input, reads, answers, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
 describe('documentHandlers', () => {
@@ -205,5 +207,12 @@ describe('documentHandlers saving', () => {
     expect(grants.allows(id, 1, '/d/a.md')).toBe(true);
     handlers['documents.leaveEdit']([id], event);
     expect(grants.allows(id, 1, '/d/a.md')).toBe(false);
+  });
+
+  it("passes the page's answer about unsaved changes on, as its own window's", () => {
+    const { handlers, answers } = setup({ '/d/a.md': 'old' });
+    handlers['documents.closeAnswer'](['asking'], event);
+    handlers['documents.closeAnswer'](['cancel'], otherWindow);
+    expect(answers).toEqual(['1:asking', '2:cancel']);
   });
 });
