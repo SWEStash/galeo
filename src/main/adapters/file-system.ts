@@ -1,6 +1,6 @@
 import { constants, type Dirent, type Stats } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { chmod, mkdir, open, opendir, realpath, rename, rm, stat, utimes } from 'node:fs/promises';
+import { chmod, mkdir, open, opendir, realpath, rename, rm, stat, utimes, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from '../../core/ports';
 
@@ -133,6 +133,73 @@ export class NodeFileSystem implements FileSystem {
     }
   }
 
+  async saveFile(path: string, data: Uint8Array): Promise<'replaced' | 'in-place' | 'created'> {
+    let real: string;
+    try {
+      real = await realpath(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw toFsError(error, path);
+      await this.replace(path, data, null);
+      return 'created';
+    }
+    let info: Awaited<ReturnType<typeof stat>>;
+    try {
+      info = await stat(real);
+    } catch (error) {
+      throw toFsError(error, path);
+    }
+    if (info.isDirectory()) throw new FsError('EISDIR', path);
+    if (!info.isFile()) throw new FsError('ENOTFILE', path);
+    if (info.nlink > 1 || !(await this.replace(real, data, info))) {
+      try {
+        await writeAndSync(await open(real, 'w'), data);
+      } catch (error) {
+        throw toFsError(error, path);
+      }
+      return 'in-place';
+    }
+    return 'replaced';
+  }
+
+  /**
+   * Replaces `path` through a temp file beside it, which takes the old file's mode, owner and
+   * group (`like`); a new file gets the default mode. False, with nothing changed, when the temp
+   * file can't take that owner or group.
+   */
+  private async replace(path: string, data: Uint8Array, like: { mode: number; uid: number; gid: number } | null): Promise<boolean> {
+    const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`);
+    try {
+      const handle = await open(temp, 'wx', like ? like.mode & 0o7777 : 0o666);
+      try {
+        if (like) {
+          await handle.chmod(like.mode & 0o7777);
+          if (process.platform !== 'win32') {
+            const mine = await handle.stat();
+            if (mine.uid !== like.uid || mine.gid !== like.gid) {
+              try {
+                await handle.chown(like.uid, like.gid);
+              } catch {
+                await handle.close();
+                await rm(temp, { force: true });
+                return false;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        await handle.close();
+        throw error;
+      }
+      await writeAndSync(handle, data);
+      await rename(temp, path);
+      await syncDirectory(dirname(path));
+      return true;
+    } catch (error) {
+      await rm(temp, { force: true });
+      throw toFsError(error, path);
+    }
+  }
+
   async writeFileAtomic(path: string, data: Uint8Array, { mode }: { mode: number }): Promise<void> {
     const temp = join(dirname(path), `.${basename(path)}.${randomUUID()}.tmp`);
     try {
@@ -150,6 +217,16 @@ export class NodeFileSystem implements FileSystem {
       await rm(temp, { force: true });
       throw toFsError(error, path);
     }
+  }
+}
+
+/** Writes and flushes a file handle's whole content. */
+async function writeAndSync(handle: FileHandle, data: Uint8Array): Promise<void> {
+  try {
+    await handle.writeFile(data);
+    await handle.sync();
+  } finally {
+    await handle.close();
   }
 }
 

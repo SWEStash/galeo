@@ -34,6 +34,9 @@ describe('serveImage', () => {
     writeFileAtomic: async () => {
       throw new Error('unused');
     },
+    saveFile: async () => {
+      throw new Error('unused');
+    },
     rename: async () => {
       throw new Error('unused');
     },

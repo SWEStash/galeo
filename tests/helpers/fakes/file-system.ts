@@ -17,6 +17,8 @@ export class FakeFileSystem implements FileSystem {
   private readonly directories = new Set<string>();
   private readonly modes = new Map<string, number>();
   private readonly executables = new Set<string>();
+  /** The real paths `saveFile` wrote, in order. */
+  readonly saves: string[] = [];
 
   constructor(files: Record<string, string | Uint8Array> = {}) {
     for (const [path, content] of Object.entries(files)) this.write(path, content);
@@ -92,6 +94,17 @@ export class FakeFileSystem implements FileSystem {
       this.directories.add(dir);
     }
     this.modes.set(path, mode);
+  }
+
+  /** Every save `replaced` (or `created`); the in-place cases are the Node adapter's own tests. */
+  async saveFile(path: string, data: Uint8Array): Promise<'replaced' | 'in-place' | 'created'> {
+    this.throwIfFailing(path);
+    const target = this.resolve(path);
+    if (this.isDirectory(target)) throw new FsError('EISDIR', path);
+    const existed = this.files.has(target);
+    this.files.set(target, data.slice());
+    this.saves.push(target);
+    return existed ? 'replaced' : 'created';
   }
 
   async writeFileAtomic(path: string, data: Uint8Array, { mode }: { mode: number }): Promise<void> {

@@ -41,6 +41,14 @@ export interface FileSystem {
   mkdir(path: string, options: { mode: number }): Promise<void>;
   /** Replaces the file whole or not at all (temp file, fsync, rename), leaving it with `mode`. */
   writeFileAtomic(path: string, data: Uint8Array, options: { mode: number }): Promise<void>;
+  /**
+   * Writes a document the reader saved (ADR-013, SR-15), on the file a symlink points to:
+   * `replaced` whole (temp file with the file's mode, owner and group, `fsync`, rename), or
+   * `in-place` when a rename would change what the file is (it has other hard links, or the temp
+   * file can't take its owner or group), or `created` when the file is gone. A folder it can't
+   * write to fails with `EACCES` and leaves the file as it was.
+   */
+  saveFile(path: string, data: Uint8Array): Promise<'replaced' | 'in-place' | 'created'>;
   /** Moves a file, replacing whatever is at `to` (same file system). */
   rename(from: string, to: string): Promise<void>;
   /** Deletes a file or a folder with everything in it, symlinks as links; a missing path is fine. */

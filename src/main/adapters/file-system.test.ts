@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
@@ -272,5 +272,92 @@ describe('NodeFileSystem.touch', () => {
 
   it('rejects a missing path with ENOENT', async () => {
     expect(await codeOf(fs.touch(path.join(tempDir(), 'missing')))).toBe('ENOENT');
+  });
+});
+
+describe('NodeFileSystem.saveFile', () => {
+  const bytes = (text: string) => new TextEncoder().encode(text);
+  const leftovers = (dir: string) => readdirSync(dir).filter((name) => name.endsWith('.tmp'));
+
+  it.runIf(posix)('replaces the file whole, keeping its mode, with nothing left behind', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'a.md', 'old text');
+    chmodSync(target, 0o640);
+    const before = statSync(target);
+
+    expect(await fs.saveFile(target, bytes('new'))).toBe('replaced');
+
+    expect(readFileSync(target, 'utf8')).toBe('new');
+    expect(statSync(target).mode & 0o7777).toBe(0o640);
+    expect(statSync(target).ino).not.toBe(before.ino);
+    expect(leftovers(dir)).toEqual([]);
+  });
+
+  it.runIf(posix)('writes through a symlink to its target, and the link stays a link', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'real/a.md', 'old');
+    const link = path.join(dir, 'link.md');
+    symlinkSync(target, link);
+
+    await fs.saveFile(link, bytes('new'));
+
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readFileSync(target, 'utf8')).toBe('new');
+    expect(leftovers(path.dirname(target))).toEqual([]);
+    expect(leftovers(dir)).toEqual([]);
+  });
+
+  it.runIf(posix)('writes a hard-linked file in place, so every name still shows the same file', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'a.md', 'a much longer old text');
+    const other = path.join(dir, 'b.md');
+    linkSync(target, other);
+    const before = statSync(target).ino;
+
+    expect(await fs.saveFile(target, bytes('short'))).toBe('in-place');
+
+    expect(readFileSync(target, 'utf8')).toBe('short');
+    expect(readFileSync(other, 'utf8')).toBe('short');
+    expect(statSync(target).ino).toBe(before);
+  });
+
+  // Another of the user's groups: a temp file can take it, so the save still replaces the file whole.
+  const otherGroup = posix && !root ? execFileSync('id', ['-G'], { encoding: 'utf8' }).trim().split(/\s+/).map(Number).find((gid) => gid !== process.getgid!()) : undefined;
+  it.runIf(otherGroup !== undefined)("keeps the file's group when it is another of the user's groups", async () => {
+    const dir = tempDir();
+    const target = file(dir, 'shared.md', 'old');
+    execFileSync('chgrp', [String(otherGroup), target]);
+
+    expect(await fs.saveFile(target, bytes('new'))).toBe('replaced');
+
+    expect(statSync(target).gid).toBe(otherGroup);
+    expect(readFileSync(target, 'utf8')).toBe('new');
+  });
+
+  it('creates a file that is gone', async () => {
+    const dir = tempDir();
+    const target = path.join(dir, 'gone.md');
+
+    expect(await fs.saveFile(target, bytes('back'))).toBe('created');
+
+    expect(readFileSync(target, 'utf8')).toBe('back');
+    expect(leftovers(dir)).toEqual([]);
+  });
+
+  it.runIf(posix && !root)("refuses in a folder it can't write to, leaving the file as it was", async () => {
+    const dir = tempDir();
+    const target = file(dir, 'locked/a.md', 'old');
+    chmodSync(path.dirname(target), 0o500);
+    onTestFinished(() => chmodSync(path.dirname(target), 0o700));
+
+    expect(await codeOf(fs.saveFile(target, bytes('new')))).toBe('EACCES');
+
+    expect(readFileSync(target, 'utf8')).toBe('old');
+    expect(leftovers(path.dirname(target))).toEqual([]);
+  });
+
+  it('refuses a folder', async () => {
+    const dir = tempDir();
+    expect(await codeOf(fs.saveFile(dir, bytes('x')))).toBe('EISDIR');
   });
 });
