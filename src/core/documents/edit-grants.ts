@@ -1,24 +1,20 @@
 interface Grant {
   window: number;
   path: string;
+  dirty: boolean;
 }
 
 /**
  * The tabs the reader put in edit mode (ADR-013): only main grants one, from a key or menu item it
  * saw itself (ADR-004), and a save is allowed only for a granted tab's own file. A grant ends when
- * the reader leaves edit mode, or the tab closes or shows another file; none is ever saved.
+ * the page leaves edit mode, or the tab closes or shows another file; none is ever saved. A
+ * granted tab also carries whether the page has unsaved changes in it, for close and quit.
  */
 export class EditGrants {
   private readonly grants = new Map<string, Grant>();
 
-  /** Grants edit mode, or takes it back if granted; true when the tab is now editable. */
-  toggle(id: string, window: number, path: string): boolean {
-    if (this.allows(id, window, path)) {
-      this.grants.delete(id);
-      return false;
-    }
-    this.grants.set(id, { window, path });
-    return true;
+  grant(id: string, window: number, path: string): void {
+    this.grants.set(id, { window, path, dirty: false });
   }
 
   allows(id: string, window: number, path: string): boolean {
@@ -29,6 +25,17 @@ export class EditGrants {
   /** The page left edit mode: a window can only give up its own tab's grant. */
   revoke(id: string, window: number): void {
     if (this.grants.get(id)?.window === window) this.grants.delete(id);
+  }
+
+  /** The page's word on unsaved changes, for its own granted tabs only. */
+  setDirty(id: string, window: number, dirty: boolean): void {
+    const grant = this.grants.get(id);
+    if (grant?.window === window) grant.dirty = dirty;
+  }
+
+  /** The window's tabs with unsaved changes. */
+  dirty(window: number): string[] {
+    return [...this.grants].filter(([, grant]) => grant.window === window && grant.dirty).map(([id]) => id);
   }
 
   /** Keeps the grants of the window's tabs that still show the same file; returns the dropped tabs. */

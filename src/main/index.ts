@@ -2,6 +2,7 @@ import { app, BrowserWindow, clipboard, dialog, Menu, webContents } from 'electr
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
+import { EditGrants } from '../core/documents/edit-grants';
 import { InputCredits } from '../core/documents/input-credits';
 import { ImageGrants } from '../core/documents/images';
 import { ReadIdentities } from '../core/documents/identities';
@@ -125,6 +126,7 @@ function start(initialMode: StartupMode): void {
   const documents = new TabRegistry(randomUUID, (windowId) => {
     pushSnapshot(windowId);
     documentWatches.sync(windowId, documents.list(windowId));
+    grants.sync(windowId, documents.list(windowId));
     const profile = profileOf(windowId);
     if (profile) {
       profile.keeper.changed();
@@ -132,6 +134,7 @@ function start(initialMode: StartupMode): void {
     }
   });
   const fs = new NodeFileSystem();
+  const grants = new EditGrants();
   const watcher = new CoalescingWatcher({ inner: new NodeFileWatcher(), clock: systemClock, fs });
   // A tab whose file changed since the page read it reads it again (live reload, UX F7).
   const documentWatches = new DocumentWatches({
@@ -272,7 +275,23 @@ function start(initialMode: StartupMode): void {
     else if (command === 'closeWindow') window.close();
     else if (command === 'fullScreen') window.setFullScreen(!window.isFullScreen());
     else if (command === 'quit') app.quit();
-    else recordCapabilityKey(command);
+    else {
+      recordCapabilityKey(command);
+      if (command === 'editMode') toggleEditMode(window.webContents.id);
+    }
+  };
+
+  /**
+   * Ctrl+E on the shown tab (ADR-013): grants edit mode, or asks the page to leave it. Main never
+   * drops a grant itself here, as the page may hold unsaved text; it leaves once that is settled.
+   */
+  const toggleEditMode = (windowId: number) => {
+    const { active } = documents.snapshot(windowId);
+    const tab = active ? documents.get(active, windowId) : undefined;
+    if (!tab || tab.kind === 'settings') return;
+    if (grants.allows(tab.id, windowId, tab.path)) return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'leave' });
+    grants.grant(tab.id, windowId, tab.path);
+    sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'granted' });
   };
 
   const openMainWindow = (profile: ProfileRuntime, { bounds = null, state }: { bounds?: WindowBounds | null; state?: WindowState } = {}) => {
@@ -339,6 +358,7 @@ function start(initialMode: StartupMode): void {
       warm.closeWindow(windowId);
       crashes.closeWindow(windowId);
       input.closeWindow(windowId);
+      grants.closeWindow(windowId);
       images.closeWindow(windowId);
       quickOpen.close(windowId);
       drops.closeWindow(windowId);
@@ -744,6 +764,8 @@ function start(initialMode: StartupMode): void {
           fs,
           decode: decodeWithPlatform,
           hash: sha256,
+          grants,
+          input,
           opened: (file, windowId) =>
             void profileOf(windowId)?.recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
         }),
@@ -860,10 +882,7 @@ function reportSessionNotice(notice: SettingsNotice): void {
   if (!app.isPackaged) (globalThis as { __galeoSessionNotice?: SettingsNotice }).__galeoSessionNotice = notice;
 }
 
-/**
- * Capability keys main took before the page saw them. Edit mode (Ctrl+E) arrives in v0.2; until
- * then the key is only kept from the page. Unpackaged test runs read `globalThis.__galeoCapabilityKeys`.
- */
+/** Capability keys main took before the page saw them. Unpackaged test runs read `globalThis.__galeoCapabilityKeys`. */
 function recordCapabilityKey(command: Command): void {
   if (!app.isPackaged) ((globalThis as { __galeoCapabilityKeys?: Command[] }).__galeoCapabilityKeys ??= []).push(command);
 }

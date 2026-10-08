@@ -2,6 +2,7 @@ import { z, type ZodType } from 'zod';
 import { WINDOW_COMMANDS } from '../keymap';
 import type { SettingsOverrides } from '../settings';
 import { CHOSEN_ENCODINGS, type AnyChannel, type Requests } from './ipc';
+import { READ_MAX_BYTES } from '../documents';
 
 /**
  * Argument schemas for every renderer → main channel. Imported by main only (SR-11), and kept out
@@ -53,6 +54,9 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
   'documents.pathMenu': z.tuple([documentId]),
   'documents.contextMenu': z.tuple([documentId]),
+  'documents.save': z.tuple([documentId, z.string().max(READ_MAX_BYTES), z.string().min(1).max(128)]),
+  'documents.dirty': z.tuple([documentId, z.boolean()]),
+  'documents.leaveEdit': z.tuple([documentId]),
   'tabs.snapshot': z.tuple([]),
   'tabs.activated': z.tuple([documentId]),
   'tabs.rendering': z.tuple([documentId]),

@@ -1,7 +1,9 @@
+import type { EditGrants } from '../../core/documents/edit-grants';
 import type { ReadIdentities } from '../../core/documents/identities';
 import type { DocumentLinks } from '../../core/documents/links';
 import { MARKDOWN_RENDER_MAX_BYTES } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
+import { saveDocument } from '../../core/documents/save';
 import type { TabRegistry } from '../../core/tabs/registry';
 import type { FileSystem } from '../../core/ports';
 import type { Decode, WhatwgEncoding } from '../../core/text/decode';
@@ -15,7 +17,10 @@ type DocumentChannels =
   | 'documents.followLink'
   | 'documents.back'
   | 'documents.forward'
-  | 'documents.resolveImage';
+  | 'documents.resolveImage'
+  | 'documents.save'
+  | 'documents.dirty'
+  | 'documents.leaveEdit';
 
 /**
  * The document channels. Every request names a document by id and is scoped to the sending
@@ -28,10 +33,14 @@ export function documentHandlers(deps: {
   fs: FileSystem;
   decode: Decode;
   hash: Hash;
+  /** The tabs main put in edit mode (ADR-013). */
+  grants: EditGrants;
+  /** The window's real input: a save spends one (ADR-004). */
+  input: { spend(window: number): boolean };
   /** A file was read (the profile's recent files keep it). */
   opened: (path: string, window: number) => void;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, hash, opened } = deps;
+  const { records, links, reads, fs, decode, hash, grants, input, opened } = deps;
   // The file each tab last counted as opened: re-reads of it (a wake, a changed file) aren't opens.
   const counted = new Map<string, string>();
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
@@ -76,5 +85,18 @@ export function documentHandlers(deps: {
     'documents.back': ([id], event) => links.back(id, event.sender.id),
     'documents.forward': ([id], event) => links.forward(id, event.sender.id),
     'documents.resolveImage': ([id, src], event) => links.resolveImage(id, event.sender.id, src),
+    'documents.save': async ([id, text, base], event) => {
+      const window = event.sender.id;
+      const record = records.get(id, window);
+      if (!record || record.kind === 'settings') throw new Error('unknown document');
+      if (!grants.allows(id, window, record.path)) return { kind: 'refused', reason: 'not-editable' };
+      if (!input.spend(window)) return { kind: 'refused', reason: 'no-input' };
+      const result = await saveDocument({ fs, decode, hash }, { path: record.path, text, base, encoding: records.encoding(id, window) ?? undefined });
+      // The file's new identity, before the watcher reports the write: our own save isn't a change on disk.
+      if (result.kind === 'saved') await reads.remember(id, record.path);
+      return result;
+    },
+    'documents.dirty': ([id, dirty], event) => grants.setDirty(id, event.sender.id, dirty),
+    'documents.leaveEdit': ([id], event) => grants.revoke(id, event.sender.id),
   };
 }

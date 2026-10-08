@@ -1,4 +1,4 @@
-import type { DocumentContent } from '../../shared/documents';
+import { READ_MAX_BYTES, type DocumentContent } from '../../shared/documents';
 import { chooseView, detectFormat } from '../formats/registry';
 import { FsError, type FileSystem } from '../ports';
 import { decodeText, type Decode, type WhatwgEncoding } from '../text/decode';
@@ -6,8 +6,7 @@ import { decodeText, type Decode, type WhatwgEncoding } from '../text/decode';
 /** A content hash of a file's bytes (main's SHA-256), injected so core stays free of runtime modules. */
 export type Hash = (bytes: Uint8Array) => string;
 
-/** Larger files aren't read at all (the too-large state); logs of 100 MB+ still open. */
-export const READ_MAX_BYTES = 256 * 1024 * 1024;
+export { READ_MAX_BYTES };
 
 const STATE_BY_CODE = {
   ENOENT: 'missing',

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { EditGrants } from '../../../src/core/documents/edit-grants';
 import { ImageGrants } from '../../../src/core/documents/images';
 import { DocumentLinks } from '../../../src/core/documents/links';
 import { ReadIdentities } from '../../../src/core/documents/identities';
@@ -33,8 +34,11 @@ class SlowFileSystem extends FakeFileSystem {
   }
 }
 
-function setup(files: Record<string, string>, slow = '') {
+function setup(files: Record<string, string>, slow = '', { credits = Infinity } = {}) {
   const fs = new SlowFileSystem(files, slow);
+  const grants = new EditGrants();
+  const input = { left: credits, spend: () => input.left-- > 0 };
+  const reads = new ReadIdentities(fs);
   let n = 0;
   const records = new TabRegistry(() => `id-${++n}`);
   const links = new DocumentLinks({
@@ -51,8 +55,18 @@ function setup(files: Record<string, string>, slow = '') {
     parseUrl: () => null,
   });
   const opened: string[] = [];
-  const handlers = documentHandlers({ records, links, reads: new ReadIdentities(fs), fs, decode, hash: (bytes) => `#${bytes.byteLength}`, opened: (path, window) => opened.push(`${window}:${path}`) });
-  return { fs, records, handlers, opened, id: records.open(Object.keys(files)[0]!, 1).id };
+  const handlers = documentHandlers({
+    records,
+    links,
+    reads,
+    fs,
+    decode,
+    hash: (bytes) => `#${new TextDecoder().decode(bytes)}`,
+    grants,
+    input,
+    opened: (path, window) => opened.push(`${window}:${path}`),
+  });
+  return { fs, records, handlers, opened, grants, input, reads, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
 describe('documentHandlers', () => {
@@ -126,5 +140,70 @@ describe('documents.setEncoding', () => {
   it("refuses another window's document", () => {
     const { handlers, id } = setup({ '/d/a.txt': 'x' });
     expect(() => handlers['documents.setEncoding']([id, 'utf-8'], { ...event, sender: { id: 2 } } as WindowIpcEvent)).toThrow();
+  });
+});
+
+describe('documentHandlers saving', () => {
+  const otherWindow = { ...event, sender: { id: 2 } } as WindowIpcEvent;
+  const text = async (fs: FakeFileSystem, file: string) => new TextDecoder().decode(await fs.readFile(file, { maxBytes: 1 << 20 }));
+
+  it('saves a tab in edit mode, and the save is not reported as a change on disk', async () => {
+    const { fs, handlers, grants, reads, id } = setup({ '/d/a.md': 'old' });
+    await handlers['documents.read']([id], event);
+    grants.grant(id, 1, '/d/a.md');
+
+    // A longer text: the file's identity (size) changes, as it would on disk.
+    expect(await handlers['documents.save']([id, 'new text', '#old'], event)).toEqual({ kind: 'saved', version: '#new text' });
+
+    expect(await text(fs, '/d/a.md')).toBe('new text');
+    expect(await reads.changed(id, '/d/a.md')).toBe(false);
+  });
+
+  it('refuses a tab not in edit mode, and writes nothing', async () => {
+    const { fs, handlers, id } = setup({ '/d/a.md': 'old' });
+    expect(await handlers['documents.save']([id, 'new', '#old'], event)).toEqual({ kind: 'refused', reason: 'not-editable' });
+    expect(fs.saves).toEqual([]);
+  });
+
+  it("refuses a save no input of the reader's asked for", async () => {
+    const { fs, handlers, grants, id } = setup({ '/d/a.md': 'old' }, '', { credits: 0 });
+    grants.grant(id, 1, '/d/a.md');
+    expect(await handlers['documents.save']([id, 'new', '#old'], event)).toEqual({ kind: 'refused', reason: 'no-input' });
+    expect(fs.saves).toEqual([]);
+  });
+
+  it("refuses another window's tab as unknown", async () => {
+    const { handlers, grants, id } = setup({ '/d/a.md': 'old' });
+    grants.grant(id, 1, '/d/a.md');
+    await expect(handlers['documents.save']([id, 'new', '#old'], otherWindow)).rejects.toThrow(/unknown document/);
+  });
+
+  it('answers a conflict when the file changed since the page loaded it', async () => {
+    const { fs, handlers, grants, id } = setup({ '/d/a.md': 'old' });
+    grants.grant(id, 1, '/d/a.md');
+    fs.write('/d/a.md', 'theirs');
+    expect(await handlers['documents.save']([id, 'mine', '#old'], event)).toEqual({ kind: 'conflict', version: '#theirs' });
+    expect(await text(fs, '/d/a.md')).toBe('theirs');
+  });
+
+  it('saves in the encoding the reader chose for the tab', async () => {
+    const { fs, handlers, grants, id } = setup({ '/d/a.md': 'abc' });
+    grants.grant(id, 1, '/d/a.md');
+    handlers['documents.setEncoding']([id, 'windows-1252'], event);
+    await handlers['documents.save']([id, 'é', '#abc'], event);
+    expect([...(await fs.readFile('/d/a.md', { maxBytes: 10 }))]).toEqual([0xe9]);
+  });
+
+  it('takes unsaved state and leaving edit mode from the tab\'s own window only', () => {
+    const { handlers, grants, id } = setup({ '/d/a.md': 'old' });
+    grants.grant(id, 1, '/d/a.md');
+    handlers['documents.dirty']([id, true], otherWindow);
+    expect(grants.dirty(1)).toEqual([]);
+    handlers['documents.dirty']([id, true], event);
+    expect(grants.dirty(1)).toEqual([id]);
+    handlers['documents.leaveEdit']([id], otherWindow);
+    expect(grants.allows(id, 1, '/d/a.md')).toBe(true);
+    handlers['documents.leaveEdit']([id], event);
+    expect(grants.allows(id, 1, '/d/a.md')).toBe(false);
   });
 });

@@ -1,6 +1,9 @@
 import type { FormatId, ViewMode } from './formats';
 import type { ScrollAnchor } from './tabs';
 
+/** Larger files aren't read at all (the too-large state); logs of 100 MB+ still open. A save's text has the same cap. */
+export const READ_MAX_BYTES = 256 * 1024 * 1024;
+
 export type TextEncoding = 'utf-8' | 'utf-16le' | 'utf-16be' | 'utf-32le' | 'utf-32be' | 'windows-1252';
 
 /** A document open in a window. The renderer names it by `id` only (SR-12). */
@@ -32,6 +35,18 @@ export type DocumentContent =
   | { state: 'binary'; path: string; size: number }
   | { state: 'too-large'; path: string; maxBytes: number }
   | { state: 'missing' | 'no-permission' | 'not-a-file' | 'unreadable'; path: string };
+
+/**
+ * What a save did (ADR-013). `conflict`: the file is no longer the version the page loaded (null:
+ * it's gone), and nothing was written. `refused`: the tab isn't in edit mode, or no input of the
+ * reader's asked for it.
+ */
+export type SaveResult =
+  | { kind: 'saved'; version: string }
+  | { kind: 'conflict'; version: string | null }
+  | { kind: 'unencodable'; character: string; line: number }
+  | { kind: 'failed'; reason: 'no-permission' | 'not-a-file' | 'unavailable' }
+  | { kind: 'refused'; reason: 'not-editable' | 'no-input' };
 
 /** Why a link wasn't followed; the page shows it in the status bar. */
 export type RefusalReason =

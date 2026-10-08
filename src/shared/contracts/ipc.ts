@@ -1,7 +1,7 @@
 // The IPC contract between main and the renderer (ADR-007, SR-11). Only names and types live
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS` and `EVENTS`, one fixed method per channel or event.
-import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult } from '../documents';
+import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, SaveResult } from '../documents';
 import type { Platform, WindowCommand } from '../keymap';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
 import type { ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
@@ -91,6 +91,9 @@ export const CHANNELS = [
   'documents.resolveImage',
   'documents.pathMenu',
   'documents.contextMenu',
+  'documents.save',
+  'documents.dirty',
+  'documents.leaveEdit',
   'tabs.snapshot',
   'tabs.activated',
   'tabs.rendering',
@@ -168,6 +171,15 @@ export interface Requests {
    * is no channel that opens a file: only the user's choice in main's menu does (SR-05).
    */
   'documents.contextMenu': [id: string];
+  /**
+   * Writes the tab's edited text, if main put the tab in edit mode and the file is still the
+   * version the page loaded (`base`, from its read or last save). A reader's input pays for it (ADR-013).
+   */
+  'documents.save': [id: string, text: string, base: string];
+  /** Whether the tab in edit mode has unsaved changes (close and quit ask about them). */
+  'documents.dirty': [id: string, dirty: boolean];
+  /** The page left edit mode (its text is saved or discarded): main takes the grant back. */
+  'documents.leaveEdit': [id: string];
   /** The sender's tabs, as main knows them. */
   'tabs.snapshot': [];
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
@@ -246,6 +258,9 @@ export interface Responses {
   'documents.resolveImage': ImageResult;
   'documents.pathMenu': void;
   'documents.contextMenu': void;
+  'documents.save': SaveResult;
+  'documents.dirty': void;
+  'documents.leaveEdit': void;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendering': void;
@@ -288,7 +303,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'documents.editMode', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -300,6 +315,11 @@ export interface Events {
   'tabs.demote': string[];
   /** The tab's file changed since the read it shows; read it again. */
   'tabs.stale': string;
+  /**
+   * Ctrl+E (seen by main, never sent by the page): `granted`, the tab is now in edit mode; `leave`,
+   * the reader asks to leave it, which the page does once its text is saved or discarded (ADR-013).
+   */
+  'documents.editMode': { id: string; edit: 'granted' | 'leave' };
   'settings.changed': SettingsState;
   /** A profile was created, renamed, recoloured, deleted, started or stopped. */
   'profiles.changed': ProfilesState;

@@ -80,6 +80,10 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       resolveImage: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
       pathMenu: vi.fn().mockResolvedValue(undefined),
       contextMenu: vi.fn().mockResolvedValue(undefined),
+      save: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-editable' }),
+      dirty: vi.fn().mockResolvedValue(undefined),
+      leaveEdit: vi.fn().mockResolvedValue(undefined),
+      onEditMode: vi.fn(() => () => {}),
     },
     tabs: {
       snapshot: vi.fn().mockResolvedValue({ revision: 1, active: null, tabs: documents.records ?? [] }),
