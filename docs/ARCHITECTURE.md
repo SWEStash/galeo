@@ -14,7 +14,9 @@
   [009](decisions/ADR-009-sandbox-unavailable-launcher.md) ·
   [010](decisions/ADR-010-trusted-types-enforcement.md) ·
   [011](decisions/ADR-011-defer-macos-windows-ci.md) ·
-  [012](decisions/ADR-012-hand-run-releases-until-public.md)
+  [012](decisions/ADR-012-hand-run-releases-until-public.md) ·
+  [013](decisions/ADR-013-edit-and-save-model.md) ·
+  [014](decisions/ADR-014-split-view-and-scroll-sync.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in

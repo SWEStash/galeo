@@ -204,11 +204,11 @@ must not obstruct (plain files only, no sidecar metadata).
 ### Should Have
 
 - Editor basics: find/replace, multiple cursors, soft wrap, Markdown-aware highlighting.
-- Optional Vim keybindings.
 
 ### Won't Have (v0.2)
 
 - WYSIWYG, toolbars, running Astro components, publishing from galeo.
+- Optional Vim keybindings (moved to v0.3, owner 2026-10-08).
 
 ## User Experience
 

@@ -224,14 +224,18 @@ and keeps the scroll position at the current match.
 - Closing a tab/window/profile with unsaved changes → dialog: Save / Don't save / Cancel
   (focus on Save; Esc = Cancel).
 - **External change while dirty** → non-modal bar above the editor: "File changed on disk" with
-  *Show diff*, *Keep mine*, *Load theirs*. Nothing is overwritten until the user chooses.
+  *Show diff*, *Keep mine*, *Load theirs*. Nothing is overwritten until the user chooses. *Show
+  diff* opens a read-only side-by-side diff (mine | theirs). A file deleted while dirty offers
+  *Save again* instead of *Load theirs*.
 - External change while in edit mode but clean → silently reload (same as F7).
 
 ### F13 — Split view (v0.2)
 
 Ctrl+\ toggles source | rendered side by side (source left). Scrolling either pane keeps the
 other aligned at block level; the preview updates as you type (debounced). The divider can be
-dragged; double-click resets 50/50. In MDX files, imports are hidden and JSX components render as
+dragged, or moved with the arrow keys when focused; double-click or Home resets 50/50. A window
+too narrow for two panes (about 700 px) shows the rendered view until it widens. A preview that
+takes too long to render keeps the last good one with a notice, without leaving split. In MDX files, imports are hidden and JSX components render as
 labelled placeholder boxes (`<Callout>` with its props listed).
 
 ## 4. States
