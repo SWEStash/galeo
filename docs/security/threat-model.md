@@ -193,10 +193,15 @@ attributes; no `accesskey` or `tabindex`; only `http`, `https`, `mailto` and rel
 (protocol-relative `//host` counts as remote); ids and names prefixed to prevent clobbering.
 Images never load by URL from the page: local ones wait for main's check (SR-12), remote ones
 become placeholders.
+MDX is parsed, never evaluated: imports and exports are dropped; components, their props and
+`{expressions}` become text before the sanitizer runs; a lowercase tag with only string props
+takes the raw-HTML path above. The one attribute the sanitizer adds for it, a text-only
+`data-galeo-mdx` on `div`, `span`, `code`, `pre` and `dl`, carries no URL, script or style; raw HTML
+in a Markdown file may use it too, which at most draws a box around that file's own content.
 Documents render into a container isolated from the app's UI styles (for example Shadow DOM), so
 content can neither restyle nor imitate app chrome.
-*AC*: a corpus of known XSS/SVG/mXSS payloads renders with no script execution (detected by a
-test hook) and no CSP bypass.
+*AC*: a corpus of known XSS/SVG/mXSS payloads, and of hostile MDX rendered as MDX, renders with
+no script execution (detected by a test hook) and no CSP bypass.
 
 **SR-03 — Safe rich renderers.** Mermaid runs with `securityLevel: 'strict'` (no click callbacks,
 no HTML labels). KaTeX runs with `trust: false` and `maxExpand`/`maxSize` limits. Shiki falls back

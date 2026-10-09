@@ -44,7 +44,7 @@ the file into the window in front of you) when you want it here.
   shows `↻` for a moment. F5 or Ctrl+R reloads by hand.
 - **Views**: Ctrl+U switches a Markdown file between rendered and source; Alt+Z toggles wrapping;
   logs open in source view, and End follows the end of a growing log.
-- **Split view** (Markdown): Ctrl+\ shows the source on the left and the rendered view on the
+- **Split view** (Markdown and MDX): Ctrl+\ shows the source on the left and the rendered view on the
   right; scrolling either keeps the other on the same block. Drag the divider, or focus it and use
   the arrow keys; double-click or Home puts it back at half. Ctrl+\ again goes back to the view
   you had; Ctrl+U goes to the rendered view. A window narrower than about 700 px shows one view
@@ -61,7 +61,13 @@ the file into the window in front of you) when you want it here.
   arrow keys pan, 0 fits it, 1 shows it at 100 %, Esc closes. Images open in the same viewer: click
   one, or use its ⤢ button (a linked image follows its link on click; icons don't offer it). In dark mode, a diagram that sets
   its own colours is drawn as written, on a light panel.
-- **Large or slow documents**: Markdown over 5 MB, or that takes more than 2 s to render, opens as
+- **MDX articles** (`.mdx`) render like Markdown, and nothing in them runs: imports and exports
+  are hidden, a component shows as a dashed box labelled with its tag and props, with its content
+  inside, and `{expressions}` show as code (comment-only ones are hidden). Lowercase HTML tags work
+  as in Markdown. A syntax error opens the file as source with a banner naming the line; in split
+  while editing, the last good preview stays with *Preview paused*. galeo isn't offered as the
+  default app for `.mdx` files yet: open them from galeo or with `galeo`.
+- **Large or slow documents**: Markdown or MDX over 5 MB, or that takes more than 2 s to render, opens as
   source with a banner; **Render anyway** renders it (and waits up to a minute).
 - **A document that crashed the window**: the window comes back with its tabs, and that tab shows
   a notice instead of rendering again. *Try again* renders it; *Open as source* shows its text. A
