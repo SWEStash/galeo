@@ -1,6 +1,6 @@
 import { constants, type Dirent, type Stats } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { chmod, mkdir, open, opendir, realpath, rename, rm, stat, utimes, type FileHandle } from 'node:fs/promises';
+import { access, chmod, mkdir, open, opendir, realpath, rename, rm, stat, utimes, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from '../../core/ports';
 
@@ -150,6 +150,12 @@ export class NodeFileSystem implements FileSystem {
     }
     if (info.isDirectory()) throw new FsError('EISDIR', path);
     if (!info.isFile()) throw new FsError('ENOTFILE', path);
+    // A rename would replace a file the reader may not write, as long as its folder allows it.
+    try {
+      await access(real, constants.W_OK);
+    } catch (error) {
+      throw toFsError(error, path);
+    }
     if (info.nlink > 1 || !(await this.replace(real, data, info))) {
       try {
         await writeAndSync(await open(real, 'w'), data);

@@ -356,6 +356,17 @@ describe('NodeFileSystem.saveFile', () => {
     expect(leftovers(path.dirname(target))).toEqual([]);
   });
 
+  it.runIf(posix && !root)("refuses a file the user can't write, though its folder would allow replacing it", async () => {
+    const dir = tempDir();
+    const target = file(dir, 'a.md', 'old');
+    chmodSync(target, 0o444);
+
+    expect(await codeOf(fs.saveFile(target, bytes('new')))).toBe('EACCES');
+
+    expect(readFileSync(target, 'utf8')).toBe('old');
+    expect(leftovers(dir)).toEqual([]);
+  });
+
   it('refuses a folder', async () => {
     const dir = tempDir();
     expect(await codeOf(fs.saveFile(dir, bytes('x')))).toBe('EISDIR');

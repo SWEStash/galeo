@@ -45,8 +45,8 @@ export interface FileSystem {
    * Writes a document the reader saved (ADR-013, SR-15), on the file a symlink points to:
    * `replaced` whole (temp file with the file's mode, owner and group, `fsync`, rename), or
    * `in-place` when a rename would change what the file is (it has other hard links, or the temp
-   * file can't take its owner or group), or `created` when the file is gone. A folder it can't
-   * write to fails with `EACCES` and leaves the file as it was.
+   * file can't take its owner or group), or `created` when the file is gone. A file the user can't
+   * write, or a folder it can't write to, fails with `EACCES` and leaves the file as it was.
    */
   saveFile(path: string, data: Uint8Array): Promise<'replaced' | 'in-place' | 'created'>;
   /** Moves a file, replacing whatever is at `to` (same file system). */

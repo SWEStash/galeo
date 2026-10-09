@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
@@ -38,11 +38,11 @@ test('Ctrl+E edits the shown file, Ctrl+S saves it with its own line endings, an
 });
 
 /** A file in edit mode with one unsaved line. Closing it would ask, so a failed test's cleanup kills it. */
-async function dirtyEdit(text = '# Draft\n') {
+async function dirtyEdit(text = '# Draft\n', { open = (file: string) => file }: { open?: (file: string) => string } = {}) {
   const dir = tempHome();
   const file = path.join(dir, 'draft.md');
   writeFileSync(file, text);
-  const launched = await launchApp(['--', file]);
+  const launched = await launchApp(['--', open(file)]);
   const { app, window } = launched;
   await expect(shownDocument(window).locator('h1')).toHaveText('Draft');
   await pressInMain(app, window, 'E');
@@ -163,4 +163,66 @@ test('unsaved text never reaches a state file, while main holds it for a crash',
     removeTempHome(home);
     removeTempHome(dir);
   }
+});
+
+const message = (window: Page) => window.getByTestId('status-message');
+
+test('a change on disk while edits are unsaved is never overwritten: the save is refused and both texts stay', async () => {
+  const { app, window, home, dir, file } = await dirtyEdit();
+  try {
+    writeFileSync(file, '# Theirs\n');
+    // The watcher reports it; the editor keeps the unsaved text.
+    await window.waitForTimeout(500);
+    await expect(shownDocument(window).locator('.cm-content')).toContainText('More.');
+    await window.keyboard.press('Control+s');
+    await expect(message(window)).toHaveText('Not saved: the file changed on disk');
+    expect(readFileSync(file, 'utf8')).toBe('# Theirs\n');
+    await expect(indicator(window, 'unsaved changes')).toBeAttached();
+  } finally {
+    app.process().kill('SIGKILL');
+    removeTempHome(home);
+    removeTempHome(dir);
+  }
+});
+
+test('saving a symlinked file writes its target and keeps the link', async () => {
+  let link = '';
+  const { app, window, home, dir, file } = await dirtyEdit('# Draft\n', {
+    open: (target) => {
+      const links = path.join(path.dirname(target), 'links');
+      mkdirSync(links);
+      link = path.join(links, 'draft.md');
+      symlinkSync(target, link);
+      return link;
+    },
+  });
+  try {
+    await window.keyboard.press('Control+s');
+    await expect(message(window)).toHaveText('Saved');
+    expect(lstatSync(link).isSymbolicLink()).toBe(true);
+    expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
+  } finally {
+    app.process().kill('SIGKILL');
+    removeTempHome(home);
+    removeTempHome(dir);
+  }
+});
+
+test.describe(() => {
+  test.skip(process.platform === 'win32' || process.getuid?.() === 0, 'POSIX permissions, as a user other than root');
+  test("a read-only file isn't replaced: the save says so and the edits stay", async () => {
+    const { app, window, home, dir, file } = await dirtyEdit();
+    try {
+      chmodSync(file, 0o444);
+      await window.keyboard.press('Control+s');
+      await expect(message(window)).toHaveText('Not saved: no permission to write this file');
+      expect(readFileSync(file, 'utf8')).toBe('# Draft\n');
+      await expect(indicator(window, 'unsaved changes')).toBeAttached();
+    } finally {
+      app.process().kill('SIGKILL');
+      chmodSync(file, 0o644);
+      removeTempHome(home);
+      removeTempHome(dir);
+    }
+  });
 });
