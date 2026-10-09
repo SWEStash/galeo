@@ -37,6 +37,7 @@ describe('findViolations', () => {
     ['<span class="katex" style="background:url(https://x.org)"></span>', 'style value background:url(https://x.org)'],
     ['<p id="x">', 'id="x"'],
     ['<p data-src-line="1 onclick=x">', 'data-src-line="1 onclick=x"'],
+    ['<p data-src-end="0">', 'data-src-end="0"'],
     ['<a href="java\tscript:alert(1)">', 'href: scheme javascript'],
     ['<a href=" JaVaScRiPt:x">', 'href: scheme JaVaScRiPt'],
     ['<a href="data:text/html,x">', 'href: scheme data'],

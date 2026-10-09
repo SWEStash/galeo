@@ -47,7 +47,7 @@ export function findViolations(root: ParentNode): string[] {
       if (lower === 'style' && element.closest(GENERATED) === null) violations.push(`style on <${tag}>`);
       if (lower === 'style' && /url\(|expression|position\s*:\s*fixed|@import/i.test(value)) violations.push(`style value ${value}`);
       if ((lower === 'id' || lower === 'name') && !value.startsWith('user-content-')) violations.push(`${lower}="${value}"`);
-      if (lower === 'data-src-line' && !/^[1-9]\d*$/.test(value)) violations.push(`data-src-line="${value}"`);
+      if ((lower === 'data-src-line' || lower === 'data-src-end') && !/^[1-9]\d*$/.test(value)) violations.push(`${lower}="${value}"`);
       if (URL_ATTRIBUTES.has(lower)) {
         const problem = urlProblem(value);
         if (problem) violations.push(`${lower}: ${problem}`);

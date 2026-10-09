@@ -35,6 +35,21 @@ describe('Markdown pipeline', () => {
     expect(doc.querySelector('a')?.hasAttribute('data-src-line')).toBe(false);
   });
 
+  it("marks each positioned block's last source line, so a long block can be followed inside", async () => {
+    const ends = (doc: DocumentFragment, selector: string) =>
+      [...doc.querySelectorAll(selector)].map((element) => element.getAttribute('data-src-end'));
+    const basic = dom((await render.markdown(fixture('basic.md'))).html);
+    expect(ends(basic, 'h1, p, h2, li, blockquote')).toEqual(['1', '3', '5', '7', '8', '10', '10']);
+    // Highlighting replaces the block, which must keep both lines.
+    expect(ends(basic, 'pre.shiki')).toEqual(['14']);
+    expect(ends(dom((await render.markdown(fixture('gfm.md'))).html), 'table, tbody tr')).toEqual(['6', '5', '6']);
+    const frontmatter = dom((await render.markdown(fixture('frontmatter.md'))).html);
+    expect(ends(frontmatter, 'details.galeo-frontmatter')).toEqual(['4']);
+    const diagram = dom((await render.markdown('# Flow\n\n```mermaid\ngraph TD\n  A --> B\n```\n')).html);
+    expect(ends(diagram, 'div.galeo-diagram')).toEqual(['6']);
+    expect(diagram.querySelector('div.galeo-diagram pre')?.hasAttribute('data-src-end')).toBe(false);
+  });
+
   it('counts the prose words only: not code blocks, math, diagrams, front matter or blocked images', async () => {
     const text = [
       '---',

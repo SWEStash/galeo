@@ -1,4 +1,4 @@
-import type { Element, Root } from 'hast';
+import type { Element, Properties, Root } from 'hast';
 import type { Root as MdastRoot } from 'mdast';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize from 'rehype-sanitize';
@@ -47,13 +47,17 @@ export interface RenderResult {
   cached: boolean;
 }
 
-// Blocks that carry `data-src-line` (ADR-003): enough for scroll anchors and view toggles.
+// Blocks that carry `data-src-line` and `data-src-end` (ADR-003, ADR-014): enough for scroll
+// anchors, view toggles and following a long block inside in split view.
 const POSITIONED = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'pre', 'blockquote', 'tr', 'table', 'hr']);
 
+/** A block's first and last source lines. */
+type Lines = Partial<Pick<Properties, 'dataSrcLine' | 'dataSrcEnd'>>;
+
 interface Collected {
-  frontmatter: { value: string; lang: string } | null;
+  frontmatter: { value: string; lang: string; end: number } | null;
   /** Source lines of the code blocks Shiki is about to replace, in document order. */
-  highlighted: (number | null)[];
+  highlighted: Lines[];
   outline: OutlineEntry[];
   links: Set<string>;
   images: Set<string>;
@@ -63,7 +67,7 @@ interface Collected {
 const liftFrontmatter = (collected: Collected) => () => (tree: MdastRoot) => {
   const first = tree.children[0];
   if (first && (first.type === 'yaml' || (first.type as string) === 'toml')) {
-    collected.frontmatter = { value: (first as { value: string }).value, lang: first.type };
+    collected.frontmatter = { value: (first as { value: string }).value, lang: first.type, end: first.position?.end.line ?? 1 };
     tree.children.shift();
   }
 };
@@ -71,7 +75,10 @@ const liftFrontmatter = (collected: Collected) => () => (tree: MdastRoot) => {
 const annotate = (collected: Collected) => () => (tree: Root) => {
   eachElement(tree, (node, index, parent) => {
     const line = node.position?.start.line;
-    if (line !== undefined && POSITIONED.has(node.tagName)) node.properties['dataSrcLine'] = line;
+    if (line !== undefined && POSITIONED.has(node.tagName)) {
+      node.properties['dataSrcLine'] = line;
+      node.properties['dataSrcEnd'] = node.position?.end.line ?? line;
+    }
     if (/^h[1-6]$/.test(node.tagName) && line !== undefined) {
       collected.outline.push({
         depth: Number(node.tagName[1]),
@@ -132,11 +139,11 @@ function unhighlightIfHuge(pre: Element): void {
   code.properties['className'] = classesOf(code).filter((name) => !name.startsWith('language-'));
 }
 
-function frontmatterBlock({ value, lang }: { value: string; lang: string }): Element {
+function frontmatterBlock({ value, lang, end }: { value: string; lang: string; end: number }): Element {
   return {
     type: 'element',
     tagName: 'details',
-    properties: { className: ['galeo-frontmatter'], dataSrcLine: 1 },
+    properties: { className: ['galeo-frontmatter'], dataSrcLine: 1, dataSrcEnd: end },
     children: [
       { type: 'element', tagName: 'summary', properties: {}, children: [{ type: 'text', value: 'Frontmatter' }] },
       {
@@ -165,13 +172,14 @@ const diagramPlaceholders = () => (tree: Root) => {
   eachElement(tree, (node, index, parent) => {
     const code = node.children[0];
     if (node.tagName !== 'pre' || code?.type !== 'element' || !classesOf(code).includes('language-mermaid')) return;
-    const { dataSrcLine } = node.properties;
+    const lines = linesOf(node);
     delete node.properties['dataSrcLine'];
+    delete node.properties['dataSrcEnd'];
     code.properties['className'] = [];
     parent.children[index] = {
       type: 'element',
       tagName: 'div',
-      properties: { className: ['galeo-diagram'], ...(dataSrcLine === undefined ? {} : { dataSrcLine }) },
+      properties: { className: ['galeo-diagram'], ...lines },
       children: [node],
     };
   });
@@ -209,14 +217,22 @@ const explainMathErrors = () => (tree: Root) => {
   });
 };
 
+/** The source lines a block carries, to move onto the element that replaces it. */
+function linesOf(node: Element): Lines {
+  const { dataSrcLine, dataSrcEnd } = node.properties;
+  return {
+    ...(dataSrcLine === undefined ? {} : { dataSrcLine }),
+    ...(dataSrcEnd === undefined ? {} : { dataSrcEnd }),
+  };
+}
+
 /** Shiki swaps each code block for its own `pre`, so note their lines just before it runs… */
 const noteCodeLines = (collected: Collected) => () => (tree: Root) => {
   eachElement(tree, (node) => {
     const code = node.children[0];
     if (node.tagName !== 'pre' || code?.type !== 'element') return;
     if (!classesOf(code).some((name) => name.startsWith('language-'))) return;
-    const line = node.properties['dataSrcLine'];
-    collected.highlighted.push(typeof line === 'number' ? line : null);
+    collected.highlighted.push(linesOf(node));
   });
 };
 
@@ -225,8 +241,7 @@ const restoreCodeLines = (collected: Collected) => () => (tree: Root) => {
   let next = 0;
   eachElement(tree, (node) => {
     if (node.tagName !== 'pre' || !classesOf(node).includes('shiki')) return;
-    const line = collected.highlighted[next++];
-    if (line != null) node.properties['dataSrcLine'] = line;
+    Object.assign(node.properties, collected.highlighted[next++]);
   });
 };
 
