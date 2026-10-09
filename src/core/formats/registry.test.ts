@@ -6,6 +6,8 @@ describe('detectFormat', () => {
     ['/d/plan.md', 'markdown'],
     ['/d/README.markdown', 'markdown'],
     ['/d/notes.MD', 'markdown'],
+    ['/d/post.mdx', 'mdx'],
+    ['/d/POST.MDX', 'mdx'],
     ['/d/notes.txt', 'text'],
     ['/d/app.log', 'log'],
     ['/d/app.log.1', 'log'],
@@ -27,6 +29,11 @@ describe('detectFormat', () => {
 describe('chooseView', () => {
   it('renders Markdown by default', () => {
     expect(chooseView('markdown', { size: 1024 })).toEqual({ view: 'rendered', banner: null });
+  });
+
+  it('renders MDX by default, and over the render limit opens it as source with the banner', () => {
+    expect(chooseView('mdx', { size: MARKDOWN_RENDER_MAX_BYTES })).toEqual({ view: 'rendered', banner: null });
+    expect(chooseView('mdx', { size: MARKDOWN_RENDER_MAX_BYTES + 1 })).toEqual({ view: 'source', banner: 'too-large' });
   });
 
   it('opens .txt in the reader view', () => {
@@ -57,14 +64,15 @@ describe('chooseView', () => {
     });
   });
 
-  it('only offers split view on Markdown', () => {
-    expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.split).map(([id]) => id)).toEqual(['markdown']);
+  it('only offers split view on Markdown and MDX', () => {
+    expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.split).map(([id]) => id)).toEqual(['markdown', 'mdx']);
   });
 
-  it('only offers follow-end on logs and an outline on Markdown', () => {
+  it('only offers follow-end on logs and an outline on Markdown and MDX', () => {
     expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.follow).map(([id]) => id)).toEqual(['log']);
     expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.outline).map(([id]) => id)).toEqual([
       'markdown',
+      'mdx',
     ]);
   });
 });

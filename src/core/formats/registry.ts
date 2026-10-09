@@ -12,7 +12,7 @@ export interface FormatSpec {
   capabilities: { follow: boolean; outline: boolean; split: boolean };
 }
 
-/** Markdown over 5 MB opens as source (SR-14). */
+/** Markdown or MDX over 5 MB opens as source (SR-14). */
 export const MARKDOWN_RENDER_MAX_BYTES = 5 * 1024 * 1024;
 
 /** The `.txt` reader builds a paragraph per block of text; past this, source is lighter. */
@@ -22,6 +22,12 @@ export const TEXT_READER_MAX_BYTES = 5 * 1024 * 1024;
 export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
   markdown: {
     extensions: ['.md', '.markdown'],
+    defaultView: 'rendered',
+    renderMaxBytes: MARKDOWN_RENDER_MAX_BYTES,
+    capabilities: { follow: false, outline: true, split: true },
+  },
+  mdx: {
+    extensions: ['.mdx'],
     defaultView: 'rendered',
     renderMaxBytes: MARKDOWN_RENDER_MAX_BYTES,
     capabilities: { follow: false, outline: true, split: true },

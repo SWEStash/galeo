@@ -3,7 +3,7 @@ import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
 import type { ImageResult, SaveResult, TextEncoding } from '../../shared/documents';
 import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
-import type { FormatId, ViewMode } from '../../shared/formats';
+import { workerFormat, type FormatId, type ViewMode } from '../../shared/formats';
 import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
 import { OutlinePanel } from '../outline/OutlinePanel';
@@ -26,7 +26,7 @@ import { pauseOrMax } from './pause-or-max';
 import { useRenderedHtml } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 
-const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
+const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', mdx: 'markdown', log: 'log', text: null, plain: null };
 
 /** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
 const LOADING_DELAY_MS = 150;
@@ -176,13 +176,14 @@ export function DocumentPane({
   // The source pane's share of a split (ADR-014), kept with the view state once moved.
   const [ratio, setRatio] = useState(initialViewState.ratio ?? 0.5);
   const [narrow, setNarrow] = useState(false);
-  // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
-  const renderable = ready?.format === 'markdown' || ready?.format === 'text';
-  const splittable = ready?.format === 'markdown';
+  // Markdown and MDX render in the worker; `.txt` shows as reader text; logs and other text are source only.
+  const article = ready ? workerFormat(ready.format) !== null : false;
+  const renderable = article || ready?.format === 'text';
+  const splittable = article;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
   // Editing in split, the preview follows the editor's text rather than the file's (ADR-014).
   const [previewText, setPreviewText] = useState<string | null>(null);
-  const markdown = ready?.format === 'markdown' ? (previewText ?? ready.text) : null;
+  const markdown = ready && article ? (previewText ?? ready.text) : null;
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
   const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large', live: previewText !== null });
   // A document that failed to render shows its source instead.
@@ -458,7 +459,7 @@ export function DocumentPane({
   const [outlineOpen, setOutlineOpen] = useOutline();
   const [focusOutline, setFocusOutline] = useState(false);
   const [heading, setHeading] = useState<string | null>(null);
-  const outlined = ready?.format === 'markdown' && (view === 'rendered' || view === 'split');
+  const outlined = article && (view === 'rendered' || view === 'split');
   const showsOutline = active && outlineOpen && outlined;
   const closeOutline = useCallback(() => {
     setOutlineOpen(false);
@@ -562,9 +563,9 @@ export function DocumentPane({
 
   // Only the source view shows the file's lines; rendered and reader views wrap to the window.
   const lines = useMemo(() => (ready && view !== 'rendered' ? countLines(ready.text) : null), [ready, view]);
-  // Markdown's prose is counted by the worker as it renders; `.txt` is all prose.
+  // An article's prose is counted by the worker as it renders; `.txt` is all prose.
   const textWords = useMemo(() => (ready?.format === 'text' ? countWords(ready.text) : null), [ready]);
-  const words = ready?.format === 'markdown' ? render.words : textWords;
+  const words = article ? render.words : textWords;
   useEffect(() => {
     onStatus?.({
       state: ready ? 'ready' : content.state,

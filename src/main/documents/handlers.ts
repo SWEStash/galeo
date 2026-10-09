@@ -10,6 +10,7 @@ import type { FileSystem } from '../../core/ports';
 import type { Decode, WhatwgEncoding } from '../../core/text/decode';
 import type { Hash } from '../../core/documents/read';
 import type { DocumentContent } from '../../shared/documents';
+import { workerFormat } from '../../shared/formats';
 import type { Handlers } from '../ipc/register';
 
 type DocumentChannels =
@@ -61,8 +62,8 @@ export function documentHandlers(deps: {
       opened(path, window);
     }
     // Only the text main read itself defines which links the page may follow. Only rendered
-    // Markdown has links; nothing else is kept.
-    if (content.state === 'ready' && content.format === 'markdown' && content.size <= MARKDOWN_RENDER_MAX_BYTES) {
+    // articles (Markdown, MDX) have links; nothing else is kept.
+    if (content.state === 'ready' && workerFormat(content.format) !== null && content.size <= MARKDOWN_RENDER_MAX_BYTES) {
       links.remember(id, window, path, content.text);
     } else {
       links.forget(id);

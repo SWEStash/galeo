@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
 import type { Settings } from '../shared/settings';
+import type { FormatId } from '../shared/formats';
 
 const DEFAULT_SETTINGS: Settings = {
   themeMode: 'system',
@@ -173,7 +174,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
   return api;
 }
 
-function readyContent(format: 'markdown' | 'plain' | 'text' | 'log', view: 'rendered' | 'source', text: string): DocumentContent {
+function readyContent(format: FormatId, view: 'rendered' | 'source', text: string): DocumentContent {
   return { state: 'ready', path: '/d/x', format, view, banner: null, text, encoding: 'utf-8', guessedEncoding: false, size: text.length, version: 'v1' };
 }
 
@@ -301,6 +302,15 @@ describe('App', () => {
       expect(shadow?.querySelector('article')?.innerHTML).toBe('<p>hello</p>');
     });
     expect(api.documents.read).toHaveBeenCalledWith('doc-1');
+  });
+
+  it('renders an MDX article through the worker and opens it in split, as Markdown', async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.mdx' }], content: readyContent('mdx', 'rendered', '# hi') });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># hi</p>'));
+    await press({ key: '\\', ctrlKey: true });
+    await vi.waitFor(() => expect(shadow.querySelector<HTMLElement>('.galeo-split-divider')?.hidden).toBe(false), { timeout: 5_000 });
   });
 
   it('switches a Markdown document to its source and back with Ctrl+U', async () => {

@@ -93,6 +93,12 @@ describe('documentHandlers', () => {
     });
   });
 
+  it('keeps the links of an MDX article, as of a Markdown one', async () => {
+    const { handlers, id } = setup({ '/d/post.mdx': 'see [x](x.md)', '/d/x.md': '# x' });
+    expect(await handlers['documents.read']([id], event)).toMatchObject({ state: 'ready', format: 'mdx' });
+    expect(await handlers['documents.followLink']([id, 'x.md', 'current'], event)).toEqual({ kind: 'navigated', anchor: null });
+  });
+
   it('keeps no text for documents without links: logs and plain text', async () => {
     const { handlers, id } = setup({ '/d/app.log': 'INFO see [x](x.md)' });
     expect(await handlers['documents.read']([id], event)).toMatchObject({ state: 'ready', format: 'log' });
