@@ -39,4 +39,17 @@ describe('ReadIdentities', () => {
     fs.write('/d/a.md', 'back');
     expect(await reads.changed('t1', '/d/a.md')).toBe(true);
   });
+
+  it("keeps the shape of each tab's last read for its own file, through later identities, until forgotten", async () => {
+    const fs = new FakeFileSystem({ '/d/a.md': 'one' });
+    const reads = new ReadIdentities(fs);
+    const shape = { encoding: 'utf-8', bom: true, lineEnding: 'crlf' } as const;
+    expect(reads.shapeOf('t1', '/d/a.md')).toBeNull();
+    reads.saw('t1', '/d/a.md', shape);
+    await reads.remember('t1', '/d/a.md');
+    expect(reads.shapeOf('t1', '/d/a.md')).toEqual(shape);
+    expect(reads.shapeOf('t1', '/d/b.md')).toBeNull();
+    reads.forget('t1');
+    expect(reads.shapeOf('t1', '/d/a.md')).toBeNull();
+  });
 });

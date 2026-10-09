@@ -13,6 +13,15 @@ const read = (fs: FakeFileSystem, path: string, options: { renderAnyway?: boolea
   readDocument(path, { fs, decode, hash, ...options });
 
 describe('readDocument', () => {
+  it('tells what shape the text had (encoding, byte order mark, line endings) for a file it shows, and only for those', async () => {
+    const fs = new FakeFileSystem({ '/d/a.md': Uint8Array.from([0xef, 0xbb, 0xbf, 0x61, 0x0d, 0x0a]), '/d/empty.md': '' });
+    const shapes: unknown[] = [];
+    await readDocument('/d/a.md', { fs, decode, hash, shaped: (shape) => shapes.push(shape) });
+    await readDocument('/d/empty.md', { fs, decode, hash, shaped: (shape) => shapes.push(shape) });
+    await readDocument('/d/gone.md', { fs, decode, hash, shaped: (shape) => shapes.push(shape) });
+    expect(shapes).toEqual([{ encoding: 'utf-8', bom: true, lineEnding: 'crlf' }]);
+  });
+
   it('reads Markdown, ready to render', async () => {
     const fs = new FakeFileSystem({ '/d/a.md': '# Hi\n' });
     expect(await read(fs, '/d/a.md')).toEqual({

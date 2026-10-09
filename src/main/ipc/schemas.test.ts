@@ -12,17 +12,19 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
-  it('documents.save takes an id, text up to the read cap (empty too) and the version it was loaded from', () => {
+  it('documents.save takes an id, text up to the read cap (empty too) and the version it was loaded from (null: the file was gone)', () => {
     const channel = 'documents.save';
     expect(accepts(channel, [ID, '', 'a'.repeat(64)])).toBe(true);
     expect(accepts(channel, [ID, '# text', 'a'.repeat(64)])).toBe(true);
+    expect(accepts(channel, [ID, '# text', null])).toBe(true);
     for (const bad of [[ID, 'text'], [ID, 'text', ''], [ID, 'text', 'a'.repeat(129)], [ID, 7, 'v'], ['', 'text', 'v'], [ID, 'text', 'v', 'extra']]) {
       expect(accepts(channel, bad)).toBe(false);
     }
   });
 
-  it('documents.keep takes an id, text up to the read cap and a version', () => {
+  it('documents.keep takes an id, text up to the read cap and a version (or null)', () => {
     expect(accepts('documents.keep', [ID, '', 'v'])).toBe(true);
+    expect(accepts('documents.keep', [ID, '', null])).toBe(true);
     for (const bad of [[ID, 'text'], [ID, 'text', ''], [ID, 1, 'v'], ['', 'text', 'v']]) expect(accepts('documents.keep', bad)).toBe(false);
   });
 

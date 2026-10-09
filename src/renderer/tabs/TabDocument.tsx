@@ -142,16 +142,16 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
   );
   // A request that fails on the way (the tab closed meanwhile) reads as a write that didn't happen.
   const save = useCallback(
-    (text: string, base: string): Promise<SaveResult> =>
+    (text: string, base: string | null): Promise<SaveResult> =>
       window.galeo.documents.save(id, text, base).catch((): SaveResult => ({ kind: 'failed', reason: 'unavailable' })),
     [id],
   );
   const dirty = useCallback((isDirty: boolean) => void window.galeo.documents.dirty(id, isDirty).catch(ignoreClosedTab), [id]);
   const leaveEdit = useCallback(() => void window.galeo.documents.leaveEdit(id).catch(ignoreClosedTab), [id]);
   const onEditor = useCallback((editor: Editor | null) => (editor ? editors.set(id, editor) : editors.delete(id)), [id]);
-  const keep = useCallback((text: string, base: string) => void window.galeo.documents.keep(id, text, base).catch(ignoreClosedTab), [id]);
+  const keep = useCallback((text: string, base: string | null) => void window.galeo.documents.keep(id, text, base).catch(ignoreClosedTab), [id]);
   // Unsaved text main kept from before a renderer crash, for the tab's first document only.
-  const [recovered, setRecovered] = useState<{ text: string; base: string } | null>(null);
+  const [recovered, setRecovered] = useState<{ text: string; base: string | null } | null>(null);
   useEffect(() => {
     let current = true;
     void window.galeo.documents

@@ -1,7 +1,7 @@
-/** A dirty tab's text and the version it was loaded from, held for a page that crashes. */
+/** A dirty tab's text and the version it was loaded from (null: the file was gone), held for a page that crashes. */
 export interface KeptText {
   text: string;
-  base: string;
+  base: string | null;
 }
 
 interface Grant {
@@ -44,7 +44,7 @@ export class EditGrants {
   }
 
   /** The page's latest unsaved text for its own granted tab. */
-  keep(id: string, window: number, text: string, base: string): void {
+  keep(id: string, window: number, text: string, base: string | null): void {
     const grant = this.grants.get(id);
     if (grant?.window !== window) return;
     grant.dirty = true;

@@ -176,9 +176,10 @@ export interface Requests {
   'documents.contextMenu': [id: string];
   /**
    * Writes the tab's edited text, if main put the tab in edit mode and the file is still the
-   * version the page loaded (`base`, from its read or last save). A reader's input pays for it (ADR-013).
+   * version the page loaded (`base`, from its read or last save). A null `base` writes a file that
+   * was gone, only if it's still gone. A reader's input pays for it (ADR-013).
    */
-  'documents.save': [id: string, text: string, base: string];
+  'documents.save': [id: string, text: string, base: string | null];
   /** Whether the tab in edit mode has unsaved changes (close and quit ask about them). */
   'documents.dirty': [id: string, dirty: boolean];
   /** The page left edit mode (its text is saved or discarded): main takes the grant back. */
@@ -189,7 +190,7 @@ export interface Requests {
    */
   'documents.closeAnswer': [answer: 'asking' | 'proceed' | 'cancel'];
   /** The tab's unsaved text, which main holds in memory only so a renderer crash doesn't lose it (ADR-013). */
-  'documents.keep': [id: string, text: string, base: string];
+  'documents.keep': [id: string, text: string, base: string | null];
   /** After a crash: the unsaved text main held for the tab, if any. */
   'documents.recover': [id: string];
   /** The sender's tabs, as main knows them. */
@@ -275,7 +276,7 @@ export interface Responses {
   'documents.leaveEdit': void;
   'documents.closeAnswer': void;
   'documents.keep': void;
-  'documents.recover': { text: string; base: string } | null;
+  'documents.recover': { text: string; base: string | null } | null;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendering': void;

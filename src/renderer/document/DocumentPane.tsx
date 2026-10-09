@@ -64,7 +64,7 @@ export interface DocumentPaneProps {
   /** Main's word on edit mode for this tab (Ctrl+E, ADR-013); a new token is a new request. */
   editRequest?: { edit: 'granted' | 'leave'; token: number } | null;
   /** Saves the edited text, naming the version it was loaded from. */
-  onSave?: (text: string, base: string) => Promise<SaveResult>;
+  onSave?: (text: string, base: string | null) => Promise<SaveResult>;
   /** The tab in edit mode now has unsaved changes, or no longer has. */
   onDirty?: (dirty: boolean) => void;
   /** The page left edit mode: main takes the grant back. */
@@ -76,9 +76,9 @@ export interface DocumentPaneProps {
   /** Leaving edit mode with unsaved changes: asks the reader; true once they are saved or discarded. */
   onConfirmLeave?: () => Promise<boolean>;
   /** Hands main the unsaved text, kept in memory for a renderer crash (ADR-013). */
-  onKeep?: (text: string, base: string) => void;
+  onKeep?: (text: string, base: string | null) => void;
   /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
-  recovered?: { text: string; base: string } | null;
+  recovered?: { text: string; base: string | null } | null;
 }
 
 /** Unsaved text goes to main once typing pauses this long. */

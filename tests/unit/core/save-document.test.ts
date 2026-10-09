@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { saveDocument } from '../../../src/core/documents/save';
 import { FsError } from '../../../src/core/ports';
 import type { Decode } from '../../../src/core/text/decode';
+import type { Target } from '../../../src/core/text/encode';
 import { FakeFileSystem } from '../../helpers/fakes/file-system';
 
 const decode: Decode = (bytes, encoding, { fatal }) => new TextDecoder(encoding, { fatal, ignoreBOM: true }).decode(bytes);
@@ -13,8 +14,8 @@ async function bytesOf(fs: FakeFileSystem, path: string): Promise<number[]> {
   return [...(await fs.readFile(path, { maxBytes: 1 << 20 }))];
 }
 
-function save(fs: FakeFileSystem, text: string, base: string, encoding?: 'windows-1252') {
-  return saveDocument({ fs, decode, hash }, { path: '/d/a.md', text, base, encoding });
+function save(fs: FakeFileSystem, text: string, base: string | null, encoding?: 'windows-1252', shape?: Target) {
+  return saveDocument({ fs, decode, hash }, { path: '/d/a.md', text, base, encoding, shape });
 }
 
 describe('saveDocument', () => {
@@ -36,6 +37,44 @@ describe('saveDocument', () => {
     const fs = new FakeFileSystem({});
     expect(await save(fs, 'mine\n', hash(utf8('old\n')))).toEqual({ kind: 'conflict', version: null });
     expect(fs.saves).toEqual([]);
+  });
+
+  describe('with no base (the file was gone when the reader chose to save it again)', () => {
+    it('writes the file again, in the shape of its last read: encoding, byte order mark and line endings', async () => {
+      const fs = new FakeFileSystem({});
+      const result = await save(fs, 'a\nb\n', null, undefined, { encoding: 'utf-16le', bom: true, lineEnding: 'crlf' });
+      const bytes = [0xff, 0xfe, ...[...'a\r\nb\r\n'].flatMap((c) => [c.charCodeAt(0), 0])];
+      expect(result).toEqual({ kind: 'saved', version: hash(Uint8Array.from(bytes)) });
+      expect(await bytesOf(fs, '/d/a.md')).toEqual(bytes);
+    });
+
+    it('takes the encoding the reader chose over the last read, without a byte order mark of another encoding', async () => {
+      const fs = new FakeFileSystem({});
+      await save(fs, 'é\n', null, 'windows-1252', { encoding: 'utf-8', bom: true, lineEnding: 'crlf' });
+      expect(await bytesOf(fs, '/d/a.md')).toEqual([0xe9, 0x0d, 0x0a]);
+    });
+
+    it('writes UTF-8 with LF when nothing was read', async () => {
+      const fs = new FakeFileSystem({});
+      await save(fs, 'é\r\n', null);
+      expect(await bytesOf(fs, '/d/a.md')).toEqual([0xc3, 0xa9, 0x0a]);
+    });
+
+    it('refuses when a file is there again, naming its version, and writes nothing', async () => {
+      const fs = new FakeFileSystem({ '/d/a.md': 'back\n' });
+      expect(await save(fs, 'mine\n', null)).toEqual({ kind: 'conflict', version: hash(utf8('back\n')) });
+      expect(fs.saves).toEqual([]);
+    });
+
+    it("refuses text the shape's encoding can't hold", async () => {
+      const fs = new FakeFileSystem({});
+      expect(await save(fs, '😀', null, undefined, { encoding: 'windows-1252', bom: false, lineEnding: 'lf' })).toEqual({
+        kind: 'unencodable',
+        character: '😀',
+        line: 1,
+      });
+      expect(fs.saves).toEqual([]);
+    });
   });
 
   it("keeps the file's byte order mark and CRLF line endings", async () => {

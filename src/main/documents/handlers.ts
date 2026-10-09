@@ -55,7 +55,7 @@ export function documentHandlers(deps: {
   const read = async (id: string, window: number, path: string, encoding: WhatwgEncoding | null): Promise<DocumentContent> => {
     // The identity is taken first: a change during the read then shows as a change afterwards.
     await reads.remember(id, path);
-    const content = await readDocument(path, { fs, decode, hash, encoding: encoding ?? undefined });
+    const content = await readDocument(path, { fs, decode, hash, encoding: encoding ?? undefined, shaped: (shape) => reads.saw(id, path, shape) });
     if ((content.state === 'ready' || content.state === 'empty') && counted.get(id) !== path) {
       counted.set(id, path);
       opened(path, window);
@@ -97,7 +97,10 @@ export function documentHandlers(deps: {
       if (!record || record.kind === 'settings') throw new Error('unknown document');
       if (!grants.allows(id, window, record.path)) return { kind: 'refused', reason: 'not-editable' };
       if (!input.spend(window)) return { kind: 'refused', reason: 'no-input' };
-      const result = await saveDocument({ fs, decode, hash }, { path: record.path, text, base, encoding: records.encoding(id, window) ?? undefined });
+      const result = await saveDocument(
+        { fs, decode, hash },
+        { path: record.path, text, base, encoding: records.encoding(id, window) ?? undefined, shape: reads.shapeOf(id, record.path) },
+      );
       // The file's new identity, before the watcher reports the write: our own save isn't a change on disk.
       if (result.kind === 'saved') await reads.remember(id, record.path);
       return result;

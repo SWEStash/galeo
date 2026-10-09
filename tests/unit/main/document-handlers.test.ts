@@ -188,6 +188,15 @@ describe('documentHandlers saving', () => {
     expect(await text(fs, '/d/a.md')).toBe('theirs');
   });
 
+  it('writes a file deleted while edited again, with no base, in the line endings it was read with', async () => {
+    const { fs, handlers, grants, id } = setup({ '/d/a.md': 'a\r\nb\r\n' });
+    await handlers['documents.read']([id], event);
+    grants.grant(id, 1, '/d/a.md');
+    fs.delete('/d/a.md');
+    expect(await handlers['documents.save']([id, 'a\nb\nc\n', null], event)).toEqual({ kind: 'saved', version: '#a\r\nb\r\nc\r\n' });
+    expect(await text(fs, '/d/a.md')).toBe('a\r\nb\r\nc\r\n');
+  });
+
   it('saves in the encoding the reader chose for the tab', async () => {
     const { fs, handlers, grants, id } = setup({ '/d/a.md': 'abc' });
     grants.grant(id, 1, '/d/a.md');
@@ -224,5 +233,7 @@ describe('documentHandlers saving', () => {
     handlers['documents.keep']([id, '# mine', 'v1'], event);
     expect(handlers['documents.recover']([id], otherWindow)).toBeNull();
     expect(handlers['documents.recover']([id], event)).toEqual({ text: '# mine', base: 'v1' });
+    handlers['documents.keep']([id, '# mine', null], event);
+    expect(handlers['documents.recover']([id], event)).toEqual({ text: '# mine', base: null });
   });
 });
