@@ -6,6 +6,8 @@ export interface RenderRequest {
   id: number;
   format: 'markdown';
   text: string;
+  /** A live preview's render: the cache is neither read nor filled. */
+  noCache?: true;
 }
 
 /** Worker → window, matched to the request by `id`. */
@@ -24,7 +26,7 @@ export function createMessageHandler(renderer: Renderer, reply: (message: Worker
     if (message === 'ping') return reply('ready');
     if (!isRenderRequest(message)) return;
     try {
-      reply({ type: 'rendered', id: message.id, result: await renderer.markdown(message.text) });
+      reply({ type: 'rendered', id: message.id, result: await renderer.markdown(message.text, { cache: message.noCache !== true }) });
     } catch (error) {
       reply({ type: 'failed', id: message.id, message: error instanceof Error ? error.message : String(error) });
     }

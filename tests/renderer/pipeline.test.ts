@@ -216,6 +216,16 @@ describe('Markdown pipeline', () => {
     expect(second).toEqual({ ...first, cached: true });
   });
 
+  it('neither reads nor fills the cache for a render that skips it (typing in split)', async () => {
+    const renderer = createRenderer({ cacheEntries: 2 });
+    await renderer.markdown('# kept');
+    expect((await renderer.markdown('# kept', { cache: false })).cached).toBe(false);
+    await renderer.markdown('# typed', { cache: false });
+    expect((await renderer.markdown('# typed')).cached).toBe(false);
+    // The live render didn't push the earlier entry out.
+    expect((await renderer.markdown('# kept')).cached).toBe(true);
+  });
+
   it('evicts the least recently used result when the cache is full', async () => {
     const renderer = createRenderer({ cacheEntries: 2 });
     await renderer.markdown('# a');

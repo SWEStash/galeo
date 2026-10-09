@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRenderClient, RENDER_BUDGET_MS, RenderTimeout } from './client';
+import { createRenderClient, RENDER_BUDGET_MS, RenderSuperseded, RenderTimeout } from './client';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
 
@@ -151,6 +151,49 @@ describe('render client', () => {
       const { client, workers } = clientWithWorkers();
       client.dispose();
       expect(workers[0]!.terminated).toBe(true);
+    });
+  });
+
+  describe('live renders (typing in split)', () => {
+    it('skips the worker cache', () => {
+      const { client, current } = clientWithWorkers();
+      void client.markdown('a', { live: true });
+      expect(current().requests).toEqual([{ type: 'render', id: 1, format: 'markdown', text: 'a', noCache: true }]);
+    });
+
+    it('sends only the latest text once the worker is done with the one it has', async () => {
+      const { client, current } = clientWithWorkers();
+      const worker = current();
+      const first = client.markdown('a', { live: true });
+      const dropped = client.markdown('ab', { live: true });
+      const latest = client.markdown('abc', { live: true });
+      expect(worker.requests.map((request) => request.text)).toEqual(['a']);
+      await expect(dropped).rejects.toBeInstanceOf(RenderSuperseded);
+      worker.reply({ type: 'rendered', id: 1, result: result('a') });
+      expect((await first).html).toBe('a');
+      expect(worker.requests.map((request) => request.text)).toEqual(['a', 'abc']);
+      worker.reply({ type: 'rendered', id: worker.requests[1]!.id, result: result('abc') });
+      expect((await latest).html).toBe('abc');
+    });
+
+    it('holds back no other render', () => {
+      const { client, current } = clientWithWorkers();
+      void client.markdown('a', { live: true });
+      void client.markdown('other tab');
+      expect(current().requests.map((request) => request.text)).toEqual(['a', 'other tab']);
+    });
+
+    it('sends the waiting text to the fresh worker when the one it waited for runs over budget', async () => {
+      vi.useFakeTimers();
+      const { client, current } = clientWithWorkers();
+      const slow = client.markdown('a', { live: true });
+      const latest = client.markdown('ab', { live: true });
+      const timedOut = expect(slow).rejects.toBeInstanceOf(RenderTimeout);
+      vi.advanceTimersByTime(RENDER_BUDGET_MS);
+      await timedOut;
+      expect(current().requests).toEqual([expect.objectContaining({ text: 'ab', noCache: true })]);
+      current().reply({ type: 'rendered', id: current().requests[0]!.id, result: result('ab') });
+      expect((await latest).html).toBe('ab');
     });
   });
 });

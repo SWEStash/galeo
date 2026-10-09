@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RENDER_ANYWAY_BUDGET_MS, RenderTimeout, type RenderClient } from '../worker/client';
+import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderTimeout, type RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import { useRenderedHtml } from './useRenderedHtml';
 
@@ -23,19 +23,20 @@ function manualClient() {
   const pending: {
     text: string;
     budgetMs: number | undefined;
+    live: boolean | undefined;
     resolve: (html: string, math?: boolean, outline?: OutlineEntry[]) => void;
     reject: (error: Error) => void;
   }[] = [];
   const client = {
-    markdown: (text: string, options?: { budgetMs?: number }) =>
+    markdown: (text: string, options?: { budgetMs?: number; live?: boolean }) =>
       new Promise<{ html: string; math: boolean; outline: OutlineEntry[] }>((resolve, reject) =>
-        pending.push({ text, budgetMs: options?.budgetMs, reject, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
+        pending.push({ text, budgetMs: options?.budgetMs, live: options?.live, reject, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
       ),
   } as unknown as RenderClient;
   return { client, pending };
 }
 
-async function mount(client: RenderClient, text: string, options?: { readerAsked?: boolean }) {
+async function mount(client: RenderClient, text: string, options?: { readerAsked?: boolean; live?: boolean }) {
   const seen: ReturnType<typeof useRenderedHtml>[] = [];
   function Probe({ text }: { text: string }) {
     seen.push(useRenderedHtml(client, text, true, options));
@@ -110,5 +111,42 @@ describe('useRenderedHtml', () => {
     const outline = [{ depth: 1, text: 'one', id: 'user-content-one', line: 1 }];
     await act(async () => pending[0]!.resolve('<h1>one</h1>', false, outline));
     expect(seen.at(-1)).toMatchObject({ status: 'done', outline });
+  });
+
+  describe('live (typing in split)', () => {
+    it('asks for live renders', async () => {
+      const { client, pending } = manualClient();
+      await mount(client, '# one', { live: true });
+      expect(pending[0]).toMatchObject({ text: '# one', live: true });
+    });
+
+    it('keeps the last good preview, paused, when a render runs over budget, and goes on with the next text', async () => {
+      const { client, pending } = manualClient();
+      const { seen, rerender } = await mount(client, '# one', { live: true });
+      await act(async () => pending[0]!.resolve('<h1>one</h1>'));
+      await rerender('# two');
+      await act(async () => pending[1]!.reject(new RenderTimeout(2000)));
+      expect(seen.at(-1)).toMatchObject({ status: 'paused', reason: 'slow', html: '<h1>one</h1>' });
+      await rerender('# three');
+      expect(seen.at(-1)).toMatchObject({ status: 'pending', html: '<h1>one</h1>' });
+      await act(async () => pending[2]!.resolve('<h1>three</h1>'));
+      expect(seen.at(-1)).toMatchObject({ status: 'done', html: '<h1>three</h1>' });
+    });
+
+    it('keeps the last good preview when a render breaks too', async () => {
+      const { client, pending } = manualClient();
+      const { seen, rerender } = await mount(client, '# one', { live: true });
+      await act(async () => pending[0]!.resolve('<h1>one</h1>'));
+      await rerender('# two');
+      await act(async () => pending[1]!.reject(new Error('boom')));
+      expect(seen.at(-1)).toMatchObject({ status: 'paused', reason: 'error', html: '<h1>one</h1>' });
+    });
+
+    it('takes a render replaced by newer text as no answer at all', async () => {
+      const { client, pending } = manualClient();
+      const { seen } = await mount(client, '# one', { live: true });
+      await act(async () => pending[0]!.reject(new RenderSuperseded()));
+      expect(seen.at(-1)).toMatchObject({ status: 'pending' });
+    });
   });
 });

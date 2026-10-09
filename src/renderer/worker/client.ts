@@ -8,8 +8,12 @@ export interface WorkerPort extends EventTarget {
 }
 
 export interface RenderClient {
-  /** `budgetMs` replaces the usual budget, for a render the reader asked to wait for. */
-  markdown(text: string, options?: { budgetMs?: number }): Promise<RenderResult>;
+  /**
+   * `budgetMs` replaces the usual budget, for a render the reader asked to wait for. `live`: a
+   * preview of typing (ADR-014), which skips the cache; while one is with the worker, a newer one
+   * waits and replaces any already waiting, which is refused with `RenderSuperseded`.
+   */
+  markdown(text: string, options?: { budgetMs?: number; live?: boolean }): Promise<RenderResult>;
   /** Stops the worker (the window is going away). */
   dispose(): void;
 }
@@ -28,9 +32,18 @@ export class RenderTimeout extends Error {
   }
 }
 
+/** A live render replaced by newer text before the worker started it. */
+export class RenderSuperseded extends Error {
+  constructor() {
+    super('A newer text replaced this render');
+    this.name = 'RenderSuperseded';
+  }
+}
+
 interface Pending {
   text: string;
   budgetMs: number;
+  live: boolean;
   resolve: (result: RenderResult) => void;
   reject: (error: Error) => void;
 }
@@ -46,6 +59,9 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
   // In the order sent: the first one is the one the worker is on.
   const pending = new Map<number, Pending>();
   let timer: ReturnType<typeof setTimeout> | undefined;
+  // The live render with the worker, and the newest one waiting for it to be done.
+  let liveSent: number | null = null;
+  let liveWaiting: ({ id: number } & Pending) | null = null;
   let worker = start();
 
   function start(): WorkerPort {
@@ -60,13 +76,30 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
       pending.delete(reply.id);
       if (reply.type === 'rendered') request.resolve(reply.result);
       else request.reject(new Error(reply.message));
+      releaseLive(reply.id);
       watchOldest();
     });
     return started;
   }
 
-  function send(id: number, text: string) {
-    worker.postMessage({ type: 'render', id, format: 'markdown', text });
+  function send(id: number, { text, live }: Pick<Pending, 'text' | 'live'>) {
+    worker.postMessage({ type: 'render', id, format: 'markdown', text, ...(live ? { noCache: true as const } : {}) });
+  }
+
+  function dispatch(id: number, request: Pending) {
+    pending.set(id, request);
+    send(id, request);
+    if (request.live) liveSent = id;
+    if (pending.size === 1) watchOldest();
+  }
+
+  /** The worker is done with `id`: if it was the live render, the newest waiting one goes next. */
+  function releaseLive(id: number) {
+    if (id !== liveSent) return;
+    liveSent = null;
+    const next = liveWaiting;
+    liveWaiting = null;
+    if (next) dispatch(next.id, next);
   }
 
   /** Gives the oldest request waiting a fresh budget. */
@@ -82,17 +115,22 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
     request.reject(new RenderTimeout(request.budgetMs));
     worker.terminate();
     worker = start();
-    for (const [waiting, { text }] of pending) send(waiting, text);
+    for (const [waiting, each] of pending) send(waiting, each);
+    releaseLive(id);
     watchOldest();
   }
 
   return {
-    markdown(text, { budgetMs = RENDER_BUDGET_MS } = {}) {
+    markdown(text, { budgetMs = RENDER_BUDGET_MS, live = false } = {}) {
       const id = ++nextId;
       return new Promise((resolve, reject) => {
-        pending.set(id, { text, budgetMs, resolve, reject });
-        send(id, text);
-        if (pending.size === 1) watchOldest();
+        const request = { text, budgetMs, live, resolve, reject };
+        if (live && liveSent !== null) {
+          liveWaiting?.reject(new RenderSuperseded());
+          liveWaiting = { id, ...request };
+          return;
+        }
+        dispatch(id, request);
       });
     },
     dispose() {

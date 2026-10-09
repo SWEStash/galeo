@@ -23,6 +23,14 @@ describe('render worker messages', () => {
     expect(replies).toEqual([{ type: 'rendered', id: 7, result: { ...result, html: '<p>hi</p>' } }]);
   });
 
+  it('passes a request that skips the cache on to the renderer', async () => {
+    const seen: unknown[] = [];
+    const { handle } = setup({ markdown: async (_text, options) => (seen.push(options), result) });
+    await handle({ type: 'render', id: 1, format: 'markdown', text: 'a', noCache: true });
+    await handle({ type: 'render', id: 2, format: 'markdown', text: 'a' });
+    expect(seen).toEqual([{ cache: false }, { cache: true }]);
+  });
+
   it('reports a pipeline failure for that request instead of dying', async () => {
     const { handle, replies } = setup({ markdown: async () => Promise.reject(new Error('boom')) });
     await handle({ type: 'render', id: 3, format: 'markdown', text: 'x' });

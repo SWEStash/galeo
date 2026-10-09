@@ -251,7 +251,8 @@ async function contentKey(text: string): Promise<string> {
 }
 
 export interface Renderer {
-  markdown(text: string): Promise<RenderResult>;
+  /** `cache: false` neither reads nor fills the cache: a live preview's every pause would evict useful entries (ADR-014). */
+  markdown(text: string, options?: { cache: boolean }): Promise<RenderResult>;
 }
 
 // Inline elements run on within a word ("foo<em>bar</em>"); any other element separates words.
@@ -362,7 +363,8 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
   }
 
   return {
-    async markdown(text) {
+    async markdown(text, { cache: useCache } = { cache: true }) {
+      if (!useCache) return { ...(await run(text)), cached: false };
       const key = await contentKey(text);
       const hit = cache.get(key);
       if (hit) {
