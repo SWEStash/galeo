@@ -23,8 +23,12 @@ import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
 import { pauseOrMax } from './pause-or-max';
-import { useRenderedHtml } from './useRenderedHtml';
+import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
+
+const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed' } as const;
+
+const syntaxDetail = (syntax: SyntaxProblem | null) => (syntax ? `on line ${syntax.line}: ${syntax.message}` : '');
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', mdx: 'markdown', log: 'log', text: null, plain: null };
 
@@ -602,10 +606,12 @@ export function DocumentPane({
           {onChooseEncoding && <EncodingMenu onChoose={onChooseEncoding}>Reopen with encoding…</EncodingMenu>}
         </DocumentBanner>
       )}
-      {render.status === 'paused' && <DocumentBanner kind={render.reason === 'slow' ? 'preview-slow' : 'preview-failed'} />}
+      {render.status === 'paused' && <DocumentBanner kind={PAUSED_BANNERS[render.reason]} detail={syntaxDetail(render.syntax)} />}
       {render.status === 'failed' &&
         (render.reason === 'slow' ? (
           <DocumentBanner kind="render-slow" onAction={render.renderAnyway} />
+        ) : render.reason === 'syntax' ? (
+          <DocumentBanner kind="syntax-error" detail={syntaxDetail(render.syntax)} />
         ) : (
           <DocumentBanner kind="render-failed" onAction={render.retry} />
         ))}

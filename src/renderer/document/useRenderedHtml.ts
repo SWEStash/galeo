@@ -1,18 +1,29 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderTimeout, type RenderClient } from '../worker/client';
+import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderSyntaxError, RenderTimeout, type RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import type { WorkerFormat } from '../../shared/formats';
 import { loadMathStyles } from './host';
+
+/**
+ * Why a render didn't finish. `slow`: over the render budget (the reader may render anyway);
+ * `syntax`: the text doesn't parse (MDX), at `syntax.line`; `error`: the render broke.
+ */
+export type FailReason = 'slow' | 'syntax' | 'error';
+
+/** Where a text that doesn't parse goes wrong. */
+export interface SyntaxProblem {
+  line: number;
+  message: string;
+}
 
 export type RenderState = (
   | { status: 'idle'; html: null }
   /** `html` is the last render's while the next one runs (a changed file keeps showing until then). */
   | { status: 'pending'; html: string | null }
   | { status: 'done'; html: string }
-  /** `slow`: over the render budget (the reader may render anyway); `error`: the render broke. */
-  | { status: 'failed'; html: null; reason: 'slow' | 'error' }
+  | { status: 'failed'; html: null; reason: FailReason; syntax: SyntaxProblem | null }
   /** Live: the latest text didn't render, so the last good preview stays (ADR-014). */
-  | { status: 'paused'; html: string | null; reason: 'slow' | 'error' }
+  | { status: 'paused'; html: string | null; reason: FailReason; syntax: SyntaxProblem | null }
 ) & {
   /** The headings of the HTML shown. */
   outline: readonly OutlineEntry[];
@@ -48,7 +59,8 @@ export function useRenderedHtml(
     format: WorkerFormat;
     attempt: Attempt;
     html: string | null;
-    reason: 'slow' | 'error';
+    reason: FailReason;
+    syntax: SyntaxProblem | null;
     outline: readonly OutlineEntry[];
     words: number | null;
   } | null>(null);
@@ -70,12 +82,14 @@ export function useRenderedHtml(
         ({ html, outline, words }) => {
           if (!current) return;
           lastGood.current = { html, outline, words };
-          setResult({ text, format, attempt, html, reason: 'error', outline, words });
+          setResult({ text, format, attempt, html, reason: 'error', syntax: null, outline, words });
         },
         (error: unknown) => {
           // Newer text took its place: its own render answers.
           if (!current || error instanceof RenderSuperseded) return;
-          setResult({ text, format, attempt, html: null, reason: error instanceof RenderTimeout ? 'slow' : 'error', outline: NO_OUTLINE, words: null });
+          const syntax = error instanceof RenderSyntaxError ? { line: error.line, message: error.message } : null;
+          const reason = error instanceof RenderTimeout ? 'slow' : syntax ? 'syntax' : 'error';
+          setResult({ text, format, attempt, html: null, reason, syntax, outline: NO_OUTLINE, words: null });
         },
       );
     return () => {
@@ -89,8 +103,8 @@ export function useRenderedHtml(
   const settled = result?.text === text && result.format === format && result.attempt === attempt;
   const good = lastGood.current;
   if (settled && result.html !== null) return { status: 'done', html: result.html, outline: result.outline, words: result.words, ...actions };
-  if (settled && live) return { status: 'paused', html: good?.html ?? null, reason: result.reason, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, ...actions };
-  if (settled) return { status: 'failed', html: null, reason: result.reason, outline: NO_OUTLINE, words: null, ...actions };
+  if (settled && live) return { status: 'paused', html: good?.html ?? null, reason: result.reason, syntax: result.syntax, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, ...actions };
+  if (settled) return { status: 'failed', html: null, reason: result.reason, syntax: result.syntax, outline: NO_OUTLINE, words: null, ...actions };
   if (text === null || !wanted) return { status: 'idle', html: null, outline: NO_OUTLINE, words: null, ...actions };
   return { status: 'pending', html: good?.html ?? null, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, ...actions };
 }

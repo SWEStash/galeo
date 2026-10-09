@@ -73,7 +73,7 @@ export function DocumentLoading() {
   );
 }
 
-export type BannerKind = 'too-large' | 'encoding' | 'render-failed' | 'render-slow' | 'preview-failed' | 'preview-slow' | DiskChange;
+export type BannerKind = 'too-large' | 'encoding' | 'render-failed' | 'render-slow' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
 
 /** What happened on disk to a file with unsaved edits (UX F12). */
 export type DiskChange = 'disk-changed' | 'disk-deleted' | 'disk-unreadable';
@@ -83,9 +83,12 @@ const BANNERS: Record<BannerKind, { text: (detail?: string) => string; action?: 
   encoding: { text: (encoding) => `Not valid UTF-8: shown as ${encoding}, the likeliest encoding` },
   'render-failed': { text: () => "This document couldn't be rendered — showing source", action: 'Try again' },
   'render-slow': { text: () => 'Too slow to render — showing source', action: 'Render anyway' },
+  // MDX is strict; the detail says where ("on line 3: …"). Trying again can't help until the text changes.
+  'syntax-error': { text: (where) => `MDX syntax error ${where} — showing source` },
   // Split while editing: the last good preview stays, and the next pause in typing tries again (ADR-014).
   'preview-failed': { text: () => "Preview paused: this document couldn't be rendered" },
   'preview-slow': { text: () => 'Preview paused: this document takes too long to render' },
+  'preview-syntax': { text: (where) => `Preview paused: MDX syntax error ${where}` },
   'disk-changed': { text: () => 'File changed on disk' },
   'disk-deleted': { text: () => 'File deleted on disk' },
   'disk-unreadable': { text: () => "File changed on disk and can't be shown as text" },

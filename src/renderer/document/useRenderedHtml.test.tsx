@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderTimeout, type RenderClient } from '../worker/client';
+import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderSyntaxError, RenderTimeout, type RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import { useRenderedHtml } from './useRenderedHtml';
 
@@ -101,6 +101,13 @@ describe('useRenderedHtml', () => {
     expect(pending[1]).toMatchObject({ text: '# one', budgetMs: undefined });
   });
 
+  it('says where a syntax error is', async () => {
+    const { client, pending } = manualClient();
+    const { seen } = await mount(client, 'a <3');
+    await act(async () => pending[0]!.reject(new RenderSyntaxError('Unexpected character', 3)));
+    expect(seen.at(-1)).toMatchObject({ status: 'failed', reason: 'syntax', syntax: { line: 3, message: 'Unexpected character' } });
+  });
+
   it('has no HTML while the first render is pending', async () => {
     const { client } = manualClient();
     const { seen } = await mount(client, '# one');
@@ -154,6 +161,15 @@ describe('useRenderedHtml', () => {
       await rerender('# two');
       await act(async () => pending[1]!.reject(new Error('boom')));
       expect(seen.at(-1)).toMatchObject({ status: 'paused', reason: 'error', html: '<h1>one</h1>' });
+    });
+
+    it('keeps the last good preview on a syntax error, and says where it is', async () => {
+      const { client, pending } = manualClient();
+      const { seen, rerender } = await mount(client, '# one', { live: true });
+      await act(async () => pending[0]!.resolve('<h1>one</h1>'));
+      await rerender('# one <');
+      await act(async () => pending[1]!.reject(new RenderSyntaxError('Unexpected end of file', 1)));
+      expect(seen.at(-1)).toMatchObject({ status: 'paused', reason: 'syntax', syntax: { line: 1 }, html: '<h1>one</h1>' });
     });
 
     it('takes a render replaced by newer text as no answer at all', async () => {

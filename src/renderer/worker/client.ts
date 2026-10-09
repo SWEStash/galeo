@@ -41,6 +41,17 @@ export class RenderSuperseded extends Error {
   }
 }
 
+/** A render refused for a syntax error (MDX is strict), at `line` of the text. */
+export class RenderSyntaxError extends Error {
+  constructor(
+    message: string,
+    readonly line: number,
+  ) {
+    super(message);
+    this.name = 'RenderSyntaxError';
+  }
+}
+
 interface Pending {
   text: string;
   format: WorkerFormat;
@@ -77,7 +88,7 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
       if (!request) return;
       pending.delete(reply.id);
       if (reply.type === 'rendered') request.resolve(reply.result);
-      else request.reject(new Error(reply.message));
+      else request.reject(reply.line === undefined ? new Error(reply.message) : new RenderSyntaxError(reply.message, reply.line));
       releaseLive(reply.id);
       watchOldest();
     });

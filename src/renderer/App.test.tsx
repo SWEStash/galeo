@@ -22,7 +22,7 @@ const SOURCES = Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [k
 const renderRequests: string[] = [];
 const renderFormats: string[] = [];
 /** How the fake worker answers render requests. */
-let workerMode: 'answer' | 'hang' | 'fail' | 'links' = 'answer';
+let workerMode: 'answer' | 'hang' | 'fail' | 'syntax' | 'links' = 'answer';
 
 class FakeWorker extends EventTarget {
   postMessage(message: unknown) {
@@ -34,6 +34,7 @@ class FakeWorker extends EventTarget {
       renderFormats.push(request.format);
       if (workerMode === 'hang') return;
       if (workerMode === 'fail') return reply({ type: 'failed', id: request.id, message: 'boom' });
+      if (workerMode === 'syntax') return reply({ type: 'failed', id: request.id, message: 'Unexpected character `3`', line: 3 });
       // In `links` mode, `[label](href)` becomes a link, as the real pipeline would render it.
       const html =
         workerMode === 'links'
@@ -629,6 +630,17 @@ describe('App', () => {
     await act(async () => banner.querySelector('button')!.click());
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
     expect(container.querySelector('[data-banner="render-failed"]')).toBeNull();
+  });
+
+  it('shows the source of an MDX file with a syntax error, saying on which line', async () => {
+    workerMode = 'syntax';
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.mdx' }], content: readyContent('mdx', 'rendered', 'a <3') });
+    const container = await renderApp();
+    const banner = await vi.waitFor(() => container.querySelector<HTMLElement>('[data-banner="syntax-error"]')!);
+    expect(banner.textContent).toBe('MDX syntax error on line 3: Unexpected character `3` — showing source');
+    expect(banner.querySelector('button')).toBeNull();
+    const shadow = await documentShadow(container);
+    await vi.waitFor(() => expect(shadow.querySelector<HTMLElement>('.galeo-source')?.hidden).toBe(false));
   });
 
   it('shows the source of a document too slow to render, and renders it anyway on request', { timeout: 10_000 }, async () => {

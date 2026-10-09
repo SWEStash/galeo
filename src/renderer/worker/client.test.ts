@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRenderClient, RENDER_BUDGET_MS, RenderSuperseded, RenderTimeout } from './client';
+import { createRenderClient, RENDER_BUDGET_MS, RenderSuperseded, RenderSyntaxError, RenderTimeout } from './client';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
 
@@ -67,6 +67,15 @@ describe('render client', () => {
     const worker = current();
     worker.reply({ type: 'failed', id: 1, message: 'boom' });
     await expect(pending).rejects.toThrow('boom');
+  });
+
+  it("rejects a syntax error with its line, apart from other failures", async () => {
+    const { client, current } = clientWithWorkers();
+    const pending = client.markdown('a <3', { format: 'mdx' });
+    current().reply({ type: 'failed', id: 1, message: 'Unexpected character', line: 3 });
+    const error = await pending.catch((reason: unknown) => reason);
+    expect(error).toBeInstanceOf(RenderSyntaxError);
+    expect(error).toMatchObject({ line: 3, message: 'Unexpected character' });
   });
 
   it('ignores replies for requests it never sent', async () => {
