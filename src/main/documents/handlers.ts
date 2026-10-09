@@ -63,8 +63,9 @@ export function documentHandlers(deps: {
     }
     // Only the text main read itself defines which links the page may follow. Only rendered
     // articles (Markdown, MDX) have links; nothing else is kept.
-    if (content.state === 'ready' && workerFormat(content.format) !== null && content.size <= MARKDOWN_RENDER_MAX_BYTES) {
-      links.remember(id, window, path, content.text);
+    const article = content.state === 'ready' ? workerFormat(content.format) : null;
+    if (content.state === 'ready' && article && content.size <= MARKDOWN_RENDER_MAX_BYTES) {
+      links.remember(id, window, path, content.text, article);
     } else {
       links.forget(id);
     }

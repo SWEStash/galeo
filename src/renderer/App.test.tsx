@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: Settings = {
 const SOURCES = Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, 'default'])) as SettingsState['sources'];
 
 const renderRequests: string[] = [];
+const renderFormats: string[] = [];
 /** How the fake worker answers render requests. */
 let workerMode: 'answer' | 'hang' | 'fail' | 'links' = 'answer';
 
@@ -27,9 +28,10 @@ class FakeWorker extends EventTarget {
   postMessage(message: unknown) {
     const reply = (data: unknown) => queueMicrotask(() => this.dispatchEvent(new MessageEvent('message', { data })));
     if (message === 'ping') reply('ready');
-    const request = message as { type?: string; id: number; text: string };
+    const request = message as { type?: string; id: number; text: string; format: string };
     if (request.type === 'render') {
       renderRequests.push(request.text);
+      renderFormats.push(request.format);
       if (workerMode === 'hang') return;
       if (workerMode === 'fail') return reply({ type: 'failed', id: request.id, message: 'boom' });
       // In `links` mode, `[label](href)` becomes a link, as the real pipeline would render it.
@@ -216,6 +218,7 @@ describe('App', () => {
     act(() => roots.splice(0).forEach((root) => root.unmount()));
     document.body.innerHTML = '';
     renderRequests.length = 0;
+    renderFormats.length = 0;
     workerMode = 'answer';
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
@@ -304,11 +307,12 @@ describe('App', () => {
     expect(api.documents.read).toHaveBeenCalledWith('doc-1');
   });
 
-  it('renders an MDX article through the worker and opens it in split, as Markdown', async () => {
+  it('renders an MDX article through the worker as MDX, and opens it in split', async () => {
     stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.mdx' }], content: readyContent('mdx', 'rendered', '# hi') });
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># hi</p>'));
+    expect(renderFormats).toEqual(['mdx']);
     await press({ key: '\\', ctrlKey: true });
     await vi.waitFor(() => expect(shadow.querySelector<HTMLElement>('.galeo-split-divider')?.hidden).toBe(false), { timeout: 5_000 });
   });

@@ -1,5 +1,6 @@
 import type { LinkTarget } from '../../shared/contracts';
 import type { FollowResult, HistoryResult, ImageResult } from '../../shared/documents';
+import type { WorkerFormat } from '../../shared/formats';
 import type { References } from '../../shared/markdown/references';
 import { classifyLink, type LinkContext } from '../links/classify';
 import type { ExternalOpenLimiter } from '../links/limiter';
@@ -28,6 +29,7 @@ export interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
 interface Read {
   path: string;
   text: string;
+  format: WorkerFormat;
   references?: Promise<References | null>;
 }
 
@@ -47,8 +49,8 @@ export class DocumentLinks {
    * The text main just read from `path`: its links are the only ones that can be followed. A read
    * that finishes after the document moved on to another file is ignored.
    */
-  remember(id: string, window: number, path: string, text: string): void {
-    if (this.deps.records.get(id, window)?.path === path) this.reads.set(id, { path, text });
+  remember(id: string, window: number, path: string, text: string, format: WorkerFormat): void {
+    if (this.deps.records.get(id, window)?.path === path) this.reads.set(id, { path, text, format });
   }
 
   /** With `background`, a local link opens in a new tab after the active one; this tab stays put. */
@@ -163,7 +165,8 @@ export class DocumentLinks {
   }
 
   private async extract(read: Read): Promise<References | null> {
-    const result = await this.deps.tasks.run<References>('references', read.text, { timeoutMs: REFERENCES_TIMEOUT_MS });
+    // An MDX syntax error fails the task: no link is followed until the file parses.
+    const result = await this.deps.tasks.run<References>('references', { text: read.text, format: read.format }, { timeoutMs: REFERENCES_TIMEOUT_MS });
     return result.ok ? result.value : null;
   }
 }

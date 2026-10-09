@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractReferences } from './references';
+import { extractReferences, referencesTask } from './references';
 
 describe('extractReferences', () => {
   it('collects inline links in document order, once each', () => {
@@ -40,5 +40,18 @@ describe('extractReferences', () => {
 
   it('ignores frontmatter and math', () => {
     expect(extractReferences('---\nurl: https://front.example\n---\n\n$\\href{https://m.example}{x}$').links).toEqual([]);
+  });
+
+  it('parses MDX by its format: expressions and component props are never links', () => {
+    const text = '{"[x](x.md)"}\n\n<Card href="card.md" src="card.png" />\n\n<a href="html.md">h</a> [md](md.md) <img src="i.png" alt="" />\n';
+    expect(extractReferences(text, 'mdx')).toEqual({ links: ['html.md', 'md.md'], images: ['i.png'] });
+    expect(extractReferences('{"[x](x.md)"}', 'markdown').links).toEqual(['x.md']);
+  });
+
+  it('runs as a task on { text, format } only', () => {
+    expect(referencesTask({ text: '[a](a.md)', format: 'mdx' })).toEqual({ links: ['a.md'], images: [] });
+    for (const input of ['[a](a.md)', { text: '[a](a.md)' }, { text: 1, format: 'mdx' }, { text: '', format: 'text' }, null]) {
+      expect(() => referencesTask(input)).toThrow(/bad input/);
+    }
   });
 });

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { DocumentLinks } from '../../../src/core/documents/links';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
-import { extractReferences, type References } from '../../../src/shared/markdown/references';
+import { referencesTask, type References } from '../../../src/shared/markdown/references';
 import { ImageGrants, IMAGE_MAX_BYTES } from '../../../src/core/documents/images';
 import { FakeClock, FakeFileSystem, FakeOsShell, FakeTaskRunner } from '../../helpers/fakes';
 
@@ -17,7 +17,7 @@ function setup(options: { burst?: boolean; references?: (text: string) => Refere
   const clock = new FakeClock(1_000_000);
   let n = 0;
   const records = new TabRegistry(() => `id-${++n}`);
-  const tasks = new FakeTaskRunner({ references: (text) => (options.references ?? extractReferences)(text as string) });
+  const tasks = new FakeTaskRunner({ references: (input) => (options.references ? options.references((input as { text: string }).text) : referencesTask(input)) });
   const shell = new FakeOsShell();
   const fs = new FakeFileSystem({
     '/d/pics/dot.png': new Uint8Array(8),
@@ -48,11 +48,18 @@ function setup(options: { burst?: boolean; references?: (text: string) => Refere
     },
   });
   const { id } = records.open('/d/plan.md', 1);
-  links.remember(id, 1, '/d/plan.md', DOC);
+  links.remember(id, 1, '/d/plan.md', DOC, 'markdown');
   return { clock, records, tasks, shell, links, id, asked, fs, spent };
 }
 
 describe('DocumentLinks.follow', () => {
+  it('reads the links of an MDX document as MDX: an expression is not a link', async () => {
+    const page = setup();
+    page.links.remember(page.id, 1, '/d/plan.md', '{"[x](next.md)"} [y](next.md#scope)', 'mdx');
+    expect(await page.links.follow(page.id, 1, 'next.md')).toEqual({ kind: 'refused', reason: 'not-in-document' });
+    expect(await page.links.follow(page.id, 1, 'next.md#scope')).toMatchObject({ kind: 'navigated' });
+  });
+
   it("follows a link only on the reader's input: one credit per link, none for one it refuses (T6)", async () => {
     const page = setup({ input: false });
     for (const href of ['next.md', '#intro', 'https://example.org/a']) {
@@ -213,7 +220,7 @@ describe('DocumentLinks.follow', () => {
     const { links, id } = setup();
     await links.follow(id, 1, 'next.md');
     expect(await links.follow(id, 1, '#intro')).toEqual({ kind: 'refused', reason: 'not-in-document' });
-    links.remember(id, 1, '/d/next.md', '[back](plan.md)');
+    links.remember(id, 1, '/d/next.md', '[back](plan.md)', 'markdown');
     expect(await links.follow(id, 1, 'plan.md')).toEqual({ kind: 'navigated', anchor: null });
   });
 });
@@ -239,7 +246,7 @@ describe('DocumentLinks.resolveImage', () => {
 
   it('grants an opaque galeo://file URL for an image the document shows', async () => {
     const { links, id } = setup();
-    links.remember(id, 1, '/d/plan.md', IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES, 'markdown');
     const result = await links.resolveImage(id, 1, 'pics/dot.png');
     expect(result).toMatchObject({ kind: 'image' });
     expect((result as { url: string }).url).toMatch(/^galeo:\/\/file\/img-\d+$/);
@@ -248,7 +255,7 @@ describe('DocumentLinks.resolveImage', () => {
 
   it('refuses an image the document does not show, even if it exists (SR-12)', async () => {
     const { links, id } = setup();
-    links.remember(id, 1, '/d/plan.md', IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES, 'markdown');
     expect(await links.resolveImage(id, 1, '../d/pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
     expect(await links.resolveImage(id, 1, '/d/pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
   });
@@ -260,13 +267,13 @@ describe('DocumentLinks.resolveImage', () => {
     ['folder.png', 'not-an-image'],
   ] as const)('refuses %s: %s', async (src, reason) => {
     const { links, id } = setup();
-    links.remember(id, 1, '/d/plan.md', IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES, 'markdown');
     expect(await links.resolveImage(id, 1, src)).toEqual({ kind: 'refused', reason });
   });
 
   it("refuses images of another window's document", async () => {
     const { links, id } = setup();
-    links.remember(id, 1, '/d/plan.md', IMAGES);
+    links.remember(id, 1, '/d/plan.md', IMAGES, 'markdown');
     expect(await links.resolveImage(id, 2, 'pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
   });
 });

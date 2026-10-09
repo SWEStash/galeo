@@ -9,7 +9,7 @@ import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
 import type { Decode } from '../../../src/core/text/decode';
 import { documentHandlers } from '../../../src/main/documents/handlers';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
-import { extractReferences } from '../../../src/shared/markdown/references';
+import { referencesTask } from '../../../src/shared/markdown/references';
 import { FakeClock, FakeFileSystem, FakeOsShell, FakeTaskRunner } from '../../helpers/fakes';
 
 const decode: Decode = (bytes, encoding, { fatal }) => new TextDecoder(encoding, { fatal, ignoreBOM: true }).decode(bytes);
@@ -47,7 +47,7 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
     input: { spend: () => true },
     fs,
     images: new ImageGrants(() => `img-${++n}`),
-    tasks: new FakeTaskRunner({ references: (text) => extractReferences(text as string) }),
+    tasks: new FakeTaskRunner({ references: (input) => referencesTask(input) }),
     shell: new FakeOsShell(),
     limiter: new ExternalOpenLimiter(new FakeClock()),
     confirmBurst: async () => true,
@@ -93,9 +93,11 @@ describe('documentHandlers', () => {
     });
   });
 
-  it('keeps the links of an MDX article, as of a Markdown one', async () => {
-    const { handlers, id } = setup({ '/d/post.mdx': 'see [x](x.md)', '/d/x.md': '# x' });
+  it('keeps the links of an MDX article, parsed as MDX', async () => {
+    const { handlers, id } = setup({ '/d/post.mdx': 'see [x](x.md)\n\n{"[y](y.md)"}', '/d/x.md': '# x' });
     expect(await handlers['documents.read']([id], event)).toMatchObject({ state: 'ready', format: 'mdx' });
+    // As Markdown the expression would be a link; in MDX it is code.
+    expect(await handlers['documents.followLink']([id, 'y.md', 'current'], event)).toEqual({ kind: 'refused', reason: 'not-in-document' });
     expect(await handlers['documents.followLink']([id, 'x.md', 'current'], event)).toEqual({ kind: 'navigated', anchor: null });
   });
 

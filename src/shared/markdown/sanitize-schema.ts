@@ -17,7 +17,8 @@ const DROPPED_ATTRIBUTES = new Set(['accessKey', 'tabIndex', 'action', 'encType'
  * `style`, no event handlers, and no element that runs code, loads a resource or changes the page
  * (`link`, `meta` and `base` are never allowed). Access keys and tab stops are dropped so a
  * document can't take the app's shortcuts or trap focus. remark-math's classes are kept so KaTeX
- * can typeset math after sanitizing.
+ * can typeset math after sanitizing. `data-galeo-mdx` marks the parts MDX placeholders are drawn with
+ * (text only: no URL, script or style).
  */
 export const SANITIZE_SCHEMA: Schema = {
   ...defaultSchema,
@@ -28,6 +29,7 @@ export const SANITIZE_SCHEMA: Schema = {
   attributes: {
     ...Object.fromEntries(Object.entries(defaultSchema.attributes!).filter(([tag]) => !DROPPED_TAGS.has(tag))),
     '*': defaultSchema.attributes!['*']!.filter((name) => typeof name !== 'string' || !DROPPED_ATTRIBUTES.has(name)),
-    code: [['className', /^language-./, 'math-inline', 'math-display']],
+    code: [['className', /^language-./, 'math-inline', 'math-display'], 'dataGaleoMdx'],
+    ...Object.fromEntries(['div', 'span', 'pre', 'dl'].map((tag) => [tag, [...(defaultSchema.attributes![tag] ?? []), 'dataGaleoMdx']])),
   },
 };

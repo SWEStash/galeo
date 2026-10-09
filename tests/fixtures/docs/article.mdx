@@ -1,0 +1,23 @@
+---
+title: An MDX article
+---
+import Callout from '../components/Callout.astro';
+export const year = 2026;
+
+# An MDX article
+
+<Callout type="warning" open count={3} {...rest}>
+Text with **bold** and [a link](basic.md).
+</Callout>
+
+An inline <Badge label="new" /> in a paragraph, and an expression {year}.
+
+{/* A comment, hidden as Astro hides it. */}
+
+{items.map((item) => item.name)}
+
+<img src="images/red-dot.png" alt="A red dot" />
+
+<a href="basic.md">A link written as HTML</a>
+
+<Card href="https://example.com/x" src="images/red-dot.png">Card text</Card>

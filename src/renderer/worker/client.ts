@@ -1,3 +1,4 @@
+import type { WorkerFormat } from '../../shared/formats';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
 
@@ -13,7 +14,7 @@ export interface RenderClient {
    * preview of typing (ADR-014), which skips the cache; while one is with the worker, a newer one
    * waits and replaces any already waiting, which is refused with `RenderSuperseded`.
    */
-  markdown(text: string, options?: { budgetMs?: number; live?: boolean }): Promise<RenderResult>;
+  markdown(text: string, options?: { budgetMs?: number; live?: boolean; format?: WorkerFormat }): Promise<RenderResult>;
   /** Stops the worker (the window is going away). */
   dispose(): void;
 }
@@ -42,6 +43,7 @@ export class RenderSuperseded extends Error {
 
 interface Pending {
   text: string;
+  format: WorkerFormat;
   budgetMs: number;
   live: boolean;
   resolve: (result: RenderResult) => void;
@@ -82,8 +84,8 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
     return started;
   }
 
-  function send(id: number, { text, live }: Pick<Pending, 'text' | 'live'>) {
-    worker.postMessage({ type: 'render', id, format: 'markdown', text, ...(live ? { noCache: true as const } : {}) });
+  function send(id: number, { text, format, live }: Pick<Pending, 'text' | 'format' | 'live'>) {
+    worker.postMessage({ type: 'render', id, format, text, ...(live ? { noCache: true as const } : {}) });
   }
 
   function dispatch(id: number, request: Pending) {
@@ -121,10 +123,10 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
   }
 
   return {
-    markdown(text, { budgetMs = RENDER_BUDGET_MS, live = false } = {}) {
+    markdown(text, { budgetMs = RENDER_BUDGET_MS, live = false, format = 'markdown' } = {}) {
       const id = ++nextId;
       return new Promise((resolve, reject) => {
-        const request = { text, budgetMs, live, resolve, reject };
+        const request = { text, format, budgetMs, live, resolve, reject };
         if (live && liveSent !== null) {
           liveWaiting?.reject(new RenderSuperseded());
           liveWaiting = { id, ...request };

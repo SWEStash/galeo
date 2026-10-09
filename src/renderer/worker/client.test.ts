@@ -45,6 +45,12 @@ describe('render client', () => {
     expect((await pending).html).toBe('<h1>a</h1>');
   });
 
+  it('sends MDX with its format', async () => {
+    const { client, current } = clientWithWorkers();
+    void client.markdown('<A />', { format: 'mdx' });
+    expect(current().requests).toEqual([{ type: 'render', id: 1, format: 'mdx', text: '<A />' }]);
+  });
+
   it('matches replies to requests by id, whatever their order', async () => {
     const { client, current } = clientWithWorkers();
     const worker = current();

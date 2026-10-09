@@ -249,3 +249,78 @@ describe('Markdown pipeline', () => {
     expect(instantiate).not.toHaveBeenCalled();
   });
 });
+
+describe('MDX pipeline', () => {
+  const mdx = async (text: string) => render.markdown(text, { format: 'mdx' });
+
+  it('hides imports and exports, and renders the Markdown around them', async () => {
+    const { html, outline } = await mdx(fixture('article.mdx'));
+    const doc = dom(html);
+    expect(doc.textContent).not.toContain('import Callout');
+    expect(doc.textContent).not.toContain('export const');
+    expect(doc.querySelector('details.galeo-frontmatter')).not.toBeNull();
+    expect(outline.map((entry) => entry.text)).toEqual(['An MDX article']);
+  });
+
+  it('shows a component as a labelled box listing its props, with its children rendered inside', async () => {
+    const doc = dom((await mdx(fixture('article.mdx'))).html);
+    const box = doc.querySelector('div[data-galeo-mdx="Callout"]')!;
+    expect(box.querySelector('code[data-galeo-mdx="name"]')?.textContent).toBe('<Callout>');
+    const props = [...box.querySelectorAll('dl[data-galeo-mdx="props"] > *')].map((node) => node.textContent);
+    expect(props).toEqual(['type', '"warning"', 'open', 'true', 'count', '{3}', '{...rest}']);
+    expect(box.querySelector('strong')?.textContent).toBe('bold');
+    expect(box.querySelector('a')?.getAttribute('href')).toBe('basic.md');
+    expect(box.getAttribute('data-src-line')).toBe('9');
+    expect(box.getAttribute('data-src-end')).toBe('11');
+  });
+
+  it('shows an inline component as an inline label', async () => {
+    const doc = dom((await mdx(fixture('article.mdx'))).html);
+    expect(doc.querySelector('span[data-galeo-mdx="Badge"] code[data-galeo-mdx="name"]')?.textContent).toBe('<Badge label="new" />');
+  });
+
+  it('shows expressions as code and hides comment-only ones; nothing is evaluated', async () => {
+    const doc = dom((await mdx(fixture('article.mdx'))).html);
+    const expressions = [...doc.querySelectorAll('[data-galeo-mdx="expression"]')].map((node) => [node.tagName, node.textContent]);
+    expect(expressions).toEqual([
+      ['CODE', '{year}'],
+      ['PRE', '{items.map((item) => item.name)}'],
+    ]);
+    expect(doc.textContent).not.toContain('A comment');
+  });
+
+  it('renders lowercase HTML tags as HTML, through the same sanitizer and link set as Markdown', async () => {
+    const { html, links, images } = await mdx(fixture('article.mdx'));
+    const doc = dom(html);
+    expect(doc.querySelector('img[alt="A red dot"]')?.getAttribute('data-galeo-src')).toBe('images/red-dot.png');
+    expect([...doc.querySelectorAll('a')].map((a) => a.textContent)).toEqual(['a link', 'A link written as HTML']);
+    // A component's `href` and `src` are props, shown as text: never a link or an image.
+    expect(links).toEqual(['basic.md']);
+    expect(images).toEqual(['images/red-dot.png']);
+  });
+
+  it('keeps an HTML attribute value whole, quotes and all', async () => {
+    const doc = dom((await mdx(`<a href="a.md" title='"><b>no</b> & more'>t</a>\n`)).html);
+    expect(doc.querySelector('a')?.getAttribute('title')).toBe('"><b>no</b> & more');
+    expect(doc.querySelector('b')).toBeNull();
+  });
+
+  it('counts the prose inside components, not their names, props or expressions', async () => {
+    const { words } = await mdx('<Callout type="note">Two words</Callout>\n\n{one + two}\n');
+    expect(words).toBe(2);
+  });
+
+  it('fails with the line of an MDX syntax error', async () => {
+    await expect(mdx('# Fine\n\nA stray <3 here\n')).rejects.toMatchObject({ line: 3, reason: expect.stringMatching(/^Unexpected character/) });
+  });
+
+  it('parses the same text as Markdown or MDX by its format, each cached apart', async () => {
+    const renderer = createRenderer();
+    const text = '<Callout>x</Callout>\n';
+    const asMdx = await renderer.markdown(text, { format: 'mdx' });
+    const asMarkdown = await renderer.markdown(text);
+    expect(asMarkdown.cached).toBe(false);
+    expect(dom(asMdx.html).querySelector('[data-galeo-mdx="Callout"]')).not.toBeNull();
+    expect(dom(asMarkdown.html).querySelector('[data-galeo-mdx]')).toBeNull();
+  });
+});

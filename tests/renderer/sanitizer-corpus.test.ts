@@ -6,31 +6,44 @@ import { findViolations } from '../helpers/html-violations';
 
 const DIR = path.resolve(import.meta.dirname, '../fixtures/payloads');
 
+// `.payloads.mdx` cases render as MDX, the rest as Markdown.
 const cases = readdirSync(DIR)
-  .filter((file) => file.endsWith('.payloads.md'))
+  .filter((file) => /\.payloads\.mdx?$/.test(file))
   .flatMap((file) =>
     readFileSync(path.join(DIR, file), 'utf8')
       .split(/^%%%$/m)
-      .map((text, index) => ({ name: `${file} #${index + 1}`, text: text.trim() })),
+      .map((text, index) => ({ name: `${file} #${index + 1}`, text: text.trim(), format: file.endsWith('.mdx') ? ('mdx' as const) : ('markdown' as const) })),
   );
 
 const render = createRenderer({ cacheEntries: 0 });
 
-async function renderToFragment(text: string): Promise<DocumentFragment> {
+async function renderToFragment(text: string, format: 'markdown' | 'mdx' = 'markdown'): Promise<DocumentFragment> {
   const template = document.createElement('template');
-  template.innerHTML = (await render.markdown(text)).html;
+  template.innerHTML = (await render.markdown(text, { format })).html;
   return template.content;
 }
 
 describe('sanitizer payload corpus', () => {
   it('has several cases from every payload file', () => {
     const perFile = Object.groupBy(cases, (c) => c.name.split(' ')[0]!);
-    expect(Object.keys(perFile)).toHaveLength(8);
+    expect(Object.keys(perFile)).toHaveLength(9);
     for (const group of Object.values(perFile)) expect(group!.length).toBeGreaterThanOrEqual(5);
   });
 
-  it.each(cases)('$name renders nothing that could run, load or restyle', async ({ text }) => {
-    expect(findViolations(await renderToFragment(text))).toEqual([]);
+  it.each(cases)('$name renders nothing that could run, load or restyle', async ({ text, format }) => {
+    expect(findViolations(await renderToFragment(text, format))).toEqual([]);
+  });
+
+  it('shows MDX code as text: no case leaves an element an expression or prop asked for', async () => {
+    const mdx = cases.filter((c) => c.format === 'mdx');
+    const fragment = await renderToFragment(mdx.map((c) => c.text).join('\n\n'), 'mdx');
+    expect(fragment.textContent).not.toContain('import evil');
+    // Local images wait for main's check, as in Markdown; none loads by itself.
+    expect(fragment.querySelector('img[src]')).toBeNull();
+    expect([...fragment.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual([null, 'notes.md', null, null]);
+    expect(fragment.querySelector('[data-galeo-mdx="Foo"]')?.textContent).toContain('"><img src=x onerror=window.__galeoPwned=1>');
+    // Parsing MDX runs none of it: every case would set this flag.
+    expect((globalThis as { __galeoPwned?: unknown }).__galeoPwned).toBeUndefined();
   });
 
   it('drops the contents of stripped elements instead of showing them as text', async () => {
@@ -61,6 +74,7 @@ describe('sanitizer payload corpus', () => {
     expect(fragment.querySelectorAll('a')).toHaveLength(0);
     expect(fragment.querySelector('[id]')).toBeNull();
     expect(fragment.querySelector('.galeo-fake')).toBeNull();
-    expect(fragment.querySelector('img')).toBeNull();
+    // Local images wait for main's check, as in Markdown; none loads by itself.
+    expect(fragment.querySelector('img[src]')).toBeNull();
   });
 });

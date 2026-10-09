@@ -28,7 +28,24 @@ describe('render worker messages', () => {
     const { handle } = setup({ markdown: async (_text, options) => (seen.push(options), result) });
     await handle({ type: 'render', id: 1, format: 'markdown', text: 'a', noCache: true });
     await handle({ type: 'render', id: 2, format: 'markdown', text: 'a' });
-    expect(seen).toEqual([{ cache: false }, { cache: true }]);
+    expect(seen).toEqual([
+      { cache: false, format: 'markdown' },
+      { cache: true, format: 'markdown' },
+    ]);
+  });
+
+  it('renders MDX as MDX', async () => {
+    const seen: unknown[] = [];
+    const { handle, replies } = setup({ markdown: async (_text, options) => (seen.push(options?.format), result) });
+    await handle({ type: 'render', id: 4, format: 'mdx', text: '<A />' });
+    expect(seen).toEqual(['mdx']);
+    expect(replies).toEqual([{ type: 'rendered', id: 4, result }]);
+  });
+
+  it('passes the line of a syntax error on, so the page can point at it', async () => {
+    const { handle, replies } = setup({ markdown: async () => Promise.reject(Object.assign(new Error('Unexpected character'), { line: 3 })) });
+    await handle({ type: 'render', id: 5, format: 'mdx', text: 'a <3' });
+    expect(replies).toEqual([{ type: 'failed', id: 5, message: 'Unexpected character', line: 3 }]);
   });
 
   it('reports a pipeline failure for that request instead of dying', async () => {
@@ -40,6 +57,7 @@ describe('render worker messages', () => {
   it('ignores messages it does not know', async () => {
     const { handle, replies } = setup({ markdown: async () => result });
     await handle({ type: 'render', id: 'x', text: 1 });
+    await handle({ type: 'render', id: 1, format: 'text', text: 'x' });
     await handle(null);
     expect(replies).toEqual([]);
   });

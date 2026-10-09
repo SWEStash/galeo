@@ -24,13 +24,14 @@ function manualClient() {
     text: string;
     budgetMs: number | undefined;
     live: boolean | undefined;
+    format: string | undefined;
     resolve: (html: string, math?: boolean, outline?: OutlineEntry[]) => void;
     reject: (error: Error) => void;
   }[] = [];
   const client = {
-    markdown: (text: string, options?: { budgetMs?: number; live?: boolean }) =>
+    markdown: (text: string, options?: { budgetMs?: number; live?: boolean; format?: string }) =>
       new Promise<{ html: string; math: boolean; outline: OutlineEntry[] }>((resolve, reject) =>
-        pending.push({ text, budgetMs: options?.budgetMs, live: options?.live, reject, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
+        pending.push({ text, budgetMs: options?.budgetMs, live: options?.live, format: options?.format, reject, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
       ),
   } as unknown as RenderClient;
   return { client, pending };
@@ -48,6 +49,19 @@ async function mount(client: RenderClient, text: string, options?: { readerAsked
 }
 
 describe('useRenderedHtml', () => {
+  it('renders the text in its format, and again when only the format changes', async () => {
+    const { client, pending } = manualClient();
+    function Probe({ format }: { format: 'markdown' | 'mdx' }) {
+      useRenderedHtml(client, '<A />', true, { format });
+      return null;
+    }
+    root = createRoot(document.createElement('div'));
+    await act(async () => root!.render(<Probe format="mdx" />));
+    await act(async () => pending[0]!.resolve('<div>A</div>'));
+    await act(async () => root!.render(<Probe format="markdown" />));
+    expect(pending.map((request) => request.format)).toEqual(['mdx', 'markdown']);
+  });
+
   it('keeps showing the last HTML while a changed text renders, then the new HTML', async () => {
     const { client, pending } = manualClient();
     const { seen, rerender } = await mount(client, '# one');

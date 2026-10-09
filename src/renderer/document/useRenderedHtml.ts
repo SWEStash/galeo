@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderTimeout, type RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
+import type { WorkerFormat } from '../../shared/formats';
 import { loadMathStyles } from './host';
 
 export type RenderState = (
@@ -29,7 +30,7 @@ interface Attempt {
 }
 
 /**
- * The worker's HTML for Markdown `text`, rendered only once `wanted` (the rendered view shows).
+ * The worker's HTML for `text` in its `format` (Markdown or MDX), rendered only once `wanted` (the rendered view shows).
  * `readerAsked`: the reader asked for this render (a document over the render limit opens as
  * source), so it waits as long as Render anyway does. `live`: a preview of typing in split, which
  * keeps the last good HTML when the latest text doesn't render.
@@ -40,10 +41,11 @@ export function useRenderedHtml(
   client: RenderClient | null,
   text: string | null,
   wanted: boolean,
-  { readerAsked = false, live = false }: { readerAsked?: boolean; live?: boolean } = {},
+  { readerAsked = false, live = false, format = 'markdown' }: { readerAsked?: boolean; live?: boolean; format?: WorkerFormat } = {},
 ): RenderState & { retry: () => void; renderAnyway: () => void } {
   const [result, setResult] = useState<{
     text: string;
+    format: WorkerFormat;
     attempt: Attempt;
     html: string | null;
     reason: 'slow' | 'error';
@@ -55,10 +57,10 @@ export function useRenderedHtml(
 
   useEffect(() => {
     if (!client || text === null || !wanted) return;
-    if (result?.text === text && result.attempt === attempt) return;
+    if (result?.text === text && result.format === format && result.attempt === attempt) return;
     let current = true;
     client
-      .markdown(text, { ...(attempt.long || readerAsked ? { budgetMs: RENDER_ANYWAY_BUDGET_MS } : {}), ...(live ? { live } : {}) })
+      .markdown(text, { format, ...(attempt.long || readerAsked ? { budgetMs: RENDER_ANYWAY_BUDGET_MS } : {}), ...(live ? { live } : {}) })
       // Math shows only once KaTeX's styles are in, never unstyled.
       .then(async ({ html, math, outline, words }) => {
         if (math) await loadMathStyles();
@@ -68,23 +70,23 @@ export function useRenderedHtml(
         ({ html, outline, words }) => {
           if (!current) return;
           lastGood.current = { html, outline, words };
-          setResult({ text, attempt, html, reason: 'error', outline, words });
+          setResult({ text, format, attempt, html, reason: 'error', outline, words });
         },
         (error: unknown) => {
           // Newer text took its place: its own render answers.
           if (!current || error instanceof RenderSuperseded) return;
-          setResult({ text, attempt, html: null, reason: error instanceof RenderTimeout ? 'slow' : 'error', outline: NO_OUTLINE, words: null });
+          setResult({ text, format, attempt, html: null, reason: error instanceof RenderTimeout ? 'slow' : 'error', outline: NO_OUTLINE, words: null });
         },
       );
     return () => {
       current = false;
     };
-  }, [client, text, wanted, result, attempt, readerAsked, live]);
+  }, [client, text, format, wanted, result, attempt, readerAsked, live]);
 
   const retry = useCallback(() => setAttempt(({ count }) => ({ count: count + 1, long: false })), []);
   const renderAnyway = useCallback(() => setAttempt(({ count }) => ({ count: count + 1, long: true })), []);
   const actions = { retry, renderAnyway };
-  const settled = result?.text === text && result.attempt === attempt;
+  const settled = result?.text === text && result.format === format && result.attempt === attempt;
   const good = lastGood.current;
   if (settled && result.html !== null) return { status: 'done', html: result.html, outline: result.outline, words: result.words, ...actions };
   if (settled && live) return { status: 'paused', html: good?.html ?? null, reason: result.reason, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, ...actions };

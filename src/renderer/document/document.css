@@ -200,6 +200,44 @@ details > summary {
   margin: 0.5em 0 0;
 }
 
+/* MDX components: a dashed box labelled with the tag, its props, then its content. */
+div[data-galeo-mdx] {
+  margin: 0 0 var(--galeo-space-block);
+  padding: 0.5em 0.9em;
+  border: 1px dashed var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+}
+div[data-galeo-mdx] > :last-child {
+  margin-bottom: 0;
+}
+code[data-galeo-mdx='name'] {
+  color: var(--galeo-color-muted);
+  font-size: 0.85em;
+}
+div[data-galeo-mdx] > code[data-galeo-mdx='name'] {
+  display: block;
+  padding: 0;
+  background: none;
+}
+dl[data-galeo-mdx='props'] {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.1em 1em;
+  margin: 0.4em 0 0.6em;
+  color: var(--galeo-color-muted);
+  font-family: var(--galeo-font-code);
+  font-size: var(--galeo-code-size);
+}
+/* A spread (`{...rest}`) has no value: each name starts a row. */
+dl[data-galeo-mdx='props'] dt {
+  grid-column: 1;
+}
+dl[data-galeo-mdx='props'] dd {
+  grid-column: 2;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .katex-display {
   overflow-x: auto;
   overflow-y: hidden;

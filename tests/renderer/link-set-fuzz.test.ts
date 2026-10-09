@@ -39,10 +39,27 @@ const PIECES: ((target: string, n: number) => string)[] = [
   (t) => `&#91;not a link&#93;(${t})`,
 ];
 
-function document(seed: number): string {
+// MDX has no autolinks, HTML comments or unclosed tags; it adds components, expressions and ESM.
+const MDX_PIECES: ((target: string, n: number) => string)[] = [
+  (t) => `[inline](${t})`,
+  (t, n) => `[ref][r${n}]\n\n[r${n}]: ${t}`,
+  (t) => `<a href="${t}">raw</a>`,
+  (t) => `<img src="${t}" alt="" />`,
+  (t) => `![image](${t})`,
+  (t) => `<Card href="${t}" src="${t}">card [inner](${t})</Card>`,
+  (t) => `<a href={"${t}"}>expression href</a>`,
+  (t) => `{"[expression](${t})"}`,
+  (t, n) => `import x${n} from '${t}'`,
+  (t) => '```\n[fenced](' + t + ')\n```',
+  (t) => `| h |\n| - |\n| [cell](${t}) |`,
+  (t, n) => `note[^f${n}]\n\n[^f${n}]: [in footnote](${t})`,
+  (t) => `<details><summary>s</summary><a href="${t}">in details</a></details>`,
+];
+
+function document(seed: number, pieces = PIECES): string {
   const next = random(seed);
   const pick = <T,>(items: T[]) => items[Math.floor(next() * items.length)]!;
-  return Array.from({ length: 1 + Math.floor(next() * 8) }, (_, n) => pick(PIECES)(pick(TARGETS), n)).join('\n\n');
+  return Array.from({ length: 1 + Math.floor(next() * 8) }, (_, n) => pick(pieces)(pick(TARGETS), n)).join('\n\n');
 }
 
 describe("the renderer's references match main's", () => {
@@ -53,6 +70,14 @@ describe("the renderer's references match main's", () => {
       const text = document(seed);
       const { links, images } = await renderer.markdown(text);
       expect({ seed, links, images }).toEqual({ seed, ...extractReferences(text) });
+    }
+  }, 60_000);
+
+  it('on 300 generated MDX documents, parsed as MDX on both sides', async () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const text = document(seed, MDX_PIECES);
+      const { links, images } = await renderer.markdown(text, { format: 'mdx' });
+      expect({ seed, links, images }).toEqual({ seed, ...extractReferences(text, 'mdx') });
     }
   }, 60_000);
 });

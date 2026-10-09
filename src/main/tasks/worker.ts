@@ -1,9 +1,9 @@
 // The task worker thread (ADR-004): runs parsing that main must never do on its own thread.
 import { parentPort } from 'node:worker_threads';
-import { extractReferences } from '../../shared/markdown/references';
+import { referencesTask } from '../../shared/markdown/references';
 
 const TASKS: Record<string, (input: unknown) => unknown> = {
-  references: (input) => extractReferences(String(input)),
+  references: referencesTask,
 };
 
 parentPort!.on('message', ({ id, task, input }: { id: number; task: string; input: unknown }) => {

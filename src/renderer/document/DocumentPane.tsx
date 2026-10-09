@@ -177,7 +177,8 @@ export function DocumentPane({
   const [ratio, setRatio] = useState(initialViewState.ratio ?? 0.5);
   const [narrow, setNarrow] = useState(false);
   // Markdown and MDX render in the worker; `.txt` shows as reader text; logs and other text are source only.
-  const article = ready ? workerFormat(ready.format) !== null : false;
+  const format = ready ? workerFormat(ready.format) : null;
+  const article = format !== null;
   const renderable = article || ready?.format === 'text';
   const splittable = article;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
@@ -185,7 +186,7 @@ export function DocumentPane({
   const [previewText, setPreviewText] = useState<string | null>(null);
   const markdown = ready && article ? (previewText ?? ready.text) : null;
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
-  const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large', live: previewText !== null });
+  const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large', live: previewText !== null, format: format ?? 'markdown' });
   // A document that failed to render shows its source instead.
   const layout = wantedView !== 'source' && render.status === 'failed' ? 'source' : wantedView;
   // What Ctrl+\ goes back to from split.

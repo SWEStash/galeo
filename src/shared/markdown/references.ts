@@ -1,4 +1,6 @@
 import type { Root } from 'hast';
+import remarkMdx from 'remark-mdx';
+import type { WorkerFormat } from '../formats';
 import { eachElement } from './hast';
 import { articleParser } from './parser';
 import { isLocalReference, isNetworkPathReference } from './urls';
@@ -26,9 +28,17 @@ function collectReferences(tree: Root): References {
   return { links: [...links], images: [...images] };
 }
 
-const parser = articleParser();
+const parsers = { markdown: articleParser(), mdx: articleParser({ mdx: remarkMdx }) };
 
-/** Parses Markdown as the renderer does, up to sanitizing, and collects its references. */
-export function extractReferences(text: string): References {
+/** Parses Markdown or MDX as the renderer does, up to sanitizing, and collects its references. */
+export function extractReferences(text: string, format: WorkerFormat = 'markdown'): References {
+  const parser = parsers[format];
   return collectReferences(parser.runSync(parser.parse(text)) as Root);
+}
+
+/** The `references` task as main's worker thread runs it: `{ text, format }` in, references out. */
+export function referencesTask(input: unknown): References {
+  const { text, format } = (input ?? {}) as { text?: unknown; format?: unknown };
+  if (typeof text !== 'string' || (format !== 'markdown' && format !== 'mdx')) throw new Error('references: bad input');
+  return extractReferences(text, format);
 }

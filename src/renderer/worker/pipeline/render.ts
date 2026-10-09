@@ -9,6 +9,7 @@ import { ID_PREFIX } from '../../../shared/markdown/ids';
 import { articleParser } from '../../../shared/markdown/parser';
 import { compactUrl, isLocalReference, isNetworkPathReference } from '../../../shared/markdown/urls';
 import { countWords } from '../../../shared/words';
+import type { WorkerFormat } from '../../../shared/formats';
 
 /** Code blocks longer than this are shown without highlighting (ADR-003: ~200 KB). */
 export const SHIKI_MAX_BLOCK_CHARS = 200_000;
@@ -44,6 +45,9 @@ export interface RenderResult {
 // anchors, view toggles and following a long block inside in split view.
 const POSITIONED = new Set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'pre', 'blockquote', 'tr', 'table', 'hr']);
 
+/** An MDX component's box: positioned like the blocks it holds. */
+const isMdxBox = (node: Element) => node.tagName === 'div' && typeof node.properties['dataGaleoMdx'] === 'string' && node.properties['dataGaleoMdx'] !== 'name';
+
 /** A block's first and last source lines. */
 type Lines = Partial<Pick<Properties, 'dataSrcLine' | 'dataSrcEnd'>>;
 
@@ -68,7 +72,7 @@ const liftFrontmatter = (collected: Collected) => () => (tree: MdastRoot) => {
 const annotate = (collected: Collected) => () => (tree: Root) => {
   eachElement(tree, (node, index, parent) => {
     const line = node.position?.start.line;
-    if (line !== undefined && POSITIONED.has(node.tagName)) {
+    if (line !== undefined && (POSITIONED.has(node.tagName) || isMdxBox(node))) {
       node.properties['dataSrcLine'] = line;
       node.properties['dataSrcEnd'] = node.position?.end.line ?? line;
     }
@@ -238,20 +242,25 @@ const restoreCodeLines = (collected: Collected) => () => (tree: Root) => {
   });
 };
 
-async function contentKey(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+async function contentKey(format: WorkerFormat, text: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${format}\n${text}`));
   return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
 export interface Renderer {
-  /** `cache: false` neither reads nor fills the cache: a live preview's every pause would evict useful entries (ADR-014). */
-  markdown(text: string, options?: { cache: boolean }): Promise<RenderResult>;
+  /**
+   * Renders Markdown, or MDX with `format: 'mdx'`. `cache: false` neither reads nor fills the
+   * cache: a live preview's every pause would evict useful entries (ADR-014).
+   */
+  markdown(text: string, options?: { cache?: boolean; format?: WorkerFormat }): Promise<RenderResult>;
 }
 
 // Inline elements run on within a word ("foo<em>bar</em>"); any other element separates words.
 const INLINE = new Set(['a', 'abbr', 'b', 'bdi', 'bdo', 'cite', 'code', 'data', 'del', 'dfn', 'em', 'i', 'ins', 'kbd', 'mark', 'q', 's', 'samp', 'small', 'span', 'strong', 'sub', 'sup', 'time', 'u', 'var']);
 // Not prose: code blocks, math source, diagram source, front matter, blocked-image notices.
 const NOT_PROSE = new Set(['math-inline', 'math-display', 'galeo-diagram', 'galeo-frontmatter', 'galeo-remote-image']);
+// MDX: a component's name and props, and expressions, aren't prose; the text inside a component is.
+const MDX_NOT_PROSE = new Set(['name', 'props', 'expression']);
 
 /** The words of the document's prose, from the sanitized tree before math and code are drawn. */
 function proseWords(tree: Root): number {
@@ -259,7 +268,7 @@ function proseWords(tree: Root): number {
   const walk = (node: Root | Element) => {
     for (const child of node.children) {
       if (child.type === 'text') parts.push(child.value);
-      if (child.type !== 'element' || child.tagName === 'pre' || classesOf(child).some((name) => NOT_PROSE.has(name))) continue;
+      if (child.type !== 'element' || child.tagName === 'pre' || classesOf(child).some((name) => NOT_PROSE.has(name)) || MDX_NOT_PROSE.has(String(child.properties['dataGaleoMdx']))) continue;
       const inline = INLINE.has(child.tagName);
       if (!inline) parts.push(' ');
       walk(child);
@@ -296,6 +305,8 @@ function hasCode(tree: Root): boolean {
 // KaTeX and Shiki are heavy: each loads with the first document that needs it (ADR-003).
 const loadKatex = () => import('rehype-katex').then((module) => module.default);
 const loadShiki = () => Promise.all([import('./highlighter'), import('@shikijs/rehype/core')]);
+// The MDX parser (with its JavaScript parser) loads with the first MDX document.
+const loadMdx = () => import('remark-mdx').then((module) => module.default);
 
 /** The Markdown pipeline (ADR-003), with a bounded cache keyed by content hash. */
 export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } = {}): Renderer {
@@ -308,12 +319,14 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
       }>
     | undefined;
   const cache = new Map<string, Omit<RenderResult, 'cached'>>();
+  let remarkMdx: Promise<Awaited<ReturnType<typeof loadMdx>>> | undefined;
 
-  async function run(text: string): Promise<Omit<RenderResult, 'cached'>> {
+  async function run(format: WorkerFormat, text: string): Promise<Omit<RenderResult, 'cached'>> {
     const started = performance.now();
     const collected: Collected = { frontmatter: null, highlighted: [], outline: [], links: new Set(), images: new Set() };
     // First the document as sanitized HTML, which says what else it needs…
-    const parse = articleParser({ mdast: [liftFrontmatter(collected)] })
+    const mdx = format === 'mdx' ? await (remarkMdx ??= loadMdx()) : null;
+    const parse = articleParser({ mdx, mdast: [liftFrontmatter(collected)] })
       .use(rehypeSlug, { prefix: ID_PREFIX })
       .use(annotate(collected))
       .use(diagramPlaceholders);
@@ -348,16 +361,16 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
   }
 
   return {
-    async markdown(text, { cache: useCache } = { cache: true }) {
-      if (!useCache) return { ...(await run(text)), cached: false };
-      const key = await contentKey(text);
+    async markdown(text, { cache: useCache = true, format = 'markdown' } = {}) {
+      if (!useCache) return { ...(await run(format, text)), cached: false };
+      const key = await contentKey(format, text);
       const hit = cache.get(key);
       if (hit) {
         cache.delete(key);
         cache.set(key, hit);
         return { ...hit, cached: true };
       }
-      const result = await run(text);
+      const result = await run(format, text);
       cache.set(key, result);
       if (cache.size > cacheEntries) cache.delete(cache.keys().next().value!);
       return { ...result, cached: false };
