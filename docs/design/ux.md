@@ -235,8 +235,9 @@ and keeps the scroll position at the current match.
 Ctrl+\ toggles source | rendered side by side (source left). Scrolling either pane keeps the
 other aligned at block level; the preview updates as you type (debounced). The divider can be
 dragged, or moved with the arrow keys when focused; double-click or Home resets 50/50. A window
-too narrow for two panes (about 700 px) shows the rendered view until it widens. A preview that
-takes too long to render keeps the last good one with a notice, without leaving split. In MDX files, imports are hidden and JSX components render as
+too narrow for two panes (about 700 px) shows one view until it widens: the source while
+editing, the rendered view otherwise. A preview that takes too long to render keeps the last
+good one with a notice, without leaving split. In MDX files, imports are hidden and JSX components render as
 labelled placeholder boxes (`<Callout>` with its props listed).
 
 ## 4. States

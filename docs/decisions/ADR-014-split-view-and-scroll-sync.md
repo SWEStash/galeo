@@ -1,6 +1,6 @@
 # ADR-014 — Split view: both views in one tab, block-level scroll sync, a debounced preview
 
-- Status: Proposed (2026-10-08)
+- Status: Accepted (2026-10-09; proposed 2026-10-08, wording matched to the code before acceptance)
 - Date: 2026-10-08
 - Deciders: project owner
 - Builds on: [ADR-003](ADR-003-rendering-pipeline-and-format-registry.md) (the render worker,
@@ -24,7 +24,9 @@ What exists in v0.1:
   the reading position through them (`renderedTopLine`, `scrollRenderedTo`, the source view's
   `topLine`/`scrollToLine`).
 - A render has a 2 s budget; over it, the worker is replaced and the tab falls back to source.
-  Results are cached by content hash (16 entries). Mermaid draws on the UI thread, lazily.
+  Results are cached by content hash (16 entries). Math is typeset in the worker, as part of the
+  HTML. Mermaid draws on the UI thread, lazily, and keeps a window-wide cache of drawn diagrams
+  keyed by their source text (64 entries).
 - A tab's view state (`view`, `follow`) is kept per history entry and in the session.
 
 ## Decision
@@ -32,16 +34,17 @@ What exists in v0.1:
 ### Layout
 
 - Split is a third view mode, `split`, beside `rendered` and `source`, for formats whose
-  descriptor has `capabilities.split` (Markdown and MDX). Ctrl+\ toggles it; Ctrl+U in split
-  leaves split for the other single view.
+  descriptor has `capabilities.split` (Markdown and MDX). Ctrl+\ toggles it. Ctrl+U in split
+  leaves split: for the source in edit mode, for the rendered view when reading.
 - The Document Host mounts both views at once in split mode: source on the left, rendered on the
   right, each with its own scroll container. Editing (ADR-013) is independent: split works in
-  read-only and in edit mode.
+  read-only and in edit mode, and entering or leaving edit mode keeps split.
 - The divider is a focusable separator (`role="separator"`, arrow keys move it, double-click or
   Home resets 50/50). Its ratio is per tab, kept in the view state and the session; the minimum
   pane is 20 % of the width.
-- Below a minimum window width (about 700 px) the tab shows the rendered view only, and split
-  returns when the window widens.
+- Below a minimum window width (about 700 px) the tab shows one view: the source in edit mode
+  (the text being typed stays visible), the rendered view otherwise. Split returns when the
+  window widens.
 
 ### Scroll sync
 
@@ -56,15 +59,18 @@ What exists in v0.1:
 ### Live preview
 
 - While editing in split, a change re-renders after typing pauses for 150 ms, and at least every
-  1 s during continuous typing. Only the latest text is rendered; older requests in flight are
-  dropped (the page already ignores answers for stale text).
-- Live renders skip the content-hash cache (each keystroke would evict useful entries) and use
-  the normal 2 s budget. A live render over budget keeps the **last good preview** with a notice
-  ("Preview paused: this document takes too long to render"); it does not switch the tab to
-  source, as it would in reading.
-- The rendered pane is updated in place, keeping the leading pane's position; diagrams and math
-  whose source didn't change keep their drawn output (keyed by their text), so typing in a
-  paragraph doesn't redraw Mermaid.
+  1 s during continuous typing. Only the latest text is rendered: the worker client gains a
+  latest-wins request, where a live request replaces any live request still queued; a render
+  already running finishes, and the page ignores its answer if the text has moved on (as it
+  already does).
+- Live renders skip the content-hash cache, neither reading nor writing it (each keystroke would
+  evict useful entries), and use the normal 2 s budget. A live render over budget keeps the
+  **last good preview** with a notice ("Preview paused: this document takes too long to
+  render"); it does not switch the tab to source, as it would in reading.
+- The rendered pane's article is replaced as in a reload, and its scroll is put back to follow
+  the leading pane. Diagrams whose source didn't change come back from the drawn-diagram cache
+  without running Mermaid again, so typing in a paragraph doesn't redraw them; math comes
+  with the HTML from the worker.
 
 ## Options considered
 
