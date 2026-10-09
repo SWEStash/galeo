@@ -222,3 +222,77 @@ test('split passes axe in both colour schemes', async () => {
     await close();
   }
 });
+
+/** The first rendered block showing at the top of the rendered pane: its source lines. */
+function renderedPaneTop(page: Page): Promise<{ line: number; end: number }> {
+  return shownDocument(page).evaluate((host) => {
+    const root = host.shadowRoot!;
+    const top = root.querySelector('.galeo-rendered-pane')!.getBoundingClientRect().top;
+    const block = [...root.querySelectorAll<HTMLElement>('article > [data-src-line]')].find((each) => each.getBoundingClientRect().bottom > top + 1)!;
+    return { line: Number(block.dataset['srcLine']), end: Number(block.dataset['srcEnd']) };
+  });
+}
+
+/** Scrolls the source pane so `line` is at its top, as the reader's own scrolling would. */
+function scrollSourceTo(page: Page, line: number): Promise<void> {
+  return shownDocument(page).evaluate((host, target) => {
+    const root = host.shadowRoot!;
+    const scroller = root.querySelector<HTMLElement>('.cm-scroller')!;
+    const first = root.querySelector('.cm-line')!.getBoundingClientRect();
+    const start = first.top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    scroller.scrollTop = start + (target - 1) * first.height;
+  }, line);
+}
+
+const near = (value: number, wanted: number, slack: number) => Math.abs(value - wanted) <= slack;
+
+test('scrolling either pane brings the other to the same block', async () => {
+  const { window, close } = await launchApp(['--', plan]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+
+    const dependencies = document.locator('h2', { hasText: '9. Dependency map' });
+    const dependenciesLine = Number(await dependencies.getAttribute('data-src-line'));
+    await dependencies.evaluate((element) => element.scrollIntoView({ block: 'start' }));
+    await expect.poll(async () => near(await sourceTopLine(window), dependenciesLine, 1)).toBe(true);
+
+    const risks = document.locator('h2', { hasText: '10. Risks' });
+    const risksLine = Number(await risks.getAttribute('data-src-line'));
+    await scrollSourceTo(window, risksLine);
+    await expect.poll(() => sourceTopLine(window)).toBe(risksLine);
+    await expect.poll(async () => (await renderedPaneTop(window)).line).toBe(risksLine);
+  } finally {
+    await close();
+  }
+});
+
+test('inside a long code block the rendered pane follows the source line by line, not block by block', async () => {
+  const { window, close } = await launchApp(['--', plan]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+    const block = document.locator('pre', { hasText: 'sign-off' }).first();
+    const line = Number(await block.getAttribute('data-src-line'));
+    const end = Number(await block.getAttribute('data-src-end'));
+    expect(end - line).toBeGreaterThan(8);
+    const middle = line + Math.floor((end - line) / 2);
+    await scrollSourceTo(window, middle);
+    await expect.poll(() => sourceTopLine(window)).toBe(middle);
+    const wanted = (middle - line) / (end + 1 - line);
+    // How far down the block the rendered pane's top is.
+    const through = () =>
+      block.evaluate((element) => {
+        const pane = element.closest('.galeo-rendered-pane')!.getBoundingClientRect();
+        const box = element.getBoundingClientRect();
+        return (pane.top - box.top) / box.height;
+      });
+    await expect.poll(async () => near(await through(), wanted, 0.1)).toBe(true);
+  } finally {
+    await close();
+  }
+});

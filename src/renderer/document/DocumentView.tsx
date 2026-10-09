@@ -9,6 +9,7 @@ import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor
 import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
+import { lineAtOffset, offsetOfLine, syncScrolling, type SyncBlock } from './scroll-sync';
 import type { SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 
@@ -78,6 +79,20 @@ function placedBlocks(host: DocumentHost, scroller: HTMLElement): PlacedBlock[] 
       bottom: box.bottom - origin,
       heading: /^H[1-6]$/.test(element.tagName) && element.id ? element.id : null,
     };
+  });
+}
+
+/** The rendered blocks with both their source lines, in the rendered scroller's content coordinates. */
+function syncBlocks(host: DocumentHost): SyncBlock[] {
+  const scroller = host.renderedScroller;
+  const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
+  return [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].flatMap((element) => {
+    const box = element.getBoundingClientRect();
+    // Not laid out (inside a closed `details`): it has no place to sync to.
+    if (box.width === 0 && box.height === 0) return [];
+    const line = Number(element.dataset['srcLine']);
+    const end = Number(element.dataset['srcEnd'] ?? line);
+    return [{ line, end, top: box.top - origin, bottom: box.bottom - origin }];
   });
 }
 
@@ -331,6 +346,24 @@ export function DocumentView({
   const ratioListener = useRef(onSplitRatio);
   ratioListener.current = onSplitRatio;
   useEffect(() => host().onSplitRatio((ratio) => ratioListener.current?.(ratio)), []);
+
+  // Split keeps both panes on the same block, whichever the reader scrolls (ADR-014).
+  useEffect(() => {
+    const documentHost = host();
+    const sourceView = documentHost.source;
+    if (view !== 'split' || !sourceReady || !sourceView) return;
+    const scroller = documentHost.renderedScroller;
+    return syncScrolling({
+      source: { scroller: sourceView.view.scrollDOM, position: sourceView.topPosition, scrollTo: sourceView.scrollToPosition },
+      rendered: {
+        scroller,
+        position: () => lineAtOffset(syncBlocks(documentHost), scroller.scrollTop),
+        scrollTo: (line) => {
+          scroller.scrollTop = offsetOfLine(syncBlocks(documentHost), line);
+        },
+      },
+    });
+  }, [view, sourceReady]);
 
   // Whether a split fits: measured as the document area resizes; a hidden tab (no width) keeps its say.
   const narrowListener = useRef(onNarrow);

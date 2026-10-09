@@ -38,6 +38,10 @@ export interface SourceView {
   /** The line at the top of the viewport. */
   topLine(): number;
   scrollToLine(line: number): void;
+  /** The line at the top of the viewport, with how far into it as the fraction (split's sync). */
+  topPosition(): number;
+  /** Scrolls a fractional line (`topPosition`'s) to the top. */
+  scrollToPosition(position: number): void;
   scrollToEnd(): void;
   /** Highlights `query` and selects the first match from the reading position on. */
   find(query: string, options: { caseSensitive: boolean }): FindResult;
@@ -141,11 +145,9 @@ export function createSourceView(options: {
     }),
   });
 
-  const topLine = () => {
-    // `documentTop` already moves with scrolling: the viewport top is this far into the document.
-    const block = view.lineBlockAtHeight(view.scrollDOM.getBoundingClientRect().top - view.documentTop);
-    return view.state.doc.lineAt(block.from).number;
-  };
+  // `documentTop` already moves with scrolling: the viewport top is this far into the document.
+  const viewportTop = () => view.scrollDOM.getBoundingClientRect().top - view.documentTop;
+  const topLine = () => view.state.doc.lineAt(view.lineBlockAtHeight(viewportTop()).from).number;
 
   const query = () => new SearchQuery({ search: '', literal: true });
   let active = query();
@@ -234,6 +236,21 @@ export function createSourceView(options: {
       view.dispatch({ effects: wrapping.reconfigure(wrap ? EditorView.lineWrapping : []) });
     },
     topLine,
+    topPosition() {
+      const height = viewportTop();
+      const block = view.lineBlockAtHeight(height);
+      const into = block.height > 0 ? Math.min(1, Math.max(0, (height - block.top) / block.height)) : 0;
+      return view.state.doc.lineAt(block.from).number + into;
+    },
+    scrollToPosition(position) {
+      const { doc } = view.state;
+      const number = Math.min(Math.max(Math.floor(position), 1), doc.lines);
+      const block = view.lineBlockAt(doc.line(number).from);
+      const into = number === Math.floor(position) ? position - number : 0;
+      // The document starts this far down the scrolled content (the editor's top padding).
+      const start = view.scrollDOM.scrollTop - viewportTop();
+      view.scrollDOM.scrollTop = start + block.top + into * block.height;
+    },
     scrollToLine(line) {
       const target = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines));
       view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: 'start', yMargin: 0 }) });
