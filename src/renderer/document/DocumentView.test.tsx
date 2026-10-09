@@ -103,3 +103,40 @@ describe('DocumentView editing', () => {
     focus.mockRestore();
   });
 });
+
+describe('DocumentView in split', () => {
+  const twoViews = { source: { text: '# src src', language: 'markdown' as const }, wrap: false, scheme: 'light' as const };
+
+  it('shows the source editor beside the rendered article, the divider where the reader left it', async () => {
+    const container = await render(<DocumentView {...twoViews} view="split" splitRatio={0.3} rendered={{ html: '<p>src</p>' }} />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull(), { timeout: 5_000 });
+    const element = container.querySelector<HTMLElement>('[data-testid="document"]')!;
+    expect(element.dataset['view']).toBe('split');
+    expect(shadow.querySelector<HTMLElement>('.galeo-source')!.hidden).toBe(false);
+    expect(shadow.querySelector('article')!.hidden).toBe(false);
+    expect(element.style.getPropertyValue('--galeo-split-source')).toBe('30%');
+  });
+
+  it('puts the caret in the editor when editing in split', async () => {
+    const { EditorView } = await import('@codemirror/view');
+    const focus = vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const container = await render(<DocumentView {...twoViews} view="split" editable rendered={{ html: '<p>src</p>' }} />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-content')?.getAttribute('aria-readonly')).toBeNull(), { timeout: 5_000 });
+    expect(focus).toHaveBeenCalled();
+    focus.mockRestore();
+  });
+
+  it('finds in the source pane until the reader turns to the rendered pane', async () => {
+    const handle = { current: null as import('./DocumentView').DocumentHandle | null };
+    const container = await render(<DocumentView {...twoViews} view="split" rendered={{ html: '<p>src</p>' }} ref={handle} />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull(), { timeout: 5_000 });
+    expect(handle.current!.find('src', { caseSensitive: false }).total).toBe(2);
+    shadow.querySelector('article p')!.dispatchEvent(new Event('pointerdown', { bubbles: true, composed: true }));
+    expect(handle.current!.find('src', { caseSensitive: false }).total).toBe(1);
+    shadow.querySelector('.cm-content')!.dispatchEvent(new Event('pointerdown', { bubbles: true, composed: true }));
+    expect(handle.current!.find('src', { caseSensitive: false }).total).toBe(2);
+  });
+});

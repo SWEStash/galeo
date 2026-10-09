@@ -9,6 +9,8 @@ export interface DocumentHost {
   readonly root: ShadowRoot;
   /** The rendered view's column. */
   readonly article: HTMLElement;
+  /** What scrolls the rendered view: the container, or in split its own pane (ADR-014). */
+  readonly renderedScroller: HTMLElement;
   /** Replaces the rendered content with worker output (already sanitized, ADR-003). */
   setContent(html: string): void;
   /** Shows plain text in the reading column (the `.txt` reader), as text nodes only. */
@@ -16,8 +18,10 @@ export interface DocumentHost {
   /** The source view, created on first use and updated in place afterwards (after `loadSourceView`). */
   showSource(text: string, language: SourceLanguage, wrap: boolean): SourceView;
   readonly source: SourceView | null;
-  /** Shows one view; the other stays mounted (hidden) so switching back is instant. */
+  /** Shows one view, the other mounted but hidden so switching back is instant; or both, in split. */
   showView(view: ViewMode): void;
+  /** The source pane's share of a split's width. */
+  setSplitRatio(ratio: number): void;
   /** Picks the code theme matching the app's scheme. */
   setScheme(scheme: ColorScheme): void;
 }
@@ -94,7 +98,12 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
   const sourceParent = document.createElement('div');
   sourceParent.className = 'galeo-source';
   sourceParent.hidden = true;
-  root.append(article, sourceParent);
+  // Scrolls only in split; otherwise the container scrolls the rendered view.
+  const renderedPane = document.createElement('div');
+  renderedPane.className = 'galeo-rendered-pane';
+  renderedPane.append(article);
+  // Source first: on the left in split, and first in the focus order.
+  root.append(sourceParent, renderedPane);
   let source: SourceView | null = null;
   let sourceText: string | null = null;
 
@@ -103,6 +112,9 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
     article,
     get source() {
       return source;
+    },
+    get renderedScroller() {
+      return container.dataset['view'] === 'split' ? renderedPane : container;
     },
     setContent(html) {
       article.classList.remove('galeo-text-reader');
@@ -131,9 +143,13 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
       return source;
     },
     showView(view) {
-      article.hidden = view !== 'rendered';
-      sourceParent.hidden = view !== 'source';
+      article.hidden = view === 'source';
+      sourceParent.hidden = view === 'rendered';
       container.dataset['view'] = view;
+      if (view === 'split') container.scrollTop = 0;
+    },
+    setSplitRatio(ratio) {
+      container.style.setProperty('--galeo-split-source', `${Math.round(ratio * 1000) / 10}%`);
     },
     setScheme(scheme) {
       container.dataset['scheme'] = scheme;

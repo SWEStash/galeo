@@ -509,7 +509,8 @@ main {
   min-height: 0;
   overflow: auto;
 }
-.document-view[data-view='source'] {
+.document-view[data-view='source'],
+.document-view[data-view='split'] {
   overflow: hidden;
 }
 

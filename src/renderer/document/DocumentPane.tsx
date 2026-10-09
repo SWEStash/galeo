@@ -23,6 +23,7 @@ import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
 import { useRenderedHtml } from './useRenderedHtml';
+import { afterToggleSource, afterToggleSplit, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
 
@@ -168,14 +169,20 @@ export function DocumentPane({
   const [renderAnyway, setRenderAnyway] = useState(false);
   const [wrap, setWrap] = useState(false);
   const [follow, setFollow] = useState(initialViewState.follow === true);
-  const wantedView = chosenView ?? ready?.view ?? 'rendered';
+  // The source pane's share of a split (ADR-014), kept with the view state once moved.
+  const [ratio] = useState(initialViewState.ratio ?? 0.5);
   // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
   const renderable = ready?.format === 'markdown' || ready?.format === 'text';
+  const splittable = ready?.format === 'markdown';
+  const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
   const markdown = ready?.format === 'markdown' ? ready.text : null;
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
-  const render = useRenderedHtml(client, markdown, wantedView === 'rendered', { readerAsked: ready?.banner === 'too-large' });
+  const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large' });
   // A document that failed to render shows its source instead.
-  const view = wantedView === 'rendered' && render.status === 'failed' ? 'source' : wantedView;
+  const view = wantedView !== 'source' && render.status === 'failed' ? 'source' : wantedView;
+  // What Ctrl+\ goes back to from split.
+  const lastSingle = useRef<SingleView>('rendered');
+  if (view !== 'split') lastSingle.current = view;
   const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending' && render.html === null, LOADING_DELAY_MS);
   const rendered = useMemo<RenderedContent | null>(() => {
     if (ready?.format === 'text') return { text: ready.text };
@@ -249,7 +256,7 @@ export function DocumentPane({
     setDirty(true);
     setHeld(true);
     setEditing(true);
-    setChosenView('source');
+    setChosenView((current) => viewForEditing(current ?? 'source'));
     assess(content);
   }, [recovered, ready !== null]);
   const reportedDirty = useRef(false);
@@ -267,7 +274,7 @@ export function DocumentPane({
         return;
       }
       setEditing(true);
-      setChosenView('source');
+      setChosenView(viewForEditing(view));
     } else if (dirtyNow.current) {
       void onConfirmLeave?.().then((left) => {
         if (!left) return;
@@ -426,7 +433,7 @@ export function DocumentPane({
   const [outlineOpen, setOutlineOpen] = useOutline();
   const [focusOutline, setFocusOutline] = useState(false);
   const [heading, setHeading] = useState<string | null>(null);
-  const outlined = ready?.format === 'markdown' && view === 'rendered';
+  const outlined = ready?.format === 'markdown' && (view === 'rendered' || view === 'split');
   const showsOutline = active && outlineOpen && outlined;
   const closeOutline = useCallback(() => {
     setOutlineOpen(false);
@@ -444,6 +451,11 @@ export function DocumentPane({
     onHistory(direction);
     return true;
   };
+  const toggle = (next: ViewToggle) => {
+    if ('refused' in next) onMessage?.(next.refused);
+    else setChosenView(next.view);
+    return true;
+  };
   const step = (direction: 1 | -1) => () => {
     if (!find.open) return false;
     stepFind(direction);
@@ -451,17 +463,10 @@ export function DocumentPane({
   };
   useCommands(
     {
-      toggleSource: () => {
-        if (!renderable) return false;
-        if (editing) {
-          onMessage?.('Leave edit mode (Ctrl+E) to see the rendered view');
-          return true;
-        }
-        setChosenView(view === 'rendered' ? 'source' : 'rendered');
-        return true;
-      },
+      toggleSource: () => renderable && toggle(afterToggleSource(view, { editing })),
+      toggleSplit: () => ready !== null && toggle(afterToggleSplit(view, { splittable, editing, lastSingle: lastSingle.current })),
       toggleWrap: () => {
-        if (view !== 'source') return false;
+        if (view === 'rendered') return false;
         setWrap((current) => !current);
         return true;
       },
@@ -517,17 +522,21 @@ export function DocumentPane({
 
   // An anchor waits until the rendered view has content to scroll to.
   useEffect(() => {
-    if (!pendingAnchor || view !== 'rendered' || !rendered) return;
+    if (!pendingAnchor || view === 'source' || !rendered) return;
     documentHandle.current?.scrollToAnchor(pendingAnchor.anchor);
     onAnchorShown();
   }, [pendingAnchor, view, rendered, onAnchorShown]);
 
   useEffect(() => {
-    onViewState?.({ ...(chosenView ? { view: chosenView } : {}), ...(follow ? { follow: true as const } : {}) });
-  }, [onViewState, chosenView, follow]);
+    onViewState?.({
+      ...(chosenView ? { view: chosenView } : {}),
+      ...(follow ? { follow: true as const } : {}),
+      ...(ratio !== 0.5 ? { ratio } : {}),
+    });
+  }, [onViewState, chosenView, follow, ratio]);
 
   // Only the source view shows the file's lines; rendered and reader views wrap to the window.
-  const lines = useMemo(() => (ready && view === 'source' ? countLines(ready.text) : null), [ready, view]);
+  const lines = useMemo(() => (ready && view !== 'rendered' ? countLines(ready.text) : null), [ready, view]);
   // Markdown's prose is counted by the worker as it renders; `.txt` is all prose.
   const textWords = useMemo(() => (ready?.format === 'text' ? countWords(ready.text) : null), [ready]);
   const words = ready?.format === 'markdown' ? render.words : textWords;
@@ -584,6 +593,7 @@ export function DocumentPane({
           editable={editing}
           onEdit={edited}
           view={view}
+          splitRatio={ratio}
           wrap={wrap}
           follow={follow}
           onFollowEnded={endFollow}

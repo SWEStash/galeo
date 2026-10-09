@@ -50,6 +50,43 @@ describe('mountDocumentHost', () => {
     expect(text(b.root.adoptedStyleSheets.at(-1)!)).toContain('margin');
   });
 
+  it('shows one view at a time, or both side by side in split, with the rendered pane scrolling itself there', () => {
+    const element = container();
+    const host = mountDocumentHost(element);
+    const source = host.root.querySelector<HTMLElement>('.galeo-source')!;
+    host.showView('rendered');
+    expect([host.article.hidden, source.hidden]).toEqual([false, true]);
+    expect(host.renderedScroller).toBe(element);
+    host.showView('source');
+    expect([host.article.hidden, source.hidden]).toEqual([true, false]);
+    host.showView('split');
+    expect([host.article.hidden, source.hidden]).toEqual([false, false]);
+    expect(element.dataset['view']).toBe('split');
+    // Source first, on the left; the rendered pane holds the article and scrolls on its own.
+    const pane = host.renderedScroller;
+    expect(pane).not.toBe(element);
+    expect(pane.contains(host.article)).toBe(true);
+    expect(source.compareDocumentPosition(pane) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    host.showView('rendered');
+    expect(host.renderedScroller).toBe(element);
+  });
+
+  it('lays a split out from the top: the container no longer scrolls, so an old offset would hide the panes', () => {
+    const element = container();
+    const host = mountDocumentHost(element);
+    host.showView('rendered');
+    element.scrollTop = 120;
+    host.showView('split');
+    expect(element.scrollTop).toBe(0);
+  });
+
+  it("sizes a split's source pane by the divider's ratio", () => {
+    const element = container();
+    const host = mountDocumentHost(element);
+    host.setSplitRatio(0.3);
+    expect(element.style.getPropertyValue('--galeo-split-source')).toBe('30%');
+  });
+
   it('replaces the content on each update', () => {
     const host = mountDocumentHost(container());
     host.setContent('<p>one</p>');

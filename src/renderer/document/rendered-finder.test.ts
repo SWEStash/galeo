@@ -9,7 +9,7 @@ describe('createRenderedFinder', () => {
     const scroller = document.createElement('div');
     scroller.append(article);
     document.body.append(scroller);
-    const finder = createRenderedFinder(article, scroller);
+    const finder = createRenderedFinder(article, () => scroller);
     expect(finder.find('plan', { caseSensitive: false })).toEqual({ current: 1, total: 2, capped: false });
     expect(finder.step(1)).toEqual({ current: 2, total: 2, capped: false });
     finder.clear();

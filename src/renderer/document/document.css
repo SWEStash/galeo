@@ -19,6 +19,23 @@
   height: 100%;
 }
 
+/* Split (ADR-014): source on the left, rendered on the right, each pane scrolling itself. */
+:host([data-view='split']) {
+  display: grid;
+  grid-template-columns: var(--galeo-split-source, 50%) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+:host([data-view='split']) .galeo-source,
+:host([data-view='split']) .galeo-rendered-pane {
+  min-width: 0;
+  height: 100%;
+  overscroll-behavior: contain;
+}
+:host([data-view='split']) .galeo-rendered-pane {
+  overflow: auto;
+  border-left: 1px solid var(--galeo-color-border);
+}
+
 .galeo-document {
   box-sizing: border-box;
   max-width: var(--galeo-measure);

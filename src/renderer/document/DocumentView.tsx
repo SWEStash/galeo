@@ -50,6 +50,8 @@ export interface DocumentViewProps {
   onEdit?: (() => void) | undefined;
   /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
   onHeading?: ((id: string | null) => void) | undefined;
+  /** The source pane's share of the width in split (ADR-014). */
+  splitRatio?: number;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
   ref?: Ref<DocumentHandle>;
 }
@@ -57,9 +59,12 @@ export interface DocumentViewProps {
 /** Scrolling has settled once it pauses this long; only then is the position reported. */
 const POSITION_SETTLE_MS = 300;
 
+const showsRendered = (view: ViewMode | null) => view === 'rendered' || view === 'split';
+const showsSource = (view: ViewMode | null) => view === 'source' || view === 'split';
+
 /** The rendered blocks in scroll-content coordinates, headings named by their id. */
-function placedBlocks(host: DocumentHost, container: HTMLElement): PlacedBlock[] {
-  const origin = container.getBoundingClientRect().top - container.scrollTop;
+function placedBlocks(host: DocumentHost, scroller: HTMLElement): PlacedBlock[] {
+  const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
   return [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => {
     const box = element.getBoundingClientRect();
     return {
@@ -82,8 +87,8 @@ export interface DocumentHandle extends Finder {
 }
 
 /** The source line at the top of the rendered view. */
-function renderedTopLine(host: DocumentHost, container: HTMLElement): number {
-  const viewportTop = container.getBoundingClientRect().top;
+function renderedTopLine(host: DocumentHost): number {
+  const viewportTop = host.renderedScroller.getBoundingClientRect().top;
   const blocks = [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => {
     const box = element.getBoundingClientRect();
     return { line: Number(element.dataset['srcLine']), top: box.top, bottom: box.bottom };
@@ -126,6 +131,7 @@ export function DocumentView({
   onExpandImage,
   editable = false,
   onEdit,
+  splitRatio = 0.5,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -141,13 +147,15 @@ export function DocumentView({
   const editing = useRef(editable);
   editing.current = editable;
   const renderedFinder = useRef<Finder | null>(null);
+  // The split pane the reader last turned to: find searches it, else the source (ADR-014).
+  const turnedTo = useRef<'source' | 'rendered'>('source');
   const host = () => mountDocumentHost(container.current!);
 
   useImperativeHandle(ref, () => {
-    const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, container.current!));
+    const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, () => host().renderedScroller));
     const active = (): Finder => {
       const sourceView = host().source;
-      if (view === 'source' && sourceView) {
+      if ((view === 'source' || (view === 'split' && turnedTo.current === 'source')) && sourceView) {
         return { find: sourceView.find, step: sourceView.findStep, clear: sourceView.clearFind };
       }
       return inRendered();
@@ -162,14 +170,14 @@ export function DocumentView({
       // In edit mode the caret goes back into the editor; otherwise the document takes focus.
       focus: () => {
         const source = host().source;
-        if (editing.current && source && shownView.current === 'source') source.view.focus();
+        if (editing.current && source && showsSource(shownView.current)) source.view.focus();
         else container.current?.focus();
       },
       sourceText: () => host().source?.text() ?? null,
       replaceSource: (text) => host().source?.setText(text),
       scrollToAnchor: (anchor) => {
         if (!anchor) {
-          container.current!.scrollTop = 0;
+          host().renderedScroller.scrollTop = 0;
           return true;
         }
         // Footnote links name the full id; heading links name the slug, which has the prefix.
@@ -200,12 +208,19 @@ export function DocumentView({
       event.preventDefault();
       menuListener.current?.();
     };
+    const onTurn = (event: Event) => {
+      turnedTo.current = event.composedPath().includes(host().article) ? 'rendered' : 'source';
+    };
     root.addEventListener('click', onClick);
     root.addEventListener('auxclick', onClick);
+    root.addEventListener('pointerdown', onTurn);
+    root.addEventListener('focusin', onTurn);
     element.addEventListener('contextmenu', onMenu);
     return () => {
       root.removeEventListener('click', onClick);
       root.removeEventListener('auxclick', onClick);
+      root.removeEventListener('pointerdown', onTurn);
+      root.removeEventListener('focusin', onTurn);
       element.removeEventListener('contextmenu', onMenu);
     };
   }, []);
@@ -221,10 +236,10 @@ export function DocumentView({
   useLayoutEffect(() => {
     if (!rendered) return;
     const documentHost = host();
-    const element = container.current!;
+    const element = documentHost.renderedScroller;
     // New content for the same file (it changed on disk) keeps the reader where they were,
     // anchored to the block at the top of the view, before anything paints (UX F7).
-    const before = hasContent.current && view === 'rendered' && !waking ? placedBlocks(documentHost, element) : null;
+    const before = hasContent.current && showsRendered(view) && !waking ? placedBlocks(documentHost, element) : null;
     const top = element.scrollTop;
     diagrams.current?.dispose();
     diagrams.current = null;
@@ -242,7 +257,7 @@ export function DocumentView({
       element.dataset['reloadedAt'] = String(Date.now());
     }
     hasContent.current = true;
-    if (view === 'rendered') markDocumentPaint();
+    if (showsRendered(view)) markDocumentPaint();
   }, [rendered]);
 
   // Local images wait for main: the page never names a file to load itself (ADR-004).
@@ -273,7 +288,7 @@ export function DocumentView({
   // The editor loads the first time a source view shows; until then the rendered view stays.
   const [sourceReady, setSourceReady] = useState(sourceViewLoaded);
   useEffect(() => {
-    if (view !== 'source' || sourceReady) return;
+    if (!showsSource(view) || sourceReady) return;
     let current = true;
     void loadSourceView().then(() => current && setSourceReady(true));
     return () => {
@@ -283,7 +298,7 @@ export function DocumentView({
 
   const shownSource = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (!sourceReady || (view !== 'source' && !host().source)) return;
+    if (!sourceReady || (!showsSource(view) && !host().source)) return;
     host().showSource(source.text, source.language, wrap);
     if (shownSource.current !== null && shownSource.current !== source.text) container.current!.dataset['reloadedAt'] = String(Date.now());
     shownSource.current = source.text;
@@ -293,19 +308,19 @@ export function DocumentView({
   useLayoutEffect(() => {
     const documentHost = host();
     const previous = shownView.current;
-    if (previous === view || (view === 'source' && !sourceReady)) return;
-    const line =
-      previous === 'rendered'
-        ? renderedTopLine(documentHost, container.current!)
-        : previous === 'source'
-          ? documentHost.source?.topLine()
-          : undefined;
+    if (previous === view || (showsSource(view) && !sourceReady)) return;
+    const line = showsRendered(previous) ? renderedTopLine(documentHost) : previous === 'source' ? documentHost.source?.topLine() : undefined;
     documentHost.showView(view);
     shownView.current = view;
     if (line === undefined) return;
-    if (view === 'source') documentHost.source?.scrollToLine(line);
-    else scrollRenderedTo(documentHost, line);
+    // Each pane shown comes in at the reader's place; the rendered one may now scroll elsewhere.
+    if (showsSource(view) && previous !== 'source') documentHost.source?.scrollToLine(line);
+    if (showsRendered(view)) scrollRenderedTo(documentHost, line);
   }, [view, sourceReady]);
+
+  useLayoutEffect(() => {
+    host().setSplitRatio(splitRatio);
+  }, [splitRatio]);
 
   // After the view switch above (a hidden view can't take focus): edit mode makes the source view
   // editable and puts the caret in it; reading makes it read-only again.
@@ -315,7 +330,7 @@ export function DocumentView({
     const sourceView = host().source;
     if (!sourceReady || !sourceView) return;
     sourceView.setEditable(editable);
-    if (editable && view === 'source') sourceView.view.focus();
+    if (editable && showsSource(view)) sourceView.view.focus();
   }, [editable, sourceReady, view]);
   useEffect(() => {
     const sourceView = host().source;
@@ -328,12 +343,13 @@ export function DocumentView({
     const documentHost = host();
     if (view === 'source' && documentHost.source) {
       documentHost.source.scrollToLine(initialPosition.line);
-    } else if (view === 'rendered' && rendered) {
-      const element = container.current!;
+    } else if (showsRendered(view) && rendered && (view === 'rendered' || documentHost.source)) {
+      const element = documentHost.renderedScroller;
       element.scrollTop = scrollTopFor(initialPosition, placedBlocks(documentHost, element), {
         height: element.scrollHeight,
         viewport: element.clientHeight,
       });
+      documentHost.source?.scrollToLine(initialPosition.line);
     } else {
       return;
     }
@@ -346,7 +362,8 @@ export function DocumentView({
   useEffect(() => {
     const documentHost = host();
     const element = container.current!;
-    const scroller = view === 'source' ? documentHost.source?.view.scrollDOM : element;
+    // In split the rendered pane reports: scroll sync keeps the source on the same block.
+    const scroller = view === 'source' ? documentHost.source?.view.scrollDOM : documentHost.renderedScroller;
     if (!scroller) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let latest: ScrollAnchor | null = null;
@@ -361,7 +378,7 @@ export function DocumentView({
       latest =
         view === 'source'
           ? { ...anchorAt([], scroll), line: documentHost.source!.topLine() }
-          : anchorAt(placedBlocks(documentHost, element), scroll);
+          : anchorAt(placedBlocks(documentHost, scroller), scroll);
       clearTimeout(timer);
       timer = setTimeout(report, POSITION_SETTLE_MS);
     };
@@ -375,8 +392,8 @@ export function DocumentView({
 
   // The outline follows the reader: the heading at the top of the view, once per frame of scrolling.
   useEffect(() => {
-    if (!onHeading || view !== 'rendered' || !rendered) return;
-    const element = container.current!;
+    if (!onHeading || !showsRendered(view) || !rendered) return;
+    const element = host().renderedScroller;
     const article = host().article;
     let frame = 0;
     const update = () => {
@@ -400,7 +417,7 @@ export function DocumentView({
 
   useEffect(() => {
     const renderedBytes = rendered ? 2 * ('html' in rendered ? rendered.html.length : rendered.text.length) : 0;
-    const sourceBytes = view === 'source' || host().source ? 2 * source.text.length : 0;
+    const sourceBytes = showsSource(view) || host().source ? 2 * source.text.length : 0;
     onWeight?.(renderedBytes + sourceBytes);
   }, [rendered, view, source.text, onWeight]);
 

@@ -15,8 +15,8 @@ function registry(): HighlightRegistry | null {
   return typeof Highlight === 'undefined' || typeof CSS === 'undefined' || !CSS.highlights ? null : CSS.highlights;
 }
 
-/** Find in the rendered view: matches highlighted in place, the current one centred in `scroller`. */
-export function createRenderedFinder(article: HTMLElement, scroller: HTMLElement): Finder {
+/** Find in the rendered view: matches highlighted in place, the current one centred in what scrolls it now. */
+export function createRenderedFinder(article: HTMLElement, scrollerOf: () => HTMLElement): Finder {
   let ranges: Range[] = [];
   let current = -1;
 
@@ -39,6 +39,7 @@ export function createRenderedFinder(article: HTMLElement, scroller: HTMLElement
     if (!range) return;
     // The current match goes to the middle of the view (UX F9).
     const box = range.getBoundingClientRect();
+    const scroller = scrollerOf();
     const view = scroller.getBoundingClientRect();
     scroller.scrollTop += box.top - view.top - (view.height - box.height) / 2;
   };
@@ -47,7 +48,7 @@ export function createRenderedFinder(article: HTMLElement, scroller: HTMLElement
     find(query, { caseSensitive }) {
       ranges = findRanges(article, query, { caseSensitive });
       // Start from the reading position: the first match not above the view.
-      const top = scroller.getBoundingClientRect().top;
+      const top = scrollerOf().getBoundingClientRect().top;
       const visible = ranges.findIndex((range) => range.getBoundingClientRect().bottom >= top);
       current = ranges.length === 0 ? -1 : Math.max(visible, 0);
       paint();
