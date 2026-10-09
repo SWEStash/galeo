@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { copyFileSync } from 'node:fs';
+import { copyFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
@@ -294,5 +294,64 @@ test('inside a long code block the rendered pane follows the source line by line
     await expect.poll(async () => near(await through(), wanted, 0.1)).toBe(true);
   } finally {
     await close();
+  }
+});
+
+test('typing in split updates the preview once typing pauses', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'draft.md');
+  writeFileSync(file, '# Draft\n\nFirst paragraph.\n');
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await pressInMain(app, window, 'E');
+    await expect(document.locator('.cm-content')).toBeFocused();
+    await window.keyboard.press('Control+End');
+    await window.keyboard.type('\n## Typed heading');
+    await expect(document.locator('h2')).toHaveText('Typed heading');
+    // Unsaved: the preview shows the editor's text, the file is as it was.
+    await expect(window.locator('.tab-indicator[data-indicator="unsaved changes"]')).toBeAttached();
+  } finally {
+    app.process().kill('SIGKILL');
+    await close().catch(() => {});
+    removeTempHome(dir);
+  }
+});
+
+test('a paragraph typed in split leaves drawn diagrams as they are', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'flow.md');
+  writeFileSync(file, '# Flow\n\n```mermaid\ngraph TD\n  A[Start] --> B[Done]\n```\n\nA paragraph.\n');
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+    await expect(document.locator('.galeo-diagram[data-state="rendered"]')).toBeVisible();
+    // Drawing goes through "pending"; a diagram whose source didn't change comes back drawn.
+    await document.evaluate((host) => {
+      const seen: string[] = [];
+      (globalThis as { __pending?: string[] }).__pending = seen;
+      new MutationObserver((records) => {
+        for (const record of records) {
+          const target = record.target as HTMLElement;
+          if (target.dataset?.['state'] === 'pending') seen.push('pending');
+        }
+      }).observe(host.shadowRoot!, { subtree: true, attributes: true, attributeFilter: ['data-state'] });
+    });
+    await pressInMain(app, window, 'E');
+    await expect(document.locator('.cm-content')).toBeFocused();
+    await window.keyboard.press('Control+End');
+    await window.keyboard.type(' More words.');
+    await expect(document.locator('article p').last()).toHaveText('A paragraph. More words.');
+    await expect(document.locator('.galeo-diagram[data-state="rendered"]')).toBeVisible();
+    expect(await window.evaluate(() => (globalThis as { __pending?: string[] }).__pending)).toEqual([]);
+  } finally {
+    app.process().kill('SIGKILL');
+    await close().catch(() => {});
+    removeTempHome(dir);
   }
 });

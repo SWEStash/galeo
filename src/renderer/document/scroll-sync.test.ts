@@ -73,12 +73,12 @@ describe('syncScrolling', () => {
     };
     const source = pane();
     const rendered = pane();
-    const stop = syncScrolling({ source, rendered }, (run) => frames.push(run));
+    const sync = syncScrolling({ source, rendered }, (run) => frames.push(run));
     const scroll = (target: ReturnType<typeof pane>, line: number) => {
       target.line = line;
       target.scroller.dispatchEvent(new Event('scroll'));
     };
-    return { frames, flush, source, rendered, stop, scroll };
+    return { frames, flush, source, rendered, sync, scroll };
   }
 
   it('moves the other pane to the scrolled one’s place on the next frame, once per frame', () => {
@@ -117,9 +117,32 @@ describe('syncScrolling', () => {
     expect(rendered.moves).toEqual([4]);
   });
 
+  it('puts a pane whose content changed back on the leader’s line, its own scrolling meanwhile ignored', () => {
+    const { flush, source, rendered, sync, scroll } = setup();
+    scroll(source, 8);
+    flush(5);
+    sync.refresh(rendered);
+    // Keeping its place through new content scrolls it: that isn't the reader.
+    rendered.scroller.dispatchEvent(new Event('scroll'));
+    flush(5);
+    expect(rendered.moves).toEqual([8, 8]);
+    expect(source.moves).toEqual([]);
+  });
+
+  it('leaves a leading pane whose content changed where it is, and the other pane too', () => {
+    const { flush, source, rendered, sync, scroll } = setup();
+    scroll(rendered, 8);
+    flush(5);
+    sync.refresh(rendered);
+    rendered.scroller.dispatchEvent(new Event('scroll'));
+    flush(5);
+    expect(rendered.moves).toEqual([]);
+    expect(source.moves).toEqual([8]);
+  });
+
   it('stops listening when stopped', () => {
-    const { flush, source, rendered, stop, scroll } = setup();
-    stop();
+    const { flush, source, rendered, sync, scroll } = setup();
+    sync.stop();
     scroll(rendered, 12);
     flush();
     expect(source.moves).toEqual([]);

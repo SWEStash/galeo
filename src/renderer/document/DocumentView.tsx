@@ -9,7 +9,7 @@ import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor
 import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
-import { lineAtOffset, offsetOfLine, syncScrolling, type SyncBlock } from './scroll-sync';
+import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBlock, type SyncPane } from './scroll-sync';
 import type { SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 
@@ -172,6 +172,7 @@ export function DocumentView({
   // The split pane the reader last turned to: find searches it, else the source (ADR-014).
   const turnedTo = useRef<'source' | 'rendered'>('source');
   const host = () => mountDocumentHost(container.current!);
+  const sync = useRef<{ controller: ScrollSync; rendered: SyncPane } | null>(null);
 
   useImperativeHandle(ref, () => {
     const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, () => host().renderedScroller));
@@ -279,6 +280,8 @@ export function DocumentView({
       element.dataset['reloadedAt'] = String(Date.now());
     }
     hasContent.current = true;
+    // A new preview keeps following the pane the reader leads with, not its own adjustment above.
+    if (sync.current) sync.current.controller.refresh(sync.current.rendered);
     if (showsRendered(view)) markDocumentPaint();
   }, [rendered]);
 
@@ -353,16 +356,19 @@ export function DocumentView({
     const sourceView = documentHost.source;
     if (view !== 'split' || !sourceReady || !sourceView) return;
     const scroller = documentHost.renderedScroller;
-    return syncScrolling({
-      source: { scroller: sourceView.view.scrollDOM, position: sourceView.topPosition, scrollTo: sourceView.scrollToPosition },
-      rendered: {
-        scroller,
-        position: () => lineAtOffset(syncBlocks(documentHost), scroller.scrollTop),
-        scrollTo: (line) => {
-          scroller.scrollTop = offsetOfLine(syncBlocks(documentHost), line);
-        },
+    const rendered: SyncPane = {
+      scroller,
+      position: () => lineAtOffset(syncBlocks(documentHost), scroller.scrollTop),
+      scrollTo: (line) => {
+        scroller.scrollTop = offsetOfLine(syncBlocks(documentHost), line);
       },
-    });
+    };
+    const controller = syncScrolling({ source: { scroller: sourceView.view.scrollDOM, position: sourceView.topPosition, scrollTo: sourceView.scrollToPosition }, rendered });
+    sync.current = { controller, rendered };
+    return () => {
+      controller.stop();
+      sync.current = null;
+    };
   }, [view, sourceReady]);
 
   // Whether a split fits: measured as the document area resizes; a hidden tab (no width) keeps its say.

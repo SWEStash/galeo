@@ -62,6 +62,15 @@ const READER_INPUT = ['wheel', 'pointerdown', 'keydown', 'touchstart'] as const;
 /** How many frames a follower's own scroll events are ignored after it is moved. */
 const SETTLE_FRAMES = 2;
 
+export interface ScrollSync {
+  /**
+   * `pane`'s content changed (a live preview): its own scrolling while it keeps its place is
+   * ignored, and unless it leads it is put back on the leader's line.
+   */
+  refresh(pane: SyncPane): void;
+  stop(): void;
+}
+
 /**
  * Keeps the panes on the same source line: the pane that scrolls leads, and the other follows on the
  * next frame. A follower's own scroll events are ignored while it settles, so the two never drive
@@ -70,33 +79,41 @@ const SETTLE_FRAMES = 2;
 export function syncScrolling(
   panes: { source: SyncPane; rendered: SyncPane },
   schedule: (run: () => void) => unknown = requestAnimationFrame,
-): () => void {
-  const following = new Set<SyncPane>();
+): ScrollSync {
+  // Panes whose own scroll events are ignored, each with the hold that ends it (the latest wins).
+  const following = new Map<SyncPane, number>();
+  let holds = 0;
   let leader: SyncPane | null = null;
   let pending = false;
   const other = (pane: SyncPane) => (pane === panes.source ? panes.rendered : panes.source);
 
-  const settle = (pane: SyncPane, frames: number) => {
-    if (!following.has(pane)) return;
-    if (frames === 0) following.delete(pane);
-    else schedule(() => settle(pane, frames - 1));
+  const hold = (pane: SyncPane) => {
+    const token = ++holds;
+    following.set(pane, token);
+    const tick = (frames: number) => {
+      if (following.get(pane) !== token) return;
+      if (frames === 0) following.delete(pane);
+      else schedule(() => tick(frames - 1));
+    };
+    tick(SETTLE_FRAMES);
   };
   const follow = () => {
     pending = false;
     if (!leader) return;
     const follower = other(leader);
-    following.add(follower);
+    hold(follower);
     follower.scrollTo(leader.position());
-    settle(follower, SETTLE_FRAMES);
+  };
+  const followSoon = () => {
+    if (pending) return;
+    pending = true;
+    schedule(follow);
   };
   const stops = [panes.source, panes.rendered].flatMap((pane) => {
     const onScroll = () => {
       if (following.has(pane)) return;
       leader = pane;
-      if (!pending) {
-        pending = true;
-        schedule(follow);
-      }
+      followSoon();
     };
     const onInput = () => following.delete(pane);
     pane.scroller.addEventListener('scroll', onScroll, { passive: true });
@@ -108,8 +125,16 @@ export function syncScrolling(
       },
     ];
   });
-  return () => {
-    leader = null;
-    for (const stop of stops) stop();
+  return {
+    refresh(pane) {
+      hold(pane);
+      if (leader === pane) return;
+      leader = other(pane);
+      followSoon();
+    },
+    stop() {
+      leader = null;
+      for (const stop of stops) stop();
+    },
   };
 }

@@ -22,6 +22,7 @@ import { useDelayed } from './useDelayed';
 import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
+import { pauseOrMax } from './pause-or-max';
 import { useRenderedHtml } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 
@@ -87,6 +88,9 @@ export interface DocumentPaneProps {
 
 /** Unsaved text goes to main once typing pauses this long. */
 const KEEP_MS = 1000;
+
+/** Split while editing re-renders once typing pauses this long, and at least this often (ADR-014). */
+const PREVIEW_TIMING = { pauseMs: 150, maxMs: 1000 };
 
 /** Why Ctrl+S doesn't write while the bar waits for the reader's choice. */
 const DISK_UNSAVED: Record<DiskChange, string> = {
@@ -176,9 +180,11 @@ export function DocumentPane({
   const renderable = ready?.format === 'markdown' || ready?.format === 'text';
   const splittable = ready?.format === 'markdown';
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
-  const markdown = ready?.format === 'markdown' ? ready.text : null;
+  // Editing in split, the preview follows the editor's text rather than the file's (ADR-014).
+  const [previewText, setPreviewText] = useState<string | null>(null);
+  const markdown = ready?.format === 'markdown' ? (previewText ?? ready.text) : null;
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
-  const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large' });
+  const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large', live: previewText !== null });
   // A document that failed to render shows its source instead.
   const layout = wantedView !== 'source' && render.status === 'failed' ? 'source' : wantedView;
   // What Ctrl+\ goes back to from split.
@@ -202,6 +208,19 @@ export function DocumentPane({
   const [editing, setEditing] = useState(false);
   // A split in a window too narrow for it shows one view; the toggles still act on the split.
   const view = shownView(layout, { narrow, editing });
+  const live = editing && view === 'split' && splittable;
+  const liveNow = useRef(live);
+  liveNow.current = live;
+  const preview = useMemo(() => pauseOrMax(() => setPreviewText(documentHandle.current?.sourceText() ?? null), PREVIEW_TIMING), []);
+  useEffect(() => {
+    // Into live: the preview starts from the editor's text as it is; out of it, from the file's.
+    if (live) setPreviewText(documentHandle.current?.sourceText() ?? null);
+    else {
+      preview.cancel();
+      setPreviewText(null);
+    }
+  }, [live, preview]);
+  useEffect(() => () => preview.cancel(), [preview]);
   const edits = useRef(0);
   const [pinnedText, setPinnedText] = useState('');
   const base = useRef(ready?.version ?? null);
@@ -241,6 +260,7 @@ export function DocumentPane({
   const keepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const edited = useCallback(() => {
     edits.current++;
+    if (liveNow.current) preview.poke();
     if (!dirtyNow.current) markDirty(true);
     clearTimeout(keepTimer.current);
     keepTimer.current = setTimeout(() => {
@@ -319,6 +339,8 @@ export function DocumentPane({
   /** Drops the edits: the editor shows the file as last read, and a save names that version. */
   const discard = () => {
     documentHandle.current?.replaceSource(readText.current);
+    // The file's text replaces the edits without an edit: a live preview shows it now too.
+    if (liveNow.current) setPreviewText(readText.current);
     base.current = readVersion.current;
     markDirty(false);
     setHeld(false);
@@ -578,6 +600,7 @@ export function DocumentPane({
           {onChooseEncoding && <EncodingMenu onChoose={onChooseEncoding}>Reopen with encoding…</EncodingMenu>}
         </DocumentBanner>
       )}
+      {render.status === 'paused' && <DocumentBanner kind={render.reason === 'slow' ? 'preview-slow' : 'preview-failed'} />}
       {render.status === 'failed' &&
         (render.reason === 'slow' ? (
           <DocumentBanner kind="render-slow" onAction={render.renderAnyway} />
