@@ -22,7 +22,9 @@ type DocumentChannels =
   | 'documents.save'
   | 'documents.dirty'
   | 'documents.leaveEdit'
-  | 'documents.closeAnswer';
+  | 'documents.closeAnswer'
+  | 'documents.keep'
+  | 'documents.recover';
 
 /**
  * The document channels. Every request names a document by id and is scoped to the sending
@@ -103,5 +105,7 @@ export function documentHandlers(deps: {
     'documents.dirty': ([id, dirty], event) => grants.setDirty(id, event.sender.id, dirty),
     'documents.leaveEdit': ([id], event) => grants.revoke(id, event.sender.id),
     'documents.closeAnswer': ([answer], event) => unsaved.answer(event.sender.id, answer),
+    'documents.keep': ([id, text, base], event) => grants.keep(id, event.sender.id, text, base),
+    'documents.recover': ([id], event) => grants.kept(id, event.sender.id),
   };
 }

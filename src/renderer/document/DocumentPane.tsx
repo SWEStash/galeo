@@ -75,7 +75,14 @@ export interface DocumentPaneProps {
   onEditor?: (editor: Editor | null) => void;
   /** Leaving edit mode with unsaved changes: asks the reader; true once they are saved or discarded. */
   onConfirmLeave?: () => Promise<boolean>;
+  /** Hands main the unsaved text, kept in memory for a renderer crash (ADR-013). */
+  onKeep?: (text: string, base: string) => void;
+  /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
+  recovered?: { text: string; base: string } | null;
 }
+
+/** Unsaved text goes to main once typing pauses this long. */
+const KEEP_MS = 1000;
 
 /** What the status bar says when a save didn't write. */
 function notSaved(result: Exclude<SaveResult, { kind: 'saved' }>, encoding: TextEncoding): string {
@@ -134,6 +141,8 @@ export function DocumentPane({
   onMessage,
   onEditor,
   onConfirmLeave,
+  onKeep,
+  recovered = null,
 }: DocumentPaneProps) {
   const ready = content.state === 'ready' ? content : null;
   // The document's own opening view until the user toggles it.
@@ -182,10 +191,30 @@ export function DocumentPane({
     dirtyNow.current = next;
     setDirty(next);
   };
+  const keepListener = useRef(onKeep);
+  keepListener.current = onKeep;
+  const keepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const edited = useCallback(() => {
     edits.current++;
     if (!dirtyNow.current) markDirty(true);
+    clearTimeout(keepTimer.current);
+    keepTimer.current = setTimeout(() => {
+      const text = documentHandle.current?.sourceText();
+      if (dirtyNow.current && text != null && base.current !== null) keepListener.current?.(text, base.current);
+    }, KEEP_MS);
   }, []);
+  useEffect(() => () => clearTimeout(keepTimer.current), []);
+  // Back from a crash with unsaved text: edit mode again, that text, still unsaved, still against
+  // the version it was loaded from.
+  useEffect(() => {
+    if (!recovered || !ready) return;
+    base.current = recovered.base;
+    setPinnedText(recovered.text);
+    dirtyNow.current = true;
+    setDirty(true);
+    setEditing(true);
+    setChosenView('source');
+  }, [recovered, ready !== null]);
   const reportedDirty = useRef(false);
   useEffect(() => {
     if (dirty === reportedDirty.current) return;

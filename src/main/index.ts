@@ -427,6 +427,8 @@ function start(initialMode: StartupMode): void {
     const windowId = window.webContents.id;
     for (const id of warm.warm(windowId)) warm.forget(windowId, id);
     for (const record of documents.list(windowId)) reads.forget(record.id);
+    // The page comes back read-only; tabs with unsaved text get it back from main, still editable.
+    grants.dropClean(windowId);
     const active = documents.snapshot(windowId).active;
     if (active && activate) warm.activated(windowId, active);
     window.webContents.reload();

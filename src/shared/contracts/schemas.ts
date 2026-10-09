@@ -9,6 +9,8 @@ import { READ_MAX_BYTES } from '../documents';
  * of `index.ts` so the preload and renderer never reach zod.
  */
 const documentId = z.string().min(1).max(64);
+/** A document version: the content hash a read gave (ADR-013). */
+const version = z.string().min(1).max(128);
 
 /** Where a tab is scrolled (ADR-002); also stored in sessions. */
 export const scrollAnchor = z.strictObject({
@@ -54,10 +56,12 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
   'documents.pathMenu': z.tuple([documentId]),
   'documents.contextMenu': z.tuple([documentId]),
-  'documents.save': z.tuple([documentId, z.string().max(READ_MAX_BYTES), z.string().min(1).max(128)]),
+  'documents.save': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version]),
   'documents.dirty': z.tuple([documentId, z.boolean()]),
   'documents.leaveEdit': z.tuple([documentId]),
   'documents.closeAnswer': z.tuple([z.enum(['asking', 'proceed', 'cancel'])]),
+  'documents.keep': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version]),
+  'documents.recover': z.tuple([documentId]),
   'tabs.snapshot': z.tuple([]),
   'tabs.activated': z.tuple([documentId]),
   'tabs.rendering': z.tuple([documentId]),

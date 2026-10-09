@@ -95,6 +95,8 @@ export const CHANNELS = [
   'documents.dirty',
   'documents.leaveEdit',
   'documents.closeAnswer',
+  'documents.keep',
+  'documents.recover',
   'tabs.snapshot',
   'tabs.activated',
   'tabs.rendering',
@@ -186,6 +188,10 @@ export interface Requests {
    * reader), then `proceed` (every tab saved or discarded) or `cancel`.
    */
   'documents.closeAnswer': [answer: 'asking' | 'proceed' | 'cancel'];
+  /** The tab's unsaved text, which main holds in memory only so a renderer crash doesn't lose it (ADR-013). */
+  'documents.keep': [id: string, text: string, base: string];
+  /** After a crash: the unsaved text main held for the tab, if any. */
+  'documents.recover': [id: string];
   /** The sender's tabs, as main knows them. */
   'tabs.snapshot': [];
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
@@ -268,6 +274,8 @@ export interface Responses {
   'documents.dirty': void;
   'documents.leaveEdit': void;
   'documents.closeAnswer': void;
+  'documents.keep': void;
+  'documents.recover': { text: string; base: string } | null;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendering': void;

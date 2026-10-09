@@ -5,7 +5,7 @@ const ID = '0b6c1d2e-8f1a-4c3b-9d4e-5f6a7b8c9d0e';
 const accepts = (channel: keyof typeof requestSchemas, args: unknown[]) => requestSchemas[channel].safeParse(args).success;
 
 describe('document channel arguments (SR-11)', () => {
-  it.each(['documents.read', 'documents.back', 'documents.forward', 'documents.pathMenu', 'documents.contextMenu', 'documents.leaveEdit', 'recent.open', 'tabs.activated', 'tabs.rendering', 'tabs.renderAgain', 'tabs.close'] as const)('%s takes one document id', (channel) => {
+  it.each(['documents.read', 'documents.back', 'documents.forward', 'documents.pathMenu', 'documents.contextMenu', 'documents.leaveEdit', 'documents.recover', 'recent.open', 'tabs.activated', 'tabs.rendering', 'tabs.renderAgain', 'tabs.close'] as const)('%s takes one document id', (channel) => {
     expect(accepts(channel, [ID])).toBe(true);
     for (const bad of [[], [''], ['x'.repeat(65)], [42], [null], [{ id: ID }], [ID, 'extra']]) {
       expect(accepts(channel, bad)).toBe(false);
@@ -19,6 +19,11 @@ describe('document channel arguments (SR-11)', () => {
     for (const bad of [[ID, 'text'], [ID, 'text', ''], [ID, 'text', 'a'.repeat(129)], [ID, 7, 'v'], ['', 'text', 'v'], [ID, 'text', 'v', 'extra']]) {
       expect(accepts(channel, bad)).toBe(false);
     }
+  });
+
+  it('documents.keep takes an id, text up to the read cap and a version', () => {
+    expect(accepts('documents.keep', [ID, '', 'v'])).toBe(true);
+    for (const bad of [[ID, 'text'], [ID, 'text', ''], [ID, 1, 'v'], ['', 'text', 'v']]) expect(accepts('documents.keep', bad)).toBe(false);
   });
 
   it('documents.closeAnswer takes one of its three answers', () => {

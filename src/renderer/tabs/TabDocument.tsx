@@ -149,6 +149,19 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
   const dirty = useCallback((isDirty: boolean) => void window.galeo.documents.dirty(id, isDirty).catch(ignoreClosedTab), [id]);
   const leaveEdit = useCallback(() => void window.galeo.documents.leaveEdit(id).catch(ignoreClosedTab), [id]);
   const onEditor = useCallback((editor: Editor | null) => (editor ? editors.set(id, editor) : editors.delete(id)), [id]);
+  const keep = useCallback((text: string, base: string) => void window.galeo.documents.keep(id, text, base).catch(ignoreClosedTab), [id]);
+  // Unsaved text main kept from before a renderer crash, for the tab's first document only.
+  const [recovered, setRecovered] = useState<{ text: string; base: string } | null>(null);
+  useEffect(() => {
+    let current = true;
+    void window.galeo.documents
+      .recover(id)
+      .then((kept) => current && setRecovered(kept))
+      .catch(ignoreClosedTab);
+    return () => {
+      current = false;
+    };
+  }, [id]);
   const confirm = useConfirmUnsaved();
   const confirmLeave = useCallback(() => confirm(id, path.split('/').pop() ?? 'this file'), [confirm, id, path]);
 
@@ -200,6 +213,8 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
       onMessage={onMessage}
       onEditor={onEditor}
       onConfirmLeave={confirmLeave}
+      onKeep={keep}
+      recovered={document.navigation === 0 ? recovered : null}
     />
   );
 }

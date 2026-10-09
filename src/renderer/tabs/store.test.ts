@@ -182,6 +182,20 @@ describe('createTabStore', () => {
     expect(store.getSnapshot().rendered).toEqual(new Set(['c']));
   });
 
+  it('never hibernates a tab with unsaved changes: its editor holds them', async () => {
+    const { store, demote } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    store.activate('b');
+    store.activate('a');
+    const status = { state: 'ready' as const, format: 'markdown' as const, view: 'source' as const, encoding: 'utf-8' as const, lines: 1, words: null, follow: false, editing: true, dirty: true };
+    store.setStatus('b', status);
+    demote(['b']);
+    expect(store.getSnapshot().rendered).toEqual(new Set(['a', 'b']));
+    store.setStatus('b', { ...status, dirty: false });
+    demote(['b']);
+    expect(store.getSnapshot().rendered).toEqual(new Set(['a']));
+  });
+
   it('counts the times main said a tab went stale, so it reads again', async () => {
     const { store, stale } = setup(snapshot(1, ['a', 'b'], 'a'));
     await store.start();

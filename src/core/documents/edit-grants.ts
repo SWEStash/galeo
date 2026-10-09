@@ -1,20 +1,28 @@
+/** A dirty tab's text and the version it was loaded from, held for a page that crashes. */
+export interface KeptText {
+  text: string;
+  base: string;
+}
+
 interface Grant {
   window: number;
   path: string;
   dirty: boolean;
+  kept: KeptText | null;
 }
 
 /**
  * The tabs the reader put in edit mode (ADR-013): only main grants one, from a key or menu item it
  * saw itself (ADR-004), and a save is allowed only for a granted tab's own file. A grant ends when
  * the page leaves edit mode, or the tab closes or shows another file; none is ever saved. A
- * granted tab also carries whether the page has unsaved changes in it, for close and quit.
+ * granted tab also carries whether the page has unsaved changes in it, for close and quit, and
+ * their text: in memory only, never on disk (SR-16), so a renderer crash doesn't lose it.
  */
 export class EditGrants {
   private readonly grants = new Map<string, Grant>();
 
   grant(id: string, window: number, path: string): void {
-    this.grants.set(id, { window, path, dirty: false });
+    this.grants.set(id, { window, path, dirty: false, kept: null });
   }
 
   allows(id: string, window: number, path: string): boolean {
@@ -30,7 +38,27 @@ export class EditGrants {
   /** The page's word on unsaved changes, for its own granted tabs only. */
   setDirty(id: string, window: number, dirty: boolean): void {
     const grant = this.grants.get(id);
-    if (grant?.window === window) grant.dirty = dirty;
+    if (grant?.window !== window) return;
+    grant.dirty = dirty;
+    if (!dirty) grant.kept = null;
+  }
+
+  /** The page's latest unsaved text for its own granted tab. */
+  keep(id: string, window: number, text: string, base: string): void {
+    const grant = this.grants.get(id);
+    if (grant?.window !== window) return;
+    grant.dirty = true;
+    grant.kept = { text, base };
+  }
+
+  kept(id: string, window: number): KeptText | null {
+    const grant = this.grants.get(id);
+    return grant?.window === window ? grant.kept : null;
+  }
+
+  /** A crashed page comes back read-only: only tabs with unsaved text stay in edit mode. */
+  dropClean(window: number): void {
+    for (const [id, grant] of this.grants) if (grant.window === window && !grant.kept) this.grants.delete(id);
   }
 
   /** The window's tabs with unsaved changes. */

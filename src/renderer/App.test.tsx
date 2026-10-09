@@ -86,6 +86,8 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       dirty: vi.fn().mockResolvedValue(undefined),
       leaveEdit: vi.fn().mockResolvedValue(undefined),
       closeAnswer: vi.fn().mockResolvedValue(undefined),
+      keep: vi.fn().mockResolvedValue(undefined),
+      recover: vi.fn().mockResolvedValue(null),
       onConfirmClose: vi.fn((listener: (ids: string[]) => void) => {
         events.confirmClose = listener;
         return () => {};
@@ -1071,6 +1073,41 @@ describe('App editing', () => {
     api.documents.read.mockResolvedValue({ ...readyContent('markdown', 'rendered', 'theirs'), path: '/d/a.md', version: 'v5' });
     await act(async () => events.stale!('doc-1'));
     await vi.waitFor(() => expect(editor.state.doc.toString()).toBe('theirs'));
+  });
+
+  it('hands main its unsaved text a moment after typing stops, for a crash', async () => {
+    const { api, type } = await editing();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      type('!');
+      type('?');
+      expect(api.documents.keep).not.toHaveBeenCalled();
+      act(() => vi.advanceTimersByTime(1000));
+      expect(api.documents.keep).toHaveBeenCalledOnce();
+      expect(api.documents.keep).toHaveBeenCalledWith('doc-1', '# hi!?', 'v1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('comes back after a crash in edit mode with the unsaved text main kept, saving against its version', async () => {
+    const { EditorView } = await import('@codemirror/view');
+    vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const content = { ...readyContent('markdown', 'rendered', '# on disk'), path: '/d/a.md', version: 'v2' };
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    api.documents.recover.mockResolvedValue({ text: '# mine', base: 'v1' });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    const editor = await vi.waitFor(() => {
+      const element = shadow.querySelector<HTMLElement>('.cm-editor');
+      expect(element?.querySelector('.cm-content')?.getAttribute('aria-readonly')).toBeNull();
+      return EditorView.findFromDOM(element!)!;
+    }, { timeout: 5_000 });
+    expect(editor.state.doc.toString()).toBe('# mine');
+    expect(container.querySelector('[role="tab"]')?.textContent).toContain('unsaved changes');
+    api.documents.save.mockResolvedValueOnce({ kind: 'conflict', version: 'v2' });
+    await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })));
+    expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# mine', 'v1');
   });
 
   const dialog = () => document.querySelector<HTMLElement>('[data-testid="unsaved-dialog"]');

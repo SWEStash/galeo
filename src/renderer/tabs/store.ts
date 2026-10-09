@@ -156,7 +156,8 @@ export function createTabStore(api: TabsApi): TabStore {
 
   const demote = (ids: string[]) => {
     const rendered = new Set(view.rendered);
-    for (const id of ids) if (id !== view.active) rendered.delete(id);
+    // A tab with unsaved changes stays: its editor is where they are (ADR-013).
+    for (const id of ids) if (id !== view.active && !view.statuses.get(id)?.dirty) rendered.delete(id);
     set({ rendered });
   };
 

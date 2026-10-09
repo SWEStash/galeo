@@ -215,4 +215,14 @@ describe('documentHandlers saving', () => {
     handlers['documents.closeAnswer'](['cancel'], otherWindow);
     expect(answers).toEqual(['1:asking', '2:cancel']);
   });
+
+  it("holds a tab's unsaved text for its own window only, and gives it back after a crash", () => {
+    const { handlers, grants, id } = setup({ '/d/a.md': 'old' });
+    grants.grant(id, 1, '/d/a.md');
+    handlers['documents.keep']([id, 'theirs', 'v'], otherWindow);
+    expect(handlers['documents.recover']([id], event)).toBeNull();
+    handlers['documents.keep']([id, '# mine', 'v1'], event);
+    expect(handlers['documents.recover']([id], otherWindow)).toBeNull();
+    expect(handlers['documents.recover']([id], event)).toEqual({ text: '# mine', base: 'v1' });
+  });
 });

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
@@ -140,5 +140,27 @@ test("deleting a profile with unsaved changes asks: Cancel keeps it, Don't save 
   } finally {
     await close();
     removeTempHome(home);
+  }
+});
+
+test('unsaved text never reaches a state file, while main holds it for a crash', async () => {
+  const { app, window, home, dir } = await dirtyEdit();
+  try {
+    await window.keyboard.type(' Words not saved yet.');
+    // The page hands its unsaved text to main once typing pauses for a second.
+    await window.waitForTimeout(1500);
+    // A new window makes the profile save its session now, with the edited tab in it.
+    await pressInMain(app, window, 'N');
+    await expect.poll(() => app.windows().length).toBe(2);
+    const session = path.join(appDirs(home).state, 'profiles', 'default', 'session.json');
+    // Saved 2 s after the last change.
+    const windowsSaved = () => (existsSync(session) ? (JSON.parse(readFileSync(session, 'utf8')) as { windows: unknown[] }).windows.length : 0);
+    await expect.poll(windowsSaved, { timeout: 15_000 }).toBe(2);
+    const state = path.join(appDirs(home).state, 'profiles', 'default');
+    for (const name of readdirSync(state)) expect(readFileSync(path.join(state, name), 'utf8')).not.toContain('not saved yet');
+  } finally {
+    app.process().kill('SIGKILL');
+    removeTempHome(home);
+    removeTempHome(dir);
   }
 });
