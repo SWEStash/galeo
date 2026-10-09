@@ -66,7 +66,8 @@ the file into the window in front of you) when you want it here.
 ## Editing
 
 - **Ctrl+E** puts the shown file in edit mode: the source view takes your typing, the tab shows
-  `✎`, and the status bar says *Editing*. Ctrl+E again goes back to reading.
+  `✎`, and the status bar says *Editing*. Ctrl+E again goes back to reading. An empty file
+  can't be edited.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
   permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the

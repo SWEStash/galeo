@@ -1,6 +1,7 @@
 # ADR-013 — Edit and save: a main-held edit grant, checked atomic saves, unsaved text kept in memory
 
-- Status: Accepted (2026-10-08)
+- Status: Accepted (2026-10-08); amended in place the same day to match the build (owner), see
+  "Amendment" at the end
 - Date: 2026-10-08
 - Deciders: project owner
 - Builds on: [ADR-004](ADR-004-security-and-zero-network.md) (verified capabilities: "Enable edit
@@ -41,9 +42,12 @@ This ADR settles those gaps. It does not cover split view ([ADR-014](ADR-014-spl
   main's `before-input-event` hook, or the matching native menu item, toggles the active tab's
   grant and tells the page. The page can ask to *leave* edit mode (it only removes a grant); it
   can never ask to enter it.
-- A grant belongs to one tab and one file. Closing the tab, navigating it to another file, or the
-  file going missing clears it. Grants are never saved in the session: every tab reopens
-  read-only.
+- A grant belongs to one tab and one file. Closing the tab or navigating it to another file
+  clears it; the file going missing doesn't, so unsaved text can be saved again. Grants are never
+  saved in the session: every tab reopens read-only.
+- Only a file with content can be edited: an empty file shows its empty state, and Ctrl+E says it
+  can't be edited (its type can't be told from its bytes, and a misnamed empty file of another
+  kind would get text written into it).
 - Leaving edit mode with unsaved changes is the page's choice to offer (UX F12: save or discard);
   main clears the grant only once the page says the text is clean or discarded.
 
@@ -71,8 +75,8 @@ This ADR settles those gaps. It does not cover split view ([ADR-014](ADR-014-spl
     more than one hard link, or it belongs to another user and we can't give the temp file that
     owner. Main then writes the bytes into the existing file (`O_TRUNC`, write, `fsync`). Not
     atomic, so it happens only in these cases.
-  - A folder we can't create files in (read-only, no permission) gives a clear error and the
-    edits stay in the editor.
+  - A file the user can't write is refused, though a rename in its folder would replace it, and
+    so is a folder we can't create files in: a clear error, and the edits stay in the editor.
 - After a successful write, main records the new identity as the one the tab loaded **before**
   the watcher reports the change, so the app's own save is not seen as an outside change. The
   page shows "Saved".
@@ -90,21 +94,25 @@ This ADR settles those gaps. It does not cover split view ([ADR-014](ADR-014-spl
 
 ### Unsaved changes on close and quit
 
-- The page tracks dirty state per tab and reports it to main (`tabs.dirty(tabId, dirty)`); the tab
-  shows `●` and the status bar says so (UX).
+- The page tracks dirty state per tab and reports it to main (`documents.dirty(tabId, dirty)`);
+  the tab shows `●` (UX). A tab with unsaved changes is never hibernated: that would unmount its
+  editor, and the edits with it.
 - Closing a dirty tab asks *Save / Don't save / Cancel* in the page.
 - Window close (Ctrl+Shift+W, the window manager), app quit and profile delete are decided in
   main: if any affected tab is dirty, main cancels the close, brings that window forward, and
   asks the page to run the same dialog for each dirty tab, then retries. Quit already waits for
   async work in `before-quit`; it waits for these answers too.
+- The answer has two steps: the page says it is *asking* within 5 s, or the close counts as
+  Cancel (a hung page can't hang a quit); the reader then takes as long as they like to choose.
 
 ### Unsaved text across a renderer crash
 
-- While a tab is dirty, the page sends its text to main, debounced (about 1 s after typing stops,
-  and before any close dialog). Main holds it **in memory only**, per tab, and drops it on save,
-  discard, or tab close. It is never written to disk, so SR-16 is unchanged.
+- While a tab is dirty, the page sends its text to main about 1 s after typing stops. Main holds
+  it **in memory only**, per tab, and drops it on save, discard, or tab close. It is never written
+  to disk, so SR-16 is unchanged. Text typed in the last second before a crash is lost.
 - After a renderer crash, the reloaded window restores each dirty tab's text from main, marked
-  unsaved, with its original `base`. If the app itself dies, unsaved text is lost: that is the
+  unsaved, with its original `base`; tabs that were in edit mode with nothing kept come back
+  read-only (main drops their grants). If the app itself dies, unsaved text is lost: that is the
   cost of keeping document content out of state files.
 
 ## Options considered
@@ -139,7 +147,7 @@ This ADR settles those gaps. It does not cover split view ([ADR-014](ADR-014-spl
 ### Risks
 
 - The close/quit round trip between main and pages is new and must not hang a quit: a page that
-  doesn't answer within a few seconds is treated as "Cancel" for that window, and the user sees
+  doesn't say it is asking within 5 s is treated as "Cancel" for that window, and the user sees
   the window that needs them.
 - Editing a 5 MB+ file in CodeMirror is untested; the read limits stay as they are and the e2e
   covers the largest file the render limit allows.
@@ -149,3 +157,19 @@ This ADR settles those gaps. It does not cover split view ([ADR-014](ADR-014-spl
 - A request to edit binary or non-text formats.
 - Auto-save or recovery across app crashes becomes a requirement (needs a new SR-16 decision).
 - macOS/Windows support (ADR-011): ownership, links and atomic replace differ there.
+
+## Amendment (2026-10-08, owner)
+
+Amended in place the day it was accepted, before any release, to match what was built (owner's
+choice for this ADR; the convention is a superseding ADR):
+
+- A grant survives the file going missing, so *Save again* has a grant to save with.
+- The close question is answered in two steps (*asking* within 5 s, then the reader's choice);
+  the first wording would have cancelled a reader still deciding.
+- A file the user can't write is refused rather than replaced.
+- A tab with unsaved changes is never hibernated; tabs in edit mode with no kept text come back
+  read-only after a crash.
+- Empty files can't be edited (owner, for now).
+- The page reports unsaved state on `documents.dirty`, and hands its text over only after typing
+  pauses.
+
