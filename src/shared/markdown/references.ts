@@ -1,14 +1,6 @@
 import type { Root } from 'hast';
-import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
-import remarkFrontmatter from 'remark-frontmatter';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import remarkParse from 'remark-parse';
-import remarkRehype from 'remark-rehype';
-import { unified } from 'unified';
 import { eachElement } from './hast';
-import { SANITIZE_SCHEMA } from './sanitize-schema';
+import { articleParser } from './parser';
 import { isLocalReference, isNetworkPathReference } from './urls';
 
 // The links and images of a document, found the way the renderer finds them: the same parse and
@@ -34,14 +26,7 @@ function collectReferences(tree: Root): References {
   return { links: [...links], images: [...images] };
 }
 
-const parser = unified()
-  .use(remarkParse)
-  .use(remarkGfm)
-  .use(remarkFrontmatter, ['yaml', 'toml'])
-  .use(remarkMath)
-  .use(remarkRehype, { allowDangerousHtml: true })
-  .use(rehypeRaw)
-  .use(rehypeSanitize, SANITIZE_SCHEMA);
+const parser = articleParser();
 
 /** Parses Markdown as the renderer does, up to sanitizing, and collects its references. */
 export function extractReferences(text: string): References {

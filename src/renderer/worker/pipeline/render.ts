@@ -1,20 +1,13 @@
 import type { Element, Properties, Root } from 'hast';
 import type { Root as MdastRoot } from 'mdast';
-import rehypeRaw from 'rehype-raw';
-import rehypeSanitize from 'rehype-sanitize';
 import rehypeSlug from 'rehype-slug';
 import rehypeStringify from 'rehype-stringify';
-import remarkFrontmatter from 'remark-frontmatter';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import remarkParse from 'remark-parse';
-import remarkRehype from 'remark-rehype';
 import { unified } from 'unified';
 import { classesOf, eachElement, textOf } from '../../../shared/markdown/hast';
 import type { Highlighter } from './highlighter';
 import { ID_PREFIX } from '../../../shared/markdown/ids';
+import { articleParser } from '../../../shared/markdown/parser';
 import { compactUrl, isLocalReference, isNetworkPathReference } from '../../../shared/markdown/urls';
-import { SANITIZE_SCHEMA } from '../../../shared/markdown/sanitize-schema';
 import { countWords } from '../../../shared/words';
 
 /** Code blocks longer than this are shown without highlighting (ADR-003: ~200 KB). */
@@ -320,15 +313,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
     const started = performance.now();
     const collected: Collected = { frontmatter: null, highlighted: [], outline: [], links: new Set(), images: new Set() };
     // First the document as sanitized HTML, which says what else it needs…
-    const parse = unified()
-      .use(remarkParse)
-      .use(remarkGfm)
-      .use(remarkFrontmatter, ['yaml', 'toml'])
-      .use(remarkMath)
-      .use(liftFrontmatter(collected))
-      .use(remarkRehype, { allowDangerousHtml: true })
-      .use(rehypeRaw)
-      .use(rehypeSanitize, SANITIZE_SCHEMA)
+    const parse = articleParser({ mdast: [liftFrontmatter(collected)] })
       .use(rehypeSlug, { prefix: ID_PREFIX })
       .use(annotate(collected))
       .use(diagramPlaceholders);
