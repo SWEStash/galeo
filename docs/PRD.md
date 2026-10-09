@@ -231,6 +231,7 @@ live in the [UX specification](design/ux.md).
   | Switch to a warm tab | next frame, no visible re-render |
   | Wake a hibernated tab → painted at saved scroll position | < 150 ms |
   | Live reload after file change → updated view | < 500 ms |
+  | (v0.2) Typing in split, 5,000-word article → preview updated | < 300 ms after the last keystroke, its 150 ms pause included |
   | Scrolling a long document with Mermaid diagrams | no dropped-frame jank at 60 Hz (v0.1: reported, see below) |
   | Memory, 3 profiles / ~20 tabs / ≤3 warm per window | baseline recorded in v0.1, must not regress |
 

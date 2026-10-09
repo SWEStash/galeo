@@ -118,6 +118,14 @@ describe('DocumentView in split', () => {
     expect(element.style.getPropertyValue('--galeo-split-source')).toBe('30%');
   });
 
+  it('weighs a split tab as both its views, for the warm-tab budget', async () => {
+    const onWeight = vi.fn();
+    const container = await render(<DocumentView {...twoViews} view="split" rendered={{ html: '<p>src</p>' }} onWeight={onWeight} />);
+    await vi.waitFor(() => expect(shadowOf(container).querySelector('.cm-editor')).not.toBeNull(), { timeout: 5_000 });
+    // UTF-16: two bytes a character, the HTML and the source text.
+    expect(onWeight).toHaveBeenLastCalledWith(2 * '<p>src</p>'.length + 2 * '# src src'.length);
+  });
+
   it('puts the caret in the editor when editing in split', async () => {
     const { EditorView } = await import('@codemirror/view');
     const focus = vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});

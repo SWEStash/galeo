@@ -53,6 +53,7 @@ set by the owner on 2026-10-06, on Electron 44.5.1, after the Electron and Merma
 | Wake a hibernated tab | 150 ms | 54 ms (p95 92) |
 | Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms |
 | Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) |
+| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | 260 ms (p95 292), headless, 2026-10-09; strict run with the 0.2.0 release check |
 
 ## Keyboard map (UX §5)
 
