@@ -10,7 +10,7 @@ import { useOutline } from '../outline/useOutline';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
-import { DocumentBanner, DocumentLoading, DocumentState } from './DocumentState';
+import { DocumentBanner, DocumentLoading, DocumentState, type DiskChange } from './DocumentState';
 import { EncodingMenu } from './EncodingMenu';
 import { ENCODING_NAMES } from './encodings';
 import { DocumentView, type DocumentHandle, type RenderedContent } from './DocumentView';
@@ -79,10 +79,19 @@ export interface DocumentPaneProps {
   onKeep?: (text: string, base: string | null) => void;
   /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
   recovered?: { text: string; base: string | null } | null;
+  /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
+  onReread?: () => void;
 }
 
 /** Unsaved text goes to main once typing pauses this long. */
 const KEEP_MS = 1000;
+
+/** Why Ctrl+S doesn't write while the bar waits for the reader's choice. */
+const DISK_UNSAVED: Record<DiskChange, string> = {
+  'disk-changed': 'Not saved: the file changed on disk. Keep mine or load theirs first',
+  'disk-deleted': 'Not saved: the file was deleted. Keep mine or save it again first',
+  'disk-unreadable': "Not saved: the file on disk can't be shown as text",
+};
 
 /** What the status bar says when a save didn't write. */
 function notSaved(result: Exclude<SaveResult, { kind: 'saved' }>, encoding: TextEncoding): string {
@@ -143,8 +152,16 @@ export function DocumentPane({
   onConfirmLeave,
   onKeep,
   recovered = null,
+  onReread,
 }: DocumentPaneProps) {
-  const ready = content.state === 'ready' ? content : null;
+  const [dirty, setDirty] = useState(false);
+  const dirtyNow = useRef(false);
+  // Unsaved edits stay in the editor whatever the file on disk turns into: the pane keeps showing
+  // the last text read until the edits are saved or discarded (UX F12).
+  const [held, setHeld] = useState(false);
+  const lastReady = useRef<Extract<DocumentContent, { state: 'ready' }> | null>(null);
+  if (content.state === 'ready') lastReady.current = content;
+  const ready = content.state === 'ready' ? content : held ? lastReady.current : null;
   // The document's own opening view until the user toggles it.
   const [chosenView, setChosenView] = useState<ViewMode | null>(initialViewState.view ?? null);
   const [renderAnyway, setRenderAnyway] = useState(false);
@@ -174,8 +191,6 @@ export function DocumentPane({
   // Edit mode (ADR-013). While the text has unsaved changes, the editor keeps it: a new read of
   // the file (it changed on disk) neither replaces it nor becomes the version a save names.
   const [editing, setEditing] = useState(false);
-  const [dirty, setDirty] = useState(false);
-  const dirtyNow = useRef(false);
   const edits = useRef(0);
   const [pinnedText, setPinnedText] = useState('');
   const base = useRef(ready?.version ?? null);
@@ -183,11 +198,30 @@ export function DocumentPane({
   readText.current = ready?.text ?? '';
   const readVersion = useRef(ready?.version ?? null);
   readVersion.current = ready?.version ?? null;
+  // A new read while the edits are unsaved is a change on disk: the bar asks what to do with it.
+  const [disk, setDiskShown] = useState<DiskChange | null>(null);
+  const diskNow = useRef<DiskChange | null>(null);
+  const setDisk = (next: DiskChange | null) => {
+    diskNow.current = next;
+    setDiskShown(next);
+  };
+  const assess = (read: DocumentContent) => {
+    if (!dirtyNow.current) setDisk(null);
+    else if (read.state === 'ready') setDisk(read.version === base.current ? null : 'disk-changed');
+    else if (read.state === 'missing') setDisk(base.current === null ? null : 'disk-deleted');
+    else setDisk('disk-unreadable');
+  };
   useEffect(() => {
-    if (ready && !dirtyNow.current) base.current = ready.version;
-  }, [ready]);
+    if (content.state === 'ready' && !dirtyNow.current) base.current = content.version;
+    if (!dirtyNow.current) setHeld(false);
+    assess(content);
+  }, [content]);
   const markDirty = (next: boolean) => {
-    if (next && !dirtyNow.current) setPinnedText(readText.current);
+    if (next && !dirtyNow.current) {
+      setPinnedText(readText.current);
+      setHeld(true);
+    }
+    if (!next) setDisk(null);
     dirtyNow.current = next;
     setDirty(next);
   };
@@ -200,7 +234,7 @@ export function DocumentPane({
     clearTimeout(keepTimer.current);
     keepTimer.current = setTimeout(() => {
       const text = documentHandle.current?.sourceText();
-      if (dirtyNow.current && text != null && base.current !== null) keepListener.current?.(text, base.current);
+      if (dirtyNow.current && text != null) keepListener.current?.(text, base.current);
     }, KEEP_MS);
   }, []);
   useEffect(() => () => clearTimeout(keepTimer.current), []);
@@ -212,8 +246,10 @@ export function DocumentPane({
     setPinnedText(recovered.text);
     dirtyNow.current = true;
     setDirty(true);
+    setHeld(true);
     setEditing(true);
     setChosenView('source');
+    assess(content);
   }, [recovered, ready !== null]);
   const reportedDirty = useRef(false);
   useEffect(() => {
@@ -246,16 +282,24 @@ export function DocumentPane({
   /** True once the text is on disk and nothing typed meanwhile is left unsaved. */
   const save = async (): Promise<boolean> => {
     const text = documentHandle.current?.sourceText();
-    if (!ready || !onSave || text == null || base.current === null) return false;
+    if (!ready || !onSave || text == null) return false;
+    if (diskNow.current) {
+      onMessage?.(DISK_UNSAVED[diskNow.current]);
+      return false;
+    }
     const editsAtSave = edits.current;
     const result = await onSave(text, base.current);
     if (result.kind !== 'saved') {
       if (result.kind === 'refused' && result.reason === 'not-editable') setEditing(false);
       onMessage?.(notSaved(result, ready.encoding));
+      // A change the watcher hasn't reported yet: reading it brings up the bar.
+      if (result.kind === 'conflict') onReread?.();
       return false;
     }
     base.current = result.version;
     onMessage?.('Saved');
+    // Written back after it was gone: the pane shows the file as it is now.
+    if (content.state !== 'ready') onReread?.();
     // Typing during the save stays unsaved.
     if (edits.current !== editsAtSave) return false;
     markDirty(false);
@@ -266,6 +310,36 @@ export function DocumentPane({
     documentHandle.current?.replaceSource(readText.current);
     base.current = readVersion.current;
     markDirty(false);
+    setHeld(false);
+  };
+  /** The reader's edits stand against the file as it is now: the next save writes over it (or back). */
+  const keepMine = () => {
+    base.current = content.state === 'ready' ? content.version : null;
+    setDisk(null);
+  };
+  /** Their file replaces the edits; one that can't be shown as text leaves edit mode. */
+  const loadTheirs = () => {
+    discard();
+    if (content.state === 'ready') return;
+    setEditing(false);
+    onLeaveEdit?.();
+  };
+  const diskActions: Record<DiskChange, { label: string; onAction: () => void }[]> = {
+    'disk-changed': [
+      { label: 'Keep mine', onAction: keepMine },
+      { label: 'Load theirs', onAction: loadTheirs },
+    ],
+    'disk-deleted': [
+      { label: 'Keep mine', onAction: keepMine },
+      {
+        label: 'Save again',
+        onAction: () => {
+          keepMine();
+          void actions.current.save();
+        },
+      },
+    ],
+    'disk-unreadable': [{ label: 'Load theirs', onAction: loadTheirs }],
   };
   const actions = useRef({ save, discard });
   actions.current = { save, discard };
@@ -437,7 +511,7 @@ export function DocumentPane({
   const words = ready?.format === 'markdown' ? render.words : textWords;
   useEffect(() => {
     onStatus?.({
-      state: content.state,
+      state: ready ? 'ready' : content.state,
       format: ready?.format ?? null,
       view: ready ? view : null,
       encoding: ready?.encoding ?? null,
@@ -461,6 +535,7 @@ export function DocumentPane({
 
   return (
     <>
+      {disk && <DocumentBanner kind={disk} actions={diskActions[disk]} />}
       {ready.banner === 'too-large' && view === 'source' && !renderAnyway && (
         <DocumentBanner kind="too-large" onAction={showRendered} />
       )}

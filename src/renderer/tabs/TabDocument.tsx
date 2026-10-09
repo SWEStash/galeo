@@ -172,6 +172,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
   const onViewState = useCallback((state: TabViewState) => store.setViewState(id, state), [id, store]);
   const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id).catch(ignoreClosedTab), [id]);
   const close = useCallback(() => store.close(id), [id, store]);
+  const reread = useCallback(() => store.reread(id), [id, store]);
   const chooseEncoding = useCallback(
     (encoding: ChosenEncoding | null) =>
       void window.galeo.documents.setEncoding(id, encoding).then(() => store.reread(id), ignoreClosedTab),
@@ -215,6 +216,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
       onConfirmLeave={confirmLeave}
       onKeep={keep}
       recovered={document.navigation === 0 ? recovered : null}
+      onReread={reread}
     />
   );
 }

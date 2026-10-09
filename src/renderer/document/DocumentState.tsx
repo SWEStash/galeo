@@ -73,24 +73,33 @@ export function DocumentLoading() {
   );
 }
 
-export type BannerKind = 'too-large' | 'encoding' | 'render-failed' | 'render-slow';
+export type BannerKind = 'too-large' | 'encoding' | 'render-failed' | 'render-slow' | DiskChange;
+
+/** What happened on disk to a file with unsaved edits (UX F12). */
+export type DiskChange = 'disk-changed' | 'disk-deleted' | 'disk-unreadable';
 
 const BANNERS: Record<BannerKind, { text: (detail?: string) => string; action?: string }> = {
   'too-large': { text: () => 'Large file shown as source', action: 'Render anyway' },
   encoding: { text: (encoding) => `Not valid UTF-8: shown as ${encoding}, the likeliest encoding` },
   'render-failed': { text: () => "This document couldn't be rendered — showing source", action: 'Try again' },
   'render-slow': { text: () => 'Too slow to render — showing source', action: 'Render anyway' },
+  'disk-changed': { text: () => 'File changed on disk' },
+  'disk-deleted': { text: () => 'File deleted on disk' },
+  'disk-unreadable': { text: () => "File changed on disk and can't be shown as text" },
 };
 
 export function DocumentBanner({
   kind,
   detail,
   onAction,
+  actions = [],
   children,
 }: {
   kind: BannerKind;
   detail?: string;
   onAction?: () => void;
+  /** Buttons of its own, for a banner that offers a choice. */
+  actions?: readonly { label: string; onAction: () => void }[];
   /** An action of its own (a menu), instead of the banner's button. */
   children?: ReactNode;
 }) {
@@ -103,6 +112,11 @@ export function DocumentBanner({
           {banner.action}
         </button>
       )}
+      {actions.map(({ label, onAction: act }) => (
+        <button key={label} type="button" onClick={act}>
+          {label}
+        </button>
+      ))}
       {children}
     </div>
   );

@@ -1055,17 +1055,110 @@ describe('App editing', () => {
     expect(tab()).toContain('unsaved changes');
   });
 
-  it('keeps unsaved text when the file changes on disk, and the version it was loaded from', async () => {
-    const { api, editor, type, press } = await editing();
-    type('!');
-    api.documents.read.mockResolvedValue({ ...readyContent('markdown', 'rendered', 'theirs'), path: '/d/a.md', version: 'v5' });
+  const bar = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-testid="document-banner"][data-banner^="disk-"]');
+  const barButtons = (container: HTMLElement) => [...(bar(container)?.querySelectorAll('button') ?? [])].map((button) => button.textContent);
+  const clickBar = (container: HTMLElement, name: string) =>
+    act(async () => [...bar(container)!.querySelectorAll('button')].find((button) => button.textContent === name)!.click());
+  async function changeOnDisk(api: ReturnType<typeof stubBridge>, content: DocumentContent) {
+    const reads = api.documents.read.mock.calls.length;
+    api.documents.read.mockResolvedValue(content);
     await act(async () => events.stale!('doc-1'));
-    await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledTimes(reads + 1));
     await act(async () => {});
+  }
+  const theirs = { ...readyContent('markdown', 'rendered', 'theirs'), path: '/d/a.md', version: 'v5' };
+
+  it('keeps unsaved text when the file changes on disk, says so, and saves over it only after Keep mine', async () => {
+    const { api, container, editor, type, press, message } = await editing();
+    type('!');
+    await changeOnDisk(api, theirs);
     expect(editor.state.doc.toString()).toBe('# hi!');
+    expect(bar(container)?.textContent).toContain('File changed on disk');
+    expect(barButtons(container)).toEqual(['Keep mine', 'Load theirs']);
+
+    await press('s');
+    expect(api.documents.save).not.toHaveBeenCalled();
+    expect(message()).toBe('Not saved: the file changed on disk. Keep mine or load theirs first');
+
+    await clickBar(container, 'Keep mine');
+    expect(bar(container)).toBeNull();
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v6' });
+    await press('s');
+    expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# hi!', 'v5');
+  });
+
+  it('takes their text on Load theirs: clean, still editing', async () => {
+    const { api, container, editor, type, tab } = await editing();
+    type('!');
+    await changeOnDisk(api, theirs);
+    await clickBar(container, 'Load theirs');
+    expect(editor.state.doc.toString()).toBe('theirs');
+    expect(bar(container)).toBeNull();
+    await vi.waitFor(() => expect(tab()).not.toContain('unsaved changes'));
+    expect(container.querySelector('[data-testid="status-mode"]')?.textContent).toBe('Editing');
+  });
+
+  it('keeps the editor and its text when the file is deleted, and Save again writes it back', async () => {
+    const { api, container, editor, type, press, message, tab } = await editing();
+    type('!');
+    await changeOnDisk(api, { state: 'missing', path: '/d/a.md' });
+    expect(container.querySelector('[data-testid="document-state"]')).toBeNull();
+    expect(editor.state.doc.toString()).toBe('# hi!');
+    expect(bar(container)?.textContent).toContain('File deleted on disk');
+    expect(barButtons(container)).toEqual(['Keep mine', 'Save again']);
+
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v6' });
+    await clickBar(container, 'Save again');
+    expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# hi!', null);
+    await vi.waitFor(() => expect(message()).toBe('Saved'));
+    expect(bar(container)).toBeNull();
+    expect(tab()).not.toContain('unsaved changes');
+
+    // Saved again, it is the version a later save names; nothing new was read.
+    type('?');
+    await press('s');
+    expect(api.documents.save).toHaveBeenLastCalledWith('doc-1', '# hi!?', 'v6');
+  });
+
+  it('after Keep mine on a deleted file, Ctrl+S writes it back', async () => {
+    const { api, container, type, press } = await editing();
+    type('!');
+    await changeOnDisk(api, { state: 'missing', path: '/d/a.md' });
+    await clickBar(container, 'Keep mine');
+    expect(bar(container)).toBeNull();
+    await press('s');
+    expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# hi!', null);
+  });
+
+  it("keeps the editor when the file turns into something it can't show, and Load theirs shows that", async () => {
+    const { api, container, editor, type } = await editing();
+    type('!');
+    await changeOnDisk(api, { state: 'binary', path: '/d/a.md', size: 10 });
+    expect(editor.state.doc.toString()).toBe('# hi!');
+    expect(bar(container)?.textContent).toContain("can't be shown as text");
+    expect(barButtons(container)).toEqual(['Load theirs']);
+    await clickBar(container, 'Load theirs');
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="document-state"]')?.getAttribute('data-state')).toBe('binary'));
+    expect(api.documents.leaveEdit).toHaveBeenCalledWith('doc-1');
+  });
+
+  it("shows no bar for the app's own save: typing after it is just unsaved", async () => {
+    const { api, container, type, press } = await editing();
+    type('!');
+    api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v2' });
+    await press('s');
+    type('?');
+    await act(async () => {});
+    expect(bar(container)).toBeNull();
+  });
+
+  it('reads the file again when a save meets a change not seen yet, so the bar can offer the choice', async () => {
+    const { api, container, type, press } = await editing();
+    type('!');
+    api.documents.read.mockResolvedValue(theirs);
     api.documents.save.mockResolvedValueOnce({ kind: 'conflict', version: 'v5' });
     await press('s');
-    expect(api.documents.save).toHaveBeenLastCalledWith('doc-1', '# hi!', 'v1');
+    await vi.waitFor(() => expect(bar(container)?.textContent).toContain('File changed on disk'));
   });
 
   it('takes a change on disk into the editor while nothing is unsaved', async () => {
@@ -1090,7 +1183,7 @@ describe('App editing', () => {
     }
   });
 
-  it('comes back after a crash in edit mode with the unsaved text main kept, saving against its version', async () => {
+  it('comes back after a crash in edit mode with the unsaved text main kept, against its version', async () => {
     const { EditorView } = await import('@codemirror/view');
     vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
     const content = { ...readyContent('markdown', 'rendered', '# on disk'), path: '/d/a.md', version: 'v2' };
@@ -1105,9 +1198,11 @@ describe('App editing', () => {
     }, { timeout: 5_000 });
     expect(editor.state.doc.toString()).toBe('# mine');
     expect(container.querySelector('[role="tab"]')?.textContent).toContain('unsaved changes');
-    api.documents.save.mockResolvedValueOnce({ kind: 'conflict', version: 'v2' });
+    // The file moved on since the text was loaded: the bar asks before anything is written.
+    await vi.waitFor(() => expect(bar(container)?.textContent).toContain('File changed on disk'));
+    await clickBar(container, 'Keep mine');
     await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true })));
-    expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# mine', 'v1');
+    expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# mine', 'v2');
   });
 
   const dialog = () => document.querySelector<HTMLElement>('[data-testid="unsaved-dialog"]');
