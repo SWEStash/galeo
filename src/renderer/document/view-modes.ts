@@ -14,7 +14,7 @@ export type ViewToggle = { view: ViewMode } | { refused: string };
  * back out to the source, as the rendered view alone isn't offered then.
  */
 export function afterToggleSplit(view: ViewMode, { splittable, editing, lastSingle }: { splittable: boolean; editing: boolean; lastSingle: SingleView }): ViewToggle {
-  if (!splittable) return { refused: 'Split view is for Markdown files' };
+  if (!splittable) return { refused: 'Split view is for Markdown and MDX files' };
   if (view !== 'split') return { view: 'split' };
   return { view: editing ? 'source' : lastSingle };
 }

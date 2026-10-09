@@ -18,7 +18,7 @@ describe('afterToggleSplit (Ctrl+\\)', () => {
 
   it('is refused, with a reason, for formats without a split view', () => {
     expect(afterToggleSplit('source', { splittable: false, editing: false, lastSingle: 'source' })).toEqual({
-      refused: 'Split view is for Markdown files',
+      refused: 'Split view is for Markdown and MDX files',
     });
   });
 });
