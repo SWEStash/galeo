@@ -62,7 +62,7 @@ flowchart LR
   term -- "galeo [--profile p] file…" --> galeo
   term -. agents write .md/.log .-> fs
   files -- "open %F / drag-and-drop" --> galeo
-  galeo -- "read (write in v0.2 edit mode)" --> fs
+  galeo -- "read (write in edit mode)" --> fs
   galeo -- "http/https/mailto links from the document only" --> os
   galeo -. never .-x net
 ```
@@ -300,12 +300,24 @@ sequenceDiagram
   end
 ```
 
-### 5.5 Save (v0.2)
+### 5.5 Save (ADR-013)
 
-Ctrl+E (a Main accelerator) marks the tab edit-enabled in the Capability checker. Ctrl+S sends
-`save(tabId, text, baseIdentity)`. Main then checks that the path is edit-enabled, compares the
-file on disk with `baseIdentity`, and either writes atomically (temp file, fsync, rename,
-preserving mode, writing through symlinks) or returns *conflict*, which leads to UX F12.
+Ctrl+E (a Main accelerator) grants the shown tab edit mode (`EditGrants`, core) and tells the page
+(`documents.editMode`); a second Ctrl+E asks the page to leave, which it does once its text is
+saved or discarded. Each read names its version: the SHA-256 of the bytes main read. Ctrl+S sends
+`documents.save(tabId, text, version)`, which spends an input credit. Main checks the grant, then
+reads the file again: if its hash isn't `version`, it answers *conflict* and writes nothing.
+Otherwise it encodes the text the way those bytes were (encoding, byte order mark, line endings)
+and saves through the file system port: on the symlink's target, through a temp file that keeps
+mode, owner and group, then a rename; in place for a hard-linked file or one whose owner or group
+the temp file can't take; refused for a file the user can't write. The new identity is remembered
+before the watcher reports the write.
+
+While a tab has unsaved changes, the page reports it (`documents.dirty`) and hands main its text
+a second after typing stops (`documents.keep`, memory only). Main holds window closes, quits and
+profile deletes until each affected page has asked its reader (`documents.confirmClose`, answered
+by `documents.closeAnswer`: *asking* within 5 s, then the choice). After a renderer crash, a tab
+gets its kept text back (`documents.recover`).
 
 ### 5.6 Cold start and session restore
 

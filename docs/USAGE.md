@@ -63,6 +63,20 @@ the file into the window in front of you) when you want it here.
   window that crashes 3 times within a minute stops reloading and says so: *Try again* brings its
   tabs back, *Close window* closes it.
 
+## Editing
+
+- **Ctrl+E** puts the shown file in edit mode: the source view takes your typing, the tab shows
+  `✎`, and the status bar says *Editing*. Ctrl+E again goes back to reading.
+- **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
+  permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
+- **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the
+  window, quitting or deleting the profile asks first: *Save*, *Don't save* or *Cancel*.
+- **A file that changes on disk** while you edit: with nothing unsaved, the editor takes the new
+  text; with unsaved changes, your text stays and a save is refused ("the file changed on disk"),
+  so nothing you didn't see is overwritten. A read-only file isn't saved either.
+- **If the window crashes**, unsaved text you typed more than a second before comes back in its
+  tab, still unsaved. galeo keeps it in memory only: never in a file of its own.
+
 ## Tabs, windows and sessions
 
 Tabs and windows work like a browser's: Ctrl+Tab to cycle, Ctrl+W to close, Ctrl+Shift+T to

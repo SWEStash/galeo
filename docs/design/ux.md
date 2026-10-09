@@ -221,7 +221,7 @@ and keeps the scroll position at the current match.
   says "Editing"). Ctrl+E again returns to read-only (disabled while unsaved changes exist → offers
   save/discard).
 - Ctrl+S saves (atomic); status bar shows "Saved" briefly. Unsaved `●` on tab.
-- Closing a tab/window/profile with unsaved changes → dialog: Save / Don't save / Cancel
+- Closing a tab/window/profile, or quitting, with unsaved changes → dialog: Save / Don't save / Cancel
   (focus on Save; Esc = Cancel).
 - **External change while dirty** → non-modal bar above the editor: "File changed on disk" with
   *Show diff*, *Keep mine*, *Load theirs*. Nothing is overwritten until the user chooses. *Show

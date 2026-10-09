@@ -295,7 +295,7 @@ opaque `galeo://file/<id>` URLs. Reads are limited to regular files under the si
 Writes (v0.2) are allowed only to paths that main has marked **edit-enabled** after the user's
 explicit edit command on that tab, observed by main itself (a `before-input-event` key such as
 Ctrl+E, or a native menu item). The renderer cannot enable editing by itself, and cannot
-write any other path.
+write any other path. Each save also spends an input credit (one per real key or click).
 *AC*: tests showing a renderer-originated `write` to a non-edit-enabled path is rejected, and
 that reads of paths never surfaced to the user are rejected.
 
@@ -330,12 +330,18 @@ entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument h
 *AC*: a fuzz/pathological corpus in CI finishes within budgets without hangs; a crash-recovery
 e2e test.
 
-**SR-15 — Safe saves (v0.2).**
-- Writes are atomic (temp file in the same directory, `fsync`, rename).
-- A symlinked file is written through to its target; mode and ownership are preserved.
-- Before writing, main compares the file's current mtime and hash with the version the user
-  loaded. On mismatch it goes to the conflict flow (UX F12) and never overwrites silently.
-*AC*: e2e tests for concurrent external writes, symlinks, permissions, and a crash mid-save.
+**SR-15 — Safe saves (v0.2, ADR-013).**
+- Writes are atomic (temp file in the same directory, `fsync`, rename), except where a rename
+  would change what the file is: a hard-linked file, or one whose owner or group the temp file
+  can't take, is written in place.
+- A symlinked file is written through to its target; mode and ownership are preserved. A file
+  the user can't write is not replaced.
+- Before writing, main compares the hash of the file's current bytes with the version the user
+  loaded. On mismatch it refuses the save (UX F12) and never overwrites silently.
+*AC*: e2e tests for concurrent external writes, symlinks and permissions (`edit.spec`); the
+write path's atomic, in-place and refusal cases in the file system adapter's tests. A crash in
+the middle of a save has no automated test: the atomic path writes the whole temp file before
+the rename that replaces the old one.
 
 **SR-16 — Local metadata hygiene.** Config and state directories are created `0700` and files
 `0600`. Session files, their rotated snapshots, and recent files store paths, view state and
