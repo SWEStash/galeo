@@ -1,7 +1,8 @@
-import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
+import { saveFile } from '../helpers/save';
 import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
@@ -167,17 +168,67 @@ test('unsaved text never reaches a state file, while main holds it for a crash',
 
 const message = (window: Page) => window.getByTestId('status-message');
 
-test('a change on disk while edits are unsaved is never overwritten: the save is refused and both texts stay', async () => {
+const diskBar = (window: Page, kind: 'changed' | 'deleted') =>
+  window.locator(`[data-testid="tab-panel"][data-active="true"] [data-testid="document-banner"][data-banner="disk-${kind}"]`);
+
+test('a change on disk while edits are unsaved is never overwritten: the bar asks, and Keep mine saves over it', async () => {
   const { app, window, home, dir, file } = await dirtyEdit();
   try {
-    writeFileSync(file, '# Theirs\n');
-    // The watcher reports it; the editor keeps the unsaved text.
-    await window.waitForTimeout(500);
+    saveFile(file, '# Theirs\n');
+    await expect(diskBar(window, 'changed')).toContainText('File changed on disk');
     await expect(shownDocument(window).locator('.cm-content')).toContainText('More.');
+
     await window.keyboard.press('Control+s');
-    await expect(message(window)).toHaveText('Not saved: the file changed on disk');
+    await expect(message(window)).toHaveText('Not saved: the file changed on disk. Keep mine or load theirs first');
     expect(readFileSync(file, 'utf8')).toBe('# Theirs\n');
     await expect(indicator(window, 'unsaved changes')).toBeAttached();
+
+    await diskBar(window, 'changed').getByRole('button', { name: 'Keep mine' }).click();
+    await expect(diskBar(window, 'changed')).toHaveCount(0);
+    await shownDocument(window).locator('.cm-content').focus();
+    await window.keyboard.press('Control+s');
+    await expect(message(window)).toHaveText('Saved');
+    expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
+    await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
+  } finally {
+    app.process().kill('SIGKILL');
+    removeTempHome(home);
+    removeTempHome(dir);
+  }
+});
+
+test('Load theirs replaces the unsaved text with the file on disk and writes nothing', async () => {
+  const { app, window, home, dir, file } = await dirtyEdit();
+  try {
+    saveFile(file, '# Theirs\n');
+    await diskBar(window, 'changed').getByRole('button', { name: 'Load theirs' }).click();
+    await expect(shownDocument(window).locator('.cm-content')).toHaveText('# Theirs');
+    await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    expect(readFileSync(file, 'utf8')).toBe('# Theirs\n');
+  } finally {
+    app.process().kill('SIGKILL');
+    removeTempHome(home);
+    removeTempHome(dir);
+  }
+});
+
+test('a file deleted under unsaved edits keeps them, and Save again writes it back with its line endings', async () => {
+  const { app, window, home, dir, file } = await dirtyEdit('# Draft\r\n');
+  try {
+    rmSync(file);
+    await expect(diskBar(window, 'deleted')).toContainText('File deleted on disk');
+    await expect(window.getByTestId('document-state')).toHaveCount(0);
+    await expect(shownDocument(window).locator('.cm-content')).toContainText('More.');
+
+    await diskBar(window, 'deleted').getByRole('button', { name: 'Save again' }).click();
+    await expect(message(window)).toHaveText('Saved');
+    expect(readFileSync(file, 'utf8')).toBe('# Draft\r\nMore.');
+    await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
+    // Read again as it is now: the editor shows the file, and nothing asks.
+    await expect(shownDocument(window).locator('.cm-content')).toContainText('More.');
+    await expect(diskBar(window, 'deleted')).toHaveCount(0);
+    await expect(diskBar(window, 'changed')).toHaveCount(0);
   } finally {
     app.process().kill('SIGKILL');
     removeTempHome(home);
