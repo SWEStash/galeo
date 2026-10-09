@@ -234,6 +234,16 @@ describe('TabRegistry', () => {
     expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('follow');
   });
 
+  it("keeps a split entry's divider ratio with its view, in snapshots and the session", () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.md', 1);
+    tabs.setViewState(id, 1, { view: 'split', ratio: 0.3 });
+    expect(tabs.snapshot(1).tabs[0]).toMatchObject({ view: 'split', ratio: 0.3 });
+    expect(tabs.exportWindow(1).tabs[0]!.entries[0]).toEqual({ path: '/d/a.md', anchor: null, view: 'split', ratio: 0.3 });
+    tabs.setViewState(id, 1, { view: 'split' });
+    expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('ratio');
+  });
+
   it('opens a tab at the start when asked to open it after no tab', () => {
     const tabs = new TabRegistry(counterIds());
     tabs.open('/d/a.md', 1);

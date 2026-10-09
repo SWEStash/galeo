@@ -57,6 +57,10 @@ describe('chooseView', () => {
     });
   });
 
+  it('only offers split view on Markdown', () => {
+    expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.split).map(([id]) => id)).toEqual(['markdown']);
+  });
+
   it('only offers follow-end on logs and an outline on Markdown', () => {
     expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.follow).map(([id]) => id)).toEqual(['log']);
     expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.outline).map(([id]) => id)).toEqual([

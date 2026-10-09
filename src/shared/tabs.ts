@@ -5,6 +5,8 @@ import type { ViewMode } from './formats';
 export interface TabViewState {
   view?: ViewMode;
   follow?: true;
+  /** The source pane's share of a split's width, when the reader moved the divider (absent at half). */
+  ratio?: number;
 }
 
 /** A tab in a snapshot: its record, zoom (absent at 100 %), the last position and view state main heard of. */

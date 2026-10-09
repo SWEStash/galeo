@@ -76,6 +76,11 @@ describe('commandFor', () => {
     expect(commandFor(key({ key: 'P', ctrlKey: true, shiftKey: true }), 'linux')).toBe('commandPalette');
   });
 
+  it('toggles split view with Ctrl+\\', () => {
+    expect(commandFor(key({ key: '\\', ctrlKey: true }), 'linux')).toBe('toggleSplit');
+    expect(commandFor(key({ key: '\\', metaKey: true }), 'darwin')).toBe('toggleSplit');
+  });
+
   it('follows the end of a log with End, unmodified only', () => {
     expect(commandFor(key({ key: 'End' }), 'linux')).toBe('followEnd');
     expect(commandFor(key({ key: 'End', ctrlKey: true }), 'linux')).toBeNull();

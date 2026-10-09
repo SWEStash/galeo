@@ -8,6 +8,8 @@ const BASE = {
   findNext: ['F3'],
   findPrevious: ['Shift+F3'],
   toggleSource: ['CmdOrCtrl+U'],
+  /** Source and rendered side by side (ADR-014). */
+  toggleSplit: ['CmdOrCtrl+\\'],
   toggleWrap: ['Alt+Z'],
   /** Logs: jump to the end and keep following it; scrolling up leaves. */
   followEnd: ['End'],

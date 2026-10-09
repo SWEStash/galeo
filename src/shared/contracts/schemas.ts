@@ -3,6 +3,7 @@ import { WINDOW_COMMANDS } from '../keymap';
 import type { SettingsOverrides } from '../settings';
 import { CHOSEN_ENCODINGS, type AnyChannel, type Requests } from './ipc';
 import { READ_MAX_BYTES } from '../documents';
+import { SPLIT_MAX_RATIO, SPLIT_MIN_RATIO } from '../formats';
 
 /**
  * Argument schemas for every renderer → main channel. Imported by main only (SR-11), and kept out
@@ -42,7 +43,11 @@ export const settingsOverrides = z.strictObject({
 export const zoomLevel = z.number().min(0.5).max(3);
 const quickOpenToken = z.string().min(1).max(64);
 /** A tab's chosen view and follow state; only what differs from the defaults is ever set. */
-export const tabViewState = z.strictObject({ view: z.enum(['rendered', 'source']).exactOptional(), follow: z.literal(true).exactOptional() });
+export const tabViewState = z.strictObject({
+  view: z.enum(['rendered', 'source', 'split']).exactOptional(),
+  follow: z.literal(true).exactOptional(),
+  ratio: z.number().min(SPLIT_MIN_RATIO).max(SPLIT_MAX_RATIO).exactOptional(),
+});
 
 export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'app.info': z.tuple([]),

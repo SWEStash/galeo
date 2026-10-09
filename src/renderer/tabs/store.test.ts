@@ -342,4 +342,12 @@ describe('createTabStore', () => {
     push(next);
     expect(store.viewStateOf('a')).toEqual({ view: 'source', follow: true });
   });
+
+  it("starts a split tab with the divider where main kept it", async () => {
+    const initial = snapshot(1, ['a'], 'a');
+    initial.tabs[0] = { ...initial.tabs[0]!, view: 'split', ratio: 0.3 };
+    const { store } = setup(initial);
+    await store.start();
+    expect(store.viewStateOf('a')).toEqual({ view: 'split', ratio: 0.3 });
+  });
 });

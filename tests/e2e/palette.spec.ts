@@ -18,6 +18,7 @@ const KEYBOARD_MAP: [label: string, keys: string[], macKeys: string[]][] = [
   ['Find next', ['F3'], ['F3']],
   ['Find previous', ['Shift+F3'], ['⇧F3']],
   ['Toggle source view', ['Ctrl+U'], ['⌘U']],
+  ['Toggle split view', ['Ctrl+\\'], ['⌘\\']],
   ['Toggle wrap', ['Alt+Z'], ['⌥Z']],
   ['Toggle outline', ['Ctrl+Shift+O'], ['⇧⌘O']],
   ['Follow end (logs)', ['End'], ['End']],

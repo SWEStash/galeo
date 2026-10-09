@@ -6,7 +6,7 @@ import { ignoreClosedTab } from './closed-tab';
 import { metricsLabel } from './metrics';
 import type { TabStatus, TabStore, TabsView } from './store';
 
-const VIEW_NAMES = { rendered: 'Rendered', source: 'Source' } as const;
+const VIEW_NAMES = { rendered: 'Rendered', source: 'Source', split: 'Split' } as const;
 
 /** `.txt` shows its rendered view as reader text (UX F10). */
 const viewName = (status: TabStatus) => (status.format === 'text' && status.view === 'rendered' ? 'Reader' : VIEW_NAMES[status.view!]);

@@ -12,9 +12,10 @@ export interface HistoryEntry {
   position?: ScrollAnchor;
   /** The encoding the reader chose for this file ("Reopen with encoding…"). */
   encoding?: WhatwgEncoding;
-  /** The view the reader chose, and whether a log follows its end. */
+  /** The view the reader chose, whether a log follows its end, and where a split's divider is. */
   view?: TabViewState['view'];
   follow?: true;
+  ratio?: number;
 }
 
 interface Stored {
@@ -106,13 +107,14 @@ export class TabRegistry {
   snapshot(window: number): TabSnapshot {
     const tabs = (this.order.get(window) ?? []).map((id): TabView => {
       const record = this.records.get(id)!;
-      const { position, view, follow } = record.entries[record.index]!;
+      const { position, view, follow, ratio } = record.entries[record.index]!;
       return {
         ...recordOf(record),
         ...(record.zoom ? { zoom: record.zoom } : {}),
         ...(position ? { position } : {}),
         ...(view ? { view } : {}),
         ...(follow ? { follow } : {}),
+        ...(ratio ? { ratio } : {}),
         ...(record.crashed ? { crashed: true as const } : {}),
       };
     });
@@ -252,8 +254,10 @@ export class TabRegistry {
     const entry = record.entries[record.index]!;
     delete entry.view;
     delete entry.follow;
+    delete entry.ratio;
     if (state.view) entry.view = state.view;
     if (state.follow) entry.follow = true;
+    if (state.ratio) entry.ratio = state.ratio;
     return true;
   }
 

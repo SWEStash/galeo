@@ -175,7 +175,11 @@ export function createTabStore(api: TabsApi): TabStore {
     for (const tab of snapshot.tabs) {
       if (tab.position && !positions.has(tab.id)) positions.set(tab.id, tab.position);
       // Main's is the entry the tab shows now: after a navigation, another entry's.
-      viewStates.set(tab.id, { ...(tab.view ? { view: tab.view } : {}), ...(tab.follow ? { follow: tab.follow } : {}) });
+      viewStates.set(tab.id, {
+        ...(tab.view ? { view: tab.view } : {}),
+        ...(tab.follow ? { follow: tab.follow } : {}),
+        ...(tab.ratio ? { ratio: tab.ratio } : {}),
+      });
     }
     view = { ...view, zooms, crashed };
     if (wanted && ids.includes(wanted)) {

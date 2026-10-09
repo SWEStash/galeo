@@ -9,7 +9,7 @@ export interface FormatSpec {
   defaultView: ViewMode;
   /** Above this size the rendered view is not the default (source + banner); null: no limit. */
   renderMaxBytes: number | null;
-  capabilities: { follow: boolean; outline: boolean };
+  capabilities: { follow: boolean; outline: boolean; split: boolean };
 }
 
 /** Markdown over 5 MB opens as source (SR-14). */
@@ -24,26 +24,26 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     extensions: ['.md', '.markdown'],
     defaultView: 'rendered',
     renderMaxBytes: MARKDOWN_RENDER_MAX_BYTES,
-    capabilities: { follow: false, outline: true },
+    capabilities: { follow: false, outline: true, split: true },
   },
   text: {
     extensions: ['.txt'],
     defaultView: 'rendered',
     renderMaxBytes: TEXT_READER_MAX_BYTES,
-    capabilities: { follow: false, outline: false },
+    capabilities: { follow: false, outline: false, split: false },
   },
   log: {
     extensions: ['.log'],
     matchesName: (name) => /\.log\.\d+$/.test(name),
     defaultView: 'source',
     renderMaxBytes: null,
-    capabilities: { follow: true, outline: false },
+    capabilities: { follow: true, outline: false, split: false },
   },
   plain: {
     extensions: [],
     defaultView: 'source',
     renderMaxBytes: null,
-    capabilities: { follow: false, outline: false },
+    capabilities: { follow: false, outline: false, split: false },
   },
 };
 
