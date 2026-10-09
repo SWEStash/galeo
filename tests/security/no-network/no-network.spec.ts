@@ -159,6 +159,23 @@ test('rendering the whole payload corpus opens no connection (SR-07)', async () 
   expect(connects).toEqual([]);
 });
 
+test('rendering the hostile MDX payloads as an .mdx file opens no connection (SR-07)', async () => {
+  const corpus = readFileSync(path.resolve(import.meta.dirname, '../../fixtures/payloads/mdx.payloads.mdx'), 'utf8').replaceAll(/^%%%$/gm, '');
+  const connects = await connectsWhile(
+    (dir) => {
+      writeFileSync(path.join(dir, 'corpus.mdx'), corpus);
+      return ['--', path.join(dir, 'corpus.mdx')];
+    },
+    {},
+    async (_app, page) => {
+      // Rendered as MDX: its components are boxes, not dropped tags.
+      await expect(page.getByTestId('document').locator('[data-galeo-mdx="Callout"]')).toBeVisible();
+      await page.waitForTimeout(2_000);
+    },
+  );
+  expect(connects).toEqual([]);
+});
+
 test('drawing every diagram, hostile ones included, opens no connection (SR-07)', async () => {
   const fixtures = path.resolve(import.meta.dirname, '../../fixtures');
   const corpus = [path.join(fixtures, 'docs', 'mermaid.md'), path.join(fixtures, 'payloads', 'mermaid.payloads.md')]
