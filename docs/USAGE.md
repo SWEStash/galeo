@@ -73,8 +73,11 @@ the file into the window in front of you) when you want it here.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the
   window, quitting or deleting the profile asks first: *Save*, *Don't save* or *Cancel*.
 - **A file that changes on disk** while you edit: with nothing unsaved, the editor takes the new
-  text; with unsaved changes, your text stays and a save is refused ("the file changed on disk"),
-  so nothing you didn't see is overwritten. A read-only file isn't saved either.
+  text. With unsaved changes, your text stays and a bar says *File changed on disk*; nothing is
+  saved until you choose. *Show diff* shows your text beside the file on disk, *Keep mine* lets
+  the next save write over it, *Load theirs* replaces your text with it. If the file was deleted,
+  the bar offers *Keep mine* or *Save again*, which writes it back with its encoding and line
+  endings. A read-only file isn't saved either.
 - **If the window crashes**, unsaved text you typed more than a second before comes back in its
   tab, still unsaved. galeo keeps it in memory only: never in a file of its own.
 

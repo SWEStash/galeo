@@ -311,7 +311,13 @@ Otherwise it encodes the text the way those bytes were (encoding, byte order mar
 and saves through the file system port: on the symlink's target, through a temp file that keeps
 mode, owner and group, then a rename; in place for a hard-linked file or one whose owner or group
 the temp file can't take; refused for a file the user can't write. The new identity is remembered
-before the watcher reports the write.
+before the watcher reports the write. A null `version` writes back a file that was deleted, only
+while it is still gone, in the shape of the tab's last read (`ReadIdentities` keeps the encoding,
+byte order mark and line endings, never the text).
+
+A change on disk reaches a tab with unsaved changes as a new read like any other (`tabs.stale`);
+the page keeps its text and shows the "File changed on disk" bar (UX F12) instead of taking it.
+*Show diff* loads `@codemirror/merge` with the first diff.
 
 While a tab has unsaved changes, the page reports it (`documents.dirty`) and hands main its text
 a second after typing stops (`documents.keep`, memory only). Main holds window closes, quits and

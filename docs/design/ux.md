@@ -226,7 +226,8 @@ and keeps the scroll position at the current match.
 - **External change while dirty** → non-modal bar above the editor: "File changed on disk" with
   *Show diff*, *Keep mine*, *Load theirs*. Nothing is overwritten until the user chooses. *Show
   diff* opens a read-only side-by-side diff (mine | theirs). A file deleted while dirty offers
-  *Save again* instead of *Load theirs*.
+  *Keep mine* and *Save again* (there is nothing on disk to diff). A file that turns into one
+  that can't be shown as text offers only *Load theirs*. Ctrl+S waits for the choice.
 - External change while in edit mode but clean → silently reload (same as F7).
 
 ### F13 — Split view (v0.2)
