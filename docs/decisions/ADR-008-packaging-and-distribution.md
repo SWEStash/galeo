@@ -1,7 +1,8 @@
 # ADR-008 — Build & packaging: Vite 8 + electron-builder; .deb official, AppImage and macOS/Windows previews secondary; GitHub Releases; no auto-update
 
 - Status: Accepted (2026-09-26, with review amendments; amended 2026-09-26: opt-in unsandboxed
-  mode, see "Sandbox"; one clause superseded by [ADR-009](ADR-009-sandbox-unavailable-launcher.md))
+  mode, see "Sandbox"; one clause superseded by [ADR-009](ADR-009-sandbox-unavailable-launcher.md);
+  amended 2026-10-09: the MDX file type moves to v0.3, see "Desktop entry")
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [ADR-001](ADR-001-app-shell-stack.md), [ADR-004](ADR-004-security-and-zero-network.md),
@@ -59,7 +60,8 @@ The sibling projects use semantic-release on `main` with Conventional Commits.
   warn. They get OS file associations from the bundle/installer, and "Install `galeo` command"
   (macOS: link into `/usr/local/bin`; Windows: PATH via the installer).
 - **Desktop entry**: `Exec=galeo -- %F` (SR-13), `MimeType=text/markdown;text/x-markdown;text/plain;text/x-log;`
-  (v0.2 adds MDX), `StartupWMClass` set, and an action "New Window". The app never makes itself
+  (MDX is v0.3: shared-mime-info maps `*.mdx` to a Sega 32X ROM type and has no `text/mdx`, so
+  the package will first have to define one), `StartupWMClass` set, and an action "New Window". The app never makes itself
   the default handler; the user chooses that.
 - **`gal` launcher**: a small POSIX shell script. It passes arguments after `--`, as absolute
   paths, to the app binary, which forwards them to the running instance (ADR-005).

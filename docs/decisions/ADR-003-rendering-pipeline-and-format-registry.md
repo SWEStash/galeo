@@ -1,6 +1,7 @@
 # ADR-003 — Rendering pipeline (unified/remark/rehype + Shiki, in a worker) and a format registry
 
-- Status: Accepted (2026-09-25, with review amendments)
+- Status: Accepted (2026-09-25, with review amendments); MDX bullet amended in place 2026-10-09
+  to match the build (owner), see "Amendment" at the end
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [ADR-002](ADR-002-window-and-tab-model.md), [ADR-004](ADR-004-security-and-zero-network.md),
@@ -53,8 +54,10 @@ remark-parse → remark-gfm → remark-frontmatter → remark-math → (v0.2: re
   images become placeholders.
 - **Frontmatter** is shown as a collapsible, syntax-highlighted YAML block. It is never parsed
   (no YAML dependency, nothing to exploit).
-- **MDX (v0.2):** ESM `import`/`export` is hidden, JSX elements become labelled placeholders
-  listing their props, and `{expressions}` are shown as code. Nothing is ever evaluated.
+- **MDX (v0.2):** ESM `import`/`export` is hidden, components become labelled placeholders
+  listing their props with their content rendered inside, and `{expressions}` are shown as code
+  (comment-only ones are hidden). A lowercase tag whose props are all strings is HTML, handed to
+  the same raw-HTML parse and sanitizer as in Markdown. Nothing is ever evaluated.
 - **Source positions** (`data-src-line`) go on block-level elements only (paragraphs, headings,
   list items, code blocks, blockquotes, table rows), keeping HTML small and anchors stable. They
   drive scroll anchors (ADR-002), toggling between source and rendered views (UX F10), and v0.2
@@ -137,3 +140,14 @@ own remark plugin can render them later (PRD "Obsidian syntax").
 ## Revisit triggers
 - The performance harness shows the pipeline over budget on typical documents after caching.
 - The target site moves to a different Markdown toolchain.
+
+## Amendment (2026-10-09, owner)
+
+The MDX bullet was amended in place to match what v0.2 built (owner's choice for this change; the
+convention is a superseding ADR). It first said every JSX element becomes a placeholder. MDX reads
+every HTML tag as JSX, so `<img src="a.png">` or `<details>` in an article would have shown as a
+box instead of an image or a disclosure. Lowercase tags with only string props now take the
+raw-HTML path, so images and links in them work as in Markdown; components, and tags with
+`{expression}` props, are still placeholders. Comment-only expressions (`{/* … */}`) are hidden,
+as the published site hides them. The MDX parser (with its JavaScript parser) loads in the worker
+with the first MDX document.
