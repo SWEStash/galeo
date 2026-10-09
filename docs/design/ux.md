@@ -302,7 +302,7 @@ the native menu on the active tab.
 | Quit | Ctrl+Shift+Q | Ctrl+Q not bound (avoid accidental quit) |
 | Edit mode (v0.2) | Ctrl+E | |
 | Save (v0.2) | Ctrl+S | |
-| Split view (v0.2) | Ctrl+\ | |
+| Split view (v0.2) | Ctrl+\ | Source left, rendered right; edit mode keeps it; Ctrl+U leaves it |
 | Find & replace (v0.2) | Ctrl+H | Edit mode only |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply

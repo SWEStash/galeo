@@ -37,8 +37,8 @@ Every diagram uses these names exactly.
 | **Contracts** | Shared IPC and domain types plus runtime schemas (`src/shared`) |
 | **Window Renderer** | One sandboxed renderer process per window: Chrome UI + Document Host (ADR-002) |
 | **Chrome UI** | React + React Aria app UI: tab bar, quick open, palette, find, outline, profile menu, settings, status bar (ADR-006) |
-| **Document Host** | Owns one Shadow-DOM container per tab; inserts rendered HTML, mounts CodeMirror, renders Mermaid lazily, runs find (ADR-003) |
-| **Render Worker** | One Web Worker per window running the unified pipeline + Shiki + KaTeX (ADR-003); a render over its budget (2 s) is refused and the worker replaced, so the tab shows source |
+| **Document Host** | Owns one Shadow-DOM container per tab; inserts rendered HTML, mounts CodeMirror, renders Mermaid lazily, runs find (ADR-003); in split view shows the source and rendered panes side by side and keeps them on the same block (ADR-014) |
+| **Render Worker** | One Web Worker per window running the unified pipeline + Shiki + KaTeX (ADR-003); a render over its budget (2 s) is refused and the worker replaced, so the tab shows source; a live preview's render (split while editing) skips the cache, only its latest text is rendered, and over budget the last good preview stays (ADR-014) |
 | **Format Registry** | Descriptors mapping files to source and rendered views (ADR-003) |
 | **Tab Record** | Plain data for a tab: path, view, scroll anchor, file identity, history (ADR-002) |
 | **Profile** | A named context: windows + session + settings (ADR-005) |
@@ -202,7 +202,7 @@ flowchart TB
   end
   subgraph dochost[Document Host · imperative]
     cont[Shadow-DOM container per tab<br/>active / warm]
-    views[Views from Format Registry<br/>rendered · reader · source · log]
+    views[Views from Format Registry<br/>rendered · reader · source · log<br/>split: source + rendered, scroll sync]
     cm[CodeMirror 6<br/>lazy, per source view]
     mer[Mermaid<br/>lazy, on intersection]
     hl[Find engine<br/>CSS Custom Highlight API]
@@ -311,7 +311,7 @@ Otherwise it encodes the text the way those bytes were (encoding, byte order mar
 and saves through the file system port: on the symlink's target, through a temp file that keeps
 mode, owner and group, then a rename; in place for a hard-linked file or one whose owner or group
 the temp file can't take; refused for a file the user can't write. The new identity is remembered
-before the watcher reports the write. A null `version` writes back a file that was deleted, only
+before the watcher reports the write, so the page reads the file again itself after each save. A null `version` writes back a file that was deleted, only
 while it is still gone, in the shape of the tab's last read (`ReadIdentities` keeps the encoding,
 byte order mark and line endings, never the text).
 
@@ -324,6 +324,11 @@ a second after typing stops (`documents.keep`, memory only). Main holds window c
 profile deletes until each affected page has asked its reader (`documents.confirmClose`, answered
 by `documents.closeAnswer`: *asking* within 5 s, then the choice). After a renderer crash, a tab
 gets its kept text back (`documents.recover`).
+
+In split view (ADR-014) the rendered pane previews the editor's text, not the file's: the page
+sends it to the worker 150 ms after typing pauses, and at least once a second while it goes on.
+Both panes meet on a source line through the blocks' `data-src-line` and `data-src-end`; the pane
+the reader scrolls leads, and a pane whose content just changed follows without taking the lead.
 
 ### 5.6 Cold start and session restore
 
@@ -353,6 +358,7 @@ renders only its active tab. Budget: first document painted within 500 ms.
 | Live reload < 500 ms | Coalesced watcher per open file; re-parse in the worker; anchored re-insert |
 | Smooth scrolling with diagrams | Mermaid draws a diagram within 200 px of the view at once, and one within two screens when the page is idle; cached by scheme and source; a cached diagram comes back at once. Drawing one takes the UI thread for up to about 100 ms, which the perf suite records |
 | Memory baseline | Renderers scale with windows, not tabs; warm budget with memory-pressure eviction |
+| Typing in split < 300 ms (v0.2) | A render once typing pauses for 150 ms, at least once a second; only the latest text is rendered, outside the cache; drawn diagrams come back from their cache |
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
 

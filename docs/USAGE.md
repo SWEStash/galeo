@@ -44,6 +44,11 @@ the file into the window in front of you) when you want it here.
   shows `↻` for a moment. F5 or Ctrl+R reloads by hand.
 - **Views**: Ctrl+U switches a Markdown file between rendered and source; Alt+Z toggles wrapping;
   logs open in source view, and End follows the end of a growing log.
+- **Split view** (Markdown): Ctrl+\ shows the source on the left and the rendered view on the
+  right; scrolling either keeps the other on the same block. Drag the divider, or focus it and use
+  the arrow keys; double-click or Home puts it back at half. Ctrl+\ again goes back to the view
+  you had; Ctrl+U goes to the rendered view. A window narrower than about 700 px shows one view
+  until it widens. A tab keeps its split and divider across restarts.
 - **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
   Ctrl+0, or Ctrl and the wheel), and every command by name in the **palette** (Ctrl+Shift+P).
 - **Status bar**: the path (click to copy it or reveal it in Files), the view, the encoding, the
@@ -68,6 +73,10 @@ the file into the window in front of you) when you want it here.
 - **Ctrl+E** puts the shown file in edit mode: the source view takes your typing, the tab shows
   `✎`, and the status bar says *Editing*. Ctrl+E again goes back to reading. An empty file
   can't be edited.
+- **In split view**, edit mode keeps the rendered view beside the editor, and it follows your
+  typing once you pause. If a preview takes too long to render (or can't be rendered), the last
+  one stays with *Preview paused*, and the next pause tries again. Ctrl+U goes to the editor alone;
+  a narrow window shows the editor.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
   permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the
