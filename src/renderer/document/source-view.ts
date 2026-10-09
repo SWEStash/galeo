@@ -92,6 +92,13 @@ const LANGUAGES: Record<Exclude<SourceLanguage, null>, () => Extension> = {
   log: () => logLevels(),
 };
 
+/** How source text looks, in the source view and in the diff of unsaved edits. */
+export const sourceLook = (language: SourceLanguage): Extension => [
+  syntaxHighlighting(highlight),
+  theme,
+  language ? LANGUAGES[language]() : [],
+];
+
 /**
  * A CodeMirror view inside a document's shadow root (ADR-003), read-only unless the tab is in edit
  * mode. Reading binds only the standard navigation keys.
@@ -126,12 +133,10 @@ export function createSourceView(options: {
         lineNumbers(),
         highlightActiveLineGutter(),
         keymap.of(standardKeymap),
-        syntaxHighlighting(highlight),
-        theme,
+        sourceLook(options.language),
         wrapping.of(options.wrap ? EditorView.lineWrapping : []),
         // The find bar is the app's own; CodeMirror only highlights and selects the matches.
         search({ createPanel: () => ({ dom: Object.assign(document.createElement('div'), { hidden: true }) }) }),
-        options.language ? LANGUAGES[options.language]() : [],
       ],
     }),
   });

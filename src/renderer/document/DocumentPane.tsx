@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
 import type { ImageResult, SaveResult, TextEncoding } from '../../shared/documents';
+import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
 import type { FormatId, ViewMode } from '../../shared/formats';
 import type { Platform } from '../../shared/keymap';
@@ -324,8 +325,29 @@ export function DocumentPane({
     setEditing(false);
     onLeaveEdit?.();
   };
+  // Show diff: the reader's text as it was when they asked, against the file on disk.
+  const [diff, setDiff] = useState<string | null>(null);
+  // After a choice the bar and its Show diff button are gone, so the modal's own focus restore (a
+  // frame or more after it closes) lands nowhere: focus left on the body goes to the editor.
+  const [refocus, setRefocus] = useState(0);
+  const closeDiff = (choose?: () => void) => {
+    choose?.();
+    setDiff(null);
+    if (choose) setRefocus((n) => n + 1);
+  };
+  useEffect(() => {
+    if (refocus === 0) return;
+    let frames = 0;
+    let frame = requestAnimationFrame(function settle() {
+      const focused = document.activeElement;
+      if (focused === document.body || focused?.classList.contains('document-view')) documentHandle.current?.focus();
+      if (++frames < RETURN_FOCUS_FRAMES) frame = requestAnimationFrame(settle);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [refocus]);
   const diskActions: Record<DiskChange, { label: string; onAction: () => void }[]> = {
     'disk-changed': [
+      { label: 'Show diff', onAction: () => setDiff(documentHandle.current?.sourceText() ?? pinnedText) },
       { label: 'Keep mine', onAction: keepMine },
       { label: 'Load theirs', onAction: loadTheirs },
     ],
@@ -583,6 +605,16 @@ export function DocumentPane({
         )}
       </div>
       {viewer && <ZoomViewer content={viewer.content} name={viewer.name} onClose={closeViewer} />}
+      {diff !== null && disk === 'disk-changed' && content.state === 'ready' && (
+        <DiffDialog
+          mine={diff}
+          theirs={content.text}
+          language={SOURCE_LANGUAGES[content.format]}
+          onKeepMine={() => closeDiff(keepMine)}
+          onLoadTheirs={() => closeDiff(loadTheirs)}
+          onClose={() => closeDiff()}
+        />
+      )}
     </>
   );
 }

@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
@@ -190,6 +191,40 @@ test('a change on disk while edits are unsaved is never overwritten: the bar ask
     await expect(message(window)).toHaveText('Saved');
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
     await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
+  } finally {
+    app.process().kill('SIGKILL');
+    removeTempHome(home);
+    removeTempHome(dir);
+  }
+});
+
+test('Show diff puts mine beside theirs, read-only and accessible; Esc goes back to the bar, Keep mine from it saves over', async () => {
+  const { app, window, home, dir, file } = await dirtyEdit();
+  try {
+    saveFile(file, '# Theirs\n');
+    const showDiff = diskBar(window, 'changed').getByRole('button', { name: 'Show diff' });
+    await showDiff.click();
+    const diff = window.getByRole('dialog', { name: 'Changes: mine | theirs' });
+    await expect(diff.getByRole('textbox', { name: 'Mine (unsaved)' })).toContainText('More.');
+    await expect(diff.getByRole('textbox', { name: 'Theirs (on disk)' })).toContainText('# Theirs');
+    await expect(diff.getByRole('textbox', { name: 'Mine (unsaved)' })).toHaveAttribute('aria-readonly', 'true');
+    for (const scheme of ['light', 'dark'] as const) {
+      await app.evaluate(({ nativeTheme }, value) => (nativeTheme.themeSource = value), scheme);
+      const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[role="dialog"]').analyze();
+      expect(results.violations, scheme).toEqual([]);
+    }
+    await window.keyboard.press('Escape');
+    await expect(diff).toHaveCount(0);
+    await expect(showDiff).toBeFocused();
+
+    await showDiff.click();
+    await diff.getByRole('button', { name: 'Keep mine' }).click();
+    await expect(diff).toHaveCount(0);
+    await expect(diskBar(window, 'changed')).toHaveCount(0);
+    await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
+    await window.keyboard.press('Control+s');
+    await expect(message(window)).toHaveText('Saved');
+    expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
   } finally {
     app.process().kill('SIGKILL');
     removeTempHome(home);

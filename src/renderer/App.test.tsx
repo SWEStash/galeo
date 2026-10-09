@@ -1074,7 +1074,7 @@ describe('App editing', () => {
     await changeOnDisk(api, theirs);
     expect(editor.state.doc.toString()).toBe('# hi!');
     expect(bar(container)?.textContent).toContain('File changed on disk');
-    expect(barButtons(container)).toEqual(['Keep mine', 'Load theirs']);
+    expect(barButtons(container)).toEqual(['Show diff', 'Keep mine', 'Load theirs']);
 
     await press('s');
     expect(api.documents.save).not.toHaveBeenCalled();
@@ -1085,6 +1085,28 @@ describe('App editing', () => {
     api.documents.save.mockResolvedValueOnce({ kind: 'saved', version: 'v6' });
     await press('s');
     expect(api.documents.save).toHaveBeenCalledWith('doc-1', '# hi!', 'v5');
+  });
+
+  it('shows mine against theirs, read-only, on Show diff, and the choice from there closes it', async () => {
+    const { EditorView } = await import('@codemirror/view');
+    const { api, container, editor, type } = await editing();
+    type('!');
+    await changeOnDisk(api, theirs);
+    expect(barButtons(container)).toEqual(['Show diff', 'Keep mine', 'Load theirs']);
+    await clickBar(container, 'Show diff');
+    const diff = await vi.waitFor(() => {
+      const dialog = document.querySelector<HTMLElement>('[role="dialog"][aria-label="Changes: mine | theirs"]');
+      expect(dialog?.querySelectorAll('.cm-editor')).toHaveLength(2);
+      return dialog!;
+    }, { timeout: 5_000 });
+    const [mine, disk] = [...diff.querySelectorAll<HTMLElement>('.cm-editor')].map((element) => EditorView.findFromDOM(element)!);
+    expect(mine!.state.doc.toString()).toBe('# hi!');
+    expect(disk!.state.doc.toString()).toBe('theirs');
+    expect(mine!.state.readOnly && disk!.state.readOnly).toBe(true);
+
+    await act(async () => [...diff.querySelectorAll('button')].find((button) => button.textContent === 'Load theirs')!.click());
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+    expect(editor.state.doc.toString()).toBe('theirs');
   });
 
   it('takes their text on Load theirs: clean, still editing', async () => {

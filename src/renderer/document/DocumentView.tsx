@@ -138,6 +138,8 @@ export function DocumentView({
   const menuListener = useRef(onContextMenu);
   menuListener.current = onContextMenu;
   const shownView = useRef<ViewMode | null>(null);
+  const editing = useRef(editable);
+  editing.current = editable;
   const renderedFinder = useRef<Finder | null>(null);
   const host = () => mountDocumentHost(container.current!);
 
@@ -157,7 +159,12 @@ export function DocumentView({
         inRendered().clear();
         host().source?.clearFind();
       },
-      focus: () => container.current?.focus(),
+      // In edit mode the caret goes back into the editor; otherwise the document takes focus.
+      focus: () => {
+        const source = host().source;
+        if (editing.current && source && shownView.current === 'source') source.view.focus();
+        else container.current?.focus();
+      },
       sourceText: () => host().source?.text() ?? null,
       replaceSource: (text) => host().source?.setText(text),
       scrollToAnchor: (anchor) => {
