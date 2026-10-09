@@ -309,8 +309,8 @@ export function DocumentPane({
     }
     base.current = result.version;
     onMessage?.('Saved');
-    // Written back after it was gone: the pane shows the file as it is now.
-    if (content.state !== 'ready') onReread?.();
+    // The pane shows the file as it is now: the saved text, or the file written back after it was gone.
+    onReread?.();
     // Typing during the save stays unsaved.
     if (edits.current !== editsAtSave) return false;
     markDirty(false);

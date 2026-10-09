@@ -39,6 +39,29 @@ test('Ctrl+E edits the shown file, Ctrl+S saves it with its own line endings, an
   }
 });
 
+test('after a save, the rendered view shows the saved text', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'notes.md');
+  writeFileSync(file, '# Notes\n');
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toHaveText('Notes');
+    await pressInMain(app, window, 'E');
+    await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
+    await window.keyboard.press('Control+End');
+    await window.keyboard.type('\nSaved words.');
+    await window.keyboard.press('Control+s');
+    await expect(window.getByTestId('status-message')).toHaveText('Saved');
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(shownDocument(window).locator('p')).toHaveText('Saved words.');
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
 /** A file in edit mode with one unsaved line. Closing it would ask, so a failed test's cleanup kills it. */
 async function dirtyEdit(text = '# Draft\n', { open = (file: string) => file }: { open?: (file: string) => string } = {}) {
   const dir = tempHome();
