@@ -1020,11 +1020,15 @@ button:focus-visible {
   width: min(640px, calc(100vw - 32px));
 }
 
-/* Show diff fills the window below the title bar's controls, less a margin: mine | theirs. */
-.modal.diff-view {
+/* Full-window modals fill the window below the title bar's controls, less a margin, so their bars
+   stay clear of the native window buttons. */
+.modal.diff-view,
+.modal.zoom-viewer {
   width: calc(100vw - 48px);
   height: calc(100vh - 2 * (env(titlebar-area-height, 36px) + 12px));
 }
+
+/* Show diff: mine | theirs. */
 .diff-view-dialog {
   box-sizing: border-box;
   height: 100%;
@@ -1063,11 +1067,7 @@ button:focus-visible {
   overflow: auto;
 }
 
-/* The diagram viewer fills the window, less a margin; the diagram pans and zooms inside. */
-.modal.zoom-viewer {
-  width: calc(100vw - 48px);
-  height: calc(100vh - 48px);
-}
+/* The diagram viewer: the diagram pans and zooms inside. */
 .zoom-viewer-keys {
   height: 100%;
 }

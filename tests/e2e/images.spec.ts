@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { launchApp } from '../helpers/launch';
+import { windowControlsOverlap } from '../helpers/window-controls';
 
 const index = path.resolve(import.meta.dirname, '../fixtures/docs/images/index.md');
 
@@ -84,6 +85,8 @@ test('an image larger than an icon opens in the viewer, by a click or its Expand
     const stage = viewer.getByTestId('zoom-stage');
     await expect(stage.locator('img')).toBeVisible();
     await expect.poll(async () => Number(await stage.getAttribute('data-scale'))).toBeGreaterThan(1);
+    // Its bar stays clear of the window controls drawn over the title bar.
+    expect(await windowControlsOverlap(window, viewer.getByRole('button', { name: 'Close' }))).toBeNull();
     const fitted = Number(await stage.getAttribute('data-scale'));
     await window.keyboard.press('-');
     await expect.poll(async () => Number(await stage.getAttribute('data-scale'))).toBeLessThan(fitted);

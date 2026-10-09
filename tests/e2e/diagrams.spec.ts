@@ -2,6 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { launchApp } from '../helpers/launch';
+import { windowControlsOverlap } from '../helpers/window-controls';
 
 const fixtures = path.resolve(import.meta.dirname, '../fixtures');
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
@@ -170,6 +171,8 @@ test('a diagram opens in a full-window viewer that zooms and pans, and Esc gives
     const stage = viewer.getByTestId('zoom-stage');
     const scale = async () => Number(await stage.getAttribute('data-scale'));
     await expect(stage.locator('.galeo-viewer-content')).toBeVisible();
+    // Its bar stays clear of the window controls drawn over the title bar.
+    expect(await windowControlsOverlap(window, viewer.getByRole('button', { name: 'Close' }))).toBeNull();
     const fitted = await scale();
     await window.keyboard.press('+');
     await expect.poll(scale).toBeGreaterThan(fitted);
