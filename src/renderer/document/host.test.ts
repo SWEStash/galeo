@@ -87,6 +87,40 @@ describe('mountDocumentHost', () => {
     expect(element.style.getPropertyValue('--galeo-split-source')).toBe('30%');
   });
 
+  it("puts a focusable separator between a split's panes, naming the source pane's share", () => {
+    const host = mountDocumentHost(container());
+    const divider = host.root.querySelector<HTMLElement>('[role="separator"]')!;
+    expect(divider.hidden).toBe(true);
+    host.showView('split');
+    host.setSplitRatio(0.35);
+    expect(divider.hidden).toBe(false);
+    expect(divider.tabIndex).toBe(0);
+    expect(divider.getAttribute('aria-orientation')).toBe('vertical');
+    expect(divider.getAttribute('aria-label')).toBe('Resize source and preview');
+    expect([divider.getAttribute('aria-valuemin'), divider.getAttribute('aria-valuemax'), divider.getAttribute('aria-valuenow')]).toEqual(['20', '80', '35']);
+    // Between the panes: after the source, before the rendered pane.
+    expect(divider.previousElementSibling?.className).toBe('galeo-source');
+    expect(divider.nextElementSibling?.className).toBe('galeo-rendered-pane');
+  });
+
+  it('moves the divider with the arrow keys and resets it with Home or a double-click', () => {
+    const host = mountDocumentHost(container());
+    host.showView('split');
+    host.setSplitRatio(0.5);
+    const moved: number[] = [];
+    host.onSplitRatio((ratio) => moved.push(ratio));
+    const divider = host.root.querySelector<HTMLElement>('[role="separator"]')!;
+    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    divider.dispatchEvent(right);
+    expect(right.defaultPrevented).toBe(true);
+    divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true, cancelable: true }));
+    divider.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    const other = new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true });
+    divider.dispatchEvent(other);
+    expect(other.defaultPrevented).toBe(false);
+    expect(moved.map((ratio) => Math.round(ratio * 100))).toEqual([55, 50, 50]);
+  });
+
   it('replaces the content on each update', () => {
     const host = mountDocumentHost(container());
     host.setContent('<p>one</p>');

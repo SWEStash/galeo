@@ -10,6 +10,7 @@ import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import type { SourceLanguage } from './source-view';
+import { SPLIT_MIN_WIDTH } from './view-modes';
 
 /** What the rendered view shows: worker HTML (Markdown) or reader text (`.txt`). */
 export type RenderedContent = { html: string } | { text: string };
@@ -52,6 +53,10 @@ export interface DocumentViewProps {
   onHeading?: ((id: string | null) => void) | undefined;
   /** The source pane's share of the width in split (ADR-014). */
   splitRatio?: number;
+  /** The reader moved the split's divider. */
+  onSplitRatio?: ((ratio: number) => void) | undefined;
+  /** The document area became too narrow for a split, or wide enough again. */
+  onNarrow?: ((narrow: boolean) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
   ref?: Ref<DocumentHandle>;
 }
@@ -132,6 +137,8 @@ export function DocumentView({
   editable = false,
   onEdit,
   splitRatio = 0.5,
+  onSplitRatio,
+  onNarrow,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -321,6 +328,25 @@ export function DocumentView({
   useLayoutEffect(() => {
     host().setSplitRatio(splitRatio);
   }, [splitRatio]);
+  const ratioListener = useRef(onSplitRatio);
+  ratioListener.current = onSplitRatio;
+  useEffect(() => host().onSplitRatio((ratio) => ratioListener.current?.(ratio)), []);
+
+  // Whether a split fits: measured as the document area resizes; a hidden tab (no width) keeps its say.
+  const narrowListener = useRef(onNarrow);
+  narrowListener.current = onNarrow;
+  useEffect(() => {
+    const element = container.current!;
+    let narrow: boolean | null = null;
+    const observer = new ResizeObserver(() => {
+      const width = element.getBoundingClientRect().width;
+      if (width === 0 || (width < SPLIT_MIN_WIDTH) === narrow) return;
+      narrow = width < SPLIT_MIN_WIDTH;
+      narrowListener.current?.(narrow);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   // After the view switch above (a hidden view can't take focus): edit mode makes the source view
   // editable and puts the caret in it; reading makes it read-only again.

@@ -22,7 +22,7 @@
 /* Split (ADR-014): source on the left, rendered on the right, each pane scrolling itself. */
 :host([data-view='split']) {
   display: grid;
-  grid-template-columns: var(--galeo-split-source, 50%) minmax(0, 1fr);
+  grid-template-columns: var(--galeo-split-source, 50%) auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
 }
 :host([data-view='split']) .galeo-source,
@@ -33,7 +33,22 @@
 }
 :host([data-view='split']) .galeo-rendered-pane {
   overflow: auto;
-  border-left: 1px solid var(--galeo-color-border);
+}
+
+/* A thin line with a wider grip; the focus ring shows where the arrow keys act. */
+.galeo-split-divider {
+  width: 7px;
+  margin: 0 -3px;
+  z-index: 1;
+  cursor: col-resize;
+  touch-action: none;
+  background: linear-gradient(var(--galeo-color-border), var(--galeo-color-border)) center / 1px 100% no-repeat;
+}
+.galeo-split-divider:hover,
+.galeo-split-divider:focus-visible {
+  background-size: 3px 100%;
+  background-image: linear-gradient(var(--galeo-color-focus), var(--galeo-color-focus));
+  outline: none;
 }
 
 .galeo-document {

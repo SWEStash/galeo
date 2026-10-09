@@ -23,7 +23,7 @@ import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
 import { useRenderedHtml } from './useRenderedHtml';
-import { afterToggleSource, afterToggleSplit, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
+import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 
 const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', log: 'log', text: null, plain: null };
 
@@ -170,7 +170,8 @@ export function DocumentPane({
   const [wrap, setWrap] = useState(false);
   const [follow, setFollow] = useState(initialViewState.follow === true);
   // The source pane's share of a split (ADR-014), kept with the view state once moved.
-  const [ratio] = useState(initialViewState.ratio ?? 0.5);
+  const [ratio, setRatio] = useState(initialViewState.ratio ?? 0.5);
+  const [narrow, setNarrow] = useState(false);
   // Markdown renders in the worker; `.txt` shows as reader text; logs and other text are source only.
   const renderable = ready?.format === 'markdown' || ready?.format === 'text';
   const splittable = ready?.format === 'markdown';
@@ -179,10 +180,10 @@ export function DocumentPane({
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
   const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large' });
   // A document that failed to render shows its source instead.
-  const view = wantedView !== 'source' && render.status === 'failed' ? 'source' : wantedView;
+  const layout = wantedView !== 'source' && render.status === 'failed' ? 'source' : wantedView;
   // What Ctrl+\ goes back to from split.
   const lastSingle = useRef<SingleView>('rendered');
-  if (view !== 'split') lastSingle.current = view;
+  if (layout !== 'split') lastSingle.current = layout;
   const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending' && render.html === null, LOADING_DELAY_MS);
   const rendered = useMemo<RenderedContent | null>(() => {
     if (ready?.format === 'text') return { text: ready.text };
@@ -199,6 +200,8 @@ export function DocumentPane({
   // Edit mode (ADR-013). While the text has unsaved changes, the editor keeps it: a new read of
   // the file (it changed on disk) neither replaces it nor becomes the version a save names.
   const [editing, setEditing] = useState(false);
+  // A split in a window too narrow for it shows one view; the toggles still act on the split.
+  const view = shownView(layout, { narrow, editing });
   const edits = useRef(0);
   const [pinnedText, setPinnedText] = useState('');
   const base = useRef(ready?.version ?? null);
@@ -274,7 +277,7 @@ export function DocumentPane({
         return;
       }
       setEditing(true);
-      setChosenView(viewForEditing(view));
+      setChosenView(viewForEditing(layout));
     } else if (dirtyNow.current) {
       void onConfirmLeave?.().then((left) => {
         if (!left) return;
@@ -463,8 +466,8 @@ export function DocumentPane({
   };
   useCommands(
     {
-      toggleSource: () => renderable && toggle(afterToggleSource(view, { editing })),
-      toggleSplit: () => ready !== null && toggle(afterToggleSplit(view, { splittable, editing, lastSingle: lastSingle.current })),
+      toggleSource: () => renderable && toggle(afterToggleSource(layout, { editing })),
+      toggleSplit: () => ready !== null && toggle(afterToggleSplit(layout, { splittable, editing, lastSingle: lastSingle.current })),
       toggleWrap: () => {
         if (view === 'rendered') return false;
         setWrap((current) => !current);
@@ -594,6 +597,8 @@ export function DocumentPane({
           onEdit={edited}
           view={view}
           splitRatio={ratio}
+          onSplitRatio={setRatio}
+          onNarrow={setNarrow}
           wrap={wrap}
           follow={follow}
           onFollowEnded={endFollow}

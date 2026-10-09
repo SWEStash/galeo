@@ -1,8 +1,24 @@
+import AxeBuilder from '@axe-core/playwright';
+import { copyFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
-import { launchApp } from '../helpers/launch';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { pressInMain } from '../helpers/keys';
+import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
 
-const plan = path.resolve(import.meta.dirname, '../fixtures/docs/plan-50k.md');
+const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
+const plan = path.join(docs, 'plan-50k.md');
+const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
+const divider = (window: Page) => shownDocument(window).getByRole('separator', { name: 'Resize source and preview' });
+
+/** The source pane's share of the document area's width, in whole percent. */
+async function sourceShare(window: Page): Promise<number> {
+  const { source, rendered } = await panes(window);
+  return Math.round((100 * (source[1] - source[0])) / (rendered[1] - source[0]));
+}
+
+function setWidth(app: ElectronApplication, page: Page, width: number) {
+  return app.browserWindow(page).then((window) => window.evaluate((browserWindow, value) => browserWindow.setSize(value, 800), width));
+}
 
 /** The line number at the top of the source pane, read from its gutter. */
 function sourceTopLine(page: Page): Promise<number> {
@@ -47,6 +63,161 @@ test('Ctrl+\\ shows the source beside the rendered view at the same place; Ctrl+
     await window.keyboard.press('ControlOrMeta+Backslash');
     await expect(document.locator('.cm-editor')).toBeHidden();
     await expect(heading).toBeInViewport();
+  } finally {
+    await close();
+  }
+});
+
+test('the divider moves with the arrow keys, resets with Home, and a restart keeps split and where it was', async () => {
+  const home = tempHome();
+  try {
+    const first = await launchApp(['--', plan], { home });
+    try {
+      await expect(shownDocument(first.window).locator('h1')).toBeVisible();
+      await first.window.keyboard.press('ControlOrMeta+Backslash');
+      await expect(divider(first.window)).toBeVisible();
+      await divider(first.window).focus();
+      await first.window.keyboard.press('ArrowRight');
+      await first.window.keyboard.press('ArrowRight');
+      await expect(divider(first.window)).toHaveAttribute('aria-valuenow', '60');
+      await expect.poll(() => sourceShare(first.window)).toBe(60);
+      await first.window.keyboard.press('Home');
+      await expect(divider(first.window)).toHaveAttribute('aria-valuenow', '50');
+      for (let i = 0; i < 6; i++) await first.window.keyboard.press('ArrowLeft');
+      await expect(divider(first.window)).toHaveAttribute('aria-valuenow', '20');
+    } finally {
+      await first.close();
+    }
+
+    const second = await launchApp([], { home });
+    try {
+      await expect(divider(second.window)).toBeVisible();
+      await expect(divider(second.window)).toHaveAttribute('aria-valuenow', '20');
+      await expect(second.window.getByTestId('status-view')).toHaveText('Split');
+    } finally {
+      await second.close();
+    }
+  } finally {
+    removeTempHome(home);
+  }
+});
+
+test('the divider follows a drag, and a double-click puts it back at half', async () => {
+  const { window, close } = await launchApp(['--', path.join(docs, 'basic.md')]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    const grip = divider(window);
+    await expect(grip).toBeVisible();
+    const area = (await shownDocument(window).boundingBox())!;
+    const box = (await grip.boundingBox())!;
+    await window.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await window.mouse.down();
+    await window.mouse.move(area.x + area.width * 0.3, box.y + box.height / 2, { steps: 5 });
+    await window.mouse.up();
+    await expect(grip).toHaveAttribute('aria-valuenow', '30');
+    await grip.dblclick();
+    await expect(grip).toHaveAttribute('aria-valuenow', '50');
+  } finally {
+    await close();
+  }
+});
+
+test('a window too narrow for split shows the rendered view, or the source while editing, and split comes back wider', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'basic.md');
+  copyFileSync(path.join(docs, 'basic.md'), file);
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+
+    await setWidth(app, window, 600);
+    await expect(document.locator('.cm-editor')).toBeHidden();
+    await expect(document.locator('h1')).toBeVisible();
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    await expect(document.locator('.cm-content')).toBeFocused();
+    await expect(document.locator('h1')).toBeHidden();
+
+    await setWidth(app, window, 1100);
+    await expect(document.locator('h1')).toBeVisible();
+    await expect(document.locator('.cm-editor')).toBeVisible();
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
+test('edit mode keeps split with the caret in the editor; Ctrl+U leaves split for the source while editing, the rendered view when reading', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'basic.md');
+  copyFileSync(path.join(docs, 'basic.md'), file);
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+    await pressInMain(app, window, 'E');
+    await expect(document.locator('.cm-content')).toBeFocused();
+    await expect(document.locator('h1')).toBeVisible();
+
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(document.locator('h1')).toBeHidden();
+    await expect(window.getByTestId('status-view')).toHaveText('Source');
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('h1')).toBeVisible();
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(document.locator('.cm-editor')).toBeHidden();
+    await expect(window.getByTestId('status-view')).toHaveText('Rendered');
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
+test('find searches the source pane, or the rendered pane once the reader clicks in it', async () => {
+  const { window, close } = await launchApp(['--', path.join(docs, 'basic.md')]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+    // `**bold**` in the source, "bold" in the rendered text: only the source has the asterisks.
+    await window.keyboard.press('ControlOrMeta+F');
+    await window.keyboard.type('**bold');
+    await expect(window.locator('.find-bar [role="status"]')).toHaveText('1 of 1');
+    await window.keyboard.press('Escape');
+    await document.locator('p').first().click();
+    await window.keyboard.press('ControlOrMeta+F');
+    await window.keyboard.press('ControlOrMeta+A');
+    await window.keyboard.type('**bold');
+    await expect(window.locator('.find-bar [role="status"]')).toHaveText('No matches');
+  } finally {
+    await close();
+  }
+});
+
+test('split passes axe in both colour schemes', async () => {
+  const { app, window, close } = await launchApp(['--', path.join(docs, 'basic.md')]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(divider(window)).toBeVisible();
+    for (const scheme of ['light', 'dark'] as const) {
+      await app.evaluate(({ nativeTheme }, value) => (nativeTheme.themeSource = value), scheme);
+      const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"]').analyze();
+      expect(results.violations, scheme).toEqual([]);
+    }
   } finally {
     await close();
   }

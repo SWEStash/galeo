@@ -1,6 +1,7 @@
-import type { ViewMode } from '../../shared/formats';
+import { SPLIT_MAX_RATIO, SPLIT_MIN_RATIO, type ViewMode } from '../../shared/formats';
 import documentCss from './document.css?inline';
 import type { SourceLanguage, SourceView } from './source-view';
+import { ratioAt, ratioForKey } from './split-divider';
 import { textParagraphs } from './text-reader';
 
 export type ColorScheme = 'light' | 'dark';
@@ -22,6 +23,8 @@ export interface DocumentHost {
   showView(view: ViewMode): void;
   /** The source pane's share of a split's width. */
   setSplitRatio(ratio: number): void;
+  /** The reader moved the divider (keys, a double-click or a drag) to `ratio`. */
+  onSplitRatio(listener: (ratio: number) => void): void;
   /** Picks the code theme matching the app's scheme. */
   setScheme(scheme: ColorScheme): void;
 }
@@ -82,6 +85,44 @@ export function setCustomCss(css: { global: string; profile: string }): void {
   sheets.at(-1)!.replaceSync(css.profile);
 }
 
+/**
+ * The split's divider (ADR-014, UX F13): a focusable separator moved by the arrow keys or a drag,
+ * reset to half by Home or a double-click.
+ */
+function splitDivider(container: HTMLElement, current: () => number, move: (ratio: number) => void): HTMLElement {
+  const divider = document.createElement('div');
+  divider.className = 'galeo-split-divider';
+  divider.hidden = true;
+  divider.tabIndex = 0;
+  divider.setAttribute('role', 'separator');
+  divider.setAttribute('aria-orientation', 'vertical');
+  divider.setAttribute('aria-label', 'Resize source and preview');
+  divider.setAttribute('aria-valuemin', String(SPLIT_MIN_RATIO * 100));
+  divider.setAttribute('aria-valuemax', String(SPLIT_MAX_RATIO * 100));
+  divider.addEventListener('keydown', (event) => {
+    const next = ratioForKey(current(), event.key);
+    if (next === null || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
+    event.preventDefault();
+    move(next);
+  });
+  divider.addEventListener('dblclick', () => move(0.5));
+  divider.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    divider.setPointerCapture(event.pointerId);
+    const drag = (moved: PointerEvent) => move(ratioAt(moved.clientX, container.getBoundingClientRect()));
+    const end = () => {
+      divider.removeEventListener('pointermove', drag);
+      divider.removeEventListener('pointerup', end);
+      divider.removeEventListener('pointercancel', end);
+    };
+    divider.addEventListener('pointermove', drag);
+    divider.addEventListener('pointerup', end);
+    divider.addEventListener('pointercancel', end);
+  });
+  return divider;
+}
+
 const hosts = new WeakMap<HTMLElement, DocumentHost>();
 
 /**
@@ -102,8 +143,11 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
   const renderedPane = document.createElement('div');
   renderedPane.className = 'galeo-rendered-pane';
   renderedPane.append(article);
+  let ratio = 0.5;
+  let ratioListener: ((ratio: number) => void) | undefined;
+  const divider = splitDivider(container, () => ratio, (next) => ratioListener?.(next));
   // Source first: on the left in split, and first in the focus order.
-  root.append(sourceParent, renderedPane);
+  root.append(sourceParent, divider, renderedPane);
   let source: SourceView | null = null;
   let sourceText: string | null = null;
 
@@ -145,11 +189,17 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
     showView(view) {
       article.hidden = view === 'source';
       sourceParent.hidden = view === 'rendered';
+      divider.hidden = view !== 'split';
       container.dataset['view'] = view;
       if (view === 'split') container.scrollTop = 0;
     },
-    setSplitRatio(ratio) {
-      container.style.setProperty('--galeo-split-source', `${Math.round(ratio * 1000) / 10}%`);
+    setSplitRatio(next) {
+      ratio = next;
+      container.style.setProperty('--galeo-split-source', `${Math.round(next * 1000) / 10}%`);
+      divider.setAttribute('aria-valuenow', String(Math.round(next * 100)));
+    },
+    onSplitRatio(listener) {
+      ratioListener = listener;
     },
     setScheme(scheme) {
       container.dataset['scheme'] = scheme;

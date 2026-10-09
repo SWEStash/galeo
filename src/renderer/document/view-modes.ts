@@ -1,5 +1,8 @@
 import type { ViewMode } from '../../shared/formats';
 
+/** Narrower than this (CSS px), a split shows one view until it widens (ADR-014). */
+export const SPLIT_MIN_WIDTH = 700;
+
 /** A single view: what split leaves for. */
 export type SingleView = Exclude<ViewMode, 'split'>;
 
