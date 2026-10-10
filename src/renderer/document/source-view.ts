@@ -6,6 +6,8 @@ import {
   findNext,
   findPrevious,
   openSearchPanel,
+  replaceAll,
+  replaceNext,
   search,
   SearchQuery,
   searchPanelOpen,
@@ -49,6 +51,10 @@ export interface SourceView {
   find(query: string, options: { caseSensitive: boolean }): FindResult;
   findStep(direction: 1 | -1): FindResult;
   clearFind(): void;
+  /** Edit mode: replaces the current match with `text` (as typed) and selects the next one. */
+  replace(text: string): FindResult;
+  /** Edit mode: replaces every match (no cap) as one undo step; how many it replaced. */
+  replaceAll(text: string): number;
   /** Edit mode (ADR-013): the reader's typing changes the text; otherwise it's read-only. */
   setEditable(editable: boolean): void;
   /** The text as shown now, with the reader's edits. */
@@ -199,6 +205,19 @@ export function createSourceView(options: {
     return { current: onMatch ? Math.min(matchesBefore(selection.from) + 1, total.count) : 0, total: total.count, capped: total.capped };
   };
 
+  const recount = () => {
+    let count = 0;
+    const counter = active.getCursor(view.state);
+    while (count < findCap && !counter.next().done) count++;
+    total = { count, capped: count >= findCap && !counter.next().done };
+  };
+
+  /** The active query, replacing its matches with `text`. */
+  const replacing = (text: string) => {
+    active = new SearchQuery({ search: active.search, caseSensitive: active.caseSensitive, literal: true, replace: text });
+    view.dispatch({ effects: setSearchQuery.of(active) });
+  };
+
   const reveal = (from: number, to: number) =>
     view.dispatch({
       selection: EditorSelection.single(from, to),
@@ -216,10 +235,7 @@ export function createSourceView(options: {
         total = { count: 0, capped: false };
         return where();
       }
-      let count = 0;
-      const counter = active.getCursor(view.state);
-      while (count < findCap && !counter.next().done) count++;
-      total = { count, capped: count >= findCap && !counter.next().done };
+      recount();
       const start = view.state.doc.line(topLine()).from;
       const first = active.getCursor(view.state, start).next();
       const match = first.done ? active.getCursor(view.state).next() : first;
@@ -238,6 +254,22 @@ export function createSourceView(options: {
       total = { count: 0, capped: false };
       view.dispatch({ effects: setSearchQuery.of(active) });
       closeSearchPanel(view);
+    },
+    replace(text) {
+      if (total.count === 0) return where();
+      replacing(text);
+      replaceNext(view);
+      recount();
+      return where();
+    },
+    replaceAll(text) {
+      if (total.count === 0 || view.state.readOnly) return 0;
+      let replaced = 0;
+      for (const cursor = active.getCursor(view.state); !cursor.next().done; ) replaced++;
+      replacing(text);
+      replaceAll(view);
+      recount();
+      return replaced;
     },
     setText(text) {
       // Only the span that differs is replaced: text before and after it keeps its place, and the

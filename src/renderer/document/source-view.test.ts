@@ -246,6 +246,55 @@ describe('createSourceView editing', () => {
     source.destroy();
   });
 
+  it('replaces the current match and moves to the next, recounting as it goes', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a cat, a cat, a cat', language: null, wrap: false });
+    source.setEditable(true);
+    let edits = 0;
+    source.onEdit(() => edits++);
+    expect(source.find('cat', { caseSensitive: false })).toEqual({ current: 1, total: 3, capped: false });
+    expect(source.replace('dog')).toEqual({ current: 1, total: 2, capped: false });
+    expect(source.text()).toBe('a dog, a cat, a cat');
+    expect(source.replace('dog')).toEqual({ current: 1, total: 1, capped: false });
+    expect(source.replace('dog')).toEqual({ current: 0, total: 0, capped: false });
+    expect(source.text()).toBe('a dog, a dog, a dog');
+    expect(edits).toBe(3);
+    source.destroy();
+  });
+
+  it('replaces every match, past the find cap, as one undo step', async () => {
+    const { undo } = await import('@codemirror/commands');
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'x x x x x', language: null, wrap: false, findCap: 2 });
+    source.setEditable(true);
+    expect(source.find('x', { caseSensitive: false })).toEqual({ current: 1, total: 2, capped: true });
+    expect(source.replaceAll('y')).toBe(5);
+    expect(source.text()).toBe('y y y y y');
+    undo(source.view);
+    expect(source.text()).toBe('x x x x x');
+    source.destroy();
+  });
+
+  it('replaces with the text as typed, and only the matches of the case asked for', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'Cat cat', language: null, wrap: false });
+    source.setEditable(true);
+    source.find('cat', { caseSensitive: true });
+    expect(source.replaceAll('$&\\n')).toBe(1);
+    expect(source.text()).toBe('Cat $&\\n');
+    source.destroy();
+  });
+
+  it('replaces nothing while reading', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'cat cat', language: null, wrap: false });
+    source.find('cat', { caseSensitive: false });
+    expect(source.replace('dog')).toEqual({ current: 1, total: 2, capped: false });
+    expect(source.replaceAll('dog')).toBe(0);
+    expect(source.text()).toBe('cat cat');
+    source.destroy();
+  });
+
   it('undoes edits, but not new text from the file', async () => {
     const { undo } = await import('@codemirror/commands');
     const { root, parent } = shadowContainer();
