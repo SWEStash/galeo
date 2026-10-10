@@ -14,6 +14,11 @@ Wayland) before each release.
   viewer (a diagram in both schemes, and an image), Settings, status bar, profile menu and dialogs, empty window,
   settings notices, the sandbox-unavailable window, and the crash-loop message (axe-core run in the
   page through main, as Playwright loses a crashed page).
+  Edit mode and split (v0.2): the editor with unsaved changes and its tab, split view (reading
+  and editing), a refused save in the status bar, the changed- and deleted-on-disk bars, the
+  unsaved-changes question, Show diff, the find bar with its replace row, an MDX article and an
+  MDX syntax error, each in both schemes (`accessibility`, `split`, `edit`, `replace` and `mdx`
+  specs).
   The drop overlay is decorative (`aria-hidden`); quick open is the keyboard way to open files.
 - **Contrast** (`tests/unit/design/colour-contrast.test.ts`): text tokens at 4.5:1 and focus ring
   and text-field borders at 3:1 on the page and on panels, in both schemes; the 8 accent presets
@@ -34,6 +39,11 @@ Record the date, the build and the result of each row.
 | Orca: overlays | Ctrl+P: Orca says "Quick open", then the result count ("3 results"); arrows read each result. Ctrl+Shift+P reads each command with its keys. Ctrl+F, type: it says "n of m". Esc: focus is back on the document | Pass (2026-10-06, `.deb`) |
 | Orca: status messages | Save a shown file from an editor: it says "Reloaded". In the palette, choose "Toggle edit mode": it says "Press Ctrl+E" | Pass (2026-10-06, `.deb`) |
 | Zoom 200 % | Ctrl++ to 200 % on a long document: no clipped text in the chrome | Pass (2026-10-06, `.deb`) |
+| Edit and save without a mouse (v0.2) | Ctrl+E, type, Ctrl+S; Ctrl+E again reads. Ctrl+W, Ctrl+Shift+W, Ctrl+Q and deleting the profile with unsaved changes each ask; Tab moves between Cancel, Don't save and Save; Esc cancels and the caret is back in the editor | |
+| File changed on disk, by keyboard (v0.2) | Change the file in another editor while editing: Shift+Tab from the editor reaches Load theirs, Keep mine and Show diff; each choice puts the caret back in the editor. Show diff: Esc returns to its button. Delete the file: Save again writes it back | |
+| Split and editor basics by keyboard (v0.2) | Ctrl+\; Tab to the divider, ←/→ move it, Home resets it. Ctrl+H, type, Enter replaces one, Replace all, Ctrl+Z undoes it all. Ctrl+D twice, Shift+Alt+↓, then type at every cursor; Esc leaves one | |
+| Orca: editing (v0.2) | Ctrl+E then Ctrl+Tab away and back: the tab reads "…, edit mode", and once typed in "…, unsaved changes". Ctrl+S: "Saved". A refused save reads its reason. The changed-on-disk bar reads "File changed on disk"; the unsaved question reads "Save changes to <name>?" and each button | |
+| Orca: diff, split and replace (v0.2) | Show diff reads "Changes: mine \| theirs", then "Mine (unsaved)" and "Theirs (on disk)" as read-only text. The divider reads "Resize source and preview" with its value as it moves. Replace all reads "Replaced N" once (not twice with the editor's own message). Several cursors: typing reads as usual | |
 
 ## Performance
 
