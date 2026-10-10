@@ -1,4 +1,4 @@
-import { defaultKeymap, history, historyKeymap, standardKeymap } from '@codemirror/commands';
+import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, standardKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import {
@@ -9,10 +9,12 @@ import {
   search,
   SearchQuery,
   searchPanelOpen,
+  selectNextOccurrence,
+  selectSelectionMatches,
   setSearchQuery,
 } from '@codemirror/search';
 import { Annotation, Compartment, EditorSelection, EditorState, Transaction, type Extension } from '@codemirror/state';
-import { EditorView, highlightActiveLineGutter, keymap, lineNumbers } from '@codemirror/view';
+import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers, rectangularSelection, type KeyBinding } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { logLevels } from './log-view';
 
@@ -76,6 +78,12 @@ const theme = EditorView.theme({
   '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--galeo-color-fg)' },
   '&.cm-focused': { outline: 'none' },
   '.cm-content': { caretColor: 'var(--galeo-color-fg)' },
+  // Edit mode draws its own selections and cursors (several at once); they follow light/dark too.
+  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--galeo-color-fg)' },
+  '& .cm-selectionLayer .cm-selectionBackground': { background: 'color-mix(in srgb, var(--galeo-color-focus) 18%, transparent)' },
+  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
+    background: 'color-mix(in srgb, var(--galeo-color-focus) 30%, transparent)',
+  },
   '.cm-searchMatch': { backgroundColor: 'var(--galeo-color-mark)' },
   '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--galeo-color-mark-current)', color: '#1f2328' },
 });
@@ -89,7 +97,32 @@ const fromFile = Annotation.define<boolean>();
  * already handled, so only keys the app declines (typing, Alt+arrows) reach the editor.
  */
 const reading = (): Extension => EditorState.readOnly.of(true);
-const editing = (): Extension => [history(), keymap.of([...defaultKeymap, ...historyKeymap])];
+
+/**
+ * CodeMirror's keys the Linux desktop keeps (UX §5): GNOME switches workspaces with Ctrl+Alt+↑/↓,
+ * and Ctrl+Alt is the desktop's. Adding a cursor above/below takes Shift+Alt+↑/↓ instead, in place
+ * of copying the line.
+ */
+const DESKTOP_KEYS = new Set(['Mod-Alt-ArrowUp', 'Mod-Alt-ArrowDown', 'Mod-Alt-\\', 'Shift-Alt-ArrowUp', 'Shift-Alt-ArrowDown']);
+
+/** The keys edit mode adds: editing, undo, and multiple cursors. */
+export const editingKeys: readonly KeyBinding[] = [
+  ...defaultKeymap.filter((binding) => !DESKTOP_KEYS.has(binding.key ?? '')),
+  ...historyKeymap,
+  { key: 'Shift-Alt-ArrowUp', run: addCursorAbove },
+  { key: 'Shift-Alt-ArrowDown', run: addCursorBelow },
+  { key: 'Mod-d', run: selectNextOccurrence, preventDefault: true },
+  { key: 'Mod-Shift-l', run: selectSelectionMatches },
+];
+
+// Several cursors (Ctrl+click, Alt+drag, the keys above) need drawing: the browser shows only one.
+const editing = (): Extension => [
+  history(),
+  keymap.of(editingKeys),
+  EditorState.allowMultipleSelections.of(true),
+  drawSelection(),
+  rectangularSelection(),
+];
 
 const LANGUAGES: Record<Exclude<SourceLanguage, null>, () => Extension> = {
   markdown: () => markdown(),

@@ -1,5 +1,9 @@
+import { addCursorAbove, addCursorBelow } from '@codemirror/commands';
+import { selectNextOccurrence, selectSelectionMatches } from '@codemirror/search';
+import { EditorSelection } from '@codemirror/state';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createSourceView } from './source-view';
+import { takenByDesktop } from '../../shared/desktop-keys';
+import { createSourceView, editingKeys } from './source-view';
 
 function shadowContainer() {
   const host = document.createElement('div');
@@ -194,6 +198,51 @@ describe('createSourceView editing', () => {
     type(source, '!');
     expect(edits).toBe(1);
     expect(source.text()).toBe('from disk!');
+    source.destroy();
+  });
+
+  it("binds no editing key the Linux desktop keeps: no Super, no Ctrl+Alt, none of GNOME's Alt keys (UX §5)", () => {
+    // CodeMirror's names (`Mod-Alt-ArrowUp`) as Electron accelerators on Linux (`Ctrl+Alt+Up`).
+    const names: Record<string, string> = { Mod: 'Ctrl', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right' };
+    const accelerator = (key: string) => key.split(/-(?!$)/).map((part) => names[part] ?? part).join('+');
+    const keys = editingKeys.flatMap((binding) => {
+      const key = binding.linux ?? binding.key;
+      if (!key) return [];
+      return binding.shift ? [key, `Shift-${key}`] : [key];
+    });
+    expect(keys.length).toBeGreaterThan(30);
+    for (const key of keys) expect(takenByDesktop(accelerator(key)), key).toBe(false);
+  });
+
+  it('adds a cursor above or below with Shift+Alt+↑/↓, where GNOME leaves Ctrl+Alt+↑/↓ to workspaces', () => {
+    const run = (key: string) => editingKeys.find((binding) => binding.key === key)?.run;
+    expect(run('Shift-Alt-ArrowUp')).toBe(addCursorAbove);
+    expect(run('Shift-Alt-ArrowDown')).toBe(addCursorBelow);
+    expect(run('Mod-d')).toBe(selectNextOccurrence);
+    expect(run('Mod-Shift-l')).toBe(selectSelectionMatches);
+  });
+
+  it('edits at every cursor while editing, and one undo takes the edit back everywhere', async () => {
+    const { undo } = await import('@codemirror/commands');
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'cat cat cat', language: null, wrap: false });
+    source.setEditable(true);
+    source.view.dispatch({ selection: EditorSelection.single(0, 3) });
+    selectNextOccurrence(source.view);
+    selectNextOccurrence(source.view);
+    expect(source.view.state.selection.ranges).toHaveLength(3);
+    source.view.dispatch(source.view.state.replaceSelection('dog'));
+    expect(source.text()).toBe('dog dog dog');
+    undo(source.view);
+    expect(source.text()).toBe('cat cat cat');
+    source.destroy();
+  });
+
+  it('keeps a single selection while reading', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'cat cat', language: null, wrap: false });
+    source.view.dispatch({ selection: EditorSelection.create([EditorSelection.range(0, 3), EditorSelection.range(4, 7)]) });
+    expect(source.view.state.selection.ranges).toHaveLength(1);
     source.destroy();
   });
 
