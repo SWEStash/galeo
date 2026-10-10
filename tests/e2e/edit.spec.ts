@@ -209,11 +209,39 @@ test('a change on disk while edits are unsaved is never overwritten: the bar ask
 
     await diskBar(window, 'changed').getByRole('button', { name: 'Keep mine' }).click();
     await expect(diskBar(window, 'changed')).toHaveCount(0);
-    await shownDocument(window).locator('.cm-content').focus();
     await window.keyboard.press('Control+s');
     await expect(message(window)).toHaveText('Saved');
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
     await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
+  } finally {
+    app.process().kill('SIGKILL');
+    removeTempHome(home);
+    removeTempHome(dir);
+  }
+});
+
+test('the unsaved question and the disk bar give focus back to the editor when they close', async () => {
+  const { app, window, home, dir, file } = await dirtyEdit();
+  const editor = shownDocument(window).locator('.cm-content');
+  try {
+    await pressInMain(app, window, 'W');
+    await expect(unsavedDialog(window).getByRole('button', { name: 'Save', exact: true })).toBeFocused();
+    await window.keyboard.press('Escape');
+    await expect(unsavedDialog(window)).toHaveCount(0);
+    await expect(editor).toBeFocused();
+
+    for (const choice of ['Keep mine', 'Load theirs'] as const) {
+      saveFile(file, `# ${choice}\n`);
+      await diskBar(window, 'changed').getByRole('button', { name: choice }).press('Enter');
+      await expect(diskBar(window, 'changed')).toHaveCount(0);
+      await expect(editor, choice).toBeFocused();
+    }
+
+    await window.keyboard.type('Again.');
+    rmSync(file);
+    await diskBar(window, 'deleted').getByRole('button', { name: 'Save again' }).press('Enter');
+    await expect(message(window)).toHaveText('Saved');
+    await expect(editor).toBeFocused();
   } finally {
     app.process().kill('SIGKILL');
     removeTempHome(home);

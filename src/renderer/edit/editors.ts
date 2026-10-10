@@ -4,6 +4,8 @@ export interface Editor {
   save(): Promise<boolean>;
   /** Drops the edits: the tab shows the file again. */
   discard(): void;
+  /** Puts the caret back in the editor. */
+  focus(): void;
 }
 
 /** The window's tabs in edit mode, by tab id. */

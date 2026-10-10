@@ -23,6 +23,7 @@ import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
 import { pauseOrMax } from './pause-or-max';
+import { settleFocus } from './settle-focus';
 import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 
@@ -116,9 +117,6 @@ function notSaved(result: Exclude<SaveResult, { kind: 'saved' }>, encoding: Text
       return result.reason === 'not-editable' ? "Not saved: this tab isn't in edit mode" : 'Not saved: press Ctrl+S to save';
   }
 }
-
-/** How long after the viewer closes its Expand button may take focus back from the modal's restore. */
-const RETURN_FOCUS_FRAMES = 10;
 
 function countLines(text: string): number {
   let lines = 1;
@@ -365,47 +363,44 @@ export function DocumentPane({
   };
   // Show diff: the reader's text as it was when they asked, against the file on disk.
   const [diff, setDiff] = useState<string | null>(null);
-  // After a choice the bar and its Show diff button are gone, so the modal's own focus restore (a
-  // frame or more after it closes) lands nowhere: focus left on the body goes to the editor.
+  // After a choice the bar is gone, and with it the button that had focus (or the diff's Show diff
+  // button its modal would restore focus to): focus goes back to the editor.
   const [refocus, setRefocus] = useState(0);
-  const closeDiff = (choose?: () => void) => {
-    choose?.();
+  const choose = (choice: () => void) => () => {
+    choice();
+    setRefocus((n) => n + 1);
+  };
+  const closeDiff = (choice?: () => void) => {
+    if (choice) choose(choice)();
     setDiff(null);
-    if (choose) setRefocus((n) => n + 1);
   };
   useEffect(() => {
     if (refocus === 0) return;
-    let frames = 0;
-    let frame = requestAnimationFrame(function settle() {
-      const focused = document.activeElement;
-      if (focused === document.body || focused?.classList.contains('document-view')) documentHandle.current?.focus();
-      if (++frames < RETURN_FOCUS_FRAMES) frame = requestAnimationFrame(settle);
-    });
-    return () => cancelAnimationFrame(frame);
+    return settleFocus(() => documentHandle.current?.focus());
   }, [refocus]);
   const diskActions: Record<DiskChange, { label: string; onAction: () => void }[]> = {
     'disk-changed': [
       { label: 'Show diff', onAction: () => setDiff(documentHandle.current?.sourceText() ?? pinnedText) },
-      { label: 'Keep mine', onAction: keepMine },
-      { label: 'Load theirs', onAction: loadTheirs },
+      { label: 'Keep mine', onAction: choose(keepMine) },
+      { label: 'Load theirs', onAction: choose(loadTheirs) },
     ],
     'disk-deleted': [
-      { label: 'Keep mine', onAction: keepMine },
+      { label: 'Keep mine', onAction: choose(keepMine) },
       {
         label: 'Save again',
-        onAction: () => {
+        onAction: choose(() => {
           keepMine();
           void actions.current.save();
-        },
+        }),
       },
     ],
-    'disk-unreadable': [{ label: 'Load theirs', onAction: loadTheirs }],
+    'disk-unreadable': [{ label: 'Load theirs', onAction: choose(loadTheirs) }],
   };
   const actions = useRef({ save, discard });
   actions.current = { save, discard };
   useEffect(() => {
     if (!editing) return;
-    onEditor?.({ save: () => actions.current.save(), discard: () => actions.current.discard() });
+    onEditor?.({ save: () => actions.current.save(), discard: () => actions.current.discard(), focus: () => documentHandle.current?.focus() });
     return () => onEditor?.(null);
   }, [editing, onEditor]);
   const [viewer, setViewer] = useState<{ content: ZoomContent; name: string; returnFocus: () => void } | null>(null);
@@ -423,10 +418,7 @@ export function DocumentPane({
   useEffect(() => {
     if (!active) setViewer(null);
   }, [active]);
-  // Back to the diagram's or image's Expand button once the viewer is gone. The modal restores focus
-  // itself a frame or more later (after its cleanup and any transition), to the document's shadow
-  // host, as it can't see the button inside; so for a few frames, focus left on the body or that
-  // host goes to the button. Focus the reader moved anywhere else stays.
+  // Back to the diagram's or image's Expand button once the viewer is gone.
   const returnFocus = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (viewer) {
@@ -436,13 +428,7 @@ export function DocumentPane({
     const back = returnFocus.current;
     returnFocus.current = null;
     if (!back) return;
-    let frames = 0;
-    let frame = requestAnimationFrame(function settle() {
-      const active = document.activeElement;
-      if (active === document.body || active?.classList.contains('document-view')) back();
-      if (++frames < RETURN_FOCUS_FRAMES) frame = requestAnimationFrame(settle);
-    });
-    return () => cancelAnimationFrame(frame);
+    return settleFocus(back);
   }, [viewer]);
   const [find, setFind] = useState({ open: false, replace: false, token: 0, query: '', caseSensitive: false });
   const [findResult, setFindResult] = useState<FindResult>(NO_MATCHES);

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react';
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
+import { settleFocus } from '../document/settle-focus';
 import { editors } from './editors';
 
 type Choice = 'save' | 'discard' | 'cancel';
@@ -17,7 +18,7 @@ export function useConfirmUnsaved(): ConfirmUnsaved {
 
 /**
  * The window's one question about unsaved changes (UX F12): Save / Don't save / Cancel, Save
- * focused, Esc cancels. Questions from several places wait their turn.
+ * focused, Esc cancels and goes back to the editor. Questions from several places wait their turn.
  */
 export function UnsavedPrompt({ children }: { children: ReactNode }) {
   const [question, setQuestion] = useState<{ name: string; answer: (choice: Choice) => void } | null>(null);
@@ -28,7 +29,11 @@ export function UnsavedPrompt({ children }: { children: ReactNode }) {
       const choice = await new Promise<Choice>((answer) => setQuestion({ name, answer }));
       setQuestion(null);
       const editor = editors.get(id);
-      if (choice === 'cancel') return false;
+      if (choice === 'cancel') {
+        // The tab stays: back to its editor, which the modal's own focus restore can't reach.
+        if (editor) settleFocus(() => editor.focus());
+        return false;
+      }
       if (choice === 'discard') {
         editor?.discard();
         return true;
