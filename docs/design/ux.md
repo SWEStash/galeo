@@ -189,6 +189,13 @@ case-sensitivity toggle. Works in rendered and source views (source view searche
 Matches highlighted; the current match scrolls into the middle third of the viewport. Esc closes
 and keeps the scroll position at the current match.
 
+In edit mode, Ctrl+H opens the same bar with a replace row (v0.2): *Replace with*, *Replace*
+(or Enter in that field) swaps the current match and selects the next, *Replace all* swaps every
+match as one undo step and announces "Replaced N". The replacement is literal, like the query.
+In split view the bar then searches the source pane, the only one replace can change. Outside
+edit mode Ctrl+H opens nothing and the status bar says it needs edit mode (Ctrl+E); leaving edit
+mode closes the replace row and keeps find open.
+
 ### F10 — Views
 
 - Markdown opens **rendered**; Ctrl+U toggles **source** (read-only, line numbers, wrap).
@@ -304,6 +311,9 @@ the native menu on the active tab.
 | Save (v0.2) | Ctrl+S | |
 | Split view (v0.2) | Ctrl+\ | Source left, rendered right; edit mode keeps it; Ctrl+U leaves it |
 | Find & replace (v0.2) | Ctrl+H | Edit mode only |
+| Add the next match / every match as cursors (v0.2) | Ctrl+D / Ctrl+Shift+L | Edit mode |
+| Add a cursor above / below (v0.2) | Shift+Alt+↑ / Shift+Alt+↓ | Edit mode. Ctrl+Alt+↑/↓ is GNOME's (workspaces); these keys were CodeMirror's copy line up/down, which is left out |
+| Add a cursor / a column of cursors (v0.2) | Ctrl+click / Alt+drag | Edit mode; Esc goes back to one cursor |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply
 (Cmd+Q quits, Cmd+, opens settings). Shortcuts are customisable in a later release; v0.1 ships

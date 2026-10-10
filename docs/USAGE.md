@@ -83,6 +83,12 @@ the file into the window in front of you) when you want it here.
   typing once you pause. If a preview takes too long to render (or can't be rendered), the last
   one stays with *Preview paused*, and the next pause tries again. Ctrl+U goes to the editor alone;
   a narrow window shows the editor.
+- **Find and replace** with **Ctrl+H** in edit mode: the find bar gains a replace row. Enter or
+  *Replace* swaps the current match and moves to the next; *Replace all* swaps them all, and one
+  Ctrl+Z puts them back. The replacement is taken as typed.
+- **Several cursors**: Ctrl+D adds the next match of the selection, Ctrl+Shift+L every match;
+  Shift+Alt+↑/↓ adds a cursor above or below; Ctrl+click adds one where you click, and Alt+drag
+  puts one on each line it crosses. Typing goes to all of them; Esc goes back to one.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
   permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the

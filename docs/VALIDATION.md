@@ -59,12 +59,16 @@ set by the owner on 2026-10-06, on Electron 44.5.1, after the Electron and Merma
 
 - **Conformance**: `tests/e2e/palette.spec.ts` checks that the palette lists every v0.1 row of the
   UX §5 map with its keys, on Linux and macOS (go to tab 1–8 as eight entries; the find bar's
-  Enter/Shift+Enter in `find.spec`), and the v0.2 rows so far: edit mode, save and split view.
-  Find & replace joins it with v0.2's editor basics.
-- **GNOME conflicts**: `src/shared/keymap.test.ts` keeps the Linux map free of Super, of Ctrl+Alt,
-  and of GNOME's own Alt keys (Alt+Tab, Alt+Esc, Alt+Space, Alt+F1–F10, Alt+Print). Checked against
-  `gsettings` on Ubuntu 26.04 (GNOME's `wm`, `shell`, `mutter` and `media-keys` bindings) on
-  2026-10-05: galeo's Alt keys are Alt+Z and Alt+←/→, which GNOME doesn't bind.
+  Enter/Shift+Enter in `find.spec`), and the v0.2 rows: edit mode, save, split view and find &
+  replace. The editing keys (Ctrl+D, Ctrl+Shift+L, Shift+Alt+↑/↓, Ctrl+click, Alt+drag) are
+  CodeMirror's and outside the palette; `replace.spec` presses each in the real window.
+- **GNOME conflicts**: `src/shared/keymap.test.ts`, and `source-view.test.ts` for the keys edit
+  mode adds, keep the Linux map free of Super, of Ctrl+Alt, and of GNOME's own Alt keys (Alt+Tab,
+  Alt+Esc, Alt+Space, Alt+F1–F10, Alt+Print). Checked against `gsettings` on Ubuntu 26.04 (GNOME's
+  `wm`, `shell`, `mutter` and `media-keys` bindings) on 2026-10-05: galeo's Alt keys are Alt+Z
+  and Alt+←/→, which GNOME doesn't bind. Edit mode, checked against the `wm` and `media-keys`
+  bindings on 2026-10-10: GNOME switches workspaces with Ctrl+Alt+↑/↓, so adding a cursor
+  above/below is Shift+Alt+↑/↓; its window-drag modifier is Super, leaving Alt+drag to the editor.
 
 ## Desktop and Wayland (manual)
 

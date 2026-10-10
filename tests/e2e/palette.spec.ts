@@ -17,6 +17,7 @@ const KEYBOARD_MAP: [label: string, keys: string[], macKeys: string[]][] = [
   ['Find', ['Ctrl+F'], ['⌘F']],
   ['Find next', ['F3'], ['F3']],
   ['Find previous', ['Shift+F3'], ['⇧F3']],
+  ['Find and replace', ['Ctrl+H'], ['⌘H']],
   ['Toggle source view', ['Ctrl+U'], ['⌘U']],
   ['Toggle split view', ['Ctrl+\\'], ['⌘\\']],
   ['Toggle wrap', ['Alt+Z'], ['⌥Z']],
