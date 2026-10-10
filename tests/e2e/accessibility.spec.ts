@@ -1,9 +1,11 @@
 import AxeBuilder from '@axe-core/playwright';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
-import { launchApp } from '../helpers/launch';
+import { pressInMain } from '../helpers/keys';
+import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { saveFile } from '../helpers/save';
 
 // axe on the surfaces the other suites don't check, in both colour schemes. The tab bar,
 // palette, quick open, find bar, outline, settings, status bar, profile menu and dialogs, empty
@@ -81,6 +83,68 @@ for (const scheme of SCHEMES) {
       } finally {
         await close();
         rmSync(dir, { recursive: true, force: true });
+      }
+    });
+
+    test('editing: the editor, split, a refused save, the disk bar and the unsaved question', async () => {
+      const dir = tempHome();
+      const file = path.join(dir, 'draft.md');
+      writeFileSync(file, '# Draft\n');
+      const { app, window } = await launchApp(['--', file]);
+      try {
+        await setScheme(app, scheme);
+        const panel = '[data-testid="tab-panel"][data-active="true"]';
+        await expect(shownPanel(window).locator('h1')).toHaveText('Draft');
+        await pressInMain(app, window, 'E');
+        await expect(shownPanel(window).locator('.cm-content')).toBeFocused();
+        await window.keyboard.press('Control+End');
+        await window.keyboard.type('More.');
+        await expect(window.locator('.tab-indicator[data-indicator="unsaved changes"]')).toBeAttached();
+        expect(await violations(window, panel), 'editor').toEqual([]);
+        expect(await violations(window, '.tab-bar'), 'tab bar').toEqual([]);
+
+        await window.keyboard.press('ControlOrMeta+Backslash');
+        await expect(shownPanel(window).locator('h1')).toBeVisible();
+        expect(await violations(window, panel), 'split').toEqual([]);
+        await window.keyboard.press('ControlOrMeta+Backslash');
+
+        if (process.platform !== 'win32' && process.getuid?.() !== 0) {
+          chmodSync(file, 0o444);
+          await window.keyboard.press('Control+s');
+          await expect(window.getByTestId('status-message')).toHaveText('Not saved: no permission to write this file');
+          expect(await violations(window, '.status-bar'), 'refused save').toEqual([]);
+          chmodSync(file, 0o644);
+        }
+
+        saveFile(file, '# Theirs\n');
+        await expect(window.locator('[data-banner="disk-changed"]')).toBeVisible();
+        expect(await violations(window, panel), 'changed on disk').toEqual([]);
+        await window.locator('[data-banner="disk-changed"]').getByRole('button', { name: 'Keep mine' }).click();
+        rmSync(file);
+        await expect(window.locator('[data-banner="disk-deleted"]')).toBeVisible();
+        expect(await violations(window, panel), 'deleted on disk').toEqual([]);
+
+        await pressInMain(app, window, 'W');
+        await expect(window.getByRole('alertdialog')).toBeVisible();
+        expect(await violations(window, '[role="alertdialog"]'), 'unsaved question').toEqual([]);
+      } finally {
+        app.process().kill('SIGKILL');
+        removeTempHome(dir);
+      }
+    });
+
+    test('an MDX syntax error', async () => {
+      const dir = tempHome();
+      const file = path.join(dir, 'broken.mdx');
+      writeFileSync(file, '# Broken\n\nA stray <3 here.\n');
+      const { app, window, close } = await launchApp(['--', file]);
+      try {
+        await setScheme(app, scheme);
+        await expect(window.locator('[data-banner="syntax-error"]')).toBeVisible();
+        expect(await violations(window, '[data-testid="tab-panel"][data-active="true"]')).toEqual([]);
+      } finally {
+        await close();
+        removeTempHome(dir);
       }
     });
 
