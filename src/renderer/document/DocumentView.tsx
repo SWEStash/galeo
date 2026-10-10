@@ -10,7 +10,7 @@ import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBlock, type SyncPane } from './scroll-sync';
-import type { SourceLanguage } from './source-view';
+import type { FindResult, SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 
 /** What the rendered view shows: worker HTML (Markdown) or reader text (`.txt`). */
@@ -50,6 +50,8 @@ export interface DocumentViewProps {
   editable?: boolean;
   /** The reader changed the source text (never for new text from the file). */
   onEdit?: (() => void) | undefined;
+  /** Find and replace is open: find searches the source, the only text replace can change. */
+  replacing?: boolean;
   /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
   onHeading?: ((id: string | null) => void) | undefined;
   /** The source pane's share of the width in split (ADR-014). */
@@ -61,6 +63,8 @@ export interface DocumentViewProps {
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
   ref?: Ref<DocumentHandle>;
 }
+
+const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
 
 /** Scrolling has settled once it pauses this long; only then is the position reported. */
 const POSITION_SETTLE_MS = 300;
@@ -104,6 +108,10 @@ export interface DocumentHandle extends Finder {
   sourceText(): string | null;
   /** Puts the file's text back in the source view, dropping the reader's edits. */
   replaceSource(text: string): void;
+  /** Edit mode: replaces the current find match in the source and moves to the next. */
+  replace(text: string): FindResult;
+  /** Edit mode: replaces every find match in the source; how many it replaced. */
+  replaceAll(text: string): number;
 }
 
 /** The source line at the top of the rendered view. */
@@ -151,6 +159,7 @@ export function DocumentView({
   onExpandImage,
   editable = false,
   onEdit,
+  replacing = false,
   splitRatio = 0.5,
   onSplitRatio,
   onNarrow,
@@ -178,7 +187,7 @@ export function DocumentView({
     const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, () => host().renderedScroller));
     const active = (): Finder => {
       const sourceView = host().source;
-      if ((view === 'source' || (view === 'split' && turnedTo.current === 'source')) && sourceView) {
+      if ((view === 'source' || (view === 'split' && (replacing || turnedTo.current === 'source'))) && sourceView) {
         return { find: sourceView.find, step: sourceView.findStep, clear: sourceView.clearFind };
       }
       return inRendered();
@@ -198,6 +207,8 @@ export function DocumentView({
       },
       sourceText: () => host().source?.text() ?? null,
       replaceSource: (text) => host().source?.setText(text),
+      replace: (text) => host().source?.replace(text) ?? NO_MATCHES,
+      replaceAll: (text) => host().source?.replaceAll(text) ?? 0,
       scrollToAnchor: (anchor) => {
         if (!anchor) {
           host().renderedScroller.scrollTop = 0;
@@ -210,7 +221,7 @@ export function DocumentView({
         return target !== null;
       },
     };
-  }, [view]);
+  }, [view, replacing]);
 
   // Links never navigate the page: every click goes to main as the href written in the document.
   useEffect(() => {

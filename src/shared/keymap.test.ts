@@ -75,6 +75,11 @@ describe('commandFor', () => {
     expect(commandFor(key({ key: '\\', metaKey: true }), 'darwin')).toBe('toggleSplit');
   });
 
+  it('finds and replaces with Ctrl+H', () => {
+    expect(commandFor(key({ key: 'h', ctrlKey: true }), 'linux')).toBe('findReplace');
+    expect(commandFor(key({ key: 'h', metaKey: true }), 'darwin')).toBe('findReplace');
+  });
+
   it('follows the end of a log with End, unmodified only', () => {
     expect(commandFor(key({ key: 'End' }), 'linux')).toBe('followEnd');
     expect(commandFor(key({ key: 'End', ctrlKey: true }), 'linux')).toBeNull();

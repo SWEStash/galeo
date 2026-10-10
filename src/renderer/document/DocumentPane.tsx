@@ -444,18 +444,30 @@ export function DocumentPane({
     });
     return () => cancelAnimationFrame(frame);
   }, [viewer]);
-  const [find, setFind] = useState({ open: false, token: 0, query: '', caseSensitive: false });
+  const [find, setFind] = useState({ open: false, replace: false, token: 0, query: '', caseSensitive: false });
   const [findResult, setFindResult] = useState<FindResult>(NO_MATCHES);
+  // What Replace all last did, shown until find moves on.
+  const [replaced, setReplaced] = useState<number | null>(null);
   const runFind = useCallback((query: string, caseSensitive: boolean) => {
     setFind((current) => ({ ...current, query, caseSensitive }));
+    setReplaced(null);
     setFindResult(documentHandle.current?.find(query, { caseSensitive }) ?? NO_MATCHES);
   }, []);
   const stepFind = useCallback((direction: 1 | -1) => {
+    setReplaced(null);
     if (documentHandle.current) setFindResult(documentHandle.current.step(direction));
+  }, []);
+  const replaceMatch = useCallback((text: string) => {
+    setReplaced(null);
+    if (documentHandle.current) setFindResult(documentHandle.current.replace(text));
+  }, []);
+  const replaceAll = useCallback((text: string) => {
+    if (documentHandle.current) setReplaced(documentHandle.current.replaceAll(text));
   }, []);
   const closeFind = useCallback(() => {
     documentHandle.current?.clear();
-    setFind((current) => ({ ...current, open: false, query: '' }));
+    setReplaced(null);
+    setFind((current) => ({ ...current, open: false, replace: false, query: '' }));
     // Esc keeps the scroll position at the current match; focus goes back to the document.
     documentHandle.current?.focus();
   }, []);
@@ -511,6 +523,12 @@ export function DocumentPane({
         setFind((current) => ({ ...current, open: true, token: current.token + 1 }));
         return true;
       },
+      findReplace: () => {
+        if (!ready) return false;
+        if (!editing) onMessage?.('Find and replace works in edit mode (Ctrl+E)');
+        else setFind((current) => ({ ...current, open: true, replace: true, token: current.token + 1 }));
+        return true;
+      },
       findNext: step(1),
       findPrevious: step(-1),
       back: history('back'),
@@ -545,11 +563,17 @@ export function DocumentPane({
     return () => window.removeEventListener('keydown', onKey, true);
   }, [active, find.open, closeFind]);
 
-  // Switching views, or the rendered HTML arriving, repeats the search in what is now showing.
+  // Replace is edit mode's: leaving edit mode closes its row and leaves find open.
+  useEffect(() => {
+    if (!editing) setFind((current) => (current.replace ? { ...current, replace: false } : current));
+  }, [editing]);
+
+  // Switching views, the rendered HTML arriving, or replace moving find to the source repeats the
+  // search in what is now showing.
   useEffect(() => {
     if (find.open && find.query) runFind(find.query, find.caseSensitive);
-    // Only a change of view or content repeats the search, not typing (that already ran it).
-  }, [view, rendered]);
+    // Only a change of view, content or target repeats the search, not typing (that already ran it).
+  }, [view, rendered, find.replace]);
 
   // An anchor waits until the rendered view has content to scroll to.
   useEffect(() => {
@@ -617,7 +641,14 @@ export function DocumentPane({
         ))}
       {loading && <DocumentLoading />}
       {find.open && (
-        <FindBar result={findResult} focusToken={find.token} onQuery={runFind} onStep={stepFind} onClose={closeFind} />
+        <FindBar
+          result={findResult}
+          focusToken={find.token}
+          onQuery={runFind}
+          onStep={stepFind}
+          onClose={closeFind}
+          replace={find.replace ? { onReplace: replaceMatch, onReplaceAll: replaceAll, replaced } : undefined}
+        />
       )}
       <div className="document-body">
         <DocumentView
@@ -626,6 +657,7 @@ export function DocumentPane({
           source={{ text: dirty ? pinnedText : ready.text, language: SOURCE_LANGUAGES[ready.format] }}
           editable={editing}
           onEdit={edited}
+          replacing={find.open && find.replace}
           view={view}
           splitRatio={ratio}
           onSplitRatio={setRatio}

@@ -1037,6 +1037,44 @@ describe('App editing', () => {
     return { api, container, editor, type, press, message, tab };
   }
 
+  const fill = (input: HTMLInputElement, value: string) =>
+    act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+  it('finds and replaces with Ctrl+H while editing: Replace all says how many, and the tab is unsaved', async () => {
+    const { container, editor, press, tab } = await editing('# hi hi');
+    await press('h');
+    await fill(container.querySelector<HTMLInputElement>('.find-bar input[aria-label="Find in document"]')!, 'hi');
+    await fill(container.querySelector<HTMLInputElement>('.find-bar input[aria-label="Replace with"]')!, 'yo');
+    const replaceAll = [...container.querySelectorAll('.find-bar button')].find((b) => b.textContent === 'Replace all') as HTMLButtonElement;
+    await act(async () => replaceAll.click());
+    expect(editor.state.doc.toString()).toBe('# yo yo');
+    expect(container.querySelector('.find-bar [role="status"]')?.textContent).toBe('Replaced 2');
+    await vi.waitFor(() => expect(tab()).toContain('unsaved changes'));
+  });
+
+  it('closes the replace row when edit mode ends, and keeps find open', async () => {
+    const { container, press } = await editing();
+    await press('h');
+    expect(container.querySelector('.find-bar input[aria-label="Replace with"]')).not.toBeNull();
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'leave' }));
+    await vi.waitFor(() => expect(container.querySelector('.find-bar input[aria-label="Replace with"]')).toBeNull());
+    expect(container.querySelector('.find-bar')).not.toBeNull();
+  });
+
+  it("opens no replace row outside edit mode, and says it's for edit mode", async () => {
+    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# hi') });
+    const container = await renderApp();
+    await documentShadow(container);
+    await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true, cancelable: true })));
+    expect(container.querySelector('.find-bar')).toBeNull();
+    await vi.waitFor(() =>
+      expect(container.querySelector('[data-testid="status-message"]')?.textContent).toBe('Find and replace works in edit mode (Ctrl+E)'),
+    );
+  });
+
   it("opens main's grant as an editable source view, and marks it in the tab and the status bar", async () => {
     const { container, tab } = await editing();
     expect(container.querySelector('[data-testid="status-mode"]')?.textContent).toBe('Editing');

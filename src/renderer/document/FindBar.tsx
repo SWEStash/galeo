@@ -8,6 +8,8 @@ export interface FindBarProps {
   onQuery: (query: string, caseSensitive: boolean) => void;
   onStep: (direction: 1 | -1) => void;
   onClose: () => void;
+  /** Edit mode's replace row (Ctrl+H); `replaced` is what Replace all last did, until find moves on. */
+  replace?: { onReplace: (text: string) => void; onReplaceAll: (text: string) => void; replaced: number | null } | undefined;
 }
 
 function describe({ current, total, capped }: FindResult): string {
@@ -19,10 +21,11 @@ function describe({ current, total, capped }: FindResult): string {
  * Find in the document (UX F9). Not a dialog: the document stays usable and the bar holds no
  * focus trap; Esc closes it and the app returns focus to the document.
  */
-export function FindBar({ result, focusToken, onQuery, onStep, onClose }: FindBarProps) {
+export function FindBar({ result, focusToken, onQuery, onStep, onClose, replace }: FindBarProps) {
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
+  const [replacement, setReplacement] = useState('');
 
   useLayoutEffect(() => {
     input.current?.focus();
@@ -52,7 +55,7 @@ export function FindBar({ result, focusToken, onQuery, onStep, onClose }: FindBa
         }}
       />
       <span className="find-count" role="status" aria-live="polite">
-        {query ? describe(result) : ''}
+        {replace?.replaced != null ? `Replaced ${replace.replaced}` : query ? describe(result) : ''}
       </span>
       <button
         type="button"
@@ -72,6 +75,28 @@ export function FindBar({ result, focusToken, onQuery, onStep, onClose }: FindBa
       <button type="button" aria-label="Next match" title="Next match (Enter, F3)" onClick={() => onStep(1)}>
         ↓
       </button>
+      {replace && (
+        <div className="find-replace">
+          <input
+            type="text"
+            aria-label="Replace with"
+            placeholder="Replace with"
+            value={replacement}
+            onChange={(event) => setReplacement(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              replace.onReplace(replacement);
+            }}
+          />
+          <button type="button" title="Replace (Enter)" onClick={() => replace.onReplace(replacement)}>
+            Replace
+          </button>
+          <button type="button" onClick={() => replace.onReplaceAll(replacement)}>
+            Replace all
+          </button>
+        </div>
+      )}
     </div>
   );
 }

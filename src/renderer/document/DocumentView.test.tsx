@@ -147,4 +147,24 @@ describe('DocumentView in split', () => {
     shadow.querySelector('.cm-content')!.dispatchEvent(new Event('pointerdown', { bubbles: true, composed: true }));
     expect(handle.current!.find('src', { caseSensitive: false }).total).toBe(2);
   });
+
+  it('finds and replaces in the source pane while replacing, whichever pane the reader turned to', async () => {
+    // happy-dom can't follow CodeMirror's focus inside a shadow root; focusing for real is the e2e's.
+    const { EditorView } = await import('@codemirror/view');
+    const focus = vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const handle = { current: null as import('./DocumentView').DocumentHandle | null };
+    const element = (replacing: boolean) => (
+      <DocumentView {...twoViews} view="split" editable replacing={replacing} rendered={{ html: '<p>src</p>' }} ref={handle} />
+    );
+    const container = await render(element(false));
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-content')?.getAttribute('aria-readonly')).toBeNull(), { timeout: 5_000 });
+    shadow.querySelector('article p')!.dispatchEvent(new Event('pointerdown', { bubbles: true, composed: true }));
+    expect(handle.current!.find('src', { caseSensitive: false }).total).toBe(1);
+    await act(async () => root!.render(element(true)));
+    expect(handle.current!.find('src', { caseSensitive: false }).total).toBe(2);
+    expect(handle.current!.replaceAll('x')).toBe(2);
+    expect(handle.current!.sourceText()).toBe('# x x');
+    focus.mockRestore();
+  });
 });

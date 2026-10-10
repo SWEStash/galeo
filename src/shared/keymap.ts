@@ -7,6 +7,8 @@ const BASE = {
   find: ['CmdOrCtrl+F'],
   findNext: ['F3'],
   findPrevious: ['Shift+F3'],
+  /** Edit mode only (UX §5). */
+  findReplace: ['CmdOrCtrl+H'],
   toggleSource: ['CmdOrCtrl+U'],
   /** Source and rendered side by side (ADR-014). */
   toggleSplit: ['CmdOrCtrl+\\'],

@@ -668,6 +668,7 @@ button:focus-visible {
   right: 20px;
   z-index: 10;
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   align-items: center;
   padding: 6px 8px;
@@ -693,6 +694,13 @@ button:focus-visible {
   min-width: 6.5em;
   color: var(--galeo-color-muted);
   font-variant-numeric: tabular-nums;
+}
+/* Edit mode's replace row (Ctrl+H), on a line of its own under the find row. */
+.find-replace {
+  display: flex;
+  flex-basis: 100%;
+  gap: 6px;
+  align-items: center;
 }
 .find-bar button[aria-pressed='true'] {
   border-color: var(--galeo-color-focus);

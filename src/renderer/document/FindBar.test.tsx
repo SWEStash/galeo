@@ -94,6 +94,30 @@ describe('FindBar', () => {
     expect(vi.mocked(props.onStep).mock.calls).toEqual([[1], [-1]]);
   });
 
+  it('shows no replace row unless asked for one', async () => {
+    const { container } = await render();
+    expect(container.querySelector('input[aria-label="Replace with"]')).toBeNull();
+  });
+
+  it('replaces the current match on Enter or Replace, and every match on Replace all', async () => {
+    const onReplace = vi.fn();
+    const onReplaceAll = vi.fn();
+    const { container } = await render({ replace: { onReplace, onReplaceAll, replaced: null } });
+    const field = container.querySelector<HTMLInputElement>('input[aria-label="Replace with"]')!;
+    await type(field, 'dog');
+    await key(field, { key: 'Enter' });
+    const button = (name: string) => [...container.querySelectorAll('button')].find((b) => b.textContent === name)!;
+    await act(async () => button('Replace').click());
+    await act(async () => button('Replace all').click());
+    expect(onReplace.mock.calls).toEqual([['dog'], ['dog']]);
+    expect(onReplaceAll.mock.calls).toEqual([['dog']]);
+  });
+
+  it('announces how many matches Replace all replaced', async () => {
+    const { container } = await render({ replace: { onReplace: vi.fn(), onReplaceAll: vi.fn(), replaced: 3 } });
+    expect(container.querySelector('[role="status"]')!.textContent).toBe('Replaced 3');
+  });
+
   it('takes focus again and selects its text when asked, as Ctrl+F does while open', async () => {
     const { input, props } = await render();
     await type(input, 'plan');
