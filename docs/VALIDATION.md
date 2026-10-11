@@ -51,19 +51,24 @@ Record the date, the build and the result of each row.
 own (a long test run beforehand heats the laptop and slows it). Medians of 10 runs; a cold start is
 a typical launch: galeo not running, its caches from earlier launches kept.
 
-Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performance profile;
-Electron 44.7.0, Mermaid 12.1.0. Recorded 2026-10-07 for 0.1.0. The memory baseline (1377 MB) was
-set by the owner on 2026-10-06, on Electron 44.5.1, after the Electron and Mermaid updates (1257 → 1377 MB).
+Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performance profile.
+0.1.0 was recorded on 2026-10-07 (Electron 44.7.0, Mermaid 12.1.0); the 0.2.0 candidate on
+2026-10-11 (Electron 44.7.0, Mermaid 12.1.0, headless). The memory baseline (1377 MB) was set by
+the owner on 2026-10-06, on Electron 44.5.1, after the Electron and Mermaid updates (1257 → 1377 MB).
 
-| Metric | Budget | Measured |
-|---|---|---|
-| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 473 ms (p95 738) |
-| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1198 ms (p95 1514) |
-| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) |
-| Wake a hibernated tab | 150 ms | 54 ms (p95 92) |
-| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms |
-| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) |
-| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | 260 ms (p95 292), headless, 2026-10-09; strict run with the 0.2.0 release check |
+| Metric | Budget | 0.1.0 | 0.2.0 candidate |
+|---|---|---|---|
+| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 473 ms (p95 738) | 750 ms (p95 901) |
+| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1198 ms (p95 1514) | 1255 ms (p95 1344) |
+| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) |
+| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) |
+| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
+| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB |
+| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) |
+
+The first strict run of the 0.2.0 candidate measured 913 ms for a blank window: its first
+launches after a fresh build, with the operating system's file cache cold. A run straight after
+gave the 750 ms above; cold starts in the regular test runs since v0.2 began measure 740–760 ms.
 
 ## Keyboard map (UX §5)
 
