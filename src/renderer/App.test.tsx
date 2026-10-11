@@ -64,7 +64,7 @@ const events: {
   tabs?: (snapshot: TabSnapshot) => void;
   demote?: (ids: string[]) => void;
   stale?: (id: string) => void;
-  editMode?: (request: { id: string; edit: 'granted' | 'leave' }) => void;
+  editMode?: (request: { id: string; edit: 'granted' | 'leave' | 'refused' }) => void;
   confirmClose?: (ids: string[]) => void;
   settings?: (state: SettingsState) => void;
   profiles?: (state: ProfilesState) => void;
@@ -96,7 +96,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         events.confirmClose = listener;
         return () => {};
       }),
-      onEditMode: vi.fn((listener: (request: { id: string; edit: 'granted' | 'leave' }) => void) => {
+      onEditMode: vi.fn((listener: (request: { id: string; edit: 'granted' | 'leave' | 'refused' }) => void) => {
         events.editMode = listener;
         return () => {};
       }),
@@ -1296,6 +1296,18 @@ describe('App editing', () => {
     const button = await vi.waitFor(() => [...dialog()!.querySelectorAll('button')].find((each) => each.textContent === name)!);
     await act(async () => button.click());
   };
+
+  it("says a file can't be edited when main refuses edit mode, and stays read-only", async () => {
+    const content = { ...readyContent('markdown', 'rendered', '# hi'), path: '/d/a.md', version: 'v1' };
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'refused' }));
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="status-message"]')?.textContent).toBe("This file can't be edited"));
+    expect(shadow.querySelector('.cm-content[aria-readonly="true"], article')).not.toBeNull();
+    expect(container.querySelector('.tab-indicator[data-indicator="edit mode"]')).toBeNull();
+    expect(api.documents.leaveEdit).not.toHaveBeenCalled();
+  });
 
   it('leaves edit mode at once when nothing is unsaved', async () => {
     const { api, container } = await editing();

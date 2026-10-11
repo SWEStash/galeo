@@ -226,7 +226,9 @@ mode closes the replace row and keeps find open.
 
 - Ctrl+E toggles edit mode on the active tab (source view becomes editable, `✎` on tab, status bar
   says "Editing"). Ctrl+E again returns to read-only (disabled while unsaved changes exist → offers
-  save/discard).
+  save/discard). A file opened from a link, a drop, quick open or recent files first asks in a
+  native dialog naming its full path: *Edit* / *Cancel* (Cancel is the default), once per file
+  per tab (ADR-015).
 - Ctrl+S saves (atomic); status bar shows "Saved" briefly. Unsaved `●` on tab.
 - Closing a tab/window/profile, or quitting, with unsaved changes → dialog: Save / Don't save / Cancel
   (focus on Save; Esc = Cancel).

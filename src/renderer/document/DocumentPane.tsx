@@ -70,7 +70,7 @@ export interface DocumentPaneProps {
   /** The reader chose another view, or started or stopped following a log. */
   onViewState?: (state: TabViewState) => void;
   /** Main's word on edit mode for this tab (Ctrl+E, ADR-013); a new token is a new request. */
-  editRequest?: { edit: 'granted' | 'leave'; token: number } | null;
+  editRequest?: { edit: 'granted' | 'leave' | 'refused'; token: number } | null;
   /** Saves the edited text, naming the version it was loaded from. */
   onSave?: (text: string, base: string | null) => Promise<SaveResult>;
   /** The tab in edit mode now has unsaved changes, or no longer has. */
@@ -294,6 +294,8 @@ export function DocumentPane({
   }, [dirty, onDirty]);
   useEffect(() => {
     if (!editRequest) return;
+    // Main refuses a file it didn't read as text with content (ADR-015); there is no grant to give back.
+    if (editRequest.edit === 'refused') return onMessage?.("This file can't be edited");
     if (editRequest.edit === 'granted') {
       if (!ready) {
         onLeaveEdit?.();

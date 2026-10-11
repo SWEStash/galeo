@@ -17,6 +17,7 @@ import { DEFAULT_PROFILE, ProfileCatalog } from '../core/profiles/catalog';
 import { profileIdFor } from '../core/profiles/names';
 import { appImageLauncher, installLauncher } from '../core/desktop/launcher';
 import { openFiles } from '../core/routing/open-files';
+import { editToggle } from '../core/documents/edit-toggle';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds } from '../core/session/model';
 import { DEFAULT_SETTINGS, settingSources } from '../core/settings/model';
@@ -259,8 +260,8 @@ function start(initialMode: StartupMode): void {
   /** A folder dropped on the window, which its next quick open searches. */
   const droppedFolders = new Map<number, string>();
   /** Shows files in the window: their tabs if it has them, else new ones after the shown one (or `after`). */
-  const openInWindow = (windowId: number, files: readonly string[], after?: string | null) => {
-    openFiles(documents, windowId, files, after);
+  const openInWindow = (windowId: number, files: readonly string[], after?: string | null, chosen = false) => {
+    openFiles(documents, windowId, files, after, { chosen });
     // Main showed the tab itself, so the page won't report it: the warm set hears it here.
     const shown = documents.snapshot(windowId).active;
     if (files.length > 0 && shown) {
@@ -300,16 +301,39 @@ function start(initialMode: StartupMode): void {
   };
 
   /**
-   * Ctrl+E on the shown tab (ADR-013): grants edit mode, or asks the page to leave it. Main never
-   * drops a grant itself here, as the page may hold unsaved text; it leaves once that is settled.
+   * Ctrl+E on the shown tab (ADR-013, ADR-015): grants edit mode, or asks the page to leave it. Main
+   * never drops a grant itself here, as the page may hold unsaved text; it leaves once that is settled.
+   * Only a file main read as text with content can be granted, and one the reader didn't hand over
+   * is granted only once they confirm its path in main's own dialog.
    */
   const toggleEditMode = (windowId: number) => {
     const { active } = documents.snapshot(windowId);
     const tab = active ? documents.get(active, windowId) : undefined;
     if (!tab || tab.kind === 'settings') return;
-    if (grants.allows(tab.id, windowId, tab.path)) return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'leave' });
-    grants.grant(tab.id, windowId, tab.path);
-    sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'granted' });
+    const toggle = editToggle({
+      granted: grants.allows(tab.id, windowId, tab.path),
+      text: reads.shapeOf(tab.id, tab.path) !== null,
+      chosen: documents.chosen(tab.id, windowId),
+    });
+    if (toggle === 'leave') return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'leave' });
+    if (toggle === 'refuse') return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'refused' });
+    if (toggle === 'grant') return grantEdit(windowId, tab.id, tab.path);
+    if (askingEdit.has(windowId)) return;
+    askingEdit.add(windowId);
+    void confirmEdit(windowId, tab.path)
+      .then((edit) => {
+        // Only the tab and file the key press named, if it still shows that file.
+        if (!edit || documents.get(tab.id, windowId)?.path !== tab.path || grants.allows(tab.id, windowId, tab.path)) return;
+        documents.markChosen(tab.id, windowId);
+        grantEdit(windowId, tab.id, tab.path);
+      })
+      .finally(() => askingEdit.delete(windowId));
+  };
+  /** Windows showing main's "Edit this file?" question: one at a time. */
+  const askingEdit = new Set<number>();
+  const grantEdit = (windowId: number, id: string, file: string) => {
+    grants.grant(id, windowId, file);
+    sendTo(windowId, 'documents.editMode', { id, edit: 'granted' });
   };
 
   const openMainWindow = (profile: ProfileRuntime, { bounds = null, state }: { bounds?: WindowBounds | null; state?: WindowState } = {}) => {
@@ -543,7 +567,7 @@ function start(initialMode: StartupMode): void {
    * Opens files where ADR-005 says. An existing window gets the tabs without being raised (no
    * focus stealing); a request without files asks for the window itself, so that one is focused.
    */
-  const openRouted = async (request: RouteRequest, files: readonly string[], without?: string): Promise<Route> => {
+  const openRouted = async (request: RouteRequest, files: readonly string[], { without, chosen = false }: { without?: string; chosen?: boolean } = {}): Promise<Route> => {
     const decision = route(request, await world(without));
     if (decision.kind === 'invalid') return decision;
     if (decision.create !== null) {
@@ -560,7 +584,7 @@ function start(initialMode: StartupMode): void {
       fresh = true;
     }
     const windowId = window.webContents.id;
-    openInWindow(windowId, files);
+    openInWindow(windowId, files, undefined, chosen);
     // Files added behind the reader's back, maybe on another workspace: the window asks for
     // attention, and is never raised for it (ADR-005).
     if (asksForAttention({ fresh, files: files.length, focused: window.isFocused() })) requestAttention(window);
@@ -575,7 +599,8 @@ function start(initialMode: StartupMode): void {
     const parsedRequest = parseArgv(request.argv, { cwd: request.cwd, forwarded: request.source !== 'launch', resolve: path.resolve });
     if (!parsedRequest.ok) return void console.warn(`galeo: open request ignored: ${parsedRequest.error}`);
     const { profile, newWindow, files } = parsedRequest.args;
-    const routed = await openRouted({ profile, newWindow }, files);
+    // The command line, Files or a second launch: files the reader handed over (ADR-015).
+    const routed = await openRouted({ profile, newWindow }, files, { chosen: true });
     if (routed.kind === 'invalid') console.warn(`galeo: open request ignored: --profile name ${routed.reason}`);
   };
 
@@ -602,7 +627,8 @@ function start(initialMode: StartupMode): void {
    * `files` go where they would have gone without it, first: closing the app's last window would quit it.
    */
   const removeProfile = async (id: string, files: readonly string[]) => {
-    await openRouted({ profile: null, newWindow: false }, files, id);
+    // Files a launch handed over, going where they would have gone without the profile.
+    await openRouted({ profile: null, newWindow: false }, files, { without: id, chosen: true });
     const profile = running.get(id);
     if (profile) {
       profile.discard = true;
@@ -940,6 +966,31 @@ async function confirmBurst(windowId: number): Promise<boolean> {
     type: 'question' as const,
     message: 'This document is opening many links. Allow?',
     buttons: ['Allow', 'Block for this tab'],
+    defaultId: 1,
+    cancelId: 1,
+  };
+  const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
+  return response === 0;
+}
+
+/**
+ * Asks, in a native dialog the page can't draw or answer, whether to edit a file the reader didn't
+ * hand over (ADR-015). Cancel is the default. Unpackaged test runs answer with `GALEO_TEST_EDIT_ANSWER`
+ * and record each path asked about in `globalThis.__galeoEditAsked`.
+ */
+async function confirmEdit(windowId: number, file: string): Promise<boolean> {
+  const answer = !app.isPackaged ? process.env['GALEO_TEST_EDIT_ANSWER'] : undefined;
+  if (answer) {
+    ((globalThis as { __galeoEditAsked?: string[] }).__galeoEditAsked ??= []).push(file);
+    return answer === 'edit';
+  }
+  const contents = webContents.fromId(windowId);
+  const owner = contents && BrowserWindow.fromWebContents(contents);
+  const options = {
+    type: 'question' as const,
+    message: `Edit "${path.basename(file)}"?`,
+    detail: `${file}\n\nThis file was opened from a link, a drop, quick open or recent files. galeo asks once before editing a file you didn't open from the desktop or the command line.`,
+    buttons: ['Edit', 'Cancel'],
     defaultId: 1,
     cancelId: 1,
   };

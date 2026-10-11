@@ -16,6 +16,11 @@ export interface HistoryEntry {
   view?: TabViewState['view'];
   follow?: true;
   ratio?: number;
+  /**
+   * The reader handed this file over (command line, Files, a second launch) or confirmed editing
+   * it: Ctrl+E edits it without asking (ADR-015). Main only; never in a snapshot.
+   */
+  chosen?: true;
 }
 
 interface Stored {
@@ -229,12 +234,32 @@ export class TabRegistry {
     return true;
   }
 
-  /** Moves the tab to `entry`, dropping any forward history. */
+  /** Moves the tab to `entry`, dropping any forward history. A link within the same file keeps its choice. */
   navigate(id: string, window: number, entry: HistoryEntry): boolean {
     const record = this.owned(id, window);
     if (!record) return false;
-    record.entries = [...record.entries.slice(0, record.index + 1), entry].slice(-HISTORY_DEPTH);
+    const { chosen: _chosen, ...next } = entry;
+    const current = record.entries[record.index]!;
+    const kept = current.chosen && current.path === entry.path ? { chosen: true as const } : {};
+    record.entries = [...record.entries.slice(0, record.index + 1), { ...next, ...kept }].slice(-HISTORY_DEPTH);
     record.index = record.entries.length - 1;
+    this.changed(window);
+    return true;
+  }
+
+  /** Whether the reader handed over, or confirmed, the file the tab shows now (ADR-015). */
+  chosen(id: string, window: number): boolean {
+    const record = this.owned(id, window);
+    return record?.entries[record.index]!.chosen === true;
+  }
+
+  /** The file the tab shows now is the reader's choice; false for a tab the window doesn't have. */
+  markChosen(id: string, window: number): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    const entry = record.entries[record.index]!;
+    if (entry.chosen) return true;
+    entry.chosen = true;
     this.changed(window);
     return true;
   }

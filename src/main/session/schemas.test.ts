@@ -16,7 +16,7 @@ const valid = {
           entries: [
             { path: '/d/b.txt', anchor: 'intro', encoding: 'windows-1252', position: { line: 3, offset: 0, heading: null, fraction: 0.1 }, view: 'source' },
             { path: '/d/c.log', anchor: null, view: 'source', follow: true },
-            { path: '/d/d.md', anchor: null, view: 'split', ratio: 0.35 },
+            { path: '/d/d.md', anchor: null, view: 'split', ratio: 0.35, chosen: true },
           ],
           index: 0,
           zoom: 1.25,
@@ -37,6 +37,7 @@ describe('parseSession (SR-17)', () => {
     ['an active tab that does not exist', { ...valid, windows: [{ ...valid.windows[0]!, active: 5 }] }],
     ['a focus order naming a missing window', { ...valid, focusOrder: [1] }],
     ['a relative path', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: 'a.md', anchor: null }], index: 0 }] }] }],
+    ['a choice that is not true', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, chosen: false }], index: 0 }] }] }],
     ['an unknown view', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, view: 'raw' }], index: 0 }] }] }],
     ['a follow state other than true', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, follow: false }], index: 0 }] }] }],
     ['a split narrower than a fifth', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, ratio: 0.1 }], index: 0 }] }] }],

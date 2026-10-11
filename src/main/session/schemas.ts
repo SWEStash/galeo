@@ -26,6 +26,7 @@ const entry = z.strictObject({
   position: scrollAnchor.optional(),
   encoding: z.enum(CHOSEN_ENCODINGS).optional(),
   ...tabViewState.shape,
+  chosen: z.literal(true).optional(),
 });
 
 const tab = z

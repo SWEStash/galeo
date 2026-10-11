@@ -267,6 +267,37 @@ describe('TabRegistry', () => {
     expect(tabs.encoding(id, 1)).toBe('windows-1252');
   });
 
+  it("marks the file of a tab's current entry as the reader's choice; links elsewhere aren't, back is again", () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1).id;
+    expect(tabs.chosen(a, 1)).toBe(false);
+    expect(tabs.markChosen(a, 2)).toBe(false);
+    expect(tabs.markChosen(a, 1)).toBe(true);
+    expect(tabs.chosen(a, 1)).toBe(true);
+    expect(tabs.chosen(a, 2)).toBe(false);
+
+    tabs.navigate(a, 1, { path: '/d/a.md', anchor: 'later' });
+    expect(tabs.chosen(a, 1)).toBe(true);
+    tabs.navigate(a, 1, { path: '/d/other.md', anchor: null });
+    expect(tabs.chosen(a, 1)).toBe(false);
+    tabs.back(a, 1);
+    expect(tabs.chosen(a, 1)).toBe(true);
+  });
+
+  it('keeps the choice through the session and a reopened tab, and never shows it to the page', () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1).id;
+    tabs.markChosen(a, 1);
+    expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('chosen');
+    const saved = tabs.exportWindow(1);
+    expect(saved.tabs[0]!.entries[0]).toEqual({ path: '/d/a.md', anchor: null, chosen: true });
+    const next = new TabRegistry(counterIds());
+    expect(next.chosen(next.restoreWindow(3, saved)[0]!.id, 3)).toBe(true);
+
+    tabs.close(a, 1);
+    expect(tabs.chosen(tabs.reopenClosed(1)!.id, 1)).toBe(true);
+  });
+
   it("exports a window's tabs for the session and restores them in another run, under new ids", () => {
     const tabs = new TabRegistry(counterIds());
     const a = tabs.open('/d/a.md', 1).id;

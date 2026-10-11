@@ -305,7 +305,11 @@ sequenceDiagram
 
 Ctrl+E (a Main accelerator) grants the shown tab edit mode (`EditGrants`, core) and tells the page
 (`documents.editMode`); a second Ctrl+E asks the page to leave, which it does once its text is
-saved or discarded. Each read names its version: the SHA-256 of the bytes main read. Ctrl+S sends
+saved or discarded. Main grants only a file it last read as text with content, and otherwise
+answers *refused*. A file the reader didn't hand over (its history entry isn't `chosen`: it
+came from a link, a drop, quick open or recent files, not the command line, Files or a second
+launch) is granted only after main's native dialog, naming the path, is answered *Edit*
+(ADR-015). Each read names its version: the SHA-256 of the bytes main read. Ctrl+S sends
 `documents.save(tabId, text, version)`, which spends an input credit. Main checks the grant, then
 reads the file again: if its hash isn't `version`, it answers *conflict* and writes nothing.
 Otherwise it encodes the text the way those bytes were (encoding, byte order mark, line endings)

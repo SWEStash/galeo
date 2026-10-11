@@ -132,7 +132,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
   );
 
   // Main's Ctrl+E for this tab (ADR-013): each one is a new request for the pane.
-  const [editRequest, setEditRequest] = useState<{ edit: 'granted' | 'leave'; token: number } | null>(null);
+  const [editRequest, setEditRequest] = useState<{ edit: 'granted' | 'leave' | 'refused'; token: number } | null>(null);
   useEffect(
     () =>
       window.galeo.documents.onEditMode(({ id: tab, edit }) => {

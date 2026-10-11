@@ -72,4 +72,15 @@ describe('openFiles', () => {
     expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/c.md', '/d/d.md', '/d/x.md', '/d/a.md', '/d/b.md', '/d/y.md']);
     expect(tabs.snapshot(1).active).toBe(tabs.list(1)[0]!.id);
   });
+
+  it("marks each file, new or already open, as the reader's choice when asked", () => {
+    const tabs = registry();
+    const a = tabs.open('/d/a.md', 1);
+    const c = tabs.open('/d/c.md', 1);
+    openFiles(tabs, 1, ['/d/a.md', '/d/b.md'], undefined, { chosen: true });
+    const b = tabs.find('/d/b.md', 1)!;
+    expect([tabs.chosen(a.id, 1), tabs.chosen(b.id, 1), tabs.chosen(c.id, 1)]).toEqual([true, true, false]);
+    openFiles(tabs, 1, ['/d/c.md']);
+    expect(tabs.chosen(c.id, 1)).toBe(false);
+  });
 });

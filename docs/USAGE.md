@@ -78,7 +78,9 @@ the file into the window in front of you) when you want it here.
 
 - **Ctrl+E** puts the shown file in edit mode: the source view takes your typing, the tab shows
   `✎`, and the status bar says *Editing*. Ctrl+E again goes back to reading. An empty file
-  can't be edited.
+  can't be edited. A file you opened from a link, a drop, quick open or recent files asks once,
+  naming its full path, before its first edit; files you open from Files or the command line
+  don't ask.
 - **In split view**, edit mode keeps the rendered view beside the editor, and it follows your
   typing once you pause. If a preview takes too long to render (or can't be rendered), the last
   one stays with *Preview paused*, and the next pause tries again. Ctrl+U goes to the editor alone;

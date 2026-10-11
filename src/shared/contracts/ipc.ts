@@ -335,7 +335,7 @@ export interface Events {
    * Ctrl+E (seen by main, never sent by the page): `granted`, the tab is now in edit mode; `leave`,
    * the reader asks to leave it, which the page does once its text is saved or discarded (ADR-013).
    */
-  'documents.editMode': { id: string; edit: 'granted' | 'leave' };
+  'documents.editMode': { id: string; edit: 'granted' | 'leave' | 'refused' };
   /** The window is closing (or the app quitting, or its profile going) with these tabs unsaved: ask the reader. */
   'documents.confirmClose': string[];
   'settings.changed': SettingsState;
