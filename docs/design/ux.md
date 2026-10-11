@@ -231,7 +231,8 @@ mode closes the replace row and keeps find open.
   per tab (ADR-015).
 - Ctrl+S saves (atomic); status bar shows "Saved" briefly. Unsaved `●` on tab.
 - Closing a tab/window/profile, or quitting, with unsaved changes → dialog: Save / Don't save / Cancel
-  (focus on Save; Esc = Cancel).
+  (focus on Save; Esc = Cancel). Closing the window or quitting again while that dialog is open →
+  a native dialog from main: *Keep waiting* (default) / *Close without saving*.
 - **External change while dirty** → non-modal bar above the editor: "File changed on disk" with
   *Show diff*, *Keep mine*, *Load theirs*. Nothing is overwritten until the user chooses. *Show
   diff* opens a read-only side-by-side diff (mine | theirs). A file deleted while dirty offers

@@ -6,13 +6,16 @@ export type CloseAnswer = 'asking' | 'proceed' | 'cancel';
 interface Pending {
   resolve: (proceed: boolean) => void;
   stopTimer: Unsubscribe;
+  /** The page said it is asking its reader. */
+  asking: boolean;
 }
 
 /**
  * Closing windows, quitting or deleting a profile with unsaved changes (ADR-013): each affected
  * window's page asks its reader, one window at a time, and the close goes ahead only if every
  * reader agrees. A page must say it is asking within `ackMs`, or it counts as Cancel (a hung page
- * can't hang a quit); a reader may take as long as they like to decide.
+ * can't hang a quit); a reader may take as long as they like to decide. Closing a window again while
+ * its page is asking puts main's own question instead, so a page can't hold the window open for ever.
  */
 export class UnsavedChanges {
   private readonly pending = new Map<number, Pending>();
@@ -23,6 +26,8 @@ export class UnsavedChanges {
       dirty: (window: number) => string[];
       /** Asks the window's page about these tabs. */
       ask: (window: number, ids: string[]) => void;
+      /** Main's own question, for a window whose page is still asking: true closes it unsaved. */
+      force: (window: number) => Promise<boolean>;
       clock: Clock;
       ackMs: number;
     },
@@ -41,7 +46,10 @@ export class UnsavedChanges {
     const pending = this.pending.get(window);
     if (!pending) return;
     pending.stopTimer();
-    if (answer === 'asking') return;
+    if (answer === 'asking') {
+      pending.asking = true;
+      return;
+    }
     this.settle(window, answer === 'proceed');
   }
 
@@ -50,11 +58,16 @@ export class UnsavedChanges {
     this.settle(window, true);
   }
 
-  private askOne(window: number, ids: string[]): Promise<boolean> {
+  private async askOne(window: number, ids: string[]): Promise<boolean> {
+    if (this.pending.get(window)?.asking) {
+      if (!(await this.deps.force(window))) return false;
+      this.settle(window, true);
+      return true;
+    }
     this.settle(window, false);
     return new Promise((resolve) => {
       const stopTimer = this.deps.clock.setTimeout(() => this.settle(window, false), this.deps.ackMs);
-      this.pending.set(window, { resolve, stopTimer });
+      this.pending.set(window, { resolve, stopTimer, asking: false });
       this.deps.ask(window, ids);
     });
   }

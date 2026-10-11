@@ -225,6 +225,7 @@ function start(initialMode: StartupMode): void {
       if (contents) BrowserWindow.fromWebContents(contents)?.focus();
       sendTo(windowId, 'documents.confirmClose', ids);
     },
+    force: (windowId) => confirmCloseUnsaved(windowId),
     clock: systemClock,
     ackMs: UNSAVED_ACK_MS,
   });
@@ -996,6 +997,28 @@ async function confirmEdit(windowId: number, file: string): Promise<boolean> {
   };
   const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
   return response === 0;
+}
+
+/**
+ * Main's own question when a window is closed again while its page is still asking about unsaved
+ * changes: a page can't keep its window, or the app, open for ever. Keep waiting is the default.
+ * Unpackaged test runs answer with `GALEO_TEST_CLOSE_UNSAVED_ANSWER` (`close` or `wait`).
+ */
+async function confirmCloseUnsaved(windowId: number): Promise<boolean> {
+  const answer = !app.isPackaged ? process.env['GALEO_TEST_CLOSE_UNSAVED_ANSWER'] : undefined;
+  if (answer) return answer === 'close';
+  const contents = webContents.fromId(windowId);
+  const owner = contents && BrowserWindow.fromWebContents(contents);
+  const options = {
+    type: 'warning' as const,
+    message: 'This window is still asking about unsaved changes.',
+    detail: 'Close it without saving? Its unsaved changes will be lost.',
+    buttons: ['Keep waiting', 'Close without saving'],
+    defaultId: 0,
+    cancelId: 0,
+  };
+  const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
+  return response === 1;
 }
 
 /**

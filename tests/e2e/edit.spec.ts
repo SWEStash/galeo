@@ -63,11 +63,11 @@ test('after a save, the rendered view shows the saved text', async () => {
 });
 
 /** A file in edit mode with one unsaved line. Closing it would ask, so a failed test's cleanup kills it. */
-async function dirtyEdit(text = '# Draft\n', { open = (file: string) => file }: { open?: (file: string) => string } = {}) {
+async function dirtyEdit(text = '# Draft\n', { open = (file: string) => file, env }: { open?: (file: string) => string; env?: Record<string, string> } = {}) {
   const dir = tempHome();
   const file = path.join(dir, 'draft.md');
   writeFileSync(file, text);
-  const launched = await launchApp(['--', open(file)]);
+  const launched = await launchApp(['--', open(file)], env ? { env } : {});
   const { app, window } = launched;
   await expect(shownDocument(window).locator('h1')).toHaveText('Draft');
   await pressInMain(app, window, 'E');
@@ -97,6 +97,26 @@ test('closing the window with unsaved changes asks: Cancel keeps it, Save writes
     await exited;
     closed = true;
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
+  } finally {
+    if (!closed) {
+      app.process().kill('SIGKILL');
+      await close().catch(() => {});
+    }
+    removeTempHome(dir);
+  }
+});
+
+test("closing again while the window is still asking puts main's own question, which can close it unsaved", async () => {
+  const { app, window, close, dir, file } = await dirtyEdit('# Draft\n', { env: { GALEO_TEST_CLOSE_UNSAVED_ANSWER: 'close' } });
+  let closed = false;
+  try {
+    await pressInMain(app, window, 'W', true);
+    await expect(unsavedDialog(window)).toBeVisible();
+    const exited = app.waitForEvent('close');
+    await pressInMain(app, window, 'W', true);
+    await exited;
+    closed = true;
+    expect(readFileSync(file, 'utf8')).toBe('# Draft\n');
   } finally {
     if (!closed) {
       app.process().kill('SIGKILL');
