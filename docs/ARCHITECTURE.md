@@ -16,7 +16,8 @@
   [011](decisions/ADR-011-defer-macos-windows-ci.md) ·
   [012](decisions/ADR-012-hand-run-releases-until-public.md) ·
   [013](decisions/ADR-013-edit-and-save-model.md) ·
-  [014](decisions/ADR-014-split-view-and-scroll-sync.md)
+  [014](decisions/ADR-014-split-view-and-scroll-sync.md) ·
+  [015](decisions/ADR-015-edit-grant-for-files-the-reader-chose.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
