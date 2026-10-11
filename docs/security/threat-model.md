@@ -151,7 +151,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T9 | Mitigate | SR-15 |
 | T10 | Mitigate | SR-16 |
 | T11 | **Accept.** Same-user processes already have equal privilege; the channel only opens files, which is intended behaviour. Owner: project owner. | SR-13 (argv handled as data) |
-| T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo, or, while the reader types, spend their key presses on quick-open listings, opens and the document's own links of its choosing; exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner. | SR-12 (drop grants from the preload's isolated world; input credits for quick open and links) |
+| T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo, or, while the reader types, spend their key presses on quick-open listings, opens and the document's own links of its choosing. In v0.2 it can also write the one file the reader put in edit mode, while it is in edit mode, and the reader may confirm main's question about a file without reading its path. Exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner (writes: 2026-10-11, ADR-015). | SR-12 (drop grants from the preload's isolated world; input credits for quick open and links; edit mode only for read text, and main's own question for files the reader didn't hand over) |
 | T14 | Mitigate | SR-17 |
 | T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
@@ -302,8 +302,15 @@ Writes (v0.2) are allowed only to paths that main has marked **edit-enabled** af
 explicit edit command on that tab, observed by main itself (a `before-input-event` key such as
 Ctrl+E, or a native menu item). The renderer cannot enable editing by itself, and cannot
 write any other path. Each save also spends an input credit (one per real key or click).
+Ctrl+E enables only a file main last read as text with content, so a save never creates a file.
+A file the reader didn't hand over from the command line, Files or a second launch (one reached
+through a link, a drop, quick open or recent files) is enabled only after the reader answers
+*Edit* in main's native dialog naming its path (ADR-015). The renderer chooses the active tab, so
+without that question it could steer the key press to a file of its choosing.
 *AC*: tests showing a renderer-originated `write` to a non-edit-enabled path is rejected, and
-that reads of paths never surfaced to the user are rejected.
+that reads of paths never surfaced to the user are rejected; that Ctrl+E on a missing file is
+refused by main, and that a tab the page makes active just before Ctrl+E is asked about, not
+enabled (`edit.spec`).
 
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as
 absolute paths. The `.desktop` entry uses `%F`. Main parses argv with a strict schema and never
@@ -339,7 +346,8 @@ e2e test.
 **SR-15 — Safe saves (v0.2, ADR-013).**
 - Writes are atomic (temp file in the same directory, `fsync`, rename), except where a rename
   would change what the file is: a hard-linked file, or one whose owner or group the temp file
-  can't take, is written in place.
+  can't take, is written in place; that write doesn't follow a symlink, and refuses a file other
+  than the one main checked (swapped in by someone else between the check and the write).
 - A symlinked file is written through to its target; mode and ownership are preserved. A file
   the user can't write is not replaced.
 - Before writing, main compares the hash of the file's current bytes with the version the user
