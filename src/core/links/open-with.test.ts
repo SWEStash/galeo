@@ -25,7 +25,7 @@ describe('canOpenWithDefaultApp (SR-05)', () => {
     },
   );
 
-  it.each(['/d/tool.jar', '/d/start.jnlp', '/d/app.flatpakref', '/d/repo.flatpakrepo'])('refuses %s, which installs or runs an app', (path) => {
+  it.each(['/d/tool.jar', '/d/start.jnlp', '/d/app.flatpakref', '/d/repo.flatpakrepo', '/d/pkg.deb', '/d/pkg.rpm', '/d/run.py', '/d/app.pyz'])('refuses %s, which installs or runs an app', (path) => {
     expect(canOpenWithDefaultApp(named(path))).toBe(false);
   });
 

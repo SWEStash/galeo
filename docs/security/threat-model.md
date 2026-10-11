@@ -219,8 +219,9 @@ session only.
 `javascript:`/`file:` variants, link-set membership, and the rate limit.
 
 **SR-05 — Never execute files.** "Open with default app" (`shell.openPath`) is offered only for
-non-executable, non-launcher files: not `.desktop`, `.AppImage`, `.sh` or `.run`, not Java or
-Flatpak apps (`.jar`, `.jnlp`, `.flatpakref`, `.flatpakrepo`), judged by the name and, through
+non-executable, non-launcher files: not `.desktop`, `.AppImage`, `.sh` or `.run`, not packages
+(`.deb`, `.rpm`), not Java, Python or Flatpak apps (`.jar`, `.jnlp`, `.py`, `.pyz`, `.flatpakref`,
+`.flatpakrepo`), and not the other platforms' launchers, judged by the name and, through
 symlinks, by the file pointed to; not files with the executable bit, not directories, and only when the user chooses it in a **native context
 menu built by main**. Otherwise only "Reveal in Files" is offered. Links to local
 files always open inside galeo.

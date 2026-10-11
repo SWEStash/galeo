@@ -1,10 +1,10 @@
 import { extensionOf } from '../../shared/paths';
 import type { EntryKind } from '../ports';
 
-// Files that run or install something when "opened" (SR-05): Linux launchers, Java and Flatpak
-// apps, and the other platforms' own.
+// Files that run or install something when "opened" (SR-05): Linux launchers and packages, Java,
+// Python and Flatpak apps, and the other platforms' own.
 const LAUNCHERS = new Set([
-  '.desktop', '.appimage', '.sh', '.run', '.jar', '.jnlp', '.flatpakref', '.flatpakrepo',
+  '.desktop', '.appimage', '.sh', '.run', '.deb', '.rpm', '.py', '.pyz', '.jar', '.jnlp', '.flatpakref', '.flatpakrepo',
   '.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.lnk', '.app', '.command',
 ]);
 
