@@ -158,7 +158,7 @@ export class NodeFileSystem implements FileSystem {
     }
     if (info.nlink > 1 || !(await this.replace(real, data, info))) {
       try {
-        await writeAndSync(await open(real, 'w'), data);
+        await writeInPlace(real, data, info);
       } catch (error) {
         throw toFsError(error, path);
       }
@@ -234,6 +234,23 @@ async function writeAndSync(handle: FileHandle, data: Uint8Array): Promise<void>
   } finally {
     await handle.close();
   }
+}
+
+/**
+ * Writes over the file at `real` (already resolved) without replacing it. A symlink there now, or
+ * another file, was swapped in after the checks: refused rather than followed.
+ */
+async function writeInPlace(real: string, data: Uint8Array, checked: { dev: number; ino: number }): Promise<void> {
+  const handle = await open(real, constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = await handle.stat();
+    if (opened.dev !== checked.dev || opened.ino !== checked.ino) throw new FsError('EOTHER', real);
+    await handle.truncate(0);
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+  await writeAndSync(handle, data);
 }
 
 /** Makes the rename durable. Windows can't open a directory for this, and doesn't need to. */
