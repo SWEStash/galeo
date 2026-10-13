@@ -11,9 +11,9 @@
 ## Context
 
 galeo renders Markdown now and many formats later (txt, log; then JSON, YAML, TOML, CSV,
-source code, diagrams). The v0.2 editor must preview articles for an Astro/MDX site faithfully. Such a site is built
-on Astro: remark/rehype, Shiki with the `github-light`/`github-dark` themes, and remark-math with
-KaTeX. MDX parsing exists only in the remark/micromark ecosystem.
+source code, diagrams). The v0.2 editor must preview articles for an Astro/MDX site faithfully.
+Such a site uses remark/rehype, Shiki with the `github-light`/`github-dark` themes, and
+remark-math with KaTeX. MDX parsing exists only in the remark/micromark ecosystem.
 
 Rendering must meet the tab-open budget (under 100 ms for about 50 KB of Markdown), stay off the
 UI thread (ADR-002), and treat content as hostile (threat model T1, T13).

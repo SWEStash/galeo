@@ -47,8 +47,8 @@ must not obstruct (plain files only, no sidecar metadata).
    and every profile reopens where it was left.
 4. Reading Markdown matches or beats the current extension in typography and rendering
    (code, math, diagrams, tables), with full control over theming.
-5. (v0.2) Articles can be edited as raw text with a live split preview that matches the target site
-   rendering closely enough to catch mistakes before publishing.
+5. (v0.2) Articles can be edited as raw text with a live split preview that matches the
+   site's rendering closely enough to catch mistakes before publishing.
 
 ## Non-Goals
 

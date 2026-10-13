@@ -335,7 +335,8 @@ this map only.
   centred, paragraph spacing ≥ 1em, proportional font for prose, monospace for code at 0.9em,
   modular heading scale; fonts vendored in the app (no web fonts), system font as fallback.
 - **Code**: syntax themes follow light/dark (`github-light` / `github-dark` by default, matching
-  the target site). Line numbers optional in code blocks; copy button on hover and on keyboard focus.
+  the article preview's target site). Line numbers optional in code blocks; copy button on hover
+  and on keyboard focus.
 - **Custom CSS**: a global `custom.css` and one per profile, applied in that order after the
   bundled theme; changes apply live to every open tab when the file is saved (hand edits to
   `settings.json` and `profile.json` apply live too). galeo documents a small set of

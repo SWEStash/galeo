@@ -18,7 +18,7 @@ The renderer has two very different kinds of UI:
    into Shadow DOM containers (ADR-004), warm/hibernated lifecycle (ADR-002), CodeMirror views,
    lazily rendered Mermaid.
 
-The owner works in TypeScript and already works in React. Coding agents are most
+The owner works in TypeScript and React. Coding agents are most
 reliable in React. Cold start is a PRD target, so the framework's parse and boot cost counts,
 but only for the chrome.
 
