@@ -23,7 +23,7 @@ test('Ctrl+Shift+O opens the outline on the heading being read, passes axe, and 
     await expect(shownDocument(window).locator('h1')).toBeVisible();
     await window.keyboard.press('ControlOrMeta+Shift+O');
     await expect(outline(window)).toBeVisible();
-    await expect(current(window)).toHaveText('galeo — v0.1 "reader" Execution Plan');
+    await expect(current(window)).toHaveText('Harbor — v1 "catalogue" Execution Plan');
     await expect(current(window)).toBeFocused();
     const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="outline"]').analyze();
     expect(results.violations).toEqual([]);
@@ -45,7 +45,7 @@ test('choosing a heading scrolls to it, and the current heading follows the scro
     await expect(current(window)).toHaveText('9. Dependency map and critical path');
     // Scrolling back up: the mark follows the reader.
     await shownDocument(window).evaluate((view) => (view.scrollTop = 0));
-    await expect(current(window)).toHaveText('galeo — v0.1 "reader" Execution Plan');
+    await expect(current(window)).toHaveText('Harbor — v1 "catalogue" Execution Plan');
   } finally {
     await close();
   }
