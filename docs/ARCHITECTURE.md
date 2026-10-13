@@ -17,7 +17,8 @@
   [012](decisions/ADR-012-hand-run-releases-until-public.md) ·
   [013](decisions/ADR-013-edit-and-save-model.md) ·
   [014](decisions/ADR-014-split-view-and-scroll-sync.md) ·
-  [015](decisions/ADR-015-edit-grant-for-files-the-reader-chose.md)
+  [015](decisions/ADR-015-edit-grant-for-files-the-reader-chose.md) ·
+  [016](decisions/ADR-016-name-galeo.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -29,7 +30,7 @@ Every diagram uses these names exactly.
 
 | Name | Meaning |
 |---|---|
-| **Launcher** | The `gal` shell script. Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that routes every launch through `galeo`'s argument handling and relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
+| **Launcher** | The `gal` shell script. Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that routes every launch through `gal`'s argument handling and relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
 | **Main** | The Electron main process (Node). Hosts the Core and the Adapters |
 | **Core** | Pure TypeScript domain logic: routing, tab registry, lifecycle policy, sessions, settings, capability checks, argv parsing, link extraction (ADR-007) |
 | **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `WindowHost`, `OsShell`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `Clock` |
@@ -51,7 +52,7 @@ Every diagram uses these names exactly.
 flowchart LR
   user([Developer<br/>owner / agent-heavy dev])
   subgraph machine[User's machine · single user]
-    galeo[[galeo]]
+    app[[galeo]]
     term[Terminal / coding agents<br/>Claude Code CLI]
     files[GNOME Files<br/>search · double-click · drag]
     fs[(User files<br/>repos, .local/, .claude/,<br/>scratchpads, downloads)]
@@ -59,13 +60,13 @@ flowchart LR
   end
   net((Internet))
 
-  user --> term & files & galeo
-  term -- "galeo [--profile p] file…" --> galeo
+  user --> term & files & app
+  term -- "galeo [--profile p] file…" --> app
   term -. agents write .md/.log .-> fs
-  files -- "open %F / drag-and-drop" --> galeo
-  galeo -- "read (write in edit mode)" --> fs
-  galeo -- "http/https/mailto links from the document only" --> os
-  galeo -. never .-x net
+  files -- "open %F / drag-and-drop" --> app
+  app -- "read (write in edit mode)" --> fs
+  app -- "http/https/mailto links from the document only" --> os
+  app -. never .-x net
 ```
 
 galeo has **no network dependency**. It exchanges data only with local files, the Launcher,
@@ -76,7 +77,7 @@ link targets that appear in the open document (ADR-004).
 
 ```mermaid
 flowchart TB
-  launcher[Launcher<br/>galeo script]
+  launcher[Launcher<br/>gal script]
   subgraph app[galeo app · Electron]
     subgraph mainp[Main · Node]
       core[Core<br/>pure TS]

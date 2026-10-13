@@ -16,6 +16,7 @@ GNOME); the full keyboard map is in the [UX specification](design/ux.md#5-keyboa
   ```
 
   `galeo` with no files brings the last window used forward (or opens an empty one).
+  The `.deb` also installs `gal`, a shorter name for the same command.
 - **From Files**: double-click, or *Open With → galeo*. galeo can be the default app for
   `.md`, `.txt` and `.log` files.
 - **Drag and drop**: drop files from Files onto the document (they open after the tab shown) or
@@ -134,6 +135,9 @@ says. galeo keeps its files in the usual places:
 Hand edits to these files apply at once. A file left invalid is not overwritten: galeo keeps
 using the last valid settings and says which file is wrong. [Document styling](design/document-styling.md)
 lists the CSS variables and classes a custom CSS can rely on.
+
+Builds before 0.2 kept these files under another name, and 0.2 doesn't carry them over: it starts
+with default settings and an empty session.
 
 ## Privacy
 

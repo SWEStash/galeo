@@ -5,14 +5,14 @@ import { FakeFileSystem } from '../../helpers/fakes';
 // The same check the packages' desktop entry passes (verify:package).
 import { desktopEntryProblems } from '../../../scripts/lib/desktop-entry.mjs';
 
-const GALEO = ['#!/bin/sh', 'set -eu', '', 'GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"', 'exec "$GALEO_BIN" "$@"', ''].join('\n');
+const LAUNCHER_SCRIPT = ['#!/bin/sh', 'set -eu', '', 'GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"', 'exec "$GALEO_BIN" "$@"', ''].join('\n');
 const DIRS = { binDir: '/home/u/.local/bin', applicationsDir: '/home/u/.local/share/applications', iconsDir: '/home/u/.local/share/icons' };
 const ICON = '/home/u/.local/share/icons/hicolor/256x256/apps/galeo.png';
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 
 describe('appImageLauncher ("Install command-line launcher", ADR-008)', () => {
-  it("points a copy of galeo at the AppImage, marked as galeo's", () => {
-    const files = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, GALEO);
+  it("points a copy of the launcher at the AppImage, marked as galeo's", () => {
+    const files = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, LAUNCHER_SCRIPT);
     if (!files.ok) throw new Error(files.reason);
     expect(files.bin.path).toBe('/home/u/.local/bin/galeo');
     expect(files.bin.content).toContain("GALEO_BIN='/home/u/Apps/galeo.AppImage'");
@@ -22,7 +22,7 @@ describe('appImageLauncher ("Install command-line launcher", ADR-008)', () => {
   });
 
   it("writes a desktop entry for the AppImage that passes the packages' own check", () => {
-    const files = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, GALEO);
+    const files = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, LAUNCHER_SCRIPT);
     if (!files.ok) throw new Error(files.reason);
     expect(files.desktop.path).toBe('/home/u/.local/share/applications/galeo.desktop');
     expect(files.desktop.content).toContain('Exec=/home/u/Apps/galeo.AppImage -- %F\n');
@@ -32,7 +32,7 @@ describe('appImageLauncher ("Install command-line launcher", ADR-008)', () => {
 
   it('quotes a path the desktop and the shell would otherwise split or expand', () => {
     const path = String.raw`/home/u/My Apps/it's $HOME "100%" \galeo.AppImage`;
-    const files = appImageLauncher(path, DIRS, GALEO);
+    const files = appImageLauncher(path, DIRS, LAUNCHER_SCRIPT);
     if (!files.ok) throw new Error(files.reason);
     // Desktop Entry spec: quoted, with " ` $ \ escaped, then backslashes doubled as a string value; % doubled.
     expect(files.desktop.content).toContain(String.raw`Exec="/home/u/My Apps/it's \\$HOME \\"100%%\\" \\\\galeo.AppImage" -- %F` + '\n');
@@ -40,21 +40,21 @@ describe('appImageLauncher ("Install command-line launcher", ADR-008)', () => {
   });
 
   it("keeps replacement patterns in the path as they are ($& and $' are just characters)", () => {
-    const files = appImageLauncher("/home/u/a$&b$'c.AppImage", DIRS, GALEO);
+    const files = appImageLauncher("/home/u/a$&b$'c.AppImage", DIRS, LAUNCHER_SCRIPT);
     if (!files.ok) throw new Error(files.reason);
     expect(files.bin.content).toContain(String.raw`GALEO_BIN='/home/u/a$&b$'\''c.AppImage'` + '\n');
     expect(files.bin.content.match(/GALEO_BIN=/g)).toHaveLength(1);
   });
 
   it('refuses a path no desktop entry can hold', () => {
-    expect(appImageLauncher('/home/u/a\nb.AppImage', DIRS, GALEO)).toEqual({ ok: false, reason: 'the AppImage path has a control character' });
-    expect(appImageLauncher('relative.AppImage', DIRS, GALEO)).toEqual({ ok: false, reason: 'the AppImage path is not absolute' });
+    expect(appImageLauncher('/home/u/a\nb.AppImage', DIRS, LAUNCHER_SCRIPT)).toEqual({ ok: false, reason: 'the AppImage path has a control character' });
+    expect(appImageLauncher('relative.AppImage', DIRS, LAUNCHER_SCRIPT)).toEqual({ ok: false, reason: 'the AppImage path is not absolute' });
   });
 });
 
 describe('installLauncher', () => {
   const files = () => {
-    const made = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, GALEO);
+    const made = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, LAUNCHER_SCRIPT);
     if (!made.ok) throw new Error(made.reason);
     return made;
   };
@@ -69,7 +69,7 @@ describe('installLauncher', () => {
     expect(fs.modeOf('/home/u/.local/bin')).toBeUndefined();
   });
 
-  it('replaces its own earlier launcher, never a galeo that is not galeo\'s', async () => {
+  it('replaces its own earlier launcher, never a galeo command that is not its own', async () => {
     const fs = new FakeFileSystem({ '/home/u/.local/bin/galeo': `#!/bin/sh\n${LAUNCHER_MARK}\nold` });
     expect(await installLauncher({ fs, utf8 }, files(), PNG, [])).toEqual({ ok: true });
     const foreign = new FakeFileSystem({ '/home/u/.local/bin/galeo': '#!/bin/sh\necho mine' });
@@ -109,12 +109,12 @@ describe('installLauncher', () => {
     await expect(fs.stat(ICON)).rejects.toThrow(/ENOENT/);
   });
 
-  it('installs nothing when the galeo package already provides galeo and the desktop entry', async () => {
+  it('installs nothing when the galeo package already provides the command and the desktop entry', async () => {
     const deb = '/usr/share/applications/galeo.desktop';
     const fs = new FakeFileSystem({ [deb]: '[Desktop Entry]\n' });
     expect(await installLauncher({ fs, utf8 }, files(), PNG, ['/usr/local/share/applications/galeo.desktop', deb])).toEqual({
       ok: false,
-      reason: 'the galeo package is installed and already provides galeo',
+      reason: 'the galeo package is installed and already provides the galeo command',
     });
     await expect(fs.stat('/home/u/.local/bin/galeo')).rejects.toThrow(/ENOENT/);
     await expect(fs.stat('/home/u/.local/share/applications/galeo.desktop')).rejects.toThrow(/ENOENT/);

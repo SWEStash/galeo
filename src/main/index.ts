@@ -722,7 +722,7 @@ function start(initialMode: StartupMode): void {
           const appImage = appImagePath();
           if (!appImage) throw new Error('not an AppImage');
           const home = app.getPath('home');
-          const galeo = utf8.decode(await fs.readFile(path.join(path.dirname(process.execPath), 'gal'), { maxBytes: 64 * 1024 }));
+          const script = utf8.decode(await fs.readFile(path.join(path.dirname(process.execPath), 'gal'), { maxBytes: 64 * 1024 }));
           const files = appImageLauncher(
             appImage,
             {
@@ -730,7 +730,7 @@ function start(initialMode: StartupMode): void {
               applicationsDir: path.join(xdgDataHome(home), 'applications'),
               iconsDir: path.join(xdgDataHome(home), 'icons'),
             },
-            galeo,
+            script,
           );
           if (!files.ok) return files;
           const icon = await fs.readFile(path.join(process.resourcesPath, 'icon.png'), { maxBytes: 1024 * 1024 }).catch(() => null);

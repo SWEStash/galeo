@@ -150,7 +150,7 @@ describe('SettingsView (UX §6)', () => {
     expect(settings.openCustomCss.mock.calls).toEqual([['profile'], ['global']]);
   });
 
-  it('offers the command-line launcher to an AppImage only, and says where galeo went', async () => {
+  it('offers the command-line launcher to an AppImage only, and says where the command went', async () => {
     const { app } = stubBridge();
     const plain = await render();
     expect(button(plain, 'Install command-line launcher')).toBeUndefined();

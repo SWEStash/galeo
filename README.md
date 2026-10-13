@@ -15,9 +15,9 @@ On Ubuntu 26.04 (GNOME), install the `.deb` from a release:
 sudo apt install ./galeo_*_amd64.deb   # in the folder you downloaded it to
 ```
 
-It adds `galeo` to your `PATH`, galeo to *Open With* for `.md`, `.txt` and `.log` files, and the
-AppArmor profile Chromium's sandbox needs. An AppImage is also available for other distributions;
-on Ubuntu 24.04 and later it can only run unsandboxed, so prefer the `.deb` there.
+It adds `galeo` (and the short `gal`) to your `PATH`, galeo to *Open With* for `.md`, `.txt` and
+`.log` files, and the AppArmor profile Chromium's sandbox needs. An AppImage is also available for
+other distributions; on Ubuntu 24.04 and later it can only run unsandboxed, so prefer the `.deb` there.
 
 ## Use
 

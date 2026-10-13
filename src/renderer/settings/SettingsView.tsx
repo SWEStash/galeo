@@ -157,7 +157,7 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
       {appImage && (
         <>
           <h2>Command line</h2>
-          <p className="field-hint">Adds galeo to ~/.local/bin and galeo to your applications, for this AppImage.</p>
+          <p className="field-hint">Adds galeo to ~/.local/bin and to your applications, for this AppImage.</p>
           <div className="settings-buttons">
             <Button
               onPress={() =>

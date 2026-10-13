@@ -25,16 +25,16 @@ function shellQuote(value: string): string {
 }
 
 /**
- * What "Install command-line launcher" writes for an AppImage (ADR-008): a copy of `galeo` pointed
+ * What "Install command-line launcher" writes for an AppImage (ADR-008): a copy of `gal`, installed as `galeo`, pointed
  * at the AppImage, a desktop entry that opens files with it, after `--` (SR-13), and the icon
  * that entry names.
  */
-export function appImageLauncher(appImage: string, dirs: { binDir: string; applicationsDir: string; iconsDir: string }, galeoScript: string): LauncherFiles {
+export function appImageLauncher(appImage: string, dirs: { binDir: string; applicationsDir: string; iconsDir: string }, launcherScript: string): LauncherFiles {
   if (/\p{Cc}/u.test(appImage)) return { ok: false, reason: 'the AppImage path has a control character' };
   if (!appImage.startsWith('/')) return { ok: false, reason: 'the AppImage path is not absolute' };
-  const [shebang, ...rest] = galeoScript.split('\n');
+  const [shebang, ...rest] = launcherScript.split('\n');
   const script = rest.join('\n');
-  if (!/^GALEO_BIN=.*$/m.test(script)) throw new Error('galeo has no GALEO_BIN line');
+  if (!/^GALEO_BIN=.*$/m.test(script)) throw new Error('gal has no GALEO_BIN line');
   const bin = [shebang, LAUNCHER_MARK, script.replace(/^GALEO_BIN=.*$/m, () => `GALEO_BIN=${shellQuote(appImage)}`)].join('\n');
   const exec = execArgument(appImage);
   const desktop = [
@@ -66,8 +66,8 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
 }
 
 /**
- * Writes the launcher files: `galeo` runnable, the desktop entry and the `icon` readable. A `galeo` that
- * isn't galeo's stays as it is; folders that exist keep their modes. The icon is only looks: one
+ * Writes the launcher files: `galeo` runnable, the desktop entry and the `icon` readable. A `galeo` command
+ * that isn't this app's stays as it is; folders that exist keep their modes. The icon is only looks: one
  * already there with other bytes stays, and the launcher still installs. Nothing is written while the
  * galeo package's desktop entry is at one of `packageEntries`.
  */
@@ -80,7 +80,7 @@ export async function installLauncher(
   const { fs, utf8 } = deps;
   // The user entry would hide the package's own one (same desktop id), so the package stays in charge.
   for (const entry of packageEntries) {
-    if ((await kindOf(fs, entry)) !== null) return { ok: false, reason: 'the galeo package is installed and already provides galeo' };
+    if ((await kindOf(fs, entry)) !== null) return { ok: false, reason: 'the galeo package is installed and already provides the galeo command' };
   }
   for (const [file, mark] of [
     [files.bin, LAUNCHER_MARK],
