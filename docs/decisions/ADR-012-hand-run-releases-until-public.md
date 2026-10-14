@@ -1,6 +1,6 @@
 # ADR-012 — Hand-run releases with checksums until the public repository
 
-- Status: Accepted (2026-10-07)
+- Status: Superseded by [ADR-017](ADR-017-release-workflow-with-attestations.md) (2026-10-14)
 - Date: 2026-10-07
 - Deciders: project owner
 - Supersedes: in [ADR-008](ADR-008-packaging-and-distribution.md), the "Releases" item

@@ -1,0 +1,123 @@
+name: Release
+
+# ADR-017: a `v*` tag builds the packages in CI, writes SHA256SUMS, attests them and drafts the
+# GitHub Release. Run it by hand (workflow_dispatch) for a dry run: build and attest, no release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  HUSKY: '0'
+
+jobs:
+  # Read-only: dependencies' install and build scripts run here, so this job holds no token that
+  # can write or sign anything.
+  build:
+    name: Build and verify the packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # No dependency cache: a release builds from the lockfile alone.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: The tag names package.json's version and a commit on main
+        if: github.event_name == 'push'
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "$GITHUB_REF_NAME" = "v$version" || { echo "tag $GITHUB_REF_NAME, package.json $version" >&2; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$GITHUB_SHA is not on main" >&2; exit 1; }
+      - run: npm ci
+      - run: npm run setup
+      - name: Audit dependencies (fails on high severity)
+        run: npm audit --audit-level=high
+      - run: npm run typecheck
+      - run: npm test
+      - name: Package
+        run: npm run package
+      - run: npm run check:bundle
+      - name: Allow the Chromium sandbox
+        run: sudo scripts/dev-sandbox-setup.sh
+      - name: Verify the package
+        run: npm run headless -- npm run verify:package
+      - name: Checksums
+        working-directory: release
+        run: |
+          sha256sum galeo_*_amd64.deb galeo-*.AppImage > SHA256SUMS
+          cat SHA256SUMS
+      - name: Release notes from the commit subjects since the last tag
+        run: |
+          previous=$(git describe --tags --abbrev=0 "$GITHUB_SHA^" 2>/dev/null || true)
+          git log --no-merges --format='- %s' ${previous:+"$previous.."}"$GITHUB_SHA" > release/NOTES.md
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: |
+            release/galeo_*_amd64.deb
+            release/galeo-*.AppImage
+            release/SHA256SUMS
+            release/NOTES.md
+          if-no-files-found: error
+          retention-days: 30
+
+  # Signs provenance for the exact files the build job made. Attestations need a public repository
+  # on GitHub's free plans, so a dry run in a private one stops after the build.
+  attest:
+    name: Attest build provenance
+    needs: build
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packages
+      - name: Check the files against SHA256SUMS
+        run: sha256sum -c SHA256SUMS
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            galeo_*_amd64.deb
+            galeo-*.AppImage
+
+  # Only for a tag, and only once the packages are attested. The release stays a draft: the
+  # maintainer edits the notes and publishes it.
+  release:
+    name: Draft the GitHub Release
+    needs: attest
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packages
+      - name: Check the files against SHA256SUMS
+        run: sha256sum -c SHA256SUMS
+      - name: Draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "galeo ${GITHUB_REF_NAME#v}" --notes-file NOTES.md \
+            galeo_*_amd64.deb galeo-*.AppImage SHA256SUMS

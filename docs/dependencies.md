@@ -105,6 +105,18 @@ installed as npm packages. They are plain assets with no code and change rarely.
 | `@axe-core/playwright` | 4.13.x | MPL-2.0 (dev only) | 2026-09-02 | Accessibility checks in end-to-end tests |
 | `husky`, `@commitlint/cli`, `@commitlint/config-conventional` | 9.1 / 21.2 / 21.2 | MIT | 2026-09 | Commit hooks + Conventional Commits |
 
+### CI: GitHub Actions
+
+Only GitHub's own Actions, each pinned by commit SHA (SR-10) and updated weekly by Dependabot.
+
+| Action | Version | Used in | Role |
+|---|---|---|---|
+| `actions/checkout` | 7.0.1 | CI, PR title, release | Check out the commit, without persisting credentials |
+| `actions/setup-node` | 7.1.0 | CI, PR title, release | Node from `.nvmrc` (CI caches npm; the release build doesn't) |
+| `actions/upload-artifact` | 7.0.2 | CI, release | Performance results and failure reports; the release packages for the next jobs |
+| `actions/download-artifact` | 8.0.2 | Release | Hands the built packages to the attest and release jobs, which hold the signing and write permissions (ADR-017, added 2026-10-14) |
+| `actions/attest-build-provenance` | 4.2.2 | Release | GitHub artifact attestations for the `.deb` and the AppImage (SR-10, ADR-017, added 2026-10-14) |
+
 ## Own modules and built-ins
 
 Self-owned modules live under `core/` or `renderer/lib/`, with unit tests (they replace packages,
@@ -162,8 +174,8 @@ about/licences view and the packages must include:
 - **semantic-release** (vetted 2026-09-25, removed 2026-09-29): it always installs
   `@semantic-release/npm`, which bundles `npm` and its `undici`. That `undici` had a high-severity
   advisory with no fixed npm 11 release, and a bundled copy can't be overridden, so the audit gate
-  failed. Nothing ran it yet. The release workflow's tooling is chosen when that workflow is
-  built, for the public repository ([ADR-012](decisions/ADR-012-hand-run-releases-until-public.md)).
+  failed. Nothing ran it yet. The release workflow uses no release tool: a tag starts it, and the
+  maintainer writes the notes ([ADR-017](decisions/ADR-017-release-workflow-with-attestations.md)).
 - **TypeScript 7** friction with any tool: fall back to 6.0.3 for that tool.
 - **Maintainer health**: any adopted package with no release for over 12 months is re-vetted;
   small ones are replaced by own modules.

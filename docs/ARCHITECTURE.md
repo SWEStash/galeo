@@ -18,7 +18,8 @@
   [013](decisions/ADR-013-edit-and-save-model.md) ·
   [014](decisions/ADR-014-split-view-and-scroll-sync.md) ·
   [015](decisions/ADR-015-edit-grant-for-files-the-reader-chose.md) ·
-  [016](decisions/ADR-016-name-galeo.md)
+  [016](decisions/ADR-016-name-galeo.md) ·
+  [017](decisions/ADR-017-release-workflow-with-attestations.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -371,7 +372,7 @@ The pre-release security audits check these layers against the code:
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
 
-## 8. Build, packaging and deployment (ADR-008, ADR-012)
+## 8. Build, packaging and deployment (ADR-008, ADR-017)
 
 ```
 source (src/shared · core · main · preload · renderer)
@@ -382,7 +383,8 @@ source (src/shared · core · main · preload · renderer)
                                        └─ galeo-Setup-<v>.exe              (Windows preview, deferred: ADR-011)
           CI (Linux; macOS/Windows deferred, ADR-011): tests · package + fuse read-back · no-network
               harness and performance
-              └─ release cut by hand, with SHA256SUMS → GitHub Release (docs/RELEASING.md, ADR-012)
+              └─ tag v<version> → release workflow: build, verify, SHA256SUMS, attestations →
+                 draft GitHub Release (docs/RELEASING.md, ADR-017)
 ```
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`

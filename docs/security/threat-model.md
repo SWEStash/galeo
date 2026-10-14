@@ -270,8 +270,7 @@ ship an Electron major that is out of support.
 - `npm audit` / OSV scan in CI, failing on high severity.
 - GitHub Actions pinned by commit SHA, with least-privilege `permissions:`.
 - Releases are built only in CI, and ship `SHA256SUMS` plus GitHub artifact attestations
-  (build provenance). Until the public repository, releases are cut by hand and ship
-  `SHA256SUMS` only ([ADR-012](../decisions/ADR-012-hand-run-releases-until-public.md)).
+  (build provenance) ([ADR-017](../decisions/ADR-017-release-workflow-with-attestations.md)).
 *AC*: CI configuration reviewed against this list before v0.1.
 
 **SR-11 — Minimal, validated IPC.** The preload exposes a small, typed, galeo-specific API
