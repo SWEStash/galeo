@@ -121,6 +121,24 @@ describe('QuickOpen', () => {
     expect(quickOpen.choose(1, token, folder.id)).toBeNull();
     expect(names(await quickOpen.query(1, token, '~/nowhere/'), 'path')).toEqual([]);
   });
+
+  it('keeps offering the latest query’s files when an earlier listing finishes after it', async () => {
+    const { fs, quickOpen, start } = setup();
+    const { token } = await start();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => (release = resolve));
+    const readDir = fs.readDir.bind(fs);
+    fs.readDir = async function* (folder: string) {
+      if (folder === `${HOME}/notes`) await held;
+      yield* readDir(folder);
+    };
+    const earlier = quickOpen.query(1, token, '~/notes/w');
+    const latest = await quickOpen.query(1, token, '~/notes/week/');
+    release();
+    expect((await earlier).sections).toEqual([]);
+    const monday = latest.sections.find((section) => section.kind === 'path')!.entries.find((entry) => entry.name === 'monday.md')!;
+    expect(quickOpen.choose(1, token, monday.id)).toBe(`${HOME}/notes/week/monday.md`);
+  });
 });
 
 describe('typedFolder', () => {

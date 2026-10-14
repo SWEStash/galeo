@@ -88,6 +88,8 @@ export class QuickOpen {
     const typed = typedFolder(query, this.deps.home);
     if (typed && !mayList()) return this.offer(window, session, query, []);
     const sections = typed ? [await this.pathSection(typed.folder, typed.filter, typed.shown)] : this.sections(session, query);
+    // A listing that finishes after a newer query must not replace what that query offered.
+    if (session.closed || session.query !== query) return { token, query, sections: [] };
     return this.offer(window, session, query, sections);
   }
 
