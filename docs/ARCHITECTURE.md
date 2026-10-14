@@ -353,6 +353,9 @@ renders only its active tab. Budget: first document painted within 500 ms.
 | 4. Zero network | Network Guard | SR-06 |
 | 5. Proof | CI: socket-connect harness, fuse read-back, payload corpus | SR-07, SR-08, SR-10 |
 
+The pre-release security audits check these layers against the code:
+[v0.1](security/audits/2026-10-07-v0.1.md) and [v0.2](security/audits/2026-10-10-v0.2.md).
+
 ## 7. Performance architecture
 
 | PRD target | Mechanism |
