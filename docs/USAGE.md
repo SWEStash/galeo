@@ -1,8 +1,53 @@
 # Using galeo
 
-galeo reads Markdown, plain text and log files: the plans, notes and logs that coding agents
-write. It never connects to the network. This guide covers everyday use on Linux (Ubuntu 26.04,
-GNOME); the full keyboard map is in the [UX specification](design/ux.md#5-keyboard-map).
+galeo reads and edits Markdown, plain text and log files: the plans, notes and logs that coding
+agents write. It never connects to the network. This guide covers installation and everyday use on
+Linux (Ubuntu 26.04, GNOME); the full keyboard map is in the
+[UX specification](design/ux.md#5-keyboard-map).
+
+## Installation
+
+galeo is released for Linux on x86_64, as a `.deb` package and an AppImage, on the
+[releases page](https://github.com/SWEStash/galeo/releases). It has no auto-update: a new release
+is how fixes reach you, so watch the repository's releases to hear about them.
+
+### The `.deb` package (Ubuntu 24.04 and later)
+
+```sh
+sudo apt install ./galeo_<version>_amd64.deb
+```
+
+It installs galeo in `/opt/galeo`, puts `galeo` and the shorter `gal` on your `PATH` (it leaves
+alone a `gal` command that belongs to another package), adds galeo to *Open With* for `.md`, `.txt`
+and `.log` files, and installs the AppArmor profile Chromium's sandbox needs on Ubuntu.
+`sudo apt remove galeo` removes it; your settings and sessions stay in your home folder.
+
+### The AppImage
+
+For other distributions: make `galeo-<version>.AppImage` executable and run it. To get the
+`galeo` command and a desktop entry, open Settings (Ctrl+,) and choose
+**Install command-line launcher**: it writes `~/.local/bin/galeo` and an entry in your
+applications, both pointing at that AppImage.
+
+On Ubuntu 24.04 and later the AppImage can't start Chromium's sandbox, which needs an AppArmor
+profile only the `.deb` provides. galeo then shows why and offers **Quit** or
+**Run without sandbox**; a window running without it says *Unsandboxed* for as long as it runs.
+Prefer the `.deb` there.
+
+### Checking a download
+
+Each release has a `SHA256SUMS` file. In the folder you downloaded to:
+
+```sh
+sha256sum --ignore-missing -c SHA256SUMS
+```
+
+Each package also carries a GitHub artifact attestation, which proves it was built by this
+repository's release workflow from the tagged commit. With the [GitHub CLI](https://cli.github.com/):
+
+```sh
+gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo
+```
 
 ## Opening files
 

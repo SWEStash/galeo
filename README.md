@@ -1,44 +1,42 @@
 # galeo
 
-A fast, private desktop reader for the Markdown, text and log files that coding-agent work
-produces. It has Chrome-like tabs and windows, profiles, a `galeo` command-line launcher,
-integration with the Files app, live reload, quick open, and **zero network access**.
+A fast, private desktop app for reading and editing Markdown, text and log files: the plans, notes
+and logs that coding-agent work produces. It never connects to the network.
 
-> **Status: pre-release.** Version 0.1 is in its final checks; no release is published yet. You
-> can build the packages yourself (see [Development](docs/development.md)).
+## Quick start
 
-## Install
-
-On Ubuntu 26.04 (GNOME), install the `.deb` from a release:
+On Ubuntu 24.04 or later (x86_64), download `galeo_<version>_amd64.deb` from the
+[latest release](https://github.com/SWEStash/galeo/releases/latest) and install it:
 
 ```sh
-sudo apt install ./galeo_*_amd64.deb   # in the folder you downloaded it to
+sudo apt install ./galeo_*_amd64.deb
+galeo README.md
 ```
 
-It adds `galeo` (and the short `gal`) to your `PATH`, galeo to *Open With* for `.md`, `.txt` and
-`.log` files, and the AppArmor profile Chromium's sandbox needs. An AppImage is also available for
-other distributions; on Ubuntu 24.04 and later it can only run unsandboxed, so prefer the `.deb` there.
+galeo is now also in *Open With* for `.md`, `.txt` and `.log` files. An AppImage is available
+too; see [installation](docs/USAGE.md#installation) for it and for checking a download.
 
-## Use
+## Features
 
-```sh
-galeo plan.md notes.md              # open files in the last window you used
-galeo --new-window plan.md          # in a new window
-galeo --profile acme plan.md        # in the "acme" profile (created on first use)
-```
+- **Reading**: GitHub-style Markdown with code highlighting, math and Mermaid diagrams; plain text;
+  logs in a source view that can follow a growing log. Files reload when they change on disk.
+- **Editing**: raw-text editing with a live split preview, find and replace and several cursors.
+  Saving keeps the file's encoding, line endings and permissions.
+- **MDX articles**: rendered like Markdown, with components shown as labelled boxes; nothing in
+  them runs.
+- **Tabs, windows and profiles**: browser-like tabs and windows, sessions that come back after a
+  restart, and separate profiles, for example one per project.
+- **Keyboard first**: quick open (Ctrl+P), a command palette (Ctrl+Shift+P), an outline and find.
+- **Private**: no network connections, documents can't run scripts, and Chromium's sandbox is on.
 
-Ctrl+P opens any file by name, Ctrl+Shift+P lists every command, and files dropped from Files open
-where you drop them. Each profile keeps its own windows, session and settings. See the
-[usage guide](docs/USAGE.md).
+The [usage guide](docs/USAGE.md) covers all of it.
 
 ## Documentation
 
-- [Usage guide](docs/USAGE.md)
-- [Product requirements](docs/PRD.md)
+- [Usage guide](docs/USAGE.md): installation and everyday use
+- [Product requirements](docs/PRD.md) and [UX specification](docs/design/ux.md)
 - [Architecture](docs/ARCHITECTURE.md) and [decision records](docs/decisions/)
-- [UX specification](docs/design/ux.md)
-- [Threat model](docs/security/threat-model.md)
-- [Dependencies](docs/dependencies.md)
+- [Threat model](docs/security/threat-model.md) and [dependencies](docs/dependencies.md)
 - [Development](docs/development.md), [releasing](docs/RELEASING.md) and the
   [validation record](docs/VALIDATION.md)
 - [Contributing](CONTRIBUTING.md)
