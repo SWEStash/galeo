@@ -43,7 +43,8 @@ sha256sum --ignore-missing -c SHA256SUMS
 ```
 
 Each package also carries a GitHub artifact attestation, which proves it was built by this
-repository's release workflow from the tagged commit. With the [GitHub CLI](https://cli.github.com/):
+repository's release workflow from the tagged commit. With the [GitHub CLI](https://cli.github.com/)
+2.49 or later (Ubuntu's own `gh` package may be older; GitHub's apt repository has the current one):
 
 ```sh
 gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo

@@ -44,6 +44,6 @@ Then cut it:
    match `package.json` or isn't on `main`.
 7. **Publish**: when the workflow is green, download the assets from the draft release and check
    them: `sha256sum -c SHA256SUMS` and
-   `gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo` (the same for the
-   AppImage). Edit the draft's notes (a list of commit subjects to start from) for readers, then
+   `gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo` (GitHub CLI 2.49 or
+   later; the same for the AppImage). Edit the draft's notes (a list of commit subjects to start from) for readers, then
    publish it.
