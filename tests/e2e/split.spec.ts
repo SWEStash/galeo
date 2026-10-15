@@ -246,6 +246,32 @@ function scrollSourceTo(page: Page, line: number): Promise<void> {
 
 const near = (value: number, wanted: number, slack: number) => Math.abs(value - wanted) <= slack;
 
+/** Where both panes are, for the report when a sync check fails. */
+async function describePanes(page: Page, heading: string): Promise<string> {
+  const geometry = await shownDocument(page).evaluate((host, text) => {
+    const root = host.shadowRoot!;
+    const source = root.querySelector<HTMLElement>('.cm-scroller')!;
+    const rendered = root.querySelector<HTMLElement>('.galeo-rendered-pane')!;
+    const headingElement = [...root.querySelectorAll('h2')].find((each) => each.textContent?.includes(text));
+    return {
+      devicePixelRatio,
+      sourceScrollTop: source.scrollTop,
+      renderedScrollTop: rendered.scrollTop,
+      headingFromRenderedTop: headingElement ? headingElement.getBoundingClientRect().top - rendered.getBoundingClientRect().top : null,
+    };
+  }, heading);
+  return JSON.stringify({ sourceTopLine: await sourceTopLine(page), renderedPaneTop: await renderedPaneTop(page), ...geometry });
+}
+
+/** Polls `check`; when it fails, the error says where both panes are (CI shows only the log). */
+async function pollPanes(page: Page, heading: string, check: () => Promise<boolean>): Promise<void> {
+  try {
+    await expect.poll(check).toBe(true);
+  } catch (error) {
+    throw new Error(`${error instanceof Error ? error.message : String(error)}\n\nPanes: ${await describePanes(page, heading)}`, { cause: error });
+  }
+}
+
 test('scrolling either pane brings the other to the same block', async () => {
   const { window, close } = await launchApp(['--', plan]);
   try {
@@ -257,13 +283,13 @@ test('scrolling either pane brings the other to the same block', async () => {
     const dependencies = document.locator('h2', { hasText: '9. Dependency map' });
     const dependenciesLine = Number(await dependencies.getAttribute('data-src-line'));
     await dependencies.evaluate((element) => element.scrollIntoView({ block: 'start' }));
-    await expect.poll(async () => near(await sourceTopLine(window), dependenciesLine, 1)).toBe(true);
+    await pollPanes(window, '9. Dependency map', async () => near(await sourceTopLine(window), dependenciesLine, 1));
 
     const risks = document.locator('h2', { hasText: '10. Risks' });
     const risksLine = Number(await risks.getAttribute('data-src-line'));
     await scrollSourceTo(window, risksLine);
-    await expect.poll(() => sourceTopLine(window)).toBe(risksLine);
-    await expect.poll(async () => (await renderedPaneTop(window)).line).toBe(risksLine);
+    await pollPanes(window, '10. Risks', async () => (await sourceTopLine(window)) === risksLine);
+    await pollPanes(window, '10. Risks', async () => (await renderedPaneTop(window)).line === risksLine);
   } finally {
     await close();
   }
