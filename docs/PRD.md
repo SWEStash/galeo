@@ -1,9 +1,9 @@
 # PRD: galeo
 
 - **Author**: project owner
-- **Date**: 2026-09-25 (updated 2026-09-26)
+- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15)
 - **Status**: Approved (2026-09-26)
-- **Target release**: v0.1 "reader", then v0.2 "editor"
+- **Target release**: v0.1 "reader", then v0.2 "editor", then v0.3 "formats"
 - **Related**: ADR-001…ADR-008 (all Accepted), UX specification, threat model, architecture —
   see [References](#references)
 
@@ -72,8 +72,8 @@ must not obstruct (plain files only, no sidecar metadata).
   *hibernated* (only a record kept: path, view mode, scroll position, file identity and
   back/forward history; re-rendered on demand).
 - **Views** — every file has a **source view** (read-only by default, line numbers, wrapping);
-  some formats also have a **rendered view** (Markdown now; JSON/CSV/etc. later). v0.2 adds
-  **edit mode** and **split view** (source + rendered side by side).
+  some formats also have a **rendered view** (Markdown; from v0.3 a tree for JSON and a table for
+  CSV/TSV). v0.2 adds **edit mode** and **split view** (source + rendered side by side).
 
 ## User Stories — v0.1 "reader"
 
@@ -166,7 +166,7 @@ must not obstruct (plain files only, no sidecar metadata).
 
 - Outline / table-of-contents sidebar for the active Markdown document (first to drop if the
   schedule slips).
-- Drag a tab to another window; drag a tab out to create a new window (**deferred to v0.1.x**).
+- Drag a tab to another window; drag a tab out to create a new window (moved to v0.3).
 
 ### Could Have
 
@@ -208,7 +208,63 @@ must not obstruct (plain files only, no sidecar metadata).
 ### Won't Have (v0.2)
 
 - WYSIWYG, toolbars, running Astro components, publishing from galeo.
-- Optional Vim keybindings (moved to v0.3, owner 2026-10-08).
+- Optional Vim keybindings (moved to v0.3, owner 2026-10-08; then to v0.4, owner 2026-10-15).
+
+## User Stories — v0.3 "formats"
+
+### Must Have
+
+1. **JSON as a tree.** As the owner, I want a `.json` file to open as a collapsible tree, so that I
+   can read an agent's or a tool's structured output without an IDE.
+   - AC: Given a valid `.json` file, when I open it, then a tree shows with the top level expanded;
+     I can expand and collapse nodes with the mouse and the keyboard, expand or collapse all, and
+     copy a node's path. Ctrl+U toggles the highlighted source, as for Markdown.
+   - AC: Given invalid JSON, it opens in the source view with a banner naming the error's line and
+     column, and the cursor at that position.
+   - AC: Given a file over the tree's size limit, it opens in the source view with a banner (like
+     Markdown's "too large to render").
+2. **CSV and TSV as a table.** As the owner, I want `.csv` and `.tsv` files to open as a table, so
+   that exported data is readable at a glance.
+   - AC: The header row stays visible while scrolling; quoted fields (commas, quotes and line breaks
+     inside), a byte order mark, CRLF line ends and rows of uneven length all display correctly;
+     a `.csv` that uses `;` as its separator is recognised.
+   - AC: Given more rows than the table shows, a notice says how many are shown out of how many;
+     Ctrl+U shows the whole raw text.
+3. **Highlighted source for YAML, TOML and code.** As the owner, I want `.yaml`/`.yml`, `.toml` and
+   source files (TypeScript, JavaScript, Python, Rust, Go, shell and other common languages) shown
+   with syntax highlighting, so that I can read config and code an agent changed.
+   - AC: Highlighting follows the light/dark theme with WCAG AA contrast; blocks can be folded;
+     YAML and TOML files get an outline of their top-level keys.
+   - AC: Language support loads only when a file needs it: opening Markdown is no slower than in
+     v0.2.
+   - AC: Edit mode, find, live reload and save work for every text format, as they do for Markdown.
+4. **Open With for the new types.** As the owner, I want galeo offered in Files for JSON, YAML,
+   TOML, CSV/TSV and common source files, so that a double-click can open them.
+
+### Should Have
+
+- **Move a tab to another window.** Drag a tab onto another window's tab bar, of the same or
+  another profile, to move it there; drop it outside every window to open it in a new window.
+  A keyboard path does the same from the palette. The tab keeps its history, view, zoom, reader
+  width and unsaved text (undo history does not travel); moved into another profile, it becomes
+  part of that profile's session.
+- **Reader width while reading.** Commands and shortcuts widen, narrow and reset the reading
+  column, or make it full width, per tab, kept across restarts (like zoom). The status bar shows
+  the width only while it differs from the profile's setting. Settings offers width presets
+  (narrow, normal, wide, full) besides a custom value.
+- **Font pickers.** The prose and code font settings list the bundled fonts, then the fonts
+  installed on the system (monospace ones for code), with a preview; any family name can still be
+  typed. Listing fonts makes no network request.
+- **About is easy to find.** "About galeo" is in the profile menu and in Settings, which shows the
+  version.
+
+### Won't Have (v0.3)
+
+- Optional Vim keybindings, spell check in edit mode (it would need bundled dictionaries: zero
+  network), Graphviz/D2/PlantUML diagram engines, and cold-start profiling toward the 500 ms
+  target: all moved to v0.4 (owner, 2026-10-15).
+- Parsed views for YAML and TOML (they stay highlighted source: no parser dependency), editing
+  inside the tree or the table (edits happen in the source), and schema validation.
 
 ## User Experience
 
@@ -238,7 +294,8 @@ live in the [UX specification](design/ux.md).
   v0.1 budgets (owner, 2026-10-05): on the reference laptop (Intel i7-8565U, Ubuntu 26.04), a typical
   cold start (galeo not running, its caches from earlier launches kept) paints the window in
   about 750 ms and the 50 KB document in about 1170 ms, so v0.1 holds 850 ms and 1300 ms; the
-  500 ms target returns in v0.1.x. Diagrams draw ahead in idle time; frames dropped while reading
+  500 ms target needs cold-start profiling, planned for v0.4 (owner, 2026-10-15), and until then no
+  release may make cold start slower. Diagrams draw ahead in idle time; frames dropped while reading
   past them are recorded, not gated. Numbers: `docs/VALIDATION.md`.
 
 - **Large and odd files**: Markdown above a size threshold (initially 5 MB), or too slow to render

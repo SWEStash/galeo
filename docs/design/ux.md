@@ -1,8 +1,8 @@
 # galeo — UX specification
 
 - **Status**: Approved (2026-09-26)
-- **Date**: 2026-09-25 (updated 2026-09-26)
-- **Covers**: v0.1 "reader" (and v0.2 "editor" where marked)
+- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 additions 2026-10-15)
+- **Covers**: v0.1 "reader" (and v0.2 "editor", v0.3 "formats" where marked)
 - **Related**: [PRD](../PRD.md) · ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[008](../decisions/ADR-008-packaging-and-distribution.md)
   (notably [002](../decisions/ADR-002-window-and-tab-model.md), [004](../decisions/ADR-004-security-and-zero-network.md),
   [005](../decisions/ADR-005-profiles-and-session-persistence.md), [006](../decisions/ADR-006-renderer-ui-framework.md)) ·
@@ -48,13 +48,13 @@ ADR-002…007).
 |---|---|---|
 | **Tab bar** (merged with title bar, client-side decorations) | Profile chip (name + accent colour, left edge), tabs, new-tab button, window controls | Always visible |
 | **Document area** | Rendered or source view of the active tab | Always visible |
-| **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator | Always visible; can be hidden in settings |
+| **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width") | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
-| **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices) | Ctrl+Shift+P / Esc |
+| **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document, right side | Ctrl+Shift+O (toggle) |
 | **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 % | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
-| **Profile menu** | Switch / new / rename / delete profile, open profile settings | Click profile chip or Ctrl+Shift+M |
+| **Profile menu** | Switch / new / rename / delete profile, open profile settings, About galeo (v0.3) | Click profile chip or Ctrl+Shift+M |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
 
 **Window title** (used by GNOME's overview and Alt+Tab): `<file name> — <profile> — galeo`.
@@ -99,8 +99,7 @@ profile. Multiple selected files open as tabs in selection order.
   Drop → tabs inserted at the caret.
 - Dropping folders: v0.1 opens Quick open scoped to that folder (does not open every file).
 - Unsupported or binary files still open, in the *can't display* state (the user learns why).
-- **Should**: drag a tab onto another window's tab bar to move it; drop outside any window to tear
-  it off into a new window of the same profile.
+- Dragging a tab to another window, or out of every window: see F15 (v0.3).
 
 ### F4 — Tabs and the lifecycle
 
@@ -250,6 +249,40 @@ editing, the rendered view otherwise. A preview that takes too long to render ke
 good one with a notice, without leaving split. In MDX files, imports are hidden and JSX components render as
 labelled placeholder boxes (`<Callout>` with its props listed).
 
+### F14 — Rich views (v0.3)
+
+- **JSON** opens as a **tree**: the top level expanded, each node showing its key, its type and a
+  short preview (`{3 keys}`, `[120 items]`, the value for strings and numbers). ↑/↓ move, →/←
+  expand/collapse (or move to the child/parent), as in the ARIA tree pattern; *Expand all* /
+  *Collapse all* and *Copy path* (`$.items[3].name`) are commands in the palette and the node's
+  context menu. Ctrl+U toggles the highlighted source, keeping the place (node ⇄ line).
+- Invalid JSON opens in the source view, with a banner "Not valid JSON: line L, column C" and the
+  cursor at that point. Fixing it in edit mode and saving brings the tree back.
+- **CSV and TSV** open as a **table**: a header row that stays in view, row numbers, cells that
+  keep their text on one line (the full value in the tooltip and when the cell has focus), and
+  horizontal scrolling for wide tables. Arrow keys move between cells. The separator is taken
+  from the extension, and a `.csv` that uses `;` is recognised. Ctrl+U shows the raw text.
+- **YAML, TOML and source code** open in the **source** view with syntax highlighting, fold
+  markers in the gutter and, for YAML and TOML, an outline of the top-level keys (Ctrl+Shift+O).
+- Edit mode (Ctrl+E) always edits the source; leaving it, or saving, refreshes the tree or table.
+- Live reload keeps the place: the same node (by path) or row stays at the top.
+
+### F15 — Move a tab to another window (v0.3)
+
+- Drag a tab over **another window's tab bar** (same profile or another one): the insertion
+  caret of F3 shows; drop → the tab moves there, at the caret, and becomes active.
+- Drop **outside every galeo window** → the tab opens in a new window of its profile, at the
+  pointer where the platform allows.
+- The tab keeps its back/forward history, view, scroll position, zoom, reader width, split and
+  edit mode. Unsaved text moves with it (`●` stays); its undo history doesn't.
+- Into **another profile**, the tab becomes that profile's: it is saved in that profile's session
+  and takes its look. The source profile's session no longer has it.
+- The window the last tab leaves closes; if it was its profile's last window, the profile stops
+  (F5).
+- The **Settings tab** doesn't move.
+- **Keyboard**: the palette's *Move tab to new window* and *Move tab to window…* (a list of the
+  other windows, named by profile and active tab) do the same.
+
 ## 4. States
 
 ### Window-level
@@ -273,7 +306,9 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 | **Missing** | Path gone (deleted, renamed, not yet created) | Path, "File not found", last-seen time; tab label struck | Close tab · Reveal folder · Retries automatically |
 | **No permission** | EACCES | "galeo can't read this file (permission denied)" | Close tab |
 | **Can't display** | Binary / unsupported | "This looks like a binary file" + size + type | Open with default app (native menu; **not offered** for executables or launchers: `.desktop`, `.sh`, `.run`, AppImage, Java and Flatpak apps, executable bit, or a symlink to one) · Reveal in Files |
-| **Too large to render** | Markdown > threshold (5 MB) | Source view + banner "Large file shown as source" | Render anyway |
+| **Too large to render** | Markdown > threshold (5 MB); (v0.3) JSON or CSV over its limit | Source view + banner "Large file shown as source" | Render anyway (Markdown) |
+| **Not valid JSON** (v0.3) | `.json` that doesn't parse | Source view + banner "Not valid JSON: line L, column C"; cursor at the error | Edit (Ctrl+E) |
+| **Rows not shown** (v0.3) | CSV/TSV with more rows than the table shows | Table + notice "Showing N of M rows" | Show source (Ctrl+U) |
 | **Unknown encoding** | Invalid UTF-8, detection unsure | Content shown with replacement chars + banner naming the guessed encoding | Reopen with encoding… |
 | **Partial render error** | E.g. Mermaid/KaTeX syntax error or over-limit diagram | Only the failing block shows an inline error box with the message and its source; rest renders | — |
 | **Too slow to render** | Parse exceeded its budget (2 s); the worker was restarted | Source view + banner "Too slow to render — showing source" | Render anyway (waits up to 60 s) |
@@ -317,6 +352,8 @@ the native menu on the active tab.
 | Add the next match / every match as cursors (v0.2) | Ctrl+D / Ctrl+Shift+L | Edit mode |
 | Add a cursor above / below (v0.2) | Shift+Alt+↑ / Shift+Alt+↓ | Edit mode. Ctrl+Alt+↑/↓ is GNOME's (workspaces); these keys were CodeMirror's copy line up/down, which is left out |
 | Add a cursor / a column of cursors (v0.2) | Ctrl+click / Alt+drag | Edit mode; Esc goes back to one cursor |
+| Widen / narrow / reset reader width, full width (v0.3) | chosen with the feature (§8) | Per tab, like zoom |
+| Move tab to new window / to window… (v0.3) | palette | F15 |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply
 (Cmd+Q quits, Cmd+, opens settings). Shortcuts are customisable in a later release; v0.1 ships
@@ -332,7 +369,8 @@ this map only.
   checked to stand out 3:1 on the tab bar in light and dark; a colour hand-edited into
   `profile.json` is used as it is.
 - **Reading defaults** (overridable per profile): body 17 px, line-height 1.6, measure ~72ch
-  centred, paragraph spacing ≥ 1em, proportional font for prose, monospace for code at 0.9em,
+  centred (v0.3: widened, narrowed or made full width per tab while reading, like zoom; a tab
+  left at the setting follows it when it changes), paragraph spacing ≥ 1em, proportional font for prose, monospace for code at 0.9em,
   modular heading scale; fonts vendored in the app (no web fonts), system font as fallback.
 - **Code**: syntax themes follow light/dark (`github-light` / `github-dark` by default, matching
   the article preview's target site). Line numbers optional in code blocks; copy button on hover
@@ -344,7 +382,11 @@ this map only.
   first version: [document-styling.md](document-styling.md)). v0.1 edits
   custom CSS in the user's external editor ("Open custom CSS" in Settings).
 - **Settings tab (v0.1 scope)**: theme mode, accent colour, prose font, code font, font size,
-  measure, status bar visibility, quick-open exclusions, open-custom-CSS buttons. A switch at the
+  measure, status bar visibility, quick-open exclusions, open-custom-CSS buttons. v0.3 turns the
+  font fields into pickers (the bundled fonts first, then the installed families, monospace only
+  for code, each with a preview line; any name can still be typed), gives the measure presets
+  (Narrow 60, Normal 72, Wide 100, Full width) besides a custom value, and adds an "About galeo"
+  row showing the version. A switch at the
   top says where changes go: this profile, or all profiles. Each setting shows whether its value
   is the default, all profiles' or this profile's own, with "reset to global" for the last. A
   change to a file left invalid by a hand edit is refused and names the file. The AppImage adds
@@ -393,3 +435,10 @@ Each is decided when the feature that needs it is built.
 - [x] `.txt` default view: reader, with Ctrl+U for the monospace source (decided with the text/log views, 2026-09-27).
 - [x] Zoom per tab: it scales the tab's document only, and the status bar shows it when not 100%
       (owner, 2026-09-28).
+- [x] Reader width while reading: per tab like zoom, shown in the status bar only when it differs
+      from the setting (owner, 2026-10-15).
+- [x] A tab dropped on another profile's window moves into that profile; tabs with unsaved
+      changes may move, without their undo history (owner, 2026-10-15).
+- [ ] Keys for the reader width commands (not Super- or Ctrl+Alt-based) — decide with the feature.
+- [ ] Limits for the JSON tree and the CSV table, and how `.jsonl` opens — decide with the rich views.
+- [ ] Whether source code gets an outline (functions, classes) — decide with the rich views.
