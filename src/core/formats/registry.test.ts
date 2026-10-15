@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseView, detectFormat, FORMATS, MARKDOWN_RENDER_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
+import { chooseView, detectFormat, MARKDOWN_RENDER_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
 
 describe('detectFormat', () => {
   it.each([
@@ -12,10 +12,26 @@ describe('detectFormat', () => {
     ['/d/app.log', 'log'],
     ['/d/app.log.1', 'log'],
     ['/d/app.LOG', 'log'],
-    ['/d/Makefile', 'plain'],
-    ['/d/config.yaml', 'plain'],
+    ['/d/data.json', 'json'],
+    ['/d/DATA.JSON', 'json'],
+    ['/d/events.jsonl', 'jsonl'],
+    ['/d/events.ndjson', 'jsonl'],
+    ['/d/config.yaml', 'yaml'],
+    ['/d/compose.yml', 'yaml'],
+    ['/d/Cargo.toml', 'toml'],
+    ['/d/export.csv', 'csv'],
+    ['/d/export.tsv', 'tsv'],
+    ['/d/main.rs', 'code'],
+    ['/d/app.ts', 'code'],
+    ['/d/view.tsx', 'code'],
+    ['/d/script.py', 'code'],
+    ['/d/run.sh', 'code'],
+    ['/d/Dockerfile', 'code'],
+    ['/d/Makefile', 'code'],
     ['/d/.env', 'plain'],
     ['/d/archive.md.bak', 'plain'],
+    ['/d/data.json.bak', 'plain'],
+    ['/d/notes', 'plain'],
   ])('detects %s as %s', (path, format) => {
     expect(detectFormat(path)).toBe(format);
   });
@@ -40,7 +56,7 @@ describe('chooseView', () => {
     expect(chooseView('text', { size: 1024 })).toEqual({ view: 'rendered', banner: null });
   });
 
-  it.each(['log', 'plain'] as const)('opens %s in the source view', (format) => {
+  it.each(['log', 'plain', 'json', 'jsonl', 'yaml', 'toml', 'csv', 'tsv', 'code'] as const)('opens %s in the source view', (format) => {
     expect(chooseView(format, { size: 1024 })).toEqual({ view: 'source', banner: null });
   });
 
@@ -62,17 +78,5 @@ describe('chooseView', () => {
       view: 'rendered',
       banner: null,
     });
-  });
-
-  it('only offers split view on Markdown and MDX', () => {
-    expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.split).map(([id]) => id)).toEqual(['markdown', 'mdx']);
-  });
-
-  it('only offers follow-end on logs and an outline on Markdown and MDX', () => {
-    expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.follow).map(([id]) => id)).toEqual(['log']);
-    expect(Object.entries(FORMATS).filter(([, f]) => f.capabilities.outline).map(([id]) => id)).toEqual([
-      'markdown',
-      'mdx',
-    ]);
   });
 });

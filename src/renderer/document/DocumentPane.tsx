@@ -31,7 +31,7 @@ const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 
 
 const syntaxDetail = (syntax: SyntaxProblem | null) => (syntax ? `on line ${syntax.line}: ${syntax.message}` : '');
 
-const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', mdx: 'markdown', log: 'log', text: null, plain: null };
+const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', mdx: 'markdown', log: 'log', text: null, json: null, jsonl: null, yaml: null, toml: null, csv: null, tsv: null, code: null, plain: null };
 
 /** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
 const LOADING_DELAY_MS = 150;
