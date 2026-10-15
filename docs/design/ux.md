@@ -261,7 +261,9 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 - **CSV and TSV** open as a **table**: a header row that stays in view, row numbers, cells that
   keep their text on one line (the full value in the tooltip and when the cell has focus), and
   horizontal scrolling for wide tables. Arrow keys move between cells. The separator is taken
-  from the extension, and a `.csv` that uses `;` is recognised. Ctrl+U shows the raw text.
+  from the extension, and a `.csv` that uses `;` is recognised. Ctrl+U shows the raw text;
+  Ctrl+\ puts the table beside its source (F13), rows aligned with their lines, and the table
+  follows the text while editing.
 - **YAML, TOML and source code** open in the **source** view with syntax highlighting, fold
   markers in the gutter and, for YAML and TOML, an outline of the top-level keys (Ctrl+Shift+O).
 - Edit mode (Ctrl+E) always edits the source; leaving it, or saving, refreshes the tree or table.
@@ -347,7 +349,7 @@ the native menu on the active tab.
 | Quit | Ctrl+Shift+Q | Ctrl+Q not bound (avoid accidental quit) |
 | Edit mode (v0.2) | Ctrl+E | |
 | Save (v0.2) | Ctrl+S | |
-| Split view (v0.2) | Ctrl+\ | Source left, rendered right; edit mode keeps it; Ctrl+U leaves it |
+| Split view (v0.2; CSV/TSV v0.3) | Ctrl+\ | Source left, rendered right; edit mode keeps it; Ctrl+U leaves it |
 | Find & replace (v0.2) | Ctrl+H | Edit mode only |
 | Add the next match / every match as cursors (v0.2) | Ctrl+D / Ctrl+Shift+L | Edit mode |
 | Add a cursor above / below (v0.2) | Shift+Alt+↑ / Shift+Alt+↓ | Edit mode. Ctrl+Alt+↑/↓ is GNOME's (workspaces); these keys were CodeMirror's copy line up/down, which is left out |
@@ -440,5 +442,5 @@ Each is decided when the feature that needs it is built.
 - [x] A tab dropped on another profile's window moves into that profile; tabs with unsaved
       changes may move, without their undo history (owner, 2026-10-15).
 - [ ] Keys for the reader width commands (not Super- or Ctrl+Alt-based) — decide with the feature.
-- [ ] Limits for the JSON tree and the CSV table, and how `.jsonl` opens — decide with the rich views.
-- [ ] Whether source code gets an outline (functions, classes) — decide with the rich views.
+- [x] Limits for the JSON tree and the CSV table, and how `.jsonl` opens; no outline for source code
+      in v0.3 ([ADR-018](../decisions/ADR-018-rich-views-and-the-format-descriptor.md), owner, 2026-10-15).

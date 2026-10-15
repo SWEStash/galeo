@@ -230,6 +230,10 @@ must not obstruct (plain files only, no sidecar metadata).
      a `.csv` that uses `;` as its separator is recognised.
    - AC: Given more rows than the table shows, a notice says how many are shown out of how many;
      Ctrl+U shows the whole raw text.
+   - AC: Ctrl+\ shows the table beside its source, scrolled together row by row; editing the
+     source updates the table as I type, so I can fix a dataset and check it as a table.
+   - AC: Files the size of real datasets (tens of MB, hundreds of thousands of rows) open as a table
+     and scroll smoothly.
 3. **Highlighted source for YAML, TOML and code.** As the owner, I want `.yaml`/`.yml`, `.toml` and
    source files (TypeScript, JavaScript, Python, Rust, Go, shell and other common languages) shown
    with syntax highlighting, so that I can read config and code an agent changed.
