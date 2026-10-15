@@ -30,7 +30,7 @@ Record the date, the build and the result of each row.
 
 | Check | How | Result |
 |---|---|---|
-| Open, read and close documents without a mouse | `galeo` a file; Ctrl+P, type, Enter; Ctrl+Tab between tabs; Ctrl+W | Pass (2026-10-06, `.deb`) |
+| Open, read and close documents without a mouse | `galeo` a file; Ctrl+P, type, Enter; Ctrl+Tab between tabs; Ctrl+W | Pass (2026-10-06, `.deb`; 0.2.0 `.deb`, 2026-10-15) |
 | Every overlay traps focus and gives it back | Ctrl+P, Ctrl+Shift+P, Ctrl+F, Ctrl+Shift+O, About, Settings (Ctrl+,), profile menu (Ctrl+Shift+M): Tab stays inside, Esc returns to the document | Pass (2026-10-06, `.deb`) |
 | Focus is always visible | Tab through the tab bar, status bar, Settings and dialogs in light and dark | Pass (2026-10-06, `.deb`) |
 | Source and log views scroll by keyboard | Ctrl+U, then Tab into the text; arrows, PgUp/PgDn, Home/End; End follows a log | Pass (2026-10-06, `.deb`) |
@@ -39,11 +39,11 @@ Record the date, the build and the result of each row.
 | Orca: overlays | Ctrl+P: Orca says "Quick open", then the result count ("3 results"); arrows read each result. Ctrl+Shift+P reads each command with its keys. Ctrl+F, type: it says "n of m". Esc: focus is back on the document | Pass (2026-10-06, `.deb`) |
 | Orca: status messages | Save a shown file from an editor: it says "Reloaded". In the palette, choose "Toggle edit mode": it says "Press Ctrl+E" | Pass (2026-10-06, `.deb`) |
 | Zoom 200 % | Ctrl++ to 200 % on a long document: no clipped text in the chrome | Pass (2026-10-06, `.deb`) |
-| Edit and save without a mouse (v0.2) | Ctrl+E, type, Ctrl+S; Ctrl+E again reads. Ctrl+W, Ctrl+Shift+W, Ctrl+Q and deleting the profile with unsaved changes each ask; Tab moves between Cancel, Don't save and Save; Esc cancels and the caret is back in the editor | |
-| File changed on disk, by keyboard (v0.2) | Change the file in another editor while editing: Shift+Tab from the editor reaches Load theirs, Keep mine and Show diff; each choice puts the caret back in the editor. Show diff: Esc returns to its button. Delete the file: Save again writes it back | |
-| Split and editor basics by keyboard (v0.2) | Ctrl+\; Tab to the divider, ←/→ move it, Home resets it. Ctrl+H, type, Enter replaces one, Replace all, Ctrl+Z undoes it all. Ctrl+D twice, Shift+Alt+↓, then type at every cursor; Esc leaves one | |
-| Orca: editing (v0.2) | Ctrl+E then Ctrl+Tab away and back: the tab reads "…, edit mode", and once typed in "…, unsaved changes". Ctrl+S: "Saved". A refused save reads its reason. The changed-on-disk bar reads "File changed on disk"; the unsaved question reads "Save changes to <name>?" and each button | |
-| Orca: diff, split and replace (v0.2) | Show diff reads "Changes: mine \| theirs", then "Mine (unsaved)" and "Theirs (on disk)" as read-only text. The divider reads "Resize source and preview" with its value as it moves. Replace all reads "Replaced N" once (not twice with the editor's own message). Several cursors: typing reads as usual | |
+| Edit and save without a mouse (v0.2) | Ctrl+E, type, Ctrl+S; Ctrl+E again reads. Ctrl+W, Ctrl+Shift+W, Ctrl+Q and deleting the profile with unsaved changes each ask; Tab moves between Cancel, Don't save and Save; Esc cancels and the caret is back in the editor | Pass (2026-10-15, `.deb` 0.2.0) |
+| File changed on disk, by keyboard (v0.2) | With unsaved changes, change the file in another editor: Shift+Tab from the editor reaches Load theirs, Keep mine and Show diff; each choice puts the caret back in the editor. Show diff: Esc returns to its button. With unsaved changes again, delete the file: "File deleted on disk", and Save again writes it back (with nothing unsaved, the tab shows "File not found" and comes back with the file) | Pass (2026-10-15, `.deb` 0.2.0) |
+| Split and editor basics by keyboard (v0.2) | Ctrl+\; Tab to the divider, ←/→ move it, Home resets it. Ctrl+H, type, Enter replaces one, Replace all, Ctrl+Z undoes it all. Ctrl+D twice, Shift+Alt+↓, then type at every cursor; Esc leaves one | Pass (2026-10-15, `.deb` 0.2.0) |
+| Orca: editing (v0.2) | Ctrl+E then Ctrl+Tab away and back: the tab reads "…, edit mode", and once typed in "…, unsaved changes". Ctrl+S: "Saved". A refused save reads its reason. The changed-on-disk bar reads "File changed on disk"; the unsaved question reads "Save changes to <name>?" and each button | Pass (2026-10-15, `.deb` 0.2.0) |
+| Orca: diff, split and replace (v0.2) | Show diff reads "Changes: mine \| theirs", then "Mine (unsaved)" and "Theirs (on disk)" as read-only text. The divider reads "Resize source and preview" with its value as it moves. Replace all reads "Replaced N" once (not twice with the editor's own message). Several cursors: typing reads as usual | Pass (2026-10-15, `.deb` 0.2.0) |
 
 ## Performance
 
@@ -53,18 +53,20 @@ a typical launch: galeo not running, its caches from earlier launches kept.
 
 Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performance profile.
 0.1.0 was recorded on 2026-10-07 (Electron 44.7.0, Mermaid 12.1.0); the 0.2.0 candidate on
-2026-10-11 (Electron 44.7.0, Mermaid 12.1.0, headless). The memory baseline (1377 MB) was set by
-the owner on 2026-10-06, on Electron 44.5.1, after the Electron and Mermaid updates (1257 → 1377 MB).
+2026-10-11 (Electron 44.7.0, Mermaid 12.1.0, headless); 0.2.0 on 2026-10-14 (Electron 44.7.2,
+Mermaid 12.1.0, headless), with a new 50 KB reference document of the same size and structure.
+The memory baseline (1377 MB) was set by the owner on 2026-10-06, on Electron 44.5.1, after the
+Electron and Mermaid updates (1257 → 1377 MB).
 
-| Metric | Budget | 0.1.0 | 0.2.0 candidate |
-|---|---|---|---|
-| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 473 ms (p95 738) | 750 ms (p95 901) |
-| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1198 ms (p95 1514) | 1255 ms (p95 1344) |
-| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) |
-| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) |
-| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
-| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB |
-| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) |
+| Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 |
+|---|---|---|---|---|
+| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) |
+| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) |
+| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) |
+| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) |
+| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
+| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB | 1426 MB |
+| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) | 275 ms (p95 319) |
 
 The first strict run of the 0.2.0 candidate measured 913 ms for a blank window: its first
 launches after a fresh build, with the operating system's file cache cold. A run straight after
@@ -93,13 +95,13 @@ these.
 | Check | Result |
 |---|---|
 | Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log`; a `.markdown` opens too | Pass (2026-10-06; again after removing and reinstalling the `.deb`, 2026-10-07) |
-| `galeo file.md` from a terminal (the `.deb`'s `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06; `.deb` again on 2026-10-07) |
-| Two profiles' windows open: `galeo --profile acme a.md`, a double-click in Files, a drop from Files and a plain `galeo` each land in the right window (a plain one in the window focused last) | Pass (2026-10-07) |
+| `galeo file.md` and `gal file.md` from a terminal (the `.deb`'s `/usr/bin/galeo` and `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06; `.deb` again on 2026-10-07; as `galeo`/`gal`, `.deb` 0.2.0, 2026-10-15) |
+| Two profiles' windows open: `galeo --profile acme a.md`, a double-click in Files, a drop from Files and a plain `galeo` each land in the right window (a plain one in the window focused last) | Pass (2026-10-07; 0.2.0 `.deb`, 2026-10-15) |
 | Drop files from Files onto the document area: they open after the shown tab, the first one shown | Pass (2026-10-05) |
 | Drop onto a tab (the caret between tabs): they open at the caret | Pass (2026-10-05) |
 | Drop onto the empty tab-bar space (the window-drag region) | Pass (2026-10-05) |
 | Drop a folder: quick open opens on it | Pass (2026-10-05) |
-| `galeo file.md` while galeo is on another workspace: GNOME's "galeo is ready" notice, no workspace switch | Pass (2026-10-05, Ubuntu 26.04) |
+| `galeo file.md` while galeo is on another workspace: GNOME's "galeo is ready" notice, no workspace switch | Pass (2026-10-05, Ubuntu 26.04; 0.2.0 `.deb`, 2026-10-15) |
 | Live reload from a real editor or agent: in place, no jump, `↻` for about a second | Pass (2026-10-05) |
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
