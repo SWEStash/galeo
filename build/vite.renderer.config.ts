@@ -1,8 +1,8 @@
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
-import { bundleGraph } from './bundle-graph';
-import { licences } from './licences';
+import { bundleGraph } from './bundle-graph.ts';
+import { licences } from './licences.ts';
 
 // Performance marks exist only in builds made with GALEO_PERF=1 (tests/perf).
 const define = { __GALEO_PERF__: JSON.stringify(process.env['GALEO_PERF'] === '1') };

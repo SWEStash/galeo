@@ -1,5 +1,5 @@
 import { defineConfig } from 'vitest/config';
-import { licences } from './build/licences';
+import { licences } from './build/licences.ts';
 
 export default defineConfig({
   define: { __GALEO_PERF__: 'false' },

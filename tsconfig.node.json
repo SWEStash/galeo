@@ -4,6 +4,7 @@
     "types": [
       "node"
     ],
+    "allowImportingTsExtensions": true,
     "declarationDir": "out/tsc/node",
     "tsBuildInfoFile": "out/tsc/node.tsbuildinfo"
   },
