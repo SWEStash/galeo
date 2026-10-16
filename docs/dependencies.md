@@ -73,7 +73,8 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | Package | Version | Licence | Last publish | Weekly dl | Role / notes |
 |---|---|---|---|---|---|
 | `@codemirror/state`, `@codemirror/view`, `@codemirror/search`, `@codemirror/language`, `@codemirror/commands` | 6.x | MIT | 2026-08/09 | 8–13 M | Individual packages rather than the `codemirror` meta package, to control bundle contents |
-| `@codemirror/lang-markdown`, `@codemirror/language-data`, `@codemirror/legacy-modes` | 6.5.x | MIT | 2026 | 3–5 M | Markdown source highlighting; lazily loaded language packs for other formats; a base for the log grammar |
+| `@codemirror/lang-markdown`, `@codemirror/legacy-modes` | 6.5.x | MIT | 2026 | 3–5 M | Markdown source highlighting; a base for the log grammar |
+| `@codemirror/language-data` | 6.5.2 | MIT | 2026-04-13 | 3 M | v0.3: the table of languages by file name, each grammar loaded with the first file that needs it (YAML, TOML, JSON, source code). **Exact version pin.** It brings 17 `@codemirror/lang-*` packages, `@codemirror/legacy-modes` and 10 `@lezer/*` grammars: all MIT, all published by the CodeMirror maintainers (marijn, adrianheine), checked 2026-10-15. `check:bundle` keeps `@lezer/*` off the start path like `@codemirror/*` (installed 2026-10-15; listed since v0.1) |
 | `@lezer/highlight` | 1.2.x | MIT | 2026-09-24 | 15 M | Highlight `tags` for the source view's own highlight style (colours from the `--galeo-*` tokens). Already a dependency of every `@codemirror/language*` package, same maintainer; declared directly because our code imports it (added 2026-09-27, owner) |
 | `@codemirror/merge` | 6.12.x | MIT | 2026-06-09 | 2.3 M | v0.2: the read-only diff behind "Show diff" when a file changes on disk while it has unsaved edits (ADR-013). Same maintainer as the other `@codemirror/*` packages; its dependencies are packages we already ship. Lazy, loaded with the first diff (added 2026-10-08, owner) |
 

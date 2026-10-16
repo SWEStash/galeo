@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 /** Packages no entry may load up front. */
-const LAZY_PACKAGES = ['katex', 'rehype-katex', 'shiki', '@shikijs/*', '@codemirror/*', 'mermaid', '@mermaid-js/*', 'dompurify', 'remark-mdx', 'acorn'];
+const LAZY_PACKAGES = ['katex', 'rehype-katex', 'shiki', '@shikijs/*', '@codemirror/*', '@lezer/*', 'mermaid', '@mermaid-js/*', 'dompurify', 'remark-mdx', 'acorn'];
 
 /** The package a module id belongs to (its last `node_modules/` segment), or null for own code. */
 function packageOf(id) {
