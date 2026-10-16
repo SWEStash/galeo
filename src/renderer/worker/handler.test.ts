@@ -88,6 +88,29 @@ describe('render worker messages', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
+  it('indexes JSON, handing its arrays over instead of copying them', async () => {
+    const replies: unknown[] = [];
+    const transfers: unknown[] = [];
+    const load = vi.fn(async () => ({ markdown: async () => result }));
+    const handle = createMessageHandler(load, (reply, transfer) => (replies.push(reply), transfers.push(transfer)));
+    await handle({ type: 'render', kind: 'json', id: 9, text: '{"a": [1]}' });
+    const reply = replies[0] as Extract<WorkerReply, { type: 'json' }>;
+    expect(reply).toMatchObject({ type: 'json', id: 9, result: { state: 'tree', tree: { nodes: 3 } } });
+    const tree = reply.result.state === 'tree' ? reply.result.tree : null;
+    expect(transfers[0]).toHaveLength(9);
+    expect(transfers[0]).toContain(tree!.places.buffer);
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('replies to invalid JSON with where it breaks, and transfers nothing', async () => {
+    const replies: unknown[] = [];
+    const transfers: unknown[] = [];
+    const handle = createMessageHandler(async () => ({ markdown: async () => result }), (reply, transfer) => (replies.push(reply), transfers.push(transfer)));
+    await handle({ type: 'render', kind: 'json', id: 2, text: '[1,]' });
+    expect(replies).toMatchObject([{ type: 'json', id: 2, result: { state: 'invalid', line: 1, column: 4 } }]);
+    expect(transfers).toEqual([[]]);
+  });
+
   it('ignores messages it does not know', async () => {
     const { handle, replies } = setup({ markdown: async () => result });
     await handle({ type: 'render', kind: 'article', id: 'x', text: 1 });
@@ -95,6 +118,7 @@ describe('render worker messages', () => {
     await handle({ type: 'render', kind: 'sql', id: 1, format: 'markdown', text: 'x' });
     await handle({ type: 'render', kind: 'article', id: 1, format: 'text', text: 'x' });
     await handle({ type: 'render', kind: 'table', id: 1, separator: '|', text: 'x' });
+    await handle({ type: 'render', kind: 'json', id: 1, text: 2 });
     await handle(null);
     expect(replies).toEqual([]);
   });

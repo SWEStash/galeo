@@ -1,5 +1,6 @@
 import type { CsvParse, Separator } from '../../shared/csv';
 import type { WorkerFormat } from '../../shared/formats';
+import type { JsonParse } from '../../shared/json-index';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
 
@@ -18,6 +19,8 @@ export interface RenderClient {
   markdown(text: string, options?: { budgetMs?: number; live?: boolean; format?: WorkerFormat }): Promise<RenderResult>;
   /** Reads a CSV/TSV table, on the same terms as `markdown`. */
   table(text: string, options: { separator: Separator | 'sniff'; budgetMs?: number; live?: boolean }): Promise<CsvParse>;
+  /** Indexes a JSON document for the tree, on the same terms as `markdown`. */
+  json(text: string, options?: { budgetMs?: number }): Promise<JsonParse>;
   /** Stops the worker (the window is going away). */
   dispose(): void;
 }
@@ -62,7 +65,7 @@ interface Pending {
   job: Job;
   budgetMs: number;
   live: boolean;
-  resolve: (result: RenderResult | CsvParse) => void;
+  resolve: (result: RenderResult | CsvParse | JsonParse) => void;
   reject: (error: Error) => void;
 }
 
@@ -139,7 +142,7 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
   }
 
   /** Sends `job`, or holds it as the live render waiting its turn. `Result` is what its kind answers. */
-  function submit<Result extends RenderResult | CsvParse>(job: Job, budgetMs: number, live: boolean): Promise<Result> {
+  function submit<Result extends RenderResult | CsvParse | JsonParse>(job: Job, budgetMs: number, live: boolean): Promise<Result> {
     const id = ++nextId;
     return new Promise<Result>((resolve, reject) => {
       const request = { job, budgetMs, live, resolve: resolve as Pending['resolve'], reject };
@@ -160,6 +163,9 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
     },
     table(text, { separator, budgetMs = RENDER_BUDGET_MS, live = false }) {
       return submit({ type: 'render', kind: 'table', separator, text }, budgetMs, live);
+    },
+    json(text, { budgetMs = RENDER_BUDGET_MS } = {}) {
+      return submit({ type: 'render', kind: 'json', text }, budgetMs, false);
     },
     dispose() {
       clearTimeout(timer);

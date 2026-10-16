@@ -234,4 +234,24 @@ describe('render client', () => {
       expect(workers).toHaveLength(2);
     });
   });
+
+  describe('JSON jobs', () => {
+    it('sends a JSON job and resolves with the index', async () => {
+      const { client, current } = clientWithWorkers();
+      const pending = client.json('[]');
+      expect(current().requests).toEqual([{ type: 'render', kind: 'json', id: 1, text: '[]' }]);
+      current().reply({ type: 'json', id: 1, result: { state: 'too-large' } });
+      expect(await pending).toEqual({ state: 'too-large' });
+    });
+
+    it('holds a JSON job to the same budget, replacing the worker past it', async () => {
+      vi.useFakeTimers();
+      const { client, workers } = clientWithWorkers();
+      const refused = expect(client.json('[[[[')).rejects.toBeInstanceOf(RenderTimeout);
+      vi.advanceTimersByTime(RENDER_BUDGET_MS);
+      await refused;
+      expect(workers[0]!.terminated).toBe(true);
+      expect(workers).toHaveLength(2);
+    });
+  });
 });
