@@ -145,7 +145,16 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
   renderedPane.append(article);
   let ratio = 0.5;
   let ratioListener: ((ratio: number) => void) | undefined;
-  const divider = splitDivider(container, () => ratio, (next) => ratioListener?.(next));
+  // A move shows at once, so the next key steps from it even before the page passes it back.
+  const divider = splitDivider(container, () => ratio, (next) => {
+    showRatio(next);
+    ratioListener?.(next);
+  });
+  function showRatio(next: number) {
+    ratio = next;
+    container.style.setProperty('--galeo-split-source', `${Math.round(next * 1000) / 10}%`);
+    divider.setAttribute('aria-valuenow', String(Math.round(next * 100)));
+  }
   // Source first: on the left in split, and first in the focus order.
   root.append(sourceParent, divider, renderedPane);
   let source: SourceView | null = null;
@@ -194,9 +203,7 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
       if (view === 'split') container.scrollTop = 0;
     },
     setSplitRatio(next) {
-      ratio = next;
-      container.style.setProperty('--galeo-split-source', `${Math.round(next * 1000) / 10}%`);
-      divider.setAttribute('aria-valuenow', String(Math.round(next * 100)));
+      showRatio(next);
     },
     onSplitRatio(listener) {
       ratioListener = listener;

@@ -121,6 +121,18 @@ describe('mountDocumentHost', () => {
     expect(moved.map((ratio) => Math.round(ratio * 100))).toEqual([55, 50, 50]);
   });
 
+  it('moves the divider a step per key even when keys come faster than the page passes the ratio back', () => {
+    const host = mountDocumentHost(container());
+    host.showView('split');
+    host.setSplitRatio(0.5);
+    const moved: number[] = [];
+    host.onSplitRatio((ratio) => moved.push(ratio));
+    const divider = host.root.querySelector<HTMLElement>('[role="separator"]')!;
+    for (let i = 0; i < 3; i++) divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true, cancelable: true }));
+    expect(moved.map((ratio) => Math.round(ratio * 100))).toEqual([45, 40, 35]);
+    expect(divider.getAttribute('aria-valuenow')).toBe('35');
+  });
+
   it('replaces the content on each update', () => {
     const host = mountDocumentHost(container());
     host.setContent('<p>one</p>');
