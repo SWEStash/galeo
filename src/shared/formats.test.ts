@@ -20,14 +20,14 @@ describe('FORMAT_VIEWS', () => {
     expect([...ids].sort()).toEqual(['code', 'csv', 'json', 'jsonl', 'log', 'markdown', 'mdx', 'plain', 'text', 'toml', 'tsv', 'yaml']);
   });
 
-  it('renders Markdown and MDX in the worker, and .txt as reader text and JSON as a tree on the page', () => {
+  it('renders Markdown and MDX in the worker, and .txt as reader text, JSON as a tree and CSV/TSV as a table on the page', () => {
     expect(withViews((views) => views.rendered === 'worker')).toEqual(['markdown', 'mdx']);
-    expect(withViews((views) => views.rendered === 'host')).toEqual(['text', 'json']);
+    expect(withViews((views) => views.rendered === 'host')).toEqual(['text', 'json', 'csv', 'tsv']);
     expect(withViews((views) => views.reader)).toEqual(['text']);
   });
 
-  it('offers split on Markdown and MDX, an outline on them and on YAML and TOML, and follow-end on logs', () => {
-    expect(withViews((views) => views.split)).toEqual(['markdown', 'mdx']);
+  it('offers split on Markdown, MDX, CSV and TSV, an outline on Markdown, MDX, YAML and TOML, and follow-end on logs', () => {
+    expect(withViews((views) => views.split)).toEqual(['markdown', 'mdx', 'csv', 'tsv']);
     expect(withViews((views) => views.outline)).toEqual(['markdown', 'mdx', 'yaml', 'toml']);
     expect(withViews((views) => views.follow)).toEqual(['log']);
   });

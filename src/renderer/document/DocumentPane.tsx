@@ -27,6 +27,7 @@ import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
 import { pauseOrMax } from './pause-or-max';
 import { settleFocus } from './settle-focus';
+import { useCsvTable } from './useCsvTable';
 import { useJsonTree } from './useJsonTree';
 import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
@@ -40,6 +41,9 @@ const LOADING_DELAY_MS = 150;
 
 /** A render this long offers Cancel (ADR-020). */
 const CANCEL_AFTER_MS = 5000;
+
+/** Row counts as the notice writes them: "Showing 1,000,000 of 1,250,000 rows". */
+const ROWS = new Intl.NumberFormat('en-US');
 
 const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
 
@@ -184,12 +188,13 @@ export function DocumentPane({
   const [ratio, setRatio] = useState(initialViewState.ratio ?? 0.5);
   const [narrow, setNarrow] = useState(false);
   // What the format's tab can show (ADR-018): Markdown and MDX render in the worker, `.txt` as
-  // reader text, JSON as a tree; the rest is source only.
+  // reader text, JSON as a tree, CSV/TSV as a table; the rest is source only.
   const views = ready ? FORMAT_VIEWS[ready.format] : null;
   const format = ready ? workerFormat(ready.format) : null;
   const article = format !== null;
   const reader = views?.reader === true;
   const json = ready?.format === 'json';
+  const tabular = ready?.format === 'csv' || ready?.format === 'tsv';
   const renderable = views !== null && views.rendered !== 'none';
   const splittable = views?.split === true;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
@@ -208,23 +213,36 @@ export function DocumentPane({
     () => (invalidAt ? { line: invalidAt.line, column: invalidAt.column } : null),
     [invalidAt?.line, invalidAt?.column, ready?.text],
   );
+  // CSV/TSV's table: read by the worker on its own budget, drawn by the page (ADR-018, ADR-020); in
+  // split while editing it follows the editor's text.
+  const csvTable = useCsvTable(client, tabular ? (previewText ?? ready.text) : null, wantedView !== 'source', {
+    separator: ready?.format === 'tsv' ? '\t' : 'sniff',
+    readerAsked: ready?.banner === 'too-large',
+    live: previewText !== null,
+  });
+  const tableFailed = csvTable.status === 'too-large' || csvTable.status === 'failed';
+  const shownTable = csvTable.status === 'ready' || csvTable.status === 'pending' || csvTable.status === 'paused' ? csvTable : null;
   // A document that failed to render shows its source instead.
-  const layout = wantedView !== 'source' && (render.status === 'failed' || treeFailed) ? 'source' : wantedView;
+  const layout = wantedView !== 'source' && (render.status === 'failed' || treeFailed || tableFailed) ? 'source' : wantedView;
   // What Ctrl+\ goes back to from split.
   const lastSingle = useRef<SingleView>('rendered');
   if (layout !== 'split') lastSingle.current = layout;
-  const waiting = wantedView === 'rendered' && ((render.status === 'pending' && render.html === null) || (jsonTree.status === 'pending' && treeModel === null));
+  const waiting =
+    wantedView === 'rendered' &&
+    ((render.status === 'pending' && render.html === null) || (jsonTree.status === 'pending' && treeModel === null) || (csvTable.status === 'pending' && csvTable.table === null));
   const loading = useDelayed(waiting, LOADING_DELAY_MS);
   const cancellable = useDelayed(waiting, CANCEL_AFTER_MS);
   const cancelRender = () => {
     render.cancel();
     jsonTree.cancel();
+    csvTable.cancel();
   };
   const rendered = useMemo<RenderedContent | null>(() => {
     if (ready && reader) return { text: ready.text };
     if (ready && json) return treeModel ? { tree: treeModel, label: fileName(ready.path) } : null;
+    if (ready && tabular) return shownTable?.table ? { table: shownTable.table, source: shownTable.text, label: fileName(ready.path) } : null;
     return render.html === null ? null : { html: render.html };
-  }, [ready, reader, json, treeModel, render.html]);
+  }, [ready, reader, json, treeModel, tabular, shownTable?.table, shownTable?.text, render.html]);
   const endFollow = useCallback(() => setFollow(false), []);
   const showRendered = useCallback(() => {
     setRenderAnyway(true);
@@ -542,8 +560,8 @@ export function DocumentPane({
       },
       find: () => {
         if (!ready) return false;
-        // The tree draws only the rows in view: its text is searched in the source.
-        if (json && view === 'rendered') {
+        // The tree and the table draw only the rows in view: their text is searched in the source.
+        if ((json || tabular) && view === 'rendered') {
           onMessage?.('Find works in the source view (Ctrl+U)');
           return true;
         }
@@ -672,8 +690,24 @@ export function DocumentPane({
     <>
       {disk && <DocumentBanner kind={disk} actions={diskActions[disk]} />}
       {ready.banner === 'too-large' && view === 'source' && !renderAnyway && (
-        // Render anyway stays Markdown's and the reader's (ADR-018): past its limits, JSON is source.
-        <DocumentBanner kind="too-large" {...(json ? {} : { onAction: showRendered })} />
+        // Render anyway is Markdown's and the reader's; tables have Show as table (ADR-020); past its
+        // limits, JSON is source (ADR-018).
+        tabular ? (
+          <DocumentBanner kind="too-large" actions={[{ label: 'Show as table', onAction: showRendered }]} />
+        ) : (
+          <DocumentBanner kind="too-large" {...(json ? {} : { onAction: showRendered })} />
+        )
+      )}
+      {csvTable.status === 'too-large' && view === 'source' && <DocumentBanner kind="too-large" />}
+      {csvTable.status === 'failed' &&
+        (csvTable.reason === 'error' ? (
+          <DocumentBanner kind="render-failed" onAction={csvTable.retry} />
+        ) : (
+          <DocumentBanner kind={csvTable.reason === 'slow' ? 'render-slow' : 'render-cancelled'} actions={[{ label: 'Show as table', onAction: csvTable.showAnyway }]} />
+        ))}
+      {csvTable.status === 'paused' && <DocumentBanner kind={PAUSED_BANNERS[csvTable.reason]} />}
+      {shownTable?.table && shownTable.table.totalRows > shownTable.table.rows && view !== 'source' && (
+        <DocumentBanner kind="rows-capped" detail={`Showing ${ROWS.format(shownTable.table.rows - 1)} of ${ROWS.format(shownTable.table.totalRows - 1)} rows`} />
       )}
       {jsonTree.status === 'too-large' && view === 'source' && <DocumentBanner kind="too-large" />}
       {jsonTree.status === 'invalid' && <DocumentBanner kind="json-invalid" detail={`line ${jsonTree.line}, column ${jsonTree.column}`} />}

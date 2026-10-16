@@ -96,6 +96,28 @@ describe('CSV table view', () => {
     expect(document.activeElement?.isConnected).toBe(true);
   });
 
+  it('redraws as whatever scrolls it scrolls: the view can move to a pane of its own (split)', () => {
+    const text = `n\n${Array.from({ length: 5000 }, (_, i) => i).join('\n')}\n`;
+    const first = document.createElement('div');
+    const pane = document.createElement('div');
+    for (const each of [first, pane]) Object.defineProperty(each, 'clientHeight', { configurable: true, get: () => 10 * TABLE_ROW_HEIGHT });
+    pane.append(first);
+    document.body.append(pane);
+    let current = first;
+    const view = createCsvTableView({ parent: first, scroller: () => current, label: 'x' });
+    Object.defineProperty(view.element, 'getBoundingClientRect', { value: () => ({ top: -current.scrollTop }) as DOMRect });
+    view.setTable(text, tableOf(text));
+    current = pane;
+    pane.scrollTop = 3000 * TABLE_ROW_HEIGHT;
+    pane.dispatchEvent(new Event('scroll'));
+    return new Promise<void>((done) =>
+      requestAnimationFrame(() => {
+        expect(bodyRows(view.element).map((row) => cells(row)[1])).toContain('3000');
+        done();
+      }),
+    );
+  });
+
   it("names each row's source line, the line at the top of the view, and scrolls a line into view", () => {
     const { view, scroller, grid } = setup(SAMPLE, 1);
     expect(bodyRows(grid()).map((row) => row.dataset['srcLine'])).toEqual(['2', '3', '4']);

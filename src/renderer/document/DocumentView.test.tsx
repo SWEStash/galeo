@@ -1,6 +1,7 @@
 import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { parseCsv } from '../../shared/csv';
 import { indexJson } from '../../shared/json-index';
 import { DocumentView, type DocumentHandle } from './DocumentView';
 import { createTreeModel } from './json-tree-model';
@@ -40,6 +41,18 @@ describe('DocumentView', () => {
     expect(shadow.querySelectorAll('[role=treeitem]')).toHaveLength(3);
     act(() => handle.current!.focus());
     expect(shadow.activeElement?.getAttribute('role')).toBe('treeitem');
+  });
+
+  it('shows a CSV table, whose focused cell takes the document\'s focus', async () => {
+    const handle = { current: null as DocumentHandle | null };
+    const csv = 'a,b\n1,2\n';
+    const parsed = parseCsv(csv, ',');
+    if (parsed.state !== 'table') throw new Error(parsed.state);
+    const container = await render(<DocumentView {...props} source={{ text: csv, language: null }} rendered={{ table: parsed.table, source: csv, label: 'data.csv' }} scheme="light" ref={(value) => void (handle.current = value)} />);
+    const shadow = shadowOf(container);
+    expect(shadow.querySelector('[role=grid]')?.getAttribute('aria-label')).toBe('data.csv');
+    act(() => handle.current!.focus());
+    expect(shadow.activeElement?.textContent).toBe('1');
   });
 
   it('replaces a tree with other content', async () => {

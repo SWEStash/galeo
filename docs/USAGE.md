@@ -97,11 +97,18 @@ the file into the window in front of you) when you want it here.
   (`$.items[3].name`) are in the palette. JSON that doesn't parse opens as source, with a banner
   saying where it breaks and the cursor there; JSON over 10 MB (or 200,000 values, or nested over
   1,000 deep) opens as source. Find (Ctrl+F) works in the source view.
+- **CSV and TSV** open as a **table**: the header row stays in view, rows are numbered, and each
+  cell shows its full value as a tooltip. Arrow keys move between cells, Home/End to a row's ends,
+  Ctrl+Home/End to the table's. A `.csv` that uses `;` is recognised. Ctrl+U shows the text, and
+  Ctrl+\ puts the table beside it (in edit mode the table follows your typing). Past a million
+  rows the table shows the first ones and says how many there are. A file over 100 MB opens as
+  source with **Show as table** (up to 256 MB); a big table may take a few seconds. Find (Ctrl+F)
+  works in the source view.
 - **Code and data files**: YAML, TOML and source code (TypeScript, Python, Rust, Go, shell,
   C and many more) open in the source view, highlighted, and so does JSON's source. Ctrl+Shift+[ folds the block at the
   cursor and Ctrl+Shift+] unfolds it, or use the markers in the gutter. The outline of a YAML or
   TOML file lists its top-level keys (and TOML's tables).
-- **Split view** (Markdown and MDX): Ctrl+\ shows the source on the left and the rendered view on the
+- **Split view** (Markdown, MDX, CSV and TSV): Ctrl+\ shows the source on the left and the rendered view on the
   right; scrolling either keeps the other on the same block. Drag the divider, or focus it and use
   the arrow keys; double-click or Home puts it back at half. Ctrl+\ again goes back to the view
   you had; Ctrl+U goes to the rendered view. A window narrower than about 700 px shows one view

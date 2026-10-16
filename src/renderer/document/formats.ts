@@ -26,7 +26,7 @@ export function sourceLanguage(format: FormatId, path: string): SourceLanguage {
 }
 
 /** What the status bar calls a format's rendered view where "Rendered" says too little (UX F10, F14). */
-export const RENDERED_VIEW_NAMES: Partial<Record<FormatId, string>> = { text: 'Reader', json: 'Tree' };
+export const RENDERED_VIEW_NAMES: Partial<Record<FormatId, string>> = { text: 'Reader', json: 'Tree', csv: 'Table', tsv: 'Table' };
 
 /** How messages name a format ("No split view for JSON files"). */
 export const FORMAT_NAMES: Readonly<Record<FormatId, string>> = {

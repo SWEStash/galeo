@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseView, detectFormat, JSON_TREE_MAX_BYTES, MARKDOWN_RENDER_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
+import { chooseView, detectFormat, JSON_TREE_MAX_BYTES, MARKDOWN_RENDER_MAX_BYTES, TABLE_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
 
 describe('detectFormat', () => {
   it.each([
@@ -62,7 +62,14 @@ describe('chooseView', () => {
     expect(chooseView('json', { size: JSON_TREE_MAX_BYTES + 1 })).toEqual({ view: 'source', banner: 'too-large' });
   });
 
-  it.each(['log', 'plain', 'jsonl', 'yaml', 'toml', 'csv', 'tsv', 'code'] as const)('opens %s in the source view', (format) => {
+  it.each(['csv', 'tsv'] as const)('opens %s as a table up to 100 MB, then as source unless the reader asks (ADR-020)', (format) => {
+    expect(TABLE_MAX_BYTES).toBe(100 * 1024 * 1024);
+    expect(chooseView(format, { size: TABLE_MAX_BYTES })).toEqual({ view: 'rendered', banner: null });
+    expect(chooseView(format, { size: TABLE_MAX_BYTES + 1 })).toEqual({ view: 'source', banner: 'too-large' });
+    expect(chooseView(format, { size: TABLE_MAX_BYTES + 1, renderAnyway: true })).toEqual({ view: 'rendered', banner: null });
+  });
+
+  it.each(['log', 'plain', 'jsonl', 'yaml', 'toml', 'code'] as const)('opens %s in the source view', (format) => {
     expect(chooseView(format, { size: 1024 })).toEqual({ view: 'source', banner: null });
   });
 

@@ -1,7 +1,22 @@
 import { SPLIT_MAX_RATIO, SPLIT_MIN_RATIO, type ViewMode } from '../../shared/formats';
 import documentCss from './document.css?inline';
+import type { CsvTable } from '../../shared/csv';
+import { createCsvTableView, type CsvTableView } from './csv-table-view';
 import type { TreeModel } from './json-tree-model';
 import { createJsonTreeView, type JsonTreeView } from './json-tree-view';
+
+/**
+ * A rendered view that draws only what is in view (the JSON tree, the CSV table): it answers for
+ * the reader's place itself, since there are no blocks to measure (ADR-018). The table also places
+ * fractional lines, for split's scroll sync (ADR-014).
+ */
+export interface PlacedView {
+  topLine(): number;
+  scrollToLine(line: number): void;
+  focus(): void;
+  topPosition?(): number;
+  scrollToPosition?(line: number): void;
+}
 import type { SourceLanguage, SourceView } from './source-view';
 import { ratioAt, ratioForKey } from './split-divider';
 import { textParagraphs } from './text-reader';
@@ -22,6 +37,12 @@ export interface DocumentHost {
   setTree(model: TreeModel, label: string): void;
   /** The JSON tree shown, or null. */
   readonly tree: JsonTreeView | null;
+  /** Shows a CSV/TSV table of `text` named `label`; a new version updates it in place (ADR-018). */
+  setTable(text: string, table: CsvTable, label: string): void;
+  /** The table shown, or null. */
+  readonly table: CsvTableView | null;
+  /** The tree or table shown, which answers for the place; null for other content. */
+  readonly placed: PlacedView | null;
   /** The source view, created on first use and updated in place afterwards (after `loadSourceView`). */
   showSource(text: string, language: SourceLanguage, wrap: boolean): SourceView;
   readonly source: SourceView | null;
@@ -166,11 +187,23 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
   let source: SourceView | null = null;
   let sourceText: string | null = null;
   let tree: JsonTreeView | null = null;
-  /** Other content replaces a tree. */
+  let table: CsvTableView | null = null;
+  /** Other content replaces a tree or a table. */
   const dropTree = () => {
     tree?.dispose();
     tree = null;
     article.classList.remove('galeo-json');
+  };
+  const dropTable = () => {
+    table?.dispose();
+    table = null;
+    article.classList.remove('galeo-csv');
+  };
+  /** Readies the column for a view of its own, once. */
+  const clearFor = (kind: 'galeo-json' | 'galeo-csv') => {
+    article.classList.remove('galeo-text-reader');
+    article.classList.add(kind);
+    article.replaceChildren();
   };
 
   const host: DocumentHost = {
@@ -182,16 +215,24 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
     get tree() {
       return tree;
     },
+    get table() {
+      return table;
+    },
+    get placed() {
+      return tree ?? table;
+    },
     get renderedScroller() {
       return container.dataset['view'] === 'split' ? renderedPane : container;
     },
     setContent(html) {
       dropTree();
+      dropTable();
       article.classList.remove('galeo-text-reader');
       setTrustedHtml(article, html);
     },
     setReaderText(text) {
       dropTree();
+      dropTable();
       article.classList.add('galeo-text-reader');
       article.replaceChildren(
         ...textParagraphs(text).map(({ line, text: paragraph }) => {
@@ -204,12 +245,19 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
     },
     setTree(model, label) {
       if (!tree) {
-        article.classList.remove('galeo-text-reader');
-        article.classList.add('galeo-json');
-        article.replaceChildren();
+        dropTable();
+        clearFor('galeo-json');
         tree = createJsonTreeView({ parent: article, scroller: () => host.renderedScroller, label });
       }
       tree.setModel(model);
+    },
+    setTable(text, next, label) {
+      if (!table) {
+        dropTree();
+        clearFor('galeo-csv');
+        table = createCsvTableView({ parent: article, scroller: () => host.renderedScroller, label });
+      }
+      table.setTable(text, next);
     },
     showSource(text, language, wrap) {
       if (!source) {

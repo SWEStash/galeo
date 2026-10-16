@@ -311,12 +311,12 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 | **Missing** | Path gone (deleted, renamed, not yet created) | Path, "File not found", last-seen time; tab label struck | Close tab · Reveal folder · Retries automatically |
 | **No permission** | EACCES | "galeo can't read this file (permission denied)" | Close tab |
 | **Can't display** | Binary / unsupported | "This looks like a binary file" + size + type | Open with default app (native menu; **not offered** for executables or launchers: `.desktop`, `.sh`, `.run`, AppImage, Java and Flatpak apps, executable bit, or a symlink to one) · Reveal in Files |
-| **Too large to render** | Markdown > threshold (5 MB); (v0.3) JSON or CSV over its limit | Source view + banner "Large file shown as source" | Render anyway (Markdown) |
+| **Too large to render** | Markdown > threshold (5 MB); (v0.3) JSON or CSV over its limit | Source view + banner "Large file shown as source" | Render anyway (Markdown) · Show as table (CSV/TSV, up to the 256 MB read cap; ADR-020) |
 | **Not valid JSON** (v0.3) | `.json` that doesn't parse | Source view + banner "Not valid JSON: line L, column C"; cursor at the error | Edit (Ctrl+E) |
 | **Rows not shown** (v0.3) | CSV/TSV with more rows than the table shows | Table + notice "Showing N of M rows" | Show source (Ctrl+U) |
 | **Unknown encoding** | Invalid UTF-8, detection unsure | Content shown with replacement chars + banner naming the guessed encoding | Reopen with encoding… |
 | **Partial render error** | E.g. Mermaid/KaTeX syntax error or over-limit diagram | Only the failing block shows an inline error box with the message and its source; rest renders | — |
-| **Too slow to render** | Parse exceeded its budget (2 s); the worker was restarted | Source view + banner "Too slow to render — showing source" | Render anyway (waits up to 60 s) |
+| **Too slow to render** | Parse exceeded its budget (2 s; a CSV/TSV table 30 s, ADR-020); the worker was restarted | Source view + banner "Too slow to render — showing source" | Render anyway, or Show as table for CSV/TSV (waits up to 60 s) |
 | **Crashed** | This tab was rendering when the window's renderer crashed | Tab shows `⚠`; panel "This document crashed the viewer and won't be rendered automatically" | Try again · Open as source |
 | **Remote content blocked** | Remote image/iframe in Markdown | Placeholder with host name | Copy URL |
 

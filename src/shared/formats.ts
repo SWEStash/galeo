@@ -25,8 +25,8 @@ export const FORMAT_VIEWS: Readonly<Record<FormatId, FormatViews>> = {
   jsonl: SOURCE_ONLY,
   yaml: { ...SOURCE_ONLY, outline: true },
   toml: { ...SOURCE_ONLY, outline: true },
-  csv: SOURCE_ONLY,
-  tsv: SOURCE_ONLY,
+  csv: { ...SOURCE_ONLY, rendered: 'host', split: true },
+  tsv: { ...SOURCE_ONLY, rendered: 'host', split: true },
   code: SOURCE_ONLY,
   plain: SOURCE_ONLY,
 };

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { parseCsv } from '../../shared/csv';
 import { indexJson } from '../../shared/json-index';
 import { createTreeModel } from './json-tree-model';
 import { mountDocumentHost, setCustomCss } from './host';
@@ -31,6 +32,24 @@ describe('mountDocumentHost', () => {
     host.setContent('<p>md</p>');
     expect(host.tree).toBeNull();
     expect(host.article.querySelector('[role=tree]')).toBeNull();
+  });
+
+  it('shows a CSV table in place of a tree, and the view shown answers for the place', () => {
+    const host = mountDocumentHost(container());
+    const text = 'a,b\n1,2\n';
+    const parsed = parseCsv(text, ',');
+    if (parsed.state !== 'table') throw new Error(parsed.state);
+    host.setTable(text, parsed.table, 'data.csv');
+    expect(host.article.querySelectorAll('[role=grid]')).toHaveLength(1);
+    expect(host.placed).toBe(host.table);
+    const json = indexJson('[1]');
+    if (json.state !== 'tree') throw new Error(json.state);
+    host.setTree(createTreeModel('[1]', json.tree), 'data.json');
+    expect(host.table).toBeNull();
+    expect(host.article.querySelector('[role=grid]')).toBeNull();
+    expect(host.placed).toBe(host.tree);
+    host.setReaderText('plain');
+    expect(host.placed).toBeNull();
   });
 
   it('gives the container a shadow root with one document article', () => {

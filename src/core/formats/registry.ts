@@ -20,6 +20,11 @@ export const TEXT_READER_MAX_BYTES = 5 * 1024 * 1024;
 /** JSON past this opens as source: the tree's starting limit (ADR-018 "Limits"). */
 export const JSON_TREE_MAX_BYTES = 10 * 1024 * 1024;
 
+/** CSV/TSV past this opens as source, unless the reader asks for the table (ADR-018, ADR-020). */
+export const TABLE_MAX_BYTES = 100 * 1024 * 1024;
+
+const table = (extensions: readonly string[]): FormatSpec => ({ extensions, defaultView: 'rendered', renderMaxBytes: TABLE_MAX_BYTES });
+
 /** Source code: extensions and whole names, from the shared table that also names each language. */
 const CODE_FILES = Object.keys(CODE_LANGUAGES);
 const CODE_EXTENSIONS = CODE_FILES.filter((key) => key.startsWith('.'));
@@ -58,8 +63,8 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
   jsonl: sourceOnly(['.jsonl', '.ndjson']),
   yaml: sourceOnly(['.yaml', '.yml']),
   toml: sourceOnly(['.toml']),
-  csv: sourceOnly(['.csv']),
-  tsv: sourceOnly(['.tsv']),
+  csv: table(['.csv']),
+  tsv: table(['.tsv']),
   code: { ...sourceOnly(CODE_EXTENSIONS), matchesName: (name) => CODE_NAMES.has(name) },
   plain: {
     extensions: [],

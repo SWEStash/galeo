@@ -85,13 +85,15 @@ export function DocumentLoading({ onCancel }: { onCancel?: () => void }) {
   );
 }
 
-export type BannerKind = 'too-large' | 'json-invalid' | 'encoding' | 'render-failed' | 'render-slow' | 'render-cancelled' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
+export type BannerKind = 'too-large' | 'rows-capped' | 'json-invalid' | 'encoding' | 'render-failed' | 'render-slow' | 'render-cancelled' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
 
 /** What happened on disk to a file with unsaved edits (UX F12). */
 export type DiskChange = 'disk-changed' | 'disk-deleted' | 'disk-unreadable';
 
 const BANNERS: Record<BannerKind, { text: (detail?: string) => string; action?: string }> = {
   'too-large': { text: () => 'Large file shown as source', action: 'Render anyway' },
+  // A table past its row cap: "Showing 1,000,000 of 1,250,000 rows" (ADR-018).
+  'rows-capped': { text: (shown) => shown ?? '' },
   // The detail says where: "line 3, column 7". The cursor is there in the source view.
   'json-invalid': { text: (where) => `Not valid JSON: ${where}` },
   encoding: { text: (encoding) => `Not valid UTF-8: shown as ${encoding}, the likeliest encoding` },

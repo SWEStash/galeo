@@ -93,6 +93,56 @@
   outline-offset: -2px;
   background: var(--galeo-color-code-bg);
 }
+/* The CSV/TSV table (ADR-018): the document's whole width and more (it scrolls sideways), one
+   fixed-height row per record (csv-table-view's TABLE_ROW_HEIGHT), the header row in view. */
+.galeo-document.galeo-csv {
+  max-width: none;
+  padding: 0 0 2rem;
+  font-family: var(--galeo-font-code);
+  font-size: var(--galeo-code-size);
+}
+.galeo-csv-table {
+  width: max-content;
+  min-width: 100%;
+}
+.galeo-csv-header,
+.galeo-csv-row {
+  display: grid;
+  grid-template-columns: var(--galeo-csv-columns);
+  height: 24px;
+  line-height: 24px;
+}
+.galeo-csv-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--galeo-color-code-bg);
+  border-bottom: 1px solid var(--galeo-color-border);
+  font-weight: 600;
+}
+.galeo-csv-body {
+  position: relative;
+}
+.galeo-csv-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--galeo-color-border) 50%, transparent);
+}
+.galeo-csv-cell {
+  padding: 0 0.5rem;
+  overflow: hidden;
+  white-space: pre;
+  text-overflow: ellipsis;
+}
+.galeo-csv-number {
+  color: var(--galeo-color-muted);
+  text-align: right;
+}
+.galeo-csv-row .galeo-csv-cell:focus-visible {
+  outline-offset: -2px;
+  background: var(--galeo-color-code-bg);
+}
 .galeo-json-toggle {
   display: inline-block;
   width: 1.25em;

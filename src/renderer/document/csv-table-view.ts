@@ -226,14 +226,12 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     focusCell(Number(item.dataset['row']), Number(target.dataset['column']));
   });
 
-  let listening: HTMLElement | null = null;
-  const listen = () => {
-    const pane = scroller();
-    if (pane === listening) return;
-    listening?.removeEventListener('scroll', schedule);
-    pane.addEventListener('scroll', schedule, { passive: true });
-    listening = pane;
-  };
+  // What scrolls the table changes with the view (the document, or split's own pane, ADR-014): the
+  // table hears every scroll in its document, scroll events reaching the root in the capture phase.
+  const root = element.getRootNode() as Document | ShadowRoot;
+  const host = 'host' in root ? root.host : null;
+  root.addEventListener('scroll', schedule, { capture: true, passive: true });
+  host?.addEventListener('scroll', schedule, { passive: true });
 
   const view: CsvTableView = {
     element,
@@ -259,7 +257,6 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       header.replaceChildren(columnHeader('#', 0), ...widths.map((_, column) => columnHeader(next.rows > 0 ? (cell(text, next, 0, column) ?? '') : '', column + 1)));
       focusRow = Math.min(focusRow, Math.max(0, bodyCount - 1));
       focusColumn = Math.min(focusColumn, Math.max(0, next.columns - 1));
-      listen();
       draw();
     },
     focus() {
@@ -296,7 +293,8 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     flush: draw,
     dispose() {
       cancelAnimationFrame(frame);
-      listening?.removeEventListener('scroll', schedule);
+      root.removeEventListener('scroll', schedule, { capture: true });
+      host?.removeEventListener('scroll', schedule);
       element.remove();
     },
   };

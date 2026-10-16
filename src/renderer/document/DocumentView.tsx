@@ -3,6 +3,7 @@ import type { ImageResult } from '../../shared/documents';
 import { offerZoom, type ImageExpand } from './images';
 import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
+import type { CsvTable } from '../../shared/csv';
 import type { TreeModel } from './json-tree-model';
 import type { JsonTreeView } from './json-tree-view';
 import type { ScrollAnchor } from '../../shared/tabs';
@@ -16,8 +17,8 @@ import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBl
 import type { FindResult, SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 
-/** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`) or a JSON tree named `label`. */
-export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string };
+/** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`), or a JSON tree or a CSV table (of `source`) named `label`. */
+export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string } | { table: CsvTable; source: string; label: string };
 
 /** A tree row's weight for the warm-tab budget: its share of the worker's index and the model. */
 const TREE_BYTES_PER_NODE = 48;
@@ -130,8 +131,8 @@ export interface DocumentHandle extends Finder {
 
 /** The source line at the top of the rendered view. */
 function renderedTopLine(host: DocumentHost): number {
-  // A tree draws only the rows in view: it knows its own place.
-  if (host.tree) return host.tree.topLine();
+  // A tree or a table draws only the rows in view: it knows its own place.
+  if (host.placed) return host.placed.topLine();
   const viewportTop = host.renderedScroller.getBoundingClientRect().top;
   const blocks = [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => {
     const box = element.getBoundingClientRect();
@@ -141,7 +142,7 @@ function renderedTopLine(host: DocumentHost): number {
 }
 
 function scrollRenderedTo(host: DocumentHost, line: number): void {
-  if (host.tree) return host.tree.scrollToLine(line);
+  if (host.placed) return host.placed.scrollToLine(line);
   const blocks = [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')];
   const index = blockAtOrBefore(
     blocks.map((element) => Number(element.dataset['srcLine'])),
@@ -206,7 +207,8 @@ export function DocumentView({
     const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, () => host().renderedScroller));
     const active = (): Finder => {
       const sourceView = host().source;
-      if ((view === 'source' || (view === 'split' && (replacing || turnedTo.current === 'source'))) && sourceView) {
+      // A tree or a table draws only the rows in view: the source holds all its text.
+      if ((view === 'source' || (view === 'split' && (replacing || turnedTo.current === 'source' || host().placed))) && sourceView) {
         return { find: sourceView.find, step: sourceView.findStep, clear: sourceView.clearFind };
       }
       return inRendered();
@@ -221,9 +223,9 @@ export function DocumentView({
       // In edit mode the caret goes back into the editor; otherwise the document takes focus.
       focus: () => {
         const source = host().source;
-        const tree = host().tree;
+        const placed = host().placed;
         if (editing.current && source && showsSource(shownView.current)) source.view.focus();
-        else if (tree && shownView.current === 'rendered') tree.focus();
+        else if (placed && shownView.current === 'rendered') placed.focus();
         else container.current?.focus();
       },
       sourceText: () => host().source?.text() ?? null,
@@ -296,8 +298,8 @@ export function DocumentView({
     const element = documentHost.renderedScroller;
     // New content for the same file (it changed on disk) keeps the reader where they were,
     // anchored to the block at the top of the view, before anything paints (UX F7).
-    // A tree keeps its place itself, by node path.
-    const before = hasContent.current && showsRendered(view) && !waking && !('tree' in rendered) && !documentHost.tree ? placedBlocks(documentHost, element) : null;
+    // A tree or a table keeps its place itself.
+    const before = hasContent.current && showsRendered(view) && !waking && !('tree' in rendered) && !('table' in rendered) && !documentHost.placed ? placedBlocks(documentHost, element) : null;
     const top = element.scrollTop;
     diagrams.current?.dispose();
     diagrams.current = null;
@@ -310,6 +312,7 @@ export function DocumentView({
         onExpand: (diagram) => expandListener.current?.(diagram),
       });
     } else if ('tree' in rendered) documentHost.setTree(rendered.tree, rendered.label);
+    else if ('table' in rendered) documentHost.setTable(rendered.source, rendered.table, rendered.label);
     else documentHost.setReaderText(rendered.text);
     if (before) {
       element.scrollTop = keptTopFor(before, top, placedBlocks(documentHost, element), { height: element.scrollHeight, viewport: element.clientHeight });
@@ -398,11 +401,16 @@ export function DocumentView({
     const sourceView = documentHost.source;
     if (view !== 'split' || !sourceReady || !sourceView) return;
     const scroller = documentHost.renderedScroller;
+    // A table has no blocks to measure: it places fractional lines itself (asked each time, as it
+    // may arrive after the split shows).
+    const placed = () => (documentHost.placed?.topPosition ? documentHost.placed : null);
     const rendered: SyncPane = {
       scroller,
-      position: () => lineAtOffset(syncBlocks(documentHost), scroller.scrollTop),
+      position: () => placed()?.topPosition!() ?? lineAtOffset(syncBlocks(documentHost), scroller.scrollTop),
       scrollTo: (line) => {
-        scroller.scrollTop = offsetOfLine(syncBlocks(documentHost), line);
+        const table = placed();
+        if (table) table.scrollToPosition!(line);
+        else scroller.scrollTop = offsetOfLine(syncBlocks(documentHost), line);
       },
     };
     const controller = syncScrolling({ source: { scroller: sourceView.view.scrollDOM, position: sourceView.topPosition, scrollTo: sourceView.scrollToPosition }, rendered });
@@ -450,8 +458,8 @@ export function DocumentView({
     const documentHost = host();
     if (view === 'source' && documentHost.source) {
       documentHost.source.scrollToLine(initialPosition.line);
-    } else if (showsRendered(view) && rendered && documentHost.tree) {
-      documentHost.tree.scrollToLine(initialPosition.line);
+    } else if (showsRendered(view) && rendered && documentHost.placed) {
+      documentHost.placed.scrollToLine(initialPosition.line);
     } else if (showsRendered(view) && rendered && (view === 'rendered' || documentHost.source)) {
       const element = documentHost.renderedScroller;
       element.scrollTop = scrollTopFor(initialPosition, placedBlocks(documentHost, element), {
@@ -487,8 +495,8 @@ export function DocumentView({
       latest =
         view === 'source'
           ? { ...anchorAt([], scroll), line: documentHost.source!.topLine() }
-          : documentHost.tree
-            ? { ...anchorAt([], scroll), line: documentHost.tree.topLine() }
+          : documentHost.placed
+            ? { ...anchorAt([], scroll), line: documentHost.placed.topLine() }
             : anchorAt(placedBlocks(documentHost, scroller), scroll);
       clearTimeout(timer);
       timer = setTimeout(report, POSITION_SETTLE_MS);
@@ -563,7 +571,9 @@ export function DocumentView({
       ? 0
       : 'tree' in rendered
         ? rendered.tree.nodes * TREE_BYTES_PER_NODE
-        : 2 * ('html' in rendered ? rendered.html.length : rendered.text.length);
+        : 'table' in rendered
+          ? 2 * rendered.source.length + 4 * (rendered.table.fieldEnds.length + 3 * rendered.table.rows)
+          : 2 * ('html' in rendered ? rendered.html.length : rendered.text.length);
     const sourceBytes = showsSource(view) || host().source ? 2 * source.text.length : 0;
     onWeight?.(renderedBytes + sourceBytes);
   }, [rendered, view, source.text, onWeight]);

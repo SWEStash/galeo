@@ -32,6 +32,9 @@ export const RENDER_BUDGET_MS = 2000;
 /** The budget of a render the reader asked for ("Render anyway"): long, but still bounded. */
 export const RENDER_ANYWAY_BUDGET_MS = 60_000;
 
+/** A CSV/TSV table's budget (ADR-020): a big dataset is expected to take a few seconds. */
+export const TABLE_BUDGET_MS = 30_000;
+
 /** A render refused for running over its budget (the document is too slow, not broken). */
 export class RenderTimeout extends Error {
   constructor(budgetMs: number) {
