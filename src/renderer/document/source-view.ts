@@ -1,6 +1,6 @@
 import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, standardKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { foldGutter, foldKeymap, HighlightStyle, LanguageDescription, syntaxHighlighting } from '@codemirror/language';
 import {
   closeSearchPanel,
   findNext,
@@ -18,9 +18,11 @@ import {
 import { Annotation, Compartment, EditorSelection, EditorState, Transaction, type Extension } from '@codemirror/state';
 import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers, rectangularSelection, type KeyBinding } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
+import { takenByDesktop } from '../../shared/desktop-keys';
 import { logLevels } from './log-view';
 
-export type SourceLanguage = 'markdown' | 'log' | null;
+/** `markdown` and `log` are built in; any other name is a grammar from `@codemirror/language-data`. */
+export type SourceLanguage = 'markdown' | 'log' | (string & {}) | null;
 
 /** Where find is: the 1-based current match (0 without one) of `total`, which stops at a cap. */
 export interface FindResult {
@@ -37,6 +39,8 @@ const FIND_CAP = 10_000;
 
 export interface SourceView {
   readonly view: EditorView;
+  /** Settles once the language's grammar is in (at once for Markdown, logs and plain text). */
+  readonly grammar: Promise<void>;
   setText(text: string): void;
   setWrap(wrap: boolean): void;
   /** The line at the top of the viewport. */
@@ -75,6 +79,15 @@ const highlight = HighlightStyle.define([
   { tag: [tags.link, tags.url], color: 'var(--galeo-color-link)' },
   { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator, tags.quote], color: 'var(--galeo-color-muted)' },
   { tag: tags.monospace, color: 'var(--galeo-color-fg)', backgroundColor: 'var(--galeo-color-code-bg)' },
+  // Code, YAML, TOML and JSON.
+  { tag: [tags.keyword, tags.operatorKeyword], color: 'var(--galeo-syntax-keyword)' },
+  { tag: [tags.string, tags.special(tags.string), tags.regexp, tags.character, tags.inserted], color: 'var(--galeo-syntax-string)' },
+  { tag: [tags.number, tags.bool, tags.null, tags.atom, tags.unit, tags.constant(tags.name), tags.propertyName, tags.attributeName], color: 'var(--galeo-syntax-constant)' },
+  { tag: tags.comment, color: 'var(--galeo-syntax-comment)' },
+  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.definition(tags.function(tags.variableName))], color: 'var(--galeo-syntax-function)' },
+  { tag: [tags.typeName, tags.className, tags.namespace, tags.tagName, tags.definition(tags.propertyName)], color: 'var(--galeo-syntax-type)' },
+  { tag: [tags.definition(tags.variableName), tags.self, tags.changed], color: 'var(--galeo-syntax-variable)' },
+  { tag: [tags.invalid, tags.deleted], color: 'var(--galeo-syntax-invalid)' },
 ]);
 
 const theme = EditorView.theme({
@@ -130,16 +143,52 @@ const editing = (): Extension => [
   rectangularSelection(),
 ];
 
-const LANGUAGES: Record<Exclude<SourceLanguage, null>, () => Extension> = {
+const BUILT_IN: Readonly<Record<string, () => Extension>> = {
   markdown: () => markdown(),
   log: () => logLevels(),
 };
+
+const builtIn = (language: SourceLanguage) => language !== null && Object.hasOwn(BUILT_IN, language);
+
+/** Folding and unfolding the block at the cursor; CodeMirror's fold-all keys are Ctrl+Alt, the desktop's (UX §5). */
+export const foldingKeys: readonly KeyBinding[] = foldKeymap.filter((binding) => !takenByDesktop((binding.key ?? '').replaceAll('-', '+')));
+
+/** Where a grammar goes once it has loaded (with the source view's fold markers). */
+const grammarSlot = new Compartment();
+
+const grammars = new Map<string, Promise<Extension | null>>();
+
+/** The grammar `@codemirror/language-data` lists under `name`, each loaded once (its own chunk). */
+function loadGrammar(name: string): Promise<Extension | null> {
+  let grammar = grammars.get(name);
+  if (!grammar) {
+    grammar = import('@codemirror/language-data').then(async ({ languages }) => {
+      const description = LanguageDescription.matchLanguageName(languages, name, false);
+      return description ? description.load() : null;
+    });
+    grammars.set(name, grammar);
+  }
+  return grammar;
+}
+
+/**
+ * Gives views their language's grammar, and `extras` with it, once it has loaded; the text shows
+ * before that, unhighlighted. A grammar that fails to load leaves the text plain. `open` says
+ * whether the views are still shown.
+ */
+export async function addGrammar(views: readonly EditorView[], language: SourceLanguage, open: () => boolean, extras: Extension = []): Promise<void> {
+  if (!language || builtIn(language)) return;
+  const grammar = await loadGrammar(language).catch(() => null);
+  if (!grammar || !open()) return;
+  for (const view of views) view.dispatch({ effects: grammarSlot.reconfigure([grammar, extras]) });
+}
 
 /** How source text looks, in the source view and in the diff of unsaved edits. */
 export const sourceLook = (language: SourceLanguage): Extension => [
   syntaxHighlighting(highlight),
   theme,
-  language ? LANGUAGES[language]() : [],
+  builtIn(language) ? BUILT_IN[language!]!() : [],
+  grammarSlot.of([]),
 ];
 
 /**
@@ -159,6 +208,7 @@ export function createSourceView(options: {
   const editListeners = new Set<() => void>();
   const findCap = options.findCap ?? FIND_CAP;
   let total = { count: 0, capped: false };
+  let open = true;
   const view = new EditorView({
     root: options.root,
     parent: options.parent,
@@ -227,6 +277,7 @@ export function createSourceView(options: {
 
   return {
     view,
+    grammar: addGrammar([view], options.language, () => open, [foldGutter(), keymap.of(foldingKeys)]),
     find(text, { caseSensitive }) {
       active = new SearchQuery({ search: text, caseSensitive, literal: true });
       if (!searchPanelOpen(view.state)) openSearchPanel(view);
@@ -338,6 +389,7 @@ export function createSourceView(options: {
       return () => view.scrollDOM.removeEventListener('scroll', onScroll);
     },
     destroy() {
+      open = false;
       view.destroy();
     },
   };

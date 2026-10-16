@@ -1,4 +1,4 @@
-import type { FormatId, ViewMode } from '../../shared/formats';
+import { CODE_LANGUAGES, type FormatId, type ViewMode } from '../../shared/formats';
 import { fileName } from '../../shared/paths';
 
 export interface FormatSpec {
@@ -17,13 +17,10 @@ export const MARKDOWN_RENDER_MAX_BYTES = 5 * 1024 * 1024;
 /** The `.txt` reader builds a paragraph per block of text; past this, source is lighter. */
 export const TEXT_READER_MAX_BYTES = 5 * 1024 * 1024;
 
-/** Common source code; the page picks the language from the extension (ADR-018). */
-const CODE_EXTENSIONS = [
-  '.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs', '.py', '.rs', '.go', '.sh', '.bash', '.zsh', '.fish',
-  '.c', '.h', '.cc', '.cpp', '.hpp', '.cs', '.java', '.kt', '.kts', '.swift', '.rb', '.php', '.lua', '.pl', '.r',
-  '.sql', '.css', '.scss', '.less', '.html', '.htm', '.xml', '.svg', '.vue', '.svelte', '.ini', '.conf', '.diff', '.patch',
-] as const;
-const CODE_NAMES = new Set(['dockerfile', 'containerfile', 'makefile', 'gnumakefile', 'justfile']);
+/** Source code: extensions and whole names, from the shared table that also names each language. */
+const CODE_FILES = Object.keys(CODE_LANGUAGES);
+const CODE_EXTENSIONS = CODE_FILES.filter((key) => key.startsWith('.'));
+const CODE_NAMES = new Set(CODE_FILES.filter((key) => !key.startsWith('.')));
 
 const sourceOnly = (extensions: readonly string[]): FormatSpec => ({ extensions, defaultView: 'source', renderMaxBytes: null });
 

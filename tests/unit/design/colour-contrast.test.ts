@@ -10,11 +10,11 @@ import { contrast } from '../../helpers/contrast';
 
 const css = readFileSync(path.resolve(import.meta.dirname, '../../../src/renderer/styles/tokens.css'), 'utf8');
 
-/** The `--galeo-color-*` hex values a rule block of tokens.css sets. */
+/** The `--galeo-color-*` (by name) and `--galeo-syntax-*` (`syntax-` + name) hex values a rule block of tokens.css sets. */
 function colours(selector: string): Record<string, string> {
   const start = css.indexOf(`${selector} {`);
   const block = css.slice(start, css.indexOf('}', start));
-  return Object.fromEntries([...block.matchAll(/--galeo-color-([a-z-]+):\s*(#[0-9a-f]{6})\s*;/g)].map(([, name, value]) => [name, value]));
+  return Object.fromEntries([...block.matchAll(/--galeo-(?:color-)?([a-z-]+):\s*(#[0-9a-f]{6})\s*;/g)].map(([, name, value]) => [name, value]));
 }
 
 const light = colours(':root');
@@ -25,6 +25,12 @@ const SURFACES = ['bg', 'code-bg'] as const;
 describe.each(Object.entries(SCHEMES))('the %s theme (UX §6, WCAG 2.1 AA)', (_scheme, tokens) => {
   it.each(['fg', 'muted', 'link', 'log-error', 'log-warn', 'log-info'])('%s text reads at 4.5:1 or more', (token) => {
     for (const surface of SURFACES) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('source highlighting reads at 4.5:1 or more, for every syntax colour', () => {
+    const syntax = Object.keys(tokens).filter((token) => token.startsWith('syntax-'));
+    expect(syntax).toHaveLength(8);
+    for (const token of syntax) for (const surface of SURFACES) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(4.5);
   });
 
   it.each(['focus', 'control-border'])('%s, which identifies a control, stands out 3:1 or more', (token) => {

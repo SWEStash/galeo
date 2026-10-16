@@ -1,21 +1,29 @@
-import type { FormatId } from '../../shared/formats';
+import { CODE_LANGUAGES, type FormatId } from '../../shared/formats';
+import { extensionOf, fileName } from '../../shared/paths';
 import type { SourceLanguage } from './source-view';
 
-/** The page side of the format registry (ADR-018): the language the source view highlights with. */
-export const SOURCE_LANGUAGES: Readonly<Record<FormatId, SourceLanguage>> = {
+/** The language each format's source is highlighted with; `code` takes it from the file name. */
+const FORMAT_LANGUAGES: Readonly<Record<Exclude<FormatId, 'code'>, SourceLanguage>> = {
   markdown: 'markdown',
   mdx: 'markdown',
   text: null,
   log: 'log',
-  json: null,
-  jsonl: null,
-  yaml: null,
-  toml: null,
+  json: 'JSON',
+  jsonl: 'JSON',
+  yaml: 'YAML',
+  toml: 'TOML',
   csv: null,
   tsv: null,
-  code: null,
   plain: null,
 };
+
+/** The page side of the format registry (ADR-018): the language a document's source view highlights with. */
+export function sourceLanguage(format: FormatId, path: string): SourceLanguage {
+  if (format !== 'code') return FORMAT_LANGUAGES[format];
+  // Own keys only: a file named `constructor` is not code.
+  const language = (key: string) => (Object.hasOwn(CODE_LANGUAGES, key) ? CODE_LANGUAGES[key] : undefined);
+  return language(fileName(path).toLowerCase()) ?? language(extensionOf(path)) ?? null;
+}
 
 /** How messages name a format ("No split view for JSON files"). */
 export const FORMAT_NAMES: Readonly<Record<FormatId, string>> = {

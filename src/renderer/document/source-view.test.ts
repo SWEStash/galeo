@@ -1,9 +1,10 @@
 import { addCursorAbove, addCursorBelow } from '@codemirror/commands';
 import { selectNextOccurrence, selectSelectionMatches } from '@codemirror/search';
+import { foldCode, foldedRanges, syntaxTree, unfoldCode } from '@codemirror/language';
 import { EditorSelection } from '@codemirror/state';
 import { afterEach, describe, expect, it } from 'vitest';
 import { takenByDesktop } from '../../shared/desktop-keys';
-import { createSourceView, editingKeys } from './source-view';
+import { createSourceView, editingKeys, foldingKeys } from './source-view';
 
 function shadowContainer() {
   const host = document.createElement('div');
@@ -13,6 +14,9 @@ function shadowContainer() {
   root.append(parent);
   return { root, parent };
 }
+
+/** Whether any text in `element` is highlighted (a class of the highlight style's, not CodeMirror's own `cm-` ones). */
+const highlighted = (element: Element) => [...element.querySelectorAll('.cm-line span')].some((span) => [...span.classList].some((name) => !name.startsWith('cm-')));
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -306,5 +310,53 @@ describe('createSourceView editing', () => {
     expect(source.text()).toBe('b');
     expect(undo(source.view)).toBe(false);
     source.destroy();
+  });
+
+  it('shows the text at once, then highlights it and adds fold markers once the grammar has loaded', async () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'name: galeo\nitems:\n  - a\n  - b\n', language: 'YAML', wrap: false });
+    expect(source.text()).toContain('name: galeo');
+    expect(highlighted(parent)).toBe(false);
+    expect(parent.querySelector('.cm-foldGutter')).toBeNull();
+    await source.grammar;
+    expect(syntaxTree(source.view.state).length).toBeGreaterThan(0);
+    expect(highlighted(parent)).toBe(true);
+    expect(parent.querySelector('.cm-foldGutter')).not.toBeNull();
+    source.destroy();
+  });
+
+  it('folds and unfolds a block, read-only or editing', async () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'items:\n  - a\n  - b\nnext: 1\n', language: 'YAML', wrap: false });
+    await source.grammar;
+    expect(foldCode(source.view)).toBe(true);
+    expect(foldedRanges(source.view.state).size).toBe(1);
+    expect(unfoldCode(source.view)).toBe(true);
+    expect(foldedRanges(source.view.state).size).toBe(0);
+    source.destroy();
+  });
+
+  it('keeps Markdown, logs, plain text and an unknown language without fold markers', async () => {
+    for (const language of ['markdown', 'log', null, 'No such language']) {
+      const { root, parent } = shadowContainer();
+      const source = createSourceView({ root, parent, text: '# a\nb\n', language, wrap: false });
+      await source.grammar;
+      expect(parent.querySelector('.cm-foldGutter'), String(language)).toBeNull();
+      source.destroy();
+    }
+  });
+
+  it('leaves a view closed before its grammar arrives alone', async () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: '{"a": 1}', language: 'JSON', wrap: false });
+    source.destroy();
+    await expect(source.grammar).resolves.toBeUndefined();
+  });
+
+  it('folds with Ctrl+Shift+[ and unfolds with Ctrl+Shift+], and takes no key the desktop keeps', () => {
+    const run = (key: string) => foldingKeys.find((binding) => binding.key === key)?.run;
+    expect(run('Ctrl-Shift-[')).toBe(foldCode);
+    expect(run('Ctrl-Shift-]')).toBe(unfoldCode);
+    for (const binding of foldingKeys) expect(takenByDesktop(binding.key!.replaceAll('-', '+')), binding.key).toBe(false);
   });
 });

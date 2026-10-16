@@ -17,7 +17,7 @@ import { ENCODING_NAMES } from './encodings';
 import { DocumentView, type DocumentHandle, type RenderedContent } from './DocumentView';
 import { FindBar } from './FindBar';
 import type { ColorScheme } from './host';
-import { FORMAT_NAMES, SOURCE_LANGUAGES } from './formats';
+import { FORMAT_NAMES, sourceLanguage } from './formats';
 import type { FindResult } from './source-view';
 import { useDelayed } from './useDelayed';
 import { countWords } from '../../shared/words';
@@ -644,7 +644,7 @@ export function DocumentPane({
         <DocumentView
           ref={documentHandle}
           rendered={rendered}
-          source={{ text: dirty ? pinnedText : ready.text, language: SOURCE_LANGUAGES[ready.format] }}
+          source={{ text: dirty ? pinnedText : ready.text, language: sourceLanguage(ready.format, ready.path) }}
           editable={editing}
           onEdit={edited}
           replacing={find.open && find.replace}
@@ -677,7 +677,7 @@ export function DocumentPane({
         <DiffDialog
           mine={diff}
           theirs={content.text}
-          language={SOURCE_LANGUAGES[content.format]}
+          language={sourceLanguage(content.format, content.path)}
           onKeepMine={() => closeDiff(keepMine)}
           onLoadTheirs={() => closeDiff(loadTheirs)}
           onClose={() => closeDiff()}

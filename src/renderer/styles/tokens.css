@@ -31,6 +31,15 @@
   --galeo-color-log-error: #d1242f;
   --galeo-color-log-warn: #9a6700;
   --galeo-color-log-info: #0969da;
+  /* Source highlighting: GitHub's palette, as in fenced code blocks; each 4.5:1 on bg and code-bg. */
+  --galeo-syntax-keyword: #cf222e;
+  --galeo-syntax-string: #0a3069;
+  --galeo-syntax-constant: #0550ae;
+  --galeo-syntax-comment: #59636e;
+  --galeo-syntax-function: #6639ba;
+  --galeo-syntax-type: #116329;
+  --galeo-syntax-variable: #953800;
+  --galeo-syntax-invalid: #82071e;
   color-scheme: light;
 }
 
@@ -48,5 +57,13 @@
   --galeo-color-log-error: #f85149;
   --galeo-color-log-warn: #d29922;
   --galeo-color-log-info: #4493f8;
+  --galeo-syntax-keyword: #ff7b72;
+  --galeo-syntax-string: #a5d6ff;
+  --galeo-syntax-constant: #79c0ff;
+  --galeo-syntax-comment: #9198a1;
+  --galeo-syntax-function: #d2a8ff;
+  --galeo-syntax-type: #7ee787;
+  --galeo-syntax-variable: #ffa657;
+  --galeo-syntax-invalid: #ffa198;
   color-scheme: dark;
 }

@@ -31,6 +31,23 @@ export const FORMAT_VIEWS: Readonly<Record<FormatId, FormatViews>> = {
   plain: SOURCE_ONLY,
 };
 
+/**
+ * Source code by file name (ADR-018): lower-case extensions (with the dot) and whole names, each with
+ * its language's name in `@codemirror/language-data`, or null to show it as plain source. Detection
+ * takes the keys; the page loads the grammar.
+ */
+export const CODE_LANGUAGES: Readonly<Record<string, string | null>> = {
+  '.ts': 'TypeScript', '.mts': 'TypeScript', '.cts': 'TypeScript', '.tsx': 'TSX',
+  '.js': 'JavaScript', '.mjs': 'JavaScript', '.cjs': 'JavaScript', '.jsx': 'JSX',
+  '.py': 'Python', '.rs': 'Rust', '.go': 'Go', '.sh': 'Shell', '.bash': 'Shell', '.zsh': 'Shell', '.fish': null,
+  '.c': 'C', '.h': 'C', '.cc': 'C++', '.cpp': 'C++', '.hpp': 'C++', '.cs': 'C#', '.java': 'Java',
+  '.kt': 'Kotlin', '.kts': 'Kotlin', '.swift': 'Swift', '.rb': 'Ruby', '.php': 'PHP', '.lua': 'Lua', '.pl': 'Perl',
+  '.r': 'R', '.sql': 'SQL', '.css': 'CSS', '.scss': 'SCSS', '.less': 'LESS', '.html': 'HTML', '.htm': 'HTML',
+  '.xml': 'XML', '.svg': 'XML', '.vue': 'Vue', '.svelte': null, '.ini': 'Properties files', '.conf': null,
+  '.diff': 'diff', '.patch': 'diff',
+  dockerfile: 'Dockerfile', containerfile: 'Dockerfile', makefile: null, gnumakefile: null, justfile: null,
+};
+
 /** The formats the render worker draws: Markdown articles, with or without MDX. */
 export type WorkerFormat = Extract<FormatId, 'markdown' | 'mdx'>;
 
