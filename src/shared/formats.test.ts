@@ -26,9 +26,9 @@ describe('FORMAT_VIEWS', () => {
     expect(withViews((views) => views.reader)).toEqual(['text']);
   });
 
-  it('offers split and an outline on Markdown and MDX, and follow-end on logs', () => {
+  it('offers split on Markdown and MDX, an outline on them and on YAML and TOML, and follow-end on logs', () => {
     expect(withViews((views) => views.split)).toEqual(['markdown', 'mdx']);
-    expect(withViews((views) => views.outline)).toEqual(['markdown', 'mdx']);
+    expect(withViews((views) => views.outline)).toEqual(['markdown', 'mdx', 'yaml', 'toml']);
     expect(withViews((views) => views.follow)).toEqual(['log']);
   });
 

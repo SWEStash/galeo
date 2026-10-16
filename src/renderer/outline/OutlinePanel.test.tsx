@@ -61,6 +61,11 @@ describe('OutlinePanel', () => {
     expect(container.querySelector('nav')?.textContent).toContain('No headings');
   });
 
+  it("names what a source outline lacks: a YAML or TOML file's keys", async () => {
+    const { container } = await render({ entries: [], current: null, empty: 'No keys' });
+    expect(container.querySelector('.outline-empty')?.textContent).toBe('No keys');
+  });
+
   it('takes the focus, on the heading being read, only when asked', async () => {
     const { container } = await render();
     expect(container.contains(document.activeElement)).toBe(false);

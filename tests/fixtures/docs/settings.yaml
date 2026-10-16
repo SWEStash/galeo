@@ -1,0 +1,163 @@
+# A service configuration, for the outline and highlighting tests.
+name: harbor
+version: 3
+server:
+  enabled: true
+  host: server.internal
+  port: 8000
+  tags:
+    - server
+    - core
+  note: "the server settings"
+database:
+  enabled: false
+  host: database.internal
+  port: 8001
+  tags:
+    - database
+    - core
+  note: "the database settings"
+cache:
+  enabled: true
+  host: cache.internal
+  port: 8002
+  tags:
+    - cache
+    - core
+  note: "the cache settings"
+queue:
+  enabled: false
+  host: queue.internal
+  port: 8003
+  tags:
+    - queue
+    - core
+  note: "the queue settings"
+storage:
+  enabled: true
+  host: storage.internal
+  port: 8004
+  tags:
+    - storage
+    - core
+  note: "the storage settings"
+mail:
+  enabled: false
+  host: mail.internal
+  port: 8005
+  tags:
+    - mail
+    - core
+  note: "the mail settings"
+search:
+  enabled: true
+  host: search.internal
+  port: 8006
+  tags:
+    - search
+    - core
+  note: "the search settings"
+metrics:
+  enabled: false
+  host: metrics.internal
+  port: 8007
+  tags:
+    - metrics
+    - core
+  note: "the metrics settings"
+tracing:
+  enabled: true
+  host: tracing.internal
+  port: 8008
+  tags:
+    - tracing
+    - core
+  note: "the tracing settings"
+logging:
+  enabled: false
+  host: logging.internal
+  port: 8009
+  tags:
+    - logging
+    - core
+  note: "the logging settings"
+auth:
+  enabled: true
+  host: auth.internal
+  port: 8010
+  tags:
+    - auth
+    - core
+  note: "the auth settings"
+billing:
+  enabled: false
+  host: billing.internal
+  port: 8011
+  tags:
+    - billing
+    - core
+  note: "the billing settings"
+reports:
+  enabled: true
+  host: reports.internal
+  port: 8012
+  tags:
+    - reports
+    - core
+  note: "the reports settings"
+exports:
+  enabled: false
+  host: exports.internal
+  port: 8013
+  tags:
+    - exports
+    - core
+  note: "the exports settings"
+imports:
+  enabled: true
+  host: imports.internal
+  port: 8014
+  tags:
+    - imports
+    - core
+  note: "the imports settings"
+webhooks:
+  enabled: false
+  host: webhooks.internal
+  port: 8015
+  tags:
+    - webhooks
+    - core
+  note: "the webhooks settings"
+scheduler:
+  enabled: true
+  host: scheduler.internal
+  port: 8016
+  tags:
+    - scheduler
+    - core
+  note: "the scheduler settings"
+workers:
+  enabled: false
+  host: workers.internal
+  port: 8017
+  tags:
+    - workers
+    - core
+  note: "the workers settings"
+features:
+  enabled: true
+  host: features.internal
+  port: 8018
+  tags:
+    - features
+    - core
+  note: "the features settings"
+limits:
+  enabled: false
+  host: limits.internal
+  port: 8019
+  tags:
+    - limits
+    - core
+  note: "the limits settings"

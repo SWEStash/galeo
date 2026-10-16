@@ -167,4 +167,16 @@ describe('DocumentView in split', () => {
     expect(handle.current!.sourceText()).toBe('# x x');
     focus.mockRestore();
   });
+
+  it('in the source view, hands up the YAML outline, names the entry being read and scrolls to a chosen line', async () => {
+    const onSourceOutline = vi.fn();
+    const onHeading = vi.fn();
+    const handle = { current: null as import('./DocumentView').DocumentHandle | null };
+    const yaml = { text: '# settings\na: 1\nb:\n  c: 2\n', language: 'YAML' };
+    await render(<DocumentView source={yaml} view="source" wrap={false} rendered={null} scheme="light" onSourceOutline={onSourceOutline} onHeading={onHeading} ref={handle} />);
+    await vi.waitFor(() => expect(onSourceOutline).toHaveBeenLastCalledWith([expect.objectContaining({ text: 'a', id: 'line:2' }), expect.objectContaining({ text: 'b', id: 'line:3' })]), { timeout: 5_000 });
+    // Above the first key (the comment), the first one is the one being read, as for Markdown's headings.
+    await vi.waitFor(() => expect(onHeading).toHaveBeenLastCalledWith('line:2'));
+    handle.current!.scrollToLine(2);
+  });
 });

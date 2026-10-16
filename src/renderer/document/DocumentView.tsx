@@ -5,6 +5,7 @@ import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
 import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
+import type { OutlineEntry } from '../worker/pipeline/render';
 import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
 import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
@@ -52,8 +53,10 @@ export interface DocumentViewProps {
   onEdit?: (() => void) | undefined;
   /** Find and replace is open: find searches the source, the only text replace can change. */
   replacing?: boolean;
-  /** The heading being read in the rendered view (its id), as the reader scrolls; set to follow it. */
+  /** The heading being read (its id), as the reader scrolls; set to follow it. In the source view, the id of an `onSourceOutline` entry. */
   onHeading?: ((id: string | null) => void) | undefined;
+  /** The source view's own outline (YAML, TOML), as the text changes; set to have it. */
+  onSourceOutline?: ((entries: OutlineEntry[]) => void) | undefined;
   /** The source pane's share of the width in split (ADR-014). */
   splitRatio?: number;
   /** The reader moved the split's divider. */
@@ -104,6 +107,8 @@ export interface DocumentHandle extends Finder {
   focus(): void;
   /** Scrolls the rendered view to an anchor ('' is the top); false if there's no such place. */
   scrollToAnchor(anchor: string): boolean;
+  /** Scrolls the source view to a line. */
+  scrollToLine(line: number): void;
   /** The source view's text with the reader's edits, or null before it exists. */
   sourceText(): string | null;
   /** Puts the file's text back in the source view, dropping the reader's edits. */
@@ -155,6 +160,7 @@ export function DocumentView({
   onRendering,
   zoom = 1,
   onHeading,
+  onSourceOutline,
   onExpandDiagram,
   onExpandImage,
   editable = false,
@@ -207,6 +213,7 @@ export function DocumentView({
       },
       sourceText: () => host().source?.text() ?? null,
       replaceSource: (text) => host().source?.setText(text),
+      scrollToLine: (line) => host().source?.scrollToLine(line),
       replace: (text) => host().source?.replace(text) ?? NO_MATCHES,
       replaceAll: (text) => host().source?.replaceAll(text) ?? 0,
       scrollToAnchor: (anchor) => {
@@ -490,6 +497,38 @@ export function DocumentView({
       element.removeEventListener('scroll', onScroll);
     };
   }, [onHeading, view, rendered]);
+
+  // The source view's outline (YAML, TOML) and the entry at the top of the view, as the reader scrolls or edits.
+  useEffect(() => {
+    const source = host().source;
+    if (!onSourceOutline || view !== 'source' || !sourceReady || !source) return;
+    let entries: OutlineEntry[] = [];
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const top = source.topLine();
+      // As for headings: the last entry at or above the top; the first before any is reached.
+      onHeading?.((entries.findLast((entry) => entry.line <= top) ?? entries[0])?.id ?? null);
+    };
+    const show = (next: OutlineEntry[]) => {
+      entries = next;
+      onSourceOutline(next);
+      update();
+    };
+    const onScroll = () => {
+      frame ||= requestAnimationFrame(update);
+    };
+    let current = true;
+    void source.grammar.then(() => current && show(source.outline()));
+    const stop = source.onOutline(show);
+    source.view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      current = false;
+      stop();
+      cancelAnimationFrame(frame);
+      source.view.scrollDOM.removeEventListener('scroll', onScroll);
+    };
+  }, [onSourceOutline, onHeading, view, sourceReady]);
 
   useEffect(() => {
     const renderedBytes = rendered ? 2 * ('html' in rendered ? rendered.html.length : rendered.text.length) : 0;

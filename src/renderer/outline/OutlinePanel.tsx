@@ -25,6 +25,8 @@ export interface OutlinePanelProps {
   current: string | null;
   onChoose: (id: string) => void;
   onClose: () => void;
+  /** What the panel says with no entries ("No headings"). */
+  empty?: string;
   /** Take the focus (the reader opened the panel), on the heading being read. */
   autoFocus?: boolean;
 }
@@ -33,7 +35,7 @@ export interface OutlinePanelProps {
  * The outline of the shown Markdown document (UX §2, Ctrl+Shift+O): its headings as nested lists
  * of buttons, the one being read marked as the current location. Esc closes it.
  */
-export function OutlinePanel({ entries, current, onChoose, onClose, autoFocus = false }: OutlinePanelProps) {
+export function OutlinePanel({ entries, current, onChoose, onClose, empty = 'No headings', autoFocus = false }: OutlinePanelProps) {
   const panel = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export function OutlinePanel({ entries, current, onChoose, onClose, autoFocus = 
   return (
     <nav ref={panel} className="outline-panel" aria-label="Outline" data-testid="outline" onKeyDown={onKeyDown}>
       <h2 className="outline-title">Outline</h2>
-      {entries.length > 0 ? list(nest(entries)) : <p className="outline-empty">No headings</p>}
+      {entries.length > 0 ? list(nest(entries)) : <p className="outline-empty">{empty}</p>}
     </nav>
   );
 }

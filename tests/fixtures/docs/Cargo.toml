@@ -1,0 +1,109 @@
+# A package manifest, for the outline and highlighting tests.
+title = "harbor"
+edition = 2026
+
+[server]
+enabled = true
+port = 8000
+tags = ["server", "core"]
+
+[database]
+enabled = true
+port = 8001
+tags = ["database", "core"]
+
+[cache]
+enabled = true
+port = 8002
+tags = ["cache", "core"]
+
+[queue]
+enabled = true
+port = 8003
+tags = ["queue", "core"]
+
+[storage]
+enabled = true
+port = 8004
+tags = ["storage", "core"]
+
+[mail]
+enabled = true
+port = 8005
+tags = ["mail", "core"]
+
+[search]
+enabled = true
+port = 8006
+tags = ["search", "core"]
+
+[metrics]
+enabled = true
+port = 8007
+tags = ["metrics", "core"]
+
+[tracing]
+enabled = true
+port = 8008
+tags = ["tracing", "core"]
+
+[logging]
+enabled = true
+port = 8009
+tags = ["logging", "core"]
+
+[auth]
+enabled = true
+port = 8010
+tags = ["auth", "core"]
+
+[billing]
+enabled = true
+port = 8011
+tags = ["billing", "core"]
+
+[reports]
+enabled = true
+port = 8012
+tags = ["reports", "core"]
+
+[exports]
+enabled = true
+port = 8013
+tags = ["exports", "core"]
+
+[imports]
+enabled = true
+port = 8014
+tags = ["imports", "core"]
+
+[webhooks]
+enabled = true
+port = 8015
+tags = ["webhooks", "core"]
+
+[scheduler]
+enabled = true
+port = 8016
+tags = ["scheduler", "core"]
+
+[workers]
+enabled = true
+port = 8017
+tags = ["workers", "core"]
+
+[features]
+enabled = true
+port = 8018
+tags = ["features", "core"]
+
+[limits]
+enabled = true
+port = 8019
+tags = ["limits", "core"]
+
+[[bin]]
+name = "harbor"
+
+[[bin]]
+name = "harbor-cli"

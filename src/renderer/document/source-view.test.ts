@@ -359,4 +359,25 @@ describe('createSourceView editing', () => {
     expect(run('Ctrl-Shift-]')).toBe(unfoldCode);
     for (const binding of foldingKeys) expect(takenByDesktop(binding.key!.replaceAll('-', '+')), binding.key).toBe(false);
   });
+
+  it('reports the outline once the grammar has loaded, and again after an edit', async () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a: 1\n', language: 'YAML', wrap: false });
+    const outlines: string[][] = [];
+    const next = () =>
+      new Promise<void>((resolve) => {
+        const stop = source.onOutline((entries) => {
+          outlines.push(entries.map((entry) => entry.text));
+          stop();
+          resolve();
+        });
+      });
+    await next();
+    const edited = next();
+    source.setEditable(true);
+    source.view.dispatch({ changes: { from: source.text().length, insert: 'b: 2\n' } });
+    await edited;
+    expect(outlines).toEqual([['a'], ['a', 'b']]);
+    source.destroy();
+  });
 });

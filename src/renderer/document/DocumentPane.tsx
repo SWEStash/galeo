@@ -11,6 +11,7 @@ import { useOutline } from '../outline/useOutline';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
+import type { OutlineEntry } from '../worker/pipeline/render';
 import { DocumentBanner, DocumentLoading, DocumentState, type DiskChange } from './DocumentState';
 import { EncodingMenu } from './EncodingMenu';
 import { ENCODING_NAMES } from './encodings';
@@ -462,21 +463,29 @@ export function DocumentPane({
     documentHandle.current?.focus();
   }, []);
 
-  // The outline (Markdown, rendered view): open for the window, shown by the active pane only.
+  // The outline: open for the window, shown by the active pane only. Markdown's comes with its
+  // rendered view; a format with no rendered view (YAML, TOML) has its source's.
   const [outlineOpen, setOutlineOpen] = useOutline();
   const [focusOutline, setFocusOutline] = useState(false);
   const [heading, setHeading] = useState<string | null>(null);
-  const outlined = views?.outline === true && (view === 'rendered' || view === 'split');
+  const [sourceEntries, setSourceEntries] = useState<OutlineEntry[]>([]);
+  const sourceOutlined = views?.outline === true && views.rendered === 'none';
+  const outlined = views?.outline === true && (sourceOutlined ? view === 'source' : view === 'rendered' || view === 'split');
   const showsOutline = active && outlineOpen && outlined;
   const closeOutline = useCallback(() => {
     setOutlineOpen(false);
     setFocusOutline(false);
     documentHandle.current?.focus();
   }, [setOutlineOpen]);
-  const goToHeading = useCallback((id: string) => {
-    documentHandle.current?.scrollToAnchor(id);
-    setHeading(id);
-  }, []);
+  const goToHeading = useCallback(
+    (id: string) => {
+      const line = sourceOutlined ? sourceEntries.find((entry) => entry.id === id)?.line : undefined;
+      if (line !== undefined) documentHandle.current?.scrollToLine(line);
+      else documentHandle.current?.scrollToAnchor(id);
+      setHeading(id);
+    },
+    [sourceOutlined, sourceEntries],
+  );
 
   // In a text field (the find bar), End and Alt+arrows edit the text; they don't move the document.
   const history = (direction: 'back' | 'forward') => ({ typing }: { typing: boolean }) => {
@@ -665,11 +674,12 @@ export function DocumentPane({
           onRendering={onRendering}
           zoom={zoom}
           onHeading={showsOutline ? setHeading : undefined}
+          onSourceOutline={showsOutline && sourceOutlined ? setSourceEntries : undefined}
           onExpandDiagram={expandDiagram}
           onExpandImage={expandImage}
         />
         {showsOutline && (
-          <OutlinePanel entries={render.outline} current={heading} onChoose={goToHeading} onClose={closeOutline} autoFocus={focusOutline} />
+          <OutlinePanel entries={sourceOutlined ? sourceEntries : render.outline} empty={sourceOutlined ? 'No keys' : 'No headings'} current={heading} onChoose={goToHeading} onClose={closeOutline} autoFocus={focusOutline} />
         )}
       </div>
       {viewer && <ZoomViewer content={viewer.content} name={viewer.name} onClose={closeViewer} />}

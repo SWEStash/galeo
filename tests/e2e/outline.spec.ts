@@ -71,3 +71,43 @@ test('the palette toggles the outline too; a log has none', async () => {
     await close();
   }
 });
+
+/** How far the source line that starts with `text` sits below the top of the source view, in pixels. */
+function lineOffsetFromTop(window: Page, text: string): Promise<number> {
+  return shownDocument(window).evaluate((view, wanted) => {
+    const scroller = view.shadowRoot!.querySelector('.cm-scroller')!;
+    const line = [...view.shadowRoot!.querySelectorAll('.cm-line')].find((each) => each.textContent?.startsWith(wanted));
+    return line ? line.getBoundingClientRect().top - scroller.getBoundingClientRect().top : Infinity;
+  }, text);
+}
+
+test("a YAML file's outline lists its top-level keys; choosing one scrolls the source to it, and the mark follows", async () => {
+  const { window, close } = await launchApp(['--', path.join(docs, 'settings.yaml')]);
+  try {
+    await expect(shownDocument(window).locator('.cm-content')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Shift+O');
+    await expect(outline(window).getByRole('button')).toHaveText(['name', 'version', 'server', 'database', 'cache', 'queue', 'storage', 'mail', 'search', 'metrics', 'tracing', 'logging', 'auth', 'billing', 'reports', 'exports', 'imports', 'webhooks', 'scheduler', 'workers', 'features', 'limits']);
+    await expect(current(window)).toHaveText('name');
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="outline"]').analyze();
+    expect(results.violations).toEqual([]);
+    await outline(window).getByRole('button', { name: 'webhooks' }).click();
+    await expect.poll(() => lineOffsetFromTop(window, 'webhooks:')).toBeLessThan(8);
+    await expect(current(window)).toHaveText('webhooks');
+  } finally {
+    await close();
+  }
+});
+
+test("a TOML file's outline lists its root keys and tables", async () => {
+  const { window, close } = await launchApp(['--', path.join(docs, 'Cargo.toml')]);
+  try {
+    await expect(shownDocument(window).locator('.cm-content')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Shift+O');
+    const entries = outline(window).getByRole('button');
+    await expect(entries.first()).toHaveText('title');
+    await expect(entries).toHaveCount(2 + 20 + 2);
+    await expect(entries.last()).toHaveText('[[bin]]');
+  } finally {
+    await close();
+  }
+});

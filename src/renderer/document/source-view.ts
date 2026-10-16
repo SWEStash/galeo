@@ -1,6 +1,6 @@
 import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, standardKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { foldGutter, foldKeymap, HighlightStyle, LanguageDescription, syntaxHighlighting } from '@codemirror/language';
+import { foldGutter, foldKeymap, HighlightStyle, LanguageDescription, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import {
   closeSearchPanel,
   findNext,
@@ -19,7 +19,9 @@ import { Annotation, Compartment, EditorSelection, EditorState, Transaction, typ
 import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers, rectangularSelection, type KeyBinding } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { takenByDesktop } from '../../shared/desktop-keys';
+import type { OutlineEntry } from '../worker/pipeline/render';
 import { logLevels } from './log-view';
+import { sourceOutline } from './source-outline';
 
 /** `markdown` and `log` are built in; any other name is a grammar from `@codemirror/language-data`. */
 export type SourceLanguage = 'markdown' | 'log' | (string & {}) | null;
@@ -33,6 +35,9 @@ export interface FindResult {
 
 /** How close to the end still counts as at the end. */
 const END_SLACK_PX = 4;
+
+/** The outline follows the text this long after it stops changing (typing, a large file's parsing). */
+const OUTLINE_DELAY_MS = 150;
 
 /** Counting stops here, so a common word in a 100 MB log doesn't stall the find bar. */
 const FIND_CAP = 10_000;
@@ -65,6 +70,10 @@ export interface SourceView {
   text(): string;
   /** Calls `listener` after each edit of the reader's (never for new text from the file). */
   onEdit(listener: () => void): () => void;
+  /** The YAML or TOML outline of the text as it is now; empty for other languages. */
+  outline(): OutlineEntry[];
+  /** Calls `listener` with the outline when the grammar arrives and as the text changes. */
+  onOutline(listener: (entries: OutlineEntry[]) => void): () => void;
   /** Calls `listener` when the view scrolls up (the user leaving the end of a log). */
   onScrollUp(listener: () => void): () => void;
   destroy(): void;
@@ -159,7 +168,7 @@ const grammarSlot = new Compartment();
 const grammars = new Map<string, Promise<Extension | null>>();
 
 /** The grammar `@codemirror/language-data` lists under `name`, each loaded once (its own chunk). */
-function loadGrammar(name: string): Promise<Extension | null> {
+export function loadGrammar(name: string): Promise<Extension | null> {
   let grammar = grammars.get(name);
   if (!grammar) {
     grammar = import('@codemirror/language-data').then(async ({ languages }) => {
@@ -206,6 +215,8 @@ export function createSourceView(options: {
   const wrapping = new Compartment();
   const mode = new Compartment();
   const editListeners = new Set<() => void>();
+  const outlineListeners = new Set<(entries: OutlineEntry[]) => void>();
+  let outlineTimer: ReturnType<typeof setTimeout> | undefined;
   const findCap = options.findCap ?? FIND_CAP;
   let total = { count: 0, capped: false };
   let open = true;
@@ -219,6 +230,13 @@ export function createSourceView(options: {
         EditorView.updateListener.of((update) => {
           if (update.docChanged && update.transactions.some((transaction) => transaction.docChanged && !transaction.annotation(fromFile))) {
             for (const listener of editListeners) listener();
+          }
+          if (outlineListeners.size > 0 && syntaxTree(update.state) !== syntaxTree(update.startState)) {
+            clearTimeout(outlineTimer);
+            outlineTimer = setTimeout(() => {
+              const entries = sourceOutline(view.state);
+              for (const listener of outlineListeners) listener(entries);
+            }, OUTLINE_DELAY_MS);
           }
         }),
         // A named text; a stop of its own on Tab, so the keyboard can reach and scroll it.
@@ -374,6 +392,13 @@ export function createSourceView(options: {
     scrollToEnd() {
       view.dispatch({ effects: EditorView.scrollIntoView(view.state.doc.length, { y: 'end', yMargin: 0 }) });
     },
+    outline() {
+      return sourceOutline(view.state);
+    },
+    onOutline(listener) {
+      outlineListeners.add(listener);
+      return () => outlineListeners.delete(listener);
+    },
     onScrollUp(listener) {
       const scroller = view.scrollDOM;
       let last = scroller.scrollTop;
@@ -390,6 +415,7 @@ export function createSourceView(options: {
     },
     destroy() {
       open = false;
+      clearTimeout(outlineTimer);
       view.destroy();
     },
   };
