@@ -3,7 +3,7 @@ import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
 import type { ImageResult, SaveResult, TextEncoding } from '../../shared/documents';
 import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
-import { workerFormat, type FormatId, type ViewMode } from '../../shared/formats';
+import { FORMAT_VIEWS, workerFormat, type ViewMode } from '../../shared/formats';
 import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
 import { OutlinePanel } from '../outline/OutlinePanel';
@@ -17,7 +17,8 @@ import { ENCODING_NAMES } from './encodings';
 import { DocumentView, type DocumentHandle, type RenderedContent } from './DocumentView';
 import { FindBar } from './FindBar';
 import type { ColorScheme } from './host';
-import type { FindResult, SourceLanguage } from './source-view';
+import { FORMAT_NAMES, SOURCE_LANGUAGES } from './formats';
+import type { FindResult } from './source-view';
 import { useDelayed } from './useDelayed';
 import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
@@ -30,8 +31,6 @@ import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type Si
 const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed' } as const;
 
 const syntaxDetail = (syntax: SyntaxProblem | null) => (syntax ? `on line ${syntax.line}: ${syntax.message}` : '');
-
-const SOURCE_LANGUAGES: Record<FormatId, SourceLanguage> = { markdown: 'markdown', mdx: 'markdown', log: 'log', text: null, json: null, jsonl: null, yaml: null, toml: null, csv: null, tsv: null, code: null, plain: null };
 
 /** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
 const LOADING_DELAY_MS = 150;
@@ -178,11 +177,14 @@ export function DocumentPane({
   // The source pane's share of a split (ADR-014), kept with the view state once moved.
   const [ratio, setRatio] = useState(initialViewState.ratio ?? 0.5);
   const [narrow, setNarrow] = useState(false);
-  // Markdown and MDX render in the worker; `.txt` shows as reader text; logs and other text are source only.
+  // What the format's tab can show (ADR-018): Markdown and MDX render in the worker, `.txt` as
+  // reader text; the rest is source only.
+  const views = ready ? FORMAT_VIEWS[ready.format] : null;
   const format = ready ? workerFormat(ready.format) : null;
   const article = format !== null;
-  const renderable = article || ready?.format === 'text';
-  const splittable = article;
+  const reader = views?.reader === true;
+  const renderable = views !== null && views.rendered !== 'none';
+  const splittable = views?.split === true;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
   // Editing in split, the preview follows the editor's text rather than the file's (ADR-014).
   const [previewText, setPreviewText] = useState<string | null>(null);
@@ -196,9 +198,9 @@ export function DocumentPane({
   if (layout !== 'split') lastSingle.current = layout;
   const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending' && render.html === null, LOADING_DELAY_MS);
   const rendered = useMemo<RenderedContent | null>(() => {
-    if (ready?.format === 'text') return { text: ready.text };
+    if (ready && reader) return { text: ready.text };
     return render.html === null ? null : { html: render.html };
-  }, [ready, render.html]);
+  }, [ready, reader, render.html]);
   const endFollow = useCallback(() => setFollow(false), []);
   const showRendered = useCallback(() => {
     setRenderAnyway(true);
@@ -464,7 +466,7 @@ export function DocumentPane({
   const [outlineOpen, setOutlineOpen] = useOutline();
   const [focusOutline, setFocusOutline] = useState(false);
   const [heading, setHeading] = useState<string | null>(null);
-  const outlined = article && (view === 'rendered' || view === 'split');
+  const outlined = views?.outline === true && (view === 'rendered' || view === 'split');
   const showsOutline = active && outlineOpen && outlined;
   const closeOutline = useCallback(() => {
     setOutlineOpen(false);
@@ -495,14 +497,14 @@ export function DocumentPane({
   useCommands(
     {
       toggleSource: () => renderable && toggle(afterToggleSource(layout, { editing })),
-      toggleSplit: () => ready !== null && toggle(afterToggleSplit(layout, { splittable, editing, lastSingle: lastSingle.current })),
+      toggleSplit: () => ready !== null && toggle(afterToggleSplit(layout, { splittable, editing, lastSingle: lastSingle.current, formatName: FORMAT_NAMES[ready.format] })),
       toggleWrap: () => {
         if (view === 'rendered') return false;
         setWrap((current) => !current);
         return true;
       },
       followEnd: ({ typing }) => {
-        if (ready?.format !== 'log' || typing) return false;
+        if (!views?.follow || typing) return false;
         setFollow(true);
         return true;
       },
@@ -580,8 +582,8 @@ export function DocumentPane({
 
   // Only the source view shows the file's lines; rendered and reader views wrap to the window.
   const lines = useMemo(() => (ready && view !== 'rendered' ? countLines(ready.text) : null), [ready, view]);
-  // An article's prose is counted by the worker as it renders; `.txt` is all prose.
-  const textWords = useMemo(() => (ready?.format === 'text' ? countWords(ready.text) : null), [ready]);
+  // An article's prose is counted by the worker as it renders; reader text is all prose.
+  const textWords = useMemo(() => (ready && reader ? countWords(ready.text) : null), [ready, reader]);
   const words = article ? render.words : textWords;
   useEffect(() => {
     onStatus?.({

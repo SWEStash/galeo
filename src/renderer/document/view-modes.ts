@@ -13,8 +13,11 @@ export type ViewToggle = { view: ViewMode } | { refused: string };
  * Ctrl+\ (ADR-014): into split, or back out to the single view the reader had; while editing,
  * back out to the source, as the rendered view alone isn't offered then.
  */
-export function afterToggleSplit(view: ViewMode, { splittable, editing, lastSingle }: { splittable: boolean; editing: boolean; lastSingle: SingleView }): ViewToggle {
-  if (!splittable) return { refused: 'Split view is for Markdown and MDX files' };
+export function afterToggleSplit(
+  view: ViewMode,
+  { splittable, editing, lastSingle, formatName }: { splittable: boolean; editing: boolean; lastSingle: SingleView; formatName: string },
+): ViewToggle {
+  if (!splittable) return { refused: `No split view for ${formatName} files` };
   if (view !== 'split') return { view: 'split' };
   return { view: editing ? 'source' : lastSingle };
 }

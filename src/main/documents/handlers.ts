@@ -2,7 +2,7 @@ import type { EditGrants } from '../../core/documents/edit-grants';
 import type { CloseAnswer } from '../../core/documents/unsaved';
 import type { ReadIdentities } from '../../core/documents/identities';
 import type { DocumentLinks } from '../../core/documents/links';
-import { MARKDOWN_RENDER_MAX_BYTES } from '../../core/formats/registry';
+import { FORMATS } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
 import { saveDocument } from '../../core/documents/save';
 import type { TabRegistry } from '../../core/tabs/registry';
@@ -64,7 +64,7 @@ export function documentHandlers(deps: {
     // Only the text main read itself defines which links the page may follow. Only rendered
     // articles (Markdown, MDX) have links; nothing else is kept.
     const article = content.state === 'ready' ? workerFormat(content.format) : null;
-    if (content.state === 'ready' && article && content.size <= MARKDOWN_RENDER_MAX_BYTES) {
+    if (content.state === 'ready' && article && content.size <= (FORMATS[content.format].renderMaxBytes ?? Infinity)) {
       links.remember(id, window, path, content.text, article);
     } else {
       links.forget(id);

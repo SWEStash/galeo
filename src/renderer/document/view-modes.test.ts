@@ -3,22 +3,22 @@ import { afterToggleSource, afterToggleSplit, shownView, viewForEditing } from '
 
 describe('afterToggleSplit (Ctrl+\\)', () => {
   it('opens split from either single view', () => {
-    expect(afterToggleSplit('rendered', { splittable: true, editing: false, lastSingle: 'rendered' })).toEqual({ view: 'split' });
-    expect(afterToggleSplit('source', { splittable: true, editing: true, lastSingle: 'source' })).toEqual({ view: 'split' });
+    expect(afterToggleSplit('rendered', { splittable: true, editing: false, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'split' });
+    expect(afterToggleSplit('source', { splittable: true, editing: true, lastSingle: 'source', formatName: 'Markdown' })).toEqual({ view: 'split' });
   });
 
   it('closes split back to the single view the reader had before', () => {
-    expect(afterToggleSplit('split', { splittable: true, editing: false, lastSingle: 'source' })).toEqual({ view: 'source' });
-    expect(afterToggleSplit('split', { splittable: true, editing: false, lastSingle: 'rendered' })).toEqual({ view: 'rendered' });
+    expect(afterToggleSplit('split', { splittable: true, editing: false, lastSingle: 'source', formatName: 'Markdown' })).toEqual({ view: 'source' });
+    expect(afterToggleSplit('split', { splittable: true, editing: false, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'rendered' });
   });
 
   it('closes split to the source while editing, where the rendered view is not offered', () => {
-    expect(afterToggleSplit('split', { splittable: true, editing: true, lastSingle: 'rendered' })).toEqual({ view: 'source' });
+    expect(afterToggleSplit('split', { splittable: true, editing: true, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'source' });
   });
 
   it('is refused, with a reason, for formats without a split view', () => {
-    expect(afterToggleSplit('source', { splittable: false, editing: false, lastSingle: 'source' })).toEqual({
-      refused: 'Split view is for Markdown and MDX files',
+    expect(afterToggleSplit('source', { splittable: false, editing: false, lastSingle: 'source', formatName: 'JSON' })).toEqual({
+      refused: 'No split view for JSON files',
     });
   });
 });
