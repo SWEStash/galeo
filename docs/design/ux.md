@@ -52,7 +52,7 @@ ADR-002…007).
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
-| **Outline panel** | Heading tree of the active Markdown document, right side | Ctrl+Shift+O (toggle) |
+| **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side | Ctrl+Shift+O (toggle) |
 | **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 % | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
 | **Profile menu** | Switch / new / rename / delete profile, open profile settings, About galeo (v0.3) | Click profile chip or Ctrl+Shift+M |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
@@ -356,6 +356,7 @@ the native menu on the active tab.
 | Add a cursor / a column of cursors (v0.2) | Ctrl+click / Alt+drag | Edit mode; Esc goes back to one cursor |
 | Widen / narrow / reset reader width, full width (v0.3) | chosen with the feature (§8) | Per tab, like zoom |
 | Move tab to new window / to window… (v0.3) | palette | F15 |
+| Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply
 (Cmd+Q quits, Cmd+, opens settings). Shortcuts are customisable in a later release; v0.1 ships

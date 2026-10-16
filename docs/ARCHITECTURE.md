@@ -43,7 +43,7 @@ Every diagram uses these names exactly.
 | **Chrome UI** | React + React Aria app UI: tab bar, quick open, palette, find, outline, profile menu, settings, status bar (ADR-006) |
 | **Document Host** | Owns one Shadow-DOM container per tab; inserts rendered HTML, mounts CodeMirror, renders Mermaid lazily, runs find, and replace in the source in edit mode (ADR-003); in split view shows the source and rendered panes side by side and keeps them on the same block (ADR-014) |
 | **Render Worker** | One Web Worker per window running the unified pipeline + Shiki + KaTeX (ADR-003), for Markdown and MDX (MDX is parsed, never run; its parser loads with the first `.mdx`); a render over its budget (2 s) is refused and the worker replaced, so the tab shows source; a live preview's render (split while editing) skips the cache, only its latest text is rendered, and over budget the last good preview stays (ADR-014) |
-| **Format Registry** | One descriptor per format, split by layer (ADR-003, ADR-018): core detects the format by extension or name and picks the default view and size limit; a shared table says which views and modes its tab offers (rendered by the worker, by the page, or not at all; reader, split, outline, follow, edit); the page adds the source language and the format's display name |
+| **Format Registry** | One descriptor per format, split by layer (ADR-003, ADR-018): core detects the format by extension or name (source code by a shared table that also names each file's language) and picks the default view and size limit; a shared table says which views and modes its tab offers (rendered by the worker, by the page, or not at all; reader, split, outline, follow, edit); the page adds the source language, whose grammar `@codemirror/language-data` loads with the first file that needs it, and the format's display name |
 | **Tab Record** | Plain data for a tab: path, view, scroll anchor, file identity, history (ADR-002) |
 | **Profile** | A named context: windows + session + settings (ADR-005) |
 | **Config / State / Cache stores** | XDG directories under `~/.config`, `~/.local/state` and `~/.cache` (`galeo/` in each) on Linux; `app.getPath()` equivalents on macOS/Windows previews |
@@ -362,7 +362,7 @@ The pre-release security audits check these layers against the code:
 
 | PRD target | Mechanism |
 |---|---|
-| Cold start < 500 ms | Network Guard before windows; only the active tab renders; Mermaid, KaTeX (worker and styles), Shiki and CodeMirror load with the first document that needs them, which `npm run check:bundle` enforces |
+| Cold start < 500 ms | Network Guard before windows; only the active tab renders; Mermaid, KaTeX (worker and styles), Shiki, CodeMirror and each CodeMirror grammar load with the first document that needs them, which `npm run check:bundle` enforces |
 | New tab < 100 ms | Worker parse; grammars only as needed; no process start (one renderer per window) |
 | Warm switch within the next frame | Warm DOM kept (LRU budget); switching toggles visibility only |
 | Hibernated wake < 150 ms | Re-read and re-parse in the worker, hidden insert, anchor, reveal |

@@ -91,6 +91,10 @@ the file into the window in front of you) when you want it here.
   shows `↻` for a moment. F5 or Ctrl+R reloads by hand.
 - **Views**: Ctrl+U switches a Markdown file between rendered and source; Alt+Z toggles wrapping;
   logs open in source view, and End follows the end of a growing log.
+- **Code and data files**: JSON, YAML, TOML and source code (TypeScript, Python, Rust, Go, shell,
+  C and many more) open in the source view, highlighted. Ctrl+Shift+[ folds the block at the
+  cursor and Ctrl+Shift+] unfolds it, or use the markers in the gutter. The outline of a YAML or
+  TOML file lists its top-level keys (and TOML's tables).
 - **Split view** (Markdown and MDX): Ctrl+\ shows the source on the left and the rendered view on the
   right; scrolling either keeps the other on the same block. Drag the divider, or focus it and use
   the arrow keys; double-click or Home puts it back at half. Ctrl+\ again goes back to the view

@@ -47,6 +47,14 @@ Defined on `:root`; the dark values apply when the root element has `data-scheme
 | `--galeo-color-log-error` | `#d1242f` / `#f85149` | Log error badges and line tint |
 | `--galeo-color-log-warn` | `#9a6700` / `#d29922` | Log warning badges and line tint |
 | `--galeo-color-log-info` | `#0969da` / `#4493f8` | Log info badges |
+| `--galeo-syntax-keyword` | `#cf222e` / `#ff7b72` | Source highlighting: keywords |
+| `--galeo-syntax-string` | `#0a3069` / `#a5d6ff` | Strings |
+| `--galeo-syntax-constant` | `#0550ae` / `#79c0ff` | Numbers, booleans, null, property names (JSON keys) |
+| `--galeo-syntax-comment` | `#59636e` / `#9198a1` | Comments |
+| `--galeo-syntax-function` | `#6639ba` / `#d2a8ff` | Function names |
+| `--galeo-syntax-type` | `#116329` / `#7ee787` | Types, classes, tags, keys being defined (YAML keys) |
+| `--galeo-syntax-variable` | `#953800` / `#ffa657` | Variables being defined, `self`/`this` |
+| `--galeo-syntax-invalid` | `#82071e` / `#ffa198` | Invalid syntax, deleted lines in a diff |
 
 The fonts ship with the app (no web fonts), each with a system fallback.
 
