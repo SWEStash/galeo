@@ -295,6 +295,34 @@ test('scrolling either pane brings the other to the same block', async () => {
   }
 });
 
+test('a scroll the page makes in the source just after it followed the rendered pane still leads', async () => {
+  const { window, close } = await launchApp(['--', plan]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-editor')).toBeVisible();
+
+    const risksLine = Number(await document.locator('h2', { hasText: '10. Risks' }).getAttribute('data-src-line'));
+    // The rendered pane leads; one frame later the source has followed and is settling, and a
+    // scroll without the reader's input (as find or the outline make) lands on it then.
+    await document.evaluate(async (host, target) => {
+      const root = host.shadowRoot!;
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      [...root.querySelectorAll('h2')].find((each) => each.textContent?.includes('9. Dependency map'))!.scrollIntoView({ block: 'start' });
+      await frame();
+      await frame();
+      const scroller = root.querySelector<HTMLElement>('.cm-scroller')!;
+      const first = root.querySelector('.cm-line')!.getBoundingClientRect();
+      scroller.scrollTop = first.top - scroller.getBoundingClientRect().top + scroller.scrollTop + (target - 1) * first.height;
+    }, risksLine);
+    await pollPanes(window, '10. Risks', async () => (await sourceTopLine(window)) === risksLine);
+    await pollPanes(window, '10. Risks', async () => (await renderedPaneTop(window)).line === risksLine);
+  } finally {
+    await close();
+  }
+});
+
 test('inside a long code block the rendered pane follows the source line by line, not block by block', async () => {
   const { window, close } = await launchApp(['--', plan]);
   try {

@@ -62,6 +62,9 @@ const READER_INPUT = ['wheel', 'pointerdown', 'keydown', 'touchstart'] as const;
 /** How many frames a follower's own scroll events are ignored after it is moved. */
 const SETTLE_FRAMES = 2;
 
+/** How far (in lines) a settled follower may be from where it was put before it counts as moved. */
+const MOVED_LINES = 0.5;
+
 export interface ScrollSync {
   /**
    * `pane`'s content changed (a live preview): its own scrolling while it keeps its place is
@@ -87,13 +90,20 @@ export function syncScrolling(
   let pending = false;
   const other = (pane: SyncPane) => (pane === panes.source ? panes.rendered : panes.source);
 
-  const hold = (pane: SyncPane) => {
+  // Holds `pane` through `move`, the follow that scrolls it. Moved elsewhere while it settled, it
+  // was scrolled by something else (the page, without the reader's input): it leads once settled.
+  const hold = (pane: SyncPane, move?: () => void) => {
     const token = ++holds;
     following.set(pane, token);
+    move?.();
+    const put = move ? pane.position() : undefined;
     const tick = (frames: number) => {
       if (following.get(pane) !== token) return;
-      if (frames === 0) following.delete(pane);
-      else schedule(() => tick(frames - 1));
+      if (frames > 0) return void schedule(() => tick(frames - 1));
+      following.delete(pane);
+      if (put === undefined || Math.abs(pane.position() - put) <= MOVED_LINES) return;
+      leader = pane;
+      followSoon();
     };
     tick(SETTLE_FRAMES);
   };
@@ -101,8 +111,8 @@ export function syncScrolling(
     pending = false;
     if (!leader) return;
     const follower = other(leader);
-    hold(follower);
-    follower.scrollTo(leader.position());
+    const line = leader.position();
+    hold(follower, () => follower.scrollTo(line));
   };
   const followSoon = () => {
     if (pending) return;

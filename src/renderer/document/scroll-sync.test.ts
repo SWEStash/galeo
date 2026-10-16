@@ -107,6 +107,16 @@ describe('syncScrolling', () => {
     expect(rendered.moves).toEqual([30]);
   });
 
+  it('lets a follower moved elsewhere while it settled lead once it has settled', () => {
+    const { flush, source, rendered, scroll } = setup();
+    scroll(rendered, 12);
+    flush();
+    // Not the reader's input: a scroll the page made (find, the outline) before the follower settled.
+    scroll(source, 30);
+    flush(5);
+    expect(rendered.moves).toEqual([30]);
+  });
+
   it('hands the lead over at once when the reader acts on the follower', () => {
     const { flush, source, rendered, scroll } = setup();
     scroll(rendered, 12);
