@@ -63,17 +63,29 @@ export function DocumentState({
 }
 
 /** Skeleton lines in the reading column; shown only for slow loads (no spinner, UX §4). */
-export function DocumentLoading() {
-  return (
+/** The loading skeleton; `onCancel`, once a render runs long, adds a quiet Cancel beside it (ADR-020). */
+export function DocumentLoading({ onCancel }: { onCancel?: () => void }) {
+  const lines = (
     <div className="document-loading" data-testid="document-loading" role="status" aria-label="Loading document">
       {[92, 100, 84, 96, 60].map((width, index) => (
         <span key={index} className="document-loading-line" style={{ width: `${width}%` }} />
       ))}
     </div>
   );
+  if (!onCancel) return lines;
+  return (
+    <>
+      {lines}
+      <div className="document-loading-actions">
+        <button type="button" className="document-loading-cancel" aria-label="Cancel rendering" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </>
+  );
 }
 
-export type BannerKind = 'too-large' | 'json-invalid' | 'encoding' | 'render-failed' | 'render-slow' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
+export type BannerKind = 'too-large' | 'json-invalid' | 'encoding' | 'render-failed' | 'render-slow' | 'render-cancelled' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
 
 /** What happened on disk to a file with unsaved edits (UX F12). */
 export type DiskChange = 'disk-changed' | 'disk-deleted' | 'disk-unreadable';
@@ -85,6 +97,8 @@ const BANNERS: Record<BannerKind, { text: (detail?: string) => string; action?: 
   encoding: { text: (encoding) => `Not valid UTF-8: shown as ${encoding}, the likeliest encoding` },
   'render-failed': { text: () => "This document couldn't be rendered — showing source", action: 'Try again' },
   'render-slow': { text: () => 'Too slow to render — showing source', action: 'Render anyway' },
+  // The way back depends on the format: Render anyway, Show as table, Try again (ADR-020).
+  'render-cancelled': { text: () => 'Rendering cancelled — showing source' },
   // MDX is strict; the detail says where ("on line 3: …"). Trying again can't help until the text changes.
   'syntax-error': { text: (where) => `MDX syntax error ${where} — showing source` },
   // Split while editing: the last good preview stays, and the next pause in typing tries again (ADR-014).

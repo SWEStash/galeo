@@ -649,6 +649,25 @@ button:focus-visible {
   background: var(--galeo-color-code-bg);
   animation: galeo-pulse 1.2s ease-in-out infinite alternate;
 }
+/* Cancel, once a render runs long (ADR-020): quiet, under the skeleton, not competing with it. */
+.document-loading-actions {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: var(--galeo-measure);
+  margin: 1.25rem auto 0;
+  padding: 0 1.5rem;
+}
+.document-loading-cancel {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--galeo-color-muted);
+  font-size: 0.85em;
+}
+.document-loading-cancel:hover {
+  color: var(--galeo-color-fg);
+  text-decoration: underline;
+}
 @keyframes galeo-pulse {
   to {
     opacity: 0.5;

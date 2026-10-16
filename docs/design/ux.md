@@ -304,7 +304,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 
 | State | When | What the user sees | Actions |
 |---|---|---|---|
-| **Loading** | Render takes > 150 ms | Skeleton lines in the reading column (no spinner) | — |
+| **Loading** | Render takes > 150 ms | Skeleton lines in the reading column (no spinner) | Past 5 s: a quiet **Cancel** under them (ADR-020) |
+| **Rendering cancelled** (v0.3) | The reader pressed Cancel; the worker was restarted | Source view + banner "Rendering cancelled — showing source" | Render anyway (Markdown) · Show as table (CSV/TSV) · Try again (JSON) |
 | **Loaded** | Normal | Rendered/source content | — |
 | **Empty file** | 0 bytes | Muted "This file is empty" + path; auto-updates when content arrives | — |
 | **Missing** | Path gone (deleted, renamed, not yet created) | Path, "File not found", last-seen time; tab label struck | Close tab · Reveal folder · Retries automatically |

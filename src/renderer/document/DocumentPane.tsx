@@ -31,12 +31,15 @@ import { useJsonTree } from './useJsonTree';
 import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 
-const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed' } as const;
+const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed', cancelled: 'preview-failed' } as const;
 
 const syntaxDetail = (syntax: SyntaxProblem | null) => (syntax ? `on line ${syntax.line}: ${syntax.message}` : '');
 
 /** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
 const LOADING_DELAY_MS = 150;
+
+/** A render this long offers Cancel (ADR-020). */
+const CANCEL_AFTER_MS = 5000;
 
 const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
 
@@ -210,10 +213,13 @@ export function DocumentPane({
   // What Ctrl+\ goes back to from split.
   const lastSingle = useRef<SingleView>('rendered');
   if (layout !== 'split') lastSingle.current = layout;
-  const loading = useDelayed(
-    wantedView === 'rendered' && ((render.status === 'pending' && render.html === null) || (jsonTree.status === 'pending' && treeModel === null)),
-    LOADING_DELAY_MS,
-  );
+  const waiting = wantedView === 'rendered' && ((render.status === 'pending' && render.html === null) || (jsonTree.status === 'pending' && treeModel === null));
+  const loading = useDelayed(waiting, LOADING_DELAY_MS);
+  const cancellable = useDelayed(waiting, CANCEL_AFTER_MS);
+  const cancelRender = () => {
+    render.cancel();
+    jsonTree.cancel();
+  };
   const rendered = useMemo<RenderedContent | null>(() => {
     if (ready && reader) return { text: ready.text };
     if (ready && json) return treeModel ? { tree: treeModel, label: fileName(ready.path) } : null;
@@ -672,7 +678,13 @@ export function DocumentPane({
       {jsonTree.status === 'too-large' && view === 'source' && <DocumentBanner kind="too-large" />}
       {jsonTree.status === 'invalid' && <DocumentBanner kind="json-invalid" detail={`line ${jsonTree.line}, column ${jsonTree.column}`} />}
       {jsonTree.status === 'failed' &&
-        (jsonTree.reason === 'slow' ? <DocumentBanner kind="render-slow" /> : <DocumentBanner kind="render-failed" onAction={jsonTree.retry} />)}
+        (jsonTree.reason === 'slow' ? (
+          <DocumentBanner kind="render-slow" />
+        ) : jsonTree.reason === 'cancelled' ? (
+          <DocumentBanner kind="render-cancelled" actions={[{ label: 'Try again', onAction: jsonTree.retry }]} />
+        ) : (
+          <DocumentBanner kind="render-failed" onAction={jsonTree.retry} />
+        ))}
       {ready.guessedEncoding && (
         <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]}>
           {onChooseEncoding && <EncodingMenu onChoose={onChooseEncoding}>Reopen with encoding…</EncodingMenu>}
@@ -682,12 +694,14 @@ export function DocumentPane({
       {render.status === 'failed' &&
         (render.reason === 'slow' ? (
           <DocumentBanner kind="render-slow" onAction={render.renderAnyway} />
+        ) : render.reason === 'cancelled' ? (
+          <DocumentBanner kind="render-cancelled" actions={[{ label: 'Render anyway', onAction: render.renderAnyway }]} />
         ) : render.reason === 'syntax' ? (
           <DocumentBanner kind="syntax-error" detail={syntaxDetail(render.syntax)} />
         ) : (
           <DocumentBanner kind="render-failed" onAction={render.retry} />
         ))}
-      {loading && <DocumentLoading />}
+      {loading && <DocumentLoading {...(cancellable ? { onCancel: cancelRender } : {})} />}
       {find.open && (
         <FindBar
           result={findResult}

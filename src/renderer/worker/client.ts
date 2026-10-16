@@ -14,13 +14,14 @@ export interface RenderClient {
   /**
    * `budgetMs` replaces the usual budget, for a render the reader asked to wait for. `live`: a
    * preview of typing (ADR-014), which skips the cache; while one is with the worker, a newer one
-   * waits and replaces any already waiting, which is refused with `RenderSuperseded`.
+   * waits and replaces any already waiting, which is refused with `RenderSuperseded`. `signal`: the
+   * reader cancelled (ADR-020), refused with `RenderCancelled`.
    */
-  markdown(text: string, options?: { budgetMs?: number; live?: boolean; format?: WorkerFormat }): Promise<RenderResult>;
+  markdown(text: string, options?: { budgetMs?: number; live?: boolean; format?: WorkerFormat; signal?: AbortSignal }): Promise<RenderResult>;
   /** Reads a CSV/TSV table, on the same terms as `markdown`. */
-  table(text: string, options: { separator: Separator | 'sniff'; budgetMs?: number; live?: boolean }): Promise<CsvParse>;
+  table(text: string, options: { separator: Separator | 'sniff'; budgetMs?: number; live?: boolean; signal?: AbortSignal }): Promise<CsvParse>;
   /** Indexes a JSON document for the tree, on the same terms as `markdown`. */
-  json(text: string, options?: { budgetMs?: number }): Promise<JsonParse>;
+  json(text: string, options?: { budgetMs?: number; signal?: AbortSignal }): Promise<JsonParse>;
   /** Stops the worker (the window is going away). */
   dispose(): void;
 }
@@ -44,6 +45,14 @@ export class RenderSuperseded extends Error {
   constructor() {
     super('A newer text replaced this render');
     this.name = 'RenderSuperseded';
+  }
+}
+
+/** A render the reader cancelled (ADR-020). */
+export class RenderCancelled extends Error {
+  constructor() {
+    super('Rendering cancelled');
+    this.name = 'RenderCancelled';
   }
 }
 
@@ -131,9 +140,14 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
   }
 
   function overBudget(id: number) {
+    replaceWorker(id, new RenderTimeout(pending.get(id)!.budgetMs));
+  }
+
+  /** Refuses the request the worker is on and replaces the worker; the fresh one gets the rest. */
+  function replaceWorker(id: number, error: Error) {
     const request = pending.get(id)!;
     pending.delete(id);
-    request.reject(new RenderTimeout(request.budgetMs));
+    request.reject(error);
     worker.terminate();
     worker = start();
     for (const [waiting, each] of pending) send(waiting, each);
@@ -141,10 +155,34 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
     watchOldest();
   }
 
+  /**
+   * The reader cancelled `id`: the request the worker is on costs a fresh worker (ADR-020); one
+   * still waiting is dropped (the worker may still work it, its answer goes nowhere).
+   */
+  function cancel(id: number) {
+    if (liveWaiting?.id === id) {
+      liveWaiting.reject(new RenderCancelled());
+      liveWaiting = null;
+      return;
+    }
+    const request = pending.get(id);
+    if (!request) return;
+    if (pending.keys().next().value === id) return replaceWorker(id, new RenderCancelled());
+    pending.delete(id);
+    request.reject(new RenderCancelled());
+    releaseLive(id);
+  }
+
   /** Sends `job`, or holds it as the live render waiting its turn. `Result` is what its kind answers. */
-  function submit<Result extends RenderResult | CsvParse | JsonParse>(job: Job, budgetMs: number, live: boolean): Promise<Result> {
+  function submit<Result extends RenderResult | CsvParse | JsonParse>(job: Job, budgetMs: number, live: boolean, signal?: AbortSignal): Promise<Result> {
     const id = ++nextId;
-    return new Promise<Result>((resolve, reject) => {
+    return new Promise<Result>((resolveResult, rejectResult) => {
+      if (signal?.aborted) return rejectResult(new RenderCancelled());
+      const onAbort = () => cancel(id);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      const settled = () => signal?.removeEventListener('abort', onAbort);
+      const resolve = (result: Result) => (settled(), resolveResult(result));
+      const reject = (error: Error) => (settled(), rejectResult(error));
       const request = { job, budgetMs, live, resolve: resolve as Pending['resolve'], reject };
       if (live && liveSent !== null) {
         liveWaiting?.reject(new RenderSuperseded());
@@ -158,14 +196,14 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
   const noCache = (live: boolean) => (live ? { noCache: true as const } : {});
 
   return {
-    markdown(text, { budgetMs = RENDER_BUDGET_MS, live = false, format = 'markdown' } = {}) {
-      return submit({ type: 'render', kind: 'article', format, text, ...noCache(live) }, budgetMs, live);
+    markdown(text, { budgetMs = RENDER_BUDGET_MS, live = false, format = 'markdown', signal } = {}) {
+      return submit({ type: 'render', kind: 'article', format, text, ...noCache(live) }, budgetMs, live, signal);
     },
-    table(text, { separator, budgetMs = RENDER_BUDGET_MS, live = false }) {
-      return submit({ type: 'render', kind: 'table', separator, text }, budgetMs, live);
+    table(text, { separator, budgetMs = RENDER_BUDGET_MS, live = false, signal }) {
+      return submit({ type: 'render', kind: 'table', separator, text }, budgetMs, live, signal);
     },
-    json(text, { budgetMs = RENDER_BUDGET_MS } = {}) {
-      return submit({ type: 'render', kind: 'json', text }, budgetMs, false);
+    json(text, { budgetMs = RENDER_BUDGET_MS, signal } = {}) {
+      return submit({ type: 'render', kind: 'json', text }, budgetMs, false, signal);
     },
     dispose() {
       clearTimeout(timer);

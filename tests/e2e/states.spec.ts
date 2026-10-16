@@ -83,6 +83,34 @@ test('Markdown over the render limit opens as source; rendering it anyway waits 
   }
 });
 
+test('a render that runs long offers a quiet Cancel after 5 s, which shows the source; Render anyway starts it again', async () => {
+  const file = path.join(dir, 'big-cancel.md');
+  writeFileSync(file, `# Big\n\n${'A line of an oversized plan.\n'.repeat(200_000)}`);
+  const { window, close } = await launchApp(['--', file]);
+  const heavy = { timeout: 20_000 };
+  try {
+    const banner = window.locator('[data-banner="too-large"]');
+    await expect(banner).toBeVisible(heavy);
+    // Cancel comes at 5 s of rendering, counted from the reader's ask (the skeleton itself can show late
+    // on a busy page: posting megabytes to the worker takes a while).
+    const asked = Date.now();
+    await banner.getByRole('button', { name: 'Render anyway' }).click(heavy);
+    await expect(window.getByTestId('document-loading')).toBeVisible(heavy);
+    const cancel = window.getByRole('button', { name: 'Cancel rendering' });
+    await expect(cancel).toBeVisible({ timeout: 15_000 });
+    expect(Date.now() - asked).toBeGreaterThan(4_900);
+    await cancel.click();
+    const cancelled = window.locator('[data-banner="render-cancelled"]');
+    await expect(cancelled).toHaveText(/Rendering cancelled — showing source/);
+    await expect(window.getByTestId('document').locator('.cm-editor')).toBeVisible();
+    await expect(window.getByTestId('document-loading')).toHaveCount(0);
+    await cancelled.getByRole('button', { name: 'Render anyway' }).click();
+    await expect(window.getByTestId('document-loading')).toBeVisible(heavy);
+  } finally {
+    await close();
+  }
+});
+
 test('text in a guessed encoding is shown with a banner naming it', async () => {
   const { window, close } = await launchApp(['--', fixture('latin1.txt')]);
   try {

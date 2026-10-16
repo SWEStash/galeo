@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it } from 'vitest';
 import { indexJson, type JsonParse } from '../../shared/json-index';
-import { RENDER_ANYWAY_BUDGET_MS, RenderTimeout, type RenderClient } from '../worker/client';
+import { RENDER_ANYWAY_BUDGET_MS, RenderCancelled, RenderTimeout, type RenderClient } from '../worker/client';
 import { useJsonTree } from './useJsonTree';
 
 let root: Root | undefined;
@@ -13,10 +13,10 @@ afterEach(() => {
 
 /** A worker whose JSON jobs finish only when the test says. */
 function manualClient() {
-  const pending: { text: string; budgetMs: number | undefined; resolve: (result: JsonParse) => void; reject: (error: Error) => void }[] = [];
+  const pending: { text: string; budgetMs: number | undefined; signal: AbortSignal | undefined; resolve: (result: JsonParse) => void; reject: (error: Error) => void }[] = [];
   const client = {
-    json: (text: string, options?: { budgetMs?: number }) =>
-      new Promise<JsonParse>((resolve, reject) => pending.push({ text, budgetMs: options?.budgetMs, resolve, reject })),
+    json: (text: string, options?: { budgetMs?: number; signal?: AbortSignal }) =>
+      new Promise<JsonParse>((resolve, reject) => pending.push({ text, budgetMs: options?.budgetMs, signal: options?.signal, resolve, reject })),
   } as unknown as RenderClient;
   return { client, pending };
 }
@@ -89,5 +89,16 @@ describe('useJsonTree', () => {
     const state = probe.latest();
     expect(state.status).toBe('pending');
     expect(state.status === 'pending' && state.model?.nodes).toBe(2);
+  });
+
+  it('cancels the read on request, and says so, until tried again', async () => {
+    const { client, pending } = manualClient();
+    const probe = await mount(client, '[4]');
+    await act(async () => probe.latest().cancel());
+    expect(pending[0]!.signal?.aborted).toBe(true);
+    await act(async () => pending[0]!.reject(new RenderCancelled()));
+    expect(probe.latest()).toMatchObject({ status: 'failed', reason: 'cancelled' });
+    await act(async () => probe.latest().retry());
+    expect(pending).toHaveLength(2);
   });
 });

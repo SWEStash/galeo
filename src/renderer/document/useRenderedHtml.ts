@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderSyntaxError, RenderTimeout, type RenderClient } from '../worker/client';
+import { RENDER_ANYWAY_BUDGET_MS, RenderCancelled, RenderSuperseded, RenderSyntaxError, RenderTimeout, type RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import type { WorkerFormat } from '../../shared/formats';
 import { loadMathStyles } from './host';
 
 /**
  * Why a render didn't finish. `slow`: over the render budget (the reader may render anyway);
- * `syntax`: the text doesn't parse (MDX), at `syntax.line`; `error`: the render broke.
+ * `cancelled`: by the reader (ADR-020); `syntax`: the text doesn't parse (MDX), at `syntax.line`;
+ * `error`: the render broke.
  */
-export type FailReason = 'slow' | 'syntax' | 'error';
+export type FailReason = 'slow' | 'cancelled' | 'syntax' | 'error';
 
 /** Where a text that doesn't parse goes wrong. */
 export interface SyntaxProblem {
@@ -53,7 +54,7 @@ export function useRenderedHtml(
   text: string | null,
   wanted: boolean,
   { readerAsked = false, live = false, format = 'markdown' }: { readerAsked?: boolean; live?: boolean; format?: WorkerFormat } = {},
-): RenderState & { retry: () => void; renderAnyway: () => void } {
+): RenderState & { retry: () => void; renderAnyway: () => void; cancel: () => void } {
   const [result, setResult] = useState<{
     text: string;
     format: WorkerFormat;
@@ -66,13 +67,15 @@ export function useRenderedHtml(
   } | null>(null);
   const [attempt, setAttempt] = useState<Attempt>({ count: 0, long: false });
   const lastGood = useRef<{ html: string; outline: readonly OutlineEntry[]; words: number | null } | null>(null);
+  const running = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!client || text === null || !wanted) return;
     if (result?.text === text && result.format === format && result.attempt === attempt) return;
     let current = true;
+    const controller = (running.current = new AbortController());
     client
-      .markdown(text, { format, ...(attempt.long || readerAsked ? { budgetMs: RENDER_ANYWAY_BUDGET_MS } : {}), ...(live ? { live } : {}) })
+      .markdown(text, { format, ...(attempt.long || readerAsked ? { budgetMs: RENDER_ANYWAY_BUDGET_MS } : {}), ...(live ? { live } : {}), signal: controller.signal })
       // Math shows only once KaTeX's styles are in, never unstyled.
       .then(async ({ html, math, outline, words }) => {
         if (math) await loadMathStyles();
@@ -88,7 +91,7 @@ export function useRenderedHtml(
           // Newer text took its place: its own render answers.
           if (!current || error instanceof RenderSuperseded) return;
           const syntax = error instanceof RenderSyntaxError ? { line: error.line, message: error.message } : null;
-          const reason = error instanceof RenderTimeout ? 'slow' : syntax ? 'syntax' : 'error';
+          const reason = error instanceof RenderTimeout ? 'slow' : error instanceof RenderCancelled ? 'cancelled' : syntax ? 'syntax' : 'error';
           setResult({ text, format, attempt, html: null, reason, syntax, outline: NO_OUTLINE, words: null });
         },
       );
@@ -99,7 +102,8 @@ export function useRenderedHtml(
 
   const retry = useCallback(() => setAttempt(({ count }) => ({ count: count + 1, long: false })), []);
   const renderAnyway = useCallback(() => setAttempt(({ count }) => ({ count: count + 1, long: true })), []);
-  const actions = { retry, renderAnyway };
+  const cancel = useCallback(() => running.current?.abort(), []);
+  const actions = { retry, renderAnyway, cancel };
   const settled = result?.text === text && result.format === format && result.attempt === attempt;
   const good = lastGood.current;
   if (settled && result.html !== null) return { status: 'done', html: result.html, outline: result.outline, words: result.words, ...actions };

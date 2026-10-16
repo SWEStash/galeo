@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { createRenderClient, RENDER_BUDGET_MS, RenderSuperseded, RenderSyntaxError, RenderTimeout } from './client';
+import { createRenderClient, RENDER_BUDGET_MS, RenderCancelled, RenderSuperseded, RenderSyntaxError, RenderTimeout } from './client';
 import type { CsvParse } from '../../shared/csv';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
@@ -252,6 +252,56 @@ describe('render client', () => {
       await refused;
       expect(workers[0]!.terminated).toBe(true);
       expect(workers).toHaveLength(2);
+    });
+  });
+
+  describe('cancelling', () => {
+    it('cancels the job the worker is on by replacing the worker, which gets the jobs waiting behind it', async () => {
+      const { client, workers } = clientWithWorkers();
+      const controller = new AbortController();
+      const big = client.table('huge', { separator: ',', signal: controller.signal });
+      const after = client.markdown('after');
+      controller.abort();
+      await expect(big).rejects.toBeInstanceOf(RenderCancelled);
+      expect(workers[0]!.terminated).toBe(true);
+      expect(workers[1]!.requests).toEqual([{ type: 'render', kind: 'article', id: 2, format: 'markdown', text: 'after' }]);
+      workers[1]!.reply({ type: 'rendered', id: 2, result: result('ok') });
+      expect((await after).html).toBe('ok');
+    });
+
+    it('drops a job still waiting, leaving the worker on the one before it', async () => {
+      const { client, workers } = clientWithWorkers();
+      const controller = new AbortController();
+      const first = client.markdown('first');
+      const waiting = client.json('[1]', { signal: controller.signal });
+      controller.abort();
+      await expect(waiting).rejects.toBeInstanceOf(RenderCancelled);
+      expect(workers).toHaveLength(1);
+      workers[0]!.reply({ type: 'json', id: 2, result: { state: 'too-large' } });
+      workers[0]!.reply({ type: 'rendered', id: 1, result: result('one') });
+      expect((await first).html).toBe('one');
+    });
+
+    it('drops a live render waiting for its turn without sending it', async () => {
+      const { client, current } = clientWithWorkers();
+      void client.markdown('a', { live: true });
+      const controller = new AbortController();
+      const waiting = client.markdown('b', { live: true, signal: controller.signal });
+      controller.abort();
+      await expect(waiting).rejects.toBeInstanceOf(RenderCancelled);
+      current().reply({ type: 'rendered', id: 1, result: result('a') });
+      expect(current().requests).toHaveLength(1);
+    });
+
+    it('ignores a cancel after the job answered, and refuses a job cancelled before it was asked', async () => {
+      const { client, current } = clientWithWorkers();
+      const controller = new AbortController();
+      const done = client.markdown('x', { signal: controller.signal });
+      current().reply({ type: 'rendered', id: 1, result: result('x') });
+      await done;
+      controller.abort();
+      expect(current().terminated).toBe(false);
+      await expect(client.markdown('y', { signal: controller.signal })).rejects.toBeInstanceOf(RenderCancelled);
     });
   });
 });

@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RENDER_ANYWAY_BUDGET_MS, RenderSuperseded, RenderSyntaxError, RenderTimeout, type RenderClient } from '../worker/client';
+import { RENDER_ANYWAY_BUDGET_MS, RenderCancelled, RenderSuperseded, RenderSyntaxError, RenderTimeout, type RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import { useRenderedHtml } from './useRenderedHtml';
 
@@ -25,13 +25,14 @@ function manualClient() {
     budgetMs: number | undefined;
     live: boolean | undefined;
     format: string | undefined;
+    signal: AbortSignal | undefined;
     resolve: (html: string, math?: boolean, outline?: OutlineEntry[]) => void;
     reject: (error: Error) => void;
   }[] = [];
   const client = {
-    markdown: (text: string, options?: { budgetMs?: number; live?: boolean; format?: string }) =>
+    markdown: (text: string, options?: { budgetMs?: number; live?: boolean; format?: string; signal?: AbortSignal }) =>
       new Promise<{ html: string; math: boolean; outline: OutlineEntry[] }>((resolve, reject) =>
-        pending.push({ text, budgetMs: options?.budgetMs, live: options?.live, format: options?.format, reject, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
+        pending.push({ text, budgetMs: options?.budgetMs, live: options?.live, format: options?.format, signal: options?.signal, reject, resolve: (html, math = false, outline = []) => resolve({ html, math, outline }) }),
       ),
   } as unknown as RenderClient;
   return { client, pending };
@@ -178,5 +179,16 @@ describe('useRenderedHtml', () => {
       await act(async () => pending[0]!.reject(new RenderSuperseded()));
       expect(seen.at(-1)).toMatchObject({ status: 'pending' });
     });
+  });
+
+  it('cancels a render on request, and says so; Render anyway starts it again', async () => {
+    const { client, pending } = manualClient();
+    const { seen } = await mount(client, '# big');
+    await act(async () => seen.at(-1)!.cancel());
+    expect(pending[0]!.signal?.aborted).toBe(true);
+    await act(async () => pending[0]!.reject(new RenderCancelled()));
+    expect(seen.at(-1)).toMatchObject({ status: 'failed', reason: 'cancelled' });
+    await act(async () => seen.at(-1)!.renderAnyway());
+    expect(pending[1]!.budgetMs).toBe(RENDER_ANYWAY_BUDGET_MS);
   });
 });

@@ -125,7 +125,8 @@ the file into the window in front of you) when you want it here.
   while editing, the last good preview stays with *Preview paused*. galeo isn't offered as the
   default app for `.mdx` files yet: open them from galeo or with `galeo`.
 - **Large or slow documents**: Markdown or MDX over 5 MB, or that takes more than 2 s to render, opens as
-  source with a banner; **Render anyway** renders it (and waits up to a minute).
+  source with a banner; **Render anyway** renders it (and waits up to a minute). A render still
+  going after 5 s offers **Cancel** under the loading lines: the source shows at once.
 - **A document that crashed the window**: the window comes back with its tabs, and that tab shows
   a notice instead of rendering again. *Try again* renders it; *Open as source* shows its text. A
   window that crashes 3 times within a minute stops reloading and says so: *Try again* brings its
