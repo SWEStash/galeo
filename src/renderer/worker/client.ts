@@ -1,3 +1,4 @@
+import type { CsvParse, Separator } from '../../shared/csv';
 import type { WorkerFormat } from '../../shared/formats';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
@@ -15,6 +16,8 @@ export interface RenderClient {
    * waits and replaces any already waiting, which is refused with `RenderSuperseded`.
    */
   markdown(text: string, options?: { budgetMs?: number; live?: boolean; format?: WorkerFormat }): Promise<RenderResult>;
+  /** Reads a CSV/TSV table, on the same terms as `markdown`. */
+  table(text: string, options: { separator: Separator | 'sniff'; budgetMs?: number; live?: boolean }): Promise<CsvParse>;
   /** Stops the worker (the window is going away). */
   dispose(): void;
 }
@@ -52,12 +55,14 @@ export class RenderSyntaxError extends Error {
   }
 }
 
+/** A job as sent, without its id (`send` adds it, also when a fresh worker gets it again). */
+type Job = RenderRequest extends infer Request ? (Request extends RenderRequest ? Omit<Request, 'id'> : never) : never;
+
 interface Pending {
-  /** The job as sent, without its id (`send` adds it, also when a fresh worker gets it again). */
-  job: Omit<RenderRequest, 'id'>;
+  job: Job;
   budgetMs: number;
   live: boolean;
-  resolve: (result: RenderResult) => void;
+  resolve: (result: RenderResult | CsvParse) => void;
   reject: (error: Error) => void;
 }
 
@@ -87,8 +92,8 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
       const request = pending.get(reply.id);
       if (!request) return;
       pending.delete(reply.id);
-      if (reply.type === 'rendered') request.resolve(reply.result);
-      else request.reject(reply.line === undefined ? new Error(reply.message) : new RenderSyntaxError(reply.message, reply.line));
+      if (reply.type === 'failed') request.reject(reply.line === undefined ? new Error(reply.message) : new RenderSyntaxError(reply.message, reply.line));
+      else request.resolve(reply.result);
       releaseLive(reply.id);
       watchOldest();
     });
@@ -133,19 +138,28 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
     watchOldest();
   }
 
+  /** Sends `job`, or holds it as the live render waiting its turn. `Result` is what its kind answers. */
+  function submit<Result extends RenderResult | CsvParse>(job: Job, budgetMs: number, live: boolean): Promise<Result> {
+    const id = ++nextId;
+    return new Promise<Result>((resolve, reject) => {
+      const request = { job, budgetMs, live, resolve: resolve as Pending['resolve'], reject };
+      if (live && liveSent !== null) {
+        liveWaiting?.reject(new RenderSuperseded());
+        liveWaiting = { id, ...request };
+        return;
+      }
+      dispatch(id, request);
+    });
+  }
+
+  const noCache = (live: boolean) => (live ? { noCache: true as const } : {});
+
   return {
     markdown(text, { budgetMs = RENDER_BUDGET_MS, live = false, format = 'markdown' } = {}) {
-      const id = ++nextId;
-      return new Promise((resolve, reject) => {
-        const job: Pending['job'] = { type: 'render', kind: 'article', format, text, ...(live ? { noCache: true as const } : {}) };
-        const request = { job, budgetMs, live, resolve, reject };
-        if (live && liveSent !== null) {
-          liveWaiting?.reject(new RenderSuperseded());
-          liveWaiting = { id, ...request };
-          return;
-        }
-        dispatch(id, request);
-      });
+      return submit({ type: 'render', kind: 'article', format, text, ...noCache(live) }, budgetMs, live);
+    },
+    table(text, { separator, budgetMs = RENDER_BUDGET_MS, live = false }) {
+      return submit({ type: 'render', kind: 'table', separator, text }, budgetMs, live);
     },
     dispose() {
       clearTimeout(timer);

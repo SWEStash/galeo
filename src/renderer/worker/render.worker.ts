@@ -3,6 +3,6 @@ import { createMessageHandler } from './handler';
 
 const handle = createMessageHandler(
   () => import('./pipeline/render').then((pipeline) => pipeline.createRenderer()),
-  (reply) => self.postMessage(reply),
+  (reply, transfer = []) => self.postMessage(reply, { transfer }),
 );
 self.addEventListener('message', (event: MessageEvent<unknown>) => void handle(event.data));

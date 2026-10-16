@@ -75,12 +75,26 @@ describe('render worker messages', () => {
     ]);
   });
 
+  it('reads a table with the separator asked for, handing its offsets over instead of copying them', async () => {
+    const replies: unknown[] = [];
+    const transfers: unknown[] = [];
+    const load = vi.fn(async () => ({ markdown: async () => result }));
+    const handle = createMessageHandler(load, (reply, transfer) => (replies.push(reply), transfers.push(transfer)));
+    await handle({ type: 'render', kind: 'table', id: 8, separator: '\t', text: 'a,b\tc\n' });
+    const reply = replies[0] as Extract<WorkerReply, { type: 'table' }>;
+    expect(reply).toMatchObject({ type: 'table', id: 8, result: { state: 'table', table: { separator: '\t', rows: 1, columns: 2 } } });
+    const table = reply.result.state === 'table' ? reply.result.table : null;
+    expect(transfers[0]).toEqual([table!.rowStarts.buffer, table!.rowLines.buffer, table!.rowFields.buffer, table!.fieldEnds.buffer]);
+    expect(load).not.toHaveBeenCalled();
+  });
+
   it('ignores messages it does not know', async () => {
     const { handle, replies } = setup({ markdown: async () => result });
     await handle({ type: 'render', kind: 'article', id: 'x', text: 1 });
     await handle({ type: 'render', id: 1, format: 'markdown', text: 'x' });
     await handle({ type: 'render', kind: 'sql', id: 1, format: 'markdown', text: 'x' });
     await handle({ type: 'render', kind: 'article', id: 1, format: 'text', text: 'x' });
+    await handle({ type: 'render', kind: 'table', id: 1, separator: '|', text: 'x' });
     await handle(null);
     expect(replies).toEqual([]);
   });

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRenderClient, RENDER_BUDGET_MS, RenderSuperseded, RenderSyntaxError, RenderTimeout } from './client';
+import type { CsvParse } from '../../shared/csv';
 import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
 
@@ -209,6 +210,28 @@ describe('render client', () => {
       expect(current().requests).toEqual([expect.objectContaining({ text: 'ab', noCache: true })]);
       current().reply({ type: 'rendered', id: current().requests[0]!.id, result: result('ab') });
       expect((await latest).html).toBe('ab');
+    });
+  });
+
+  describe('table jobs', () => {
+    const parsed: CsvParse = { state: 'too-large' };
+
+    it('sends a table job with its separator and resolves with the parse', async () => {
+      const { client, current } = clientWithWorkers();
+      const pending = client.table('a;b', { separator: 'sniff' });
+      expect(current().requests).toEqual([{ type: 'render', kind: 'table', id: 1, separator: 'sniff', text: 'a;b' }]);
+      current().reply({ type: 'table', id: 1, result: parsed });
+      expect(await pending).toEqual(parsed);
+    });
+
+    it('holds a table job to the same budget, replacing the worker past it', async () => {
+      vi.useFakeTimers();
+      const { client, workers } = clientWithWorkers();
+      const refused = expect(client.table('huge', { separator: ',' })).rejects.toBeInstanceOf(RenderTimeout);
+      vi.advanceTimersByTime(RENDER_BUDGET_MS);
+      await refused;
+      expect(workers[0]!.terminated).toBe(true);
+      expect(workers).toHaveLength(2);
     });
   });
 });

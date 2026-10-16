@@ -1,47 +1,63 @@
+import { parseCsv, type CsvParse, type Separator } from '../../shared/csv';
 import type { WorkerFormat } from '../../shared/formats';
 import type { Renderer, RenderResult } from './pipeline/render';
 
 /**
- * Window → worker: one job. `kind` says which: `article` is a Markdown or MDX article (ADR-003's
- * format registry); the rich views' jobs join it (ADR-018).
+ * Window → worker: one job. `kind` says which: a Markdown or MDX `article` (ADR-003's format
+ * registry), or a CSV/TSV `table` (ADR-018; `sniff` tells `,` from `;` in a `.csv`).
  */
-export interface RenderRequest {
-  type: 'render';
-  kind: 'article';
-  id: number;
-  format: WorkerFormat;
-  text: string;
-  /** A live preview's render: the cache is neither read nor filled. */
-  noCache?: true;
-}
+export type RenderRequest =
+  | {
+      type: 'render';
+      kind: 'article';
+      id: number;
+      format: WorkerFormat;
+      text: string;
+      /** A live preview's render: the cache is neither read nor filled. */
+      noCache?: true;
+    }
+  | { type: 'render'; kind: 'table'; id: number; separator: Separator | 'sniff'; text: string };
 
 /** Worker → window, matched to the request by `id`. */
 export type WorkerReply =
   | { type: 'rendered'; id: number; result: RenderResult }
+  | { type: 'table'; id: number; result: CsvParse }
   /** `line`: where an MDX syntax error is. */
   | { type: 'failed'; id: number; message: string; line?: number };
 
+const SEPARATORS: readonly unknown[] = [',', ';', '\t', 'sniff'];
+
 function isRenderRequest(message: unknown): message is RenderRequest {
-  const m = message as Partial<RenderRequest> | null;
-  return (
-    m?.type === 'render' &&
-    m.kind === 'article' &&
-    typeof m.id === 'number' &&
-    (m.format === 'markdown' || m.format === 'mdx') &&
-    typeof m.text === 'string'
-  );
+  const m = message as { type?: unknown; kind?: unknown; id?: unknown; text?: unknown; format?: unknown; separator?: unknown } | null;
+  if (m?.type !== 'render' || typeof m.id !== 'number' || typeof m.text !== 'string') return false;
+  if (m.kind === 'article') return m.format === 'markdown' || m.format === 'mdx';
+  return m.kind === 'table' && SEPARATORS.includes(m.separator);
+}
+
+/** A table's offsets, handed to the window rather than copied (millions of cells' worth). */
+function transferOf(result: CsvParse): Transferable[] {
+  if (result.state !== 'table') return [];
+  const { rowStarts, rowLines, rowFields, fieldEnds } = result.table;
+  return [rowStarts.buffer, rowLines.buffer, rowFields.buffer, fieldEnds.buffer];
 }
 
 /**
  * The worker's message loop, apart from `self` so it can be tested directly. The Markdown
  * pipeline loads with the first article, so a window showing only other formats never pays for it.
  */
-export function createMessageHandler(loadRenderer: () => Promise<Renderer>, reply: (message: WorkerReply | 'ready') => void) {
+export function createMessageHandler(
+  loadRenderer: () => Promise<Renderer>,
+  reply: (message: WorkerReply | 'ready', transfer?: Transferable[]) => void,
+) {
   let renderer: Promise<Renderer> | undefined;
   return async (message: unknown): Promise<void> => {
     if (message === 'ping') return reply('ready');
     if (!isRenderRequest(message)) return;
     try {
+      if (message.kind === 'table') {
+        const result = parseCsv(message.text, message.separator);
+        return reply({ type: 'table', id: message.id, result }, transferOf(result));
+      }
       renderer ??= loadRenderer().catch((error: unknown) => {
         // A failed load fails this request only; the next one tries again.
         renderer = undefined;
