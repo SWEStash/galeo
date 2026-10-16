@@ -53,8 +53,8 @@ export class RenderSyntaxError extends Error {
 }
 
 interface Pending {
-  text: string;
-  format: WorkerFormat;
+  /** The job as sent, without its id (`send` adds it, also when a fresh worker gets it again). */
+  job: Omit<RenderRequest, 'id'>;
   budgetMs: number;
   live: boolean;
   resolve: (result: RenderResult) => void;
@@ -95,8 +95,8 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
     return started;
   }
 
-  function send(id: number, { text, format, live }: Pick<Pending, 'text' | 'format' | 'live'>) {
-    worker.postMessage({ type: 'render', id, format, text, ...(live ? { noCache: true as const } : {}) });
+  function send(id: number, { job }: Pending) {
+    worker.postMessage({ ...job, id });
   }
 
   function dispatch(id: number, request: Pending) {
@@ -137,7 +137,8 @@ export function createRenderClient(spawn: () => WorkerPort): RenderClient {
     markdown(text, { budgetMs = RENDER_BUDGET_MS, live = false, format = 'markdown' } = {}) {
       const id = ++nextId;
       return new Promise((resolve, reject) => {
-        const request = { text, format, budgetMs, live, resolve, reject };
+        const job: Pending['job'] = { type: 'render', kind: 'article', format, text, ...(live ? { noCache: true as const } : {}) };
+        const request = { job, budgetMs, live, resolve, reject };
         if (live && liveSent !== null) {
           liveWaiting?.reject(new RenderSuperseded());
           liveWaiting = { id, ...request };

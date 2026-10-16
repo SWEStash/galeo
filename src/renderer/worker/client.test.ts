@@ -40,7 +40,7 @@ describe('render client', () => {
     const { client, current } = clientWithWorkers();
     const worker = current();
     const pending = client.markdown('# a');
-    expect(worker.requests).toEqual([{ type: 'render', id: 1, format: 'markdown', text: '# a' }]);
+    expect(worker.requests).toEqual([{ type: 'render', kind: 'article', id: 1, format: 'markdown', text: '# a' }]);
     worker.reply({ type: 'rendered', id: 1, result: result('<h1>a</h1>') });
     expect((await pending).html).toBe('<h1>a</h1>');
   });
@@ -48,7 +48,7 @@ describe('render client', () => {
   it('sends MDX with its format', async () => {
     const { client, current } = clientWithWorkers();
     void client.markdown('<A />', { format: 'mdx' });
-    expect(current().requests).toEqual([{ type: 'render', id: 1, format: 'mdx', text: '<A />' }]);
+    expect(current().requests).toEqual([{ type: 'render', kind: 'article', id: 1, format: 'mdx', text: '<A />' }]);
   });
 
   it('matches replies to requests by id, whatever their order', async () => {
@@ -173,7 +173,7 @@ describe('render client', () => {
     it('skips the worker cache', () => {
       const { client, current } = clientWithWorkers();
       void client.markdown('a', { live: true });
-      expect(current().requests).toEqual([{ type: 'render', id: 1, format: 'markdown', text: 'a', noCache: true }]);
+      expect(current().requests).toEqual([{ type: 'render', kind: 'article', id: 1, format: 'markdown', text: 'a', noCache: true }]);
     });
 
     it('sends only the latest text once the worker is done with the one it has', async () => {
