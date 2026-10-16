@@ -53,8 +53,10 @@ describe('readDocument', () => {
 
   it('shows Markdown over the render limit as source with a banner, unless rendering anyway', async () => {
     const fs = new FakeFileSystem({ '/d/big.md': 'x'.repeat(5 * 1024 * 1024 + 1) });
-    expect(await read(fs, '/d/big.md')).toMatchObject({ state: 'ready', view: 'source', banner: 'too-large' });
-    expect(await read(fs, '/d/big.md', { renderAnyway: true })).toMatchObject({ view: 'rendered', banner: null });
+    // Spelling out 5 MB of bytes would take most of the test's time budget under a full run.
+    const big = (options: { renderAnyway?: boolean } = {}) => readDocument('/d/big.md', { fs, decode, hash: () => '#big', ...options });
+    expect(await big()).toMatchObject({ state: 'ready', view: 'source', banner: 'too-large' });
+    expect(await big({ renderAnyway: true })).toMatchObject({ view: 'rendered', banner: null });
   });
 
   it('flags a Windows-1252 guess for the encoding banner', async () => {
