@@ -1,6 +1,7 @@
 # ADR-018 — Rich views and the format descriptor: JSON tree, CSV table, highlighted source
 
-- Status: Accepted (2026-10-15; owner added split view for CSV/TSV and raised the table limits)
+- Status: Accepted (2026-10-15; owner added split view for CSV/TSV and raised the table limits; the
+  table's time budget and Render anyway for tables superseded by [ADR-020](ADR-020-table-budget-and-show-as-table.md))
 - Date: 2026-10-15
 - Deciders: project owner
 - Builds on: [ADR-003](ADR-003-rendering-pipeline-and-format-registry.md) (the format registry
@@ -79,7 +80,7 @@ frontmatter in ADR-003). Their outline comes from the CodeMirror syntax tree.
   dataset of many rows scrolls as smoothly as a small file.
 - Both stay off the UI thread for the same reason as Markdown (ADR-003): a large file must not
   block scrolling or tab switching. They share the worker's render budget and "Too slow to
-  render" fallback.
+  render" fallback. *(Tables: own budget, superseded by ADR-020.)*
 
 ### Limits
 
@@ -91,7 +92,7 @@ Starting values, confirmed or adjusted by the performance harness when the views
 | JSON tree | 10 MB, or 200,000 nodes | — |
 | CSV/TSV table | 100 MB | 1,000,000 rows ("Showing N of M rows") |
 
-Nesting deeper than 1,000 levels is treated as too large. "Render anyway" stays a Markdown action
+Nesting deeper than 1,000 levels is treated as too large. *(For tables, superseded by ADR-020: "Show as table".)* "Render anyway" stays a Markdown action
 (UX states): past these limits the source view is the answer.
 
 ### Views and modes

@@ -20,7 +20,8 @@
   [015](decisions/ADR-015-edit-grant-for-files-the-reader-chose.md) ·
   [016](decisions/ADR-016-name-galeo.md) ·
   [017](decisions/ADR-017-release-workflow-with-attestations.md) ·
-  [018](decisions/ADR-018-rich-views-and-the-format-descriptor.md)
+  [018](decisions/ADR-018-rich-views-and-the-format-descriptor.md) ·
+  [020](decisions/ADR-020-table-budget-and-show-as-table.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
