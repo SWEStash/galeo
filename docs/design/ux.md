@@ -256,7 +256,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   expand/collapse (or move to the child/parent), as in the ARIA tree pattern; a click focuses a
   node, and its arrow or a double-click opens or closes it. *Expand all nodes* / *Collapse all
   nodes* and *Copy JSON path* (`$.items[3].name`, the focused node's; not the file's *Copy path*)
-  are commands in the palette and the node's context menu. Find (Ctrl+F) in the tree points to the
+  are commands in the palette. Find (Ctrl+F) in the tree points to the
   source view, where the whole text is searched. Ctrl+U toggles the highlighted source, keeping the place (node ⇄ line).
 - Invalid JSON opens in the source view, with a banner "Not valid JSON: line L, column C" and the
   cursor at that point. Fixing it in edit mode and saving brings the tree back.
