@@ -1,4 +1,6 @@
 // Packaging (ADR-008): .deb (official) and AppImage on Linux, unsigned macOS and Windows previews.
+import { MIME_TYPES } from './scripts/lib/desktop-entry.mjs';
+
 /** @type {import('electron-builder').Configuration} */
 export default {
   appId: 'io.github.swestash.galeo',
@@ -23,7 +25,7 @@ export default {
     executableArgs: ['--', '%F'],
     // StartupWMClass comes from package.json's desktopName, which Electron also uses as app_id.
     syncDesktopName: true,
-    mimeTypes: ['text/markdown', 'text/x-markdown', 'text/plain', 'text/x-log'],
+    mimeTypes: MIME_TYPES,
     desktop: {
       entry: {
         Name: 'galeo',

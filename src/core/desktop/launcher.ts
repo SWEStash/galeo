@@ -7,6 +7,16 @@ export const LAUNCHER_MARK = '# Installed by galeo: the command-line launcher fo
 /** The same, for the desktop entry. */
 const ENTRY_MARK = 'X-galeo-Launcher=true';
 
+/** The types of the files galeo reads; the package check (`scripts/lib/desktop-entry.mjs`) holds the list this must match. */
+const MIME_TYPES = [
+  'text/markdown', 'text/x-markdown', 'text/plain', 'text/x-log',
+  'application/json', 'application/yaml', 'application/toml', 'text/csv', 'text/tab-separated-values',
+  'text/javascript', 'text/x-python', 'text/x-python3', 'text/rust', 'text/x-go', 'application/x-shellscript',
+  'text/x-csrc', 'text/x-chdr', 'text/x-c++src', 'text/x-c++hdr', 'text/x-csharp', 'text/x-java', 'text/x-kotlin',
+  'application/x-ruby', 'application/x-php', 'text/x-lua', 'application/x-perl', 'application/sql', 'text/css', 'text/x-scss',
+  'application/xml', 'text/x-patch', 'text/x-makefile',
+];
+
 export type LauncherFiles =
   | { ok: true; bin: { path: string; content: string }; desktop: { path: string; content: string }; icon: { path: string; theme: string } }
   | { ok: false; reason: string };
@@ -47,7 +57,7 @@ export function appImageLauncher(appImage: string, dirs: { binDir: string; appli
     'Type=Application',
     'Terminal=false',
     'StartupWMClass=galeo',
-    'MimeType=text/markdown;text/x-markdown;text/plain;text/x-log;',
+    `MimeType=${MIME_TYPES.join(';')};`,
     'Categories=Utility;',
     'Actions=new-window;',
     ENTRY_MARK,

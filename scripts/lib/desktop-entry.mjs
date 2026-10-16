@@ -1,7 +1,19 @@
 // Checks a built package's desktop entry (ADR-008): files after `--` (SR-13), the MIME types
 // galeo reads, the window class GNOME matches windows with, an icon, and the New Window action.
 
-const MIME_TYPES = ['text/markdown', 'text/x-markdown', 'text/plain', 'text/x-log'];
+/**
+ * The MIME types of the files galeo reads, as the desktop names them (shared-mime-info): Markdown,
+ * text and logs; JSON, YAML, TOML, CSV and TSV; the source code it highlights. Not HTML or SVG,
+ * which belong to a browser and an image viewer.
+ */
+export const MIME_TYPES = [
+  'text/markdown', 'text/x-markdown', 'text/plain', 'text/x-log',
+  'application/json', 'application/yaml', 'application/toml', 'text/csv', 'text/tab-separated-values',
+  'text/javascript', 'text/x-python', 'text/x-python3', 'text/rust', 'text/x-go', 'application/x-shellscript',
+  'text/x-csrc', 'text/x-chdr', 'text/x-c++src', 'text/x-c++hdr', 'text/x-csharp', 'text/x-java', 'text/x-kotlin',
+  'application/x-ruby', 'application/x-php', 'text/x-lua', 'application/x-perl', 'application/sql', 'text/css', 'text/x-scss',
+  'application/xml', 'text/x-patch', 'text/x-makefile',
+];
 
 /** The `key=value` lines of each `[group]`. */
 function groups(text) {
