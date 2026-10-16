@@ -43,6 +43,10 @@ const BASE = {
   editMode: ['CmdOrCtrl+E'],
   /** Saves the tab in edit mode. */
   save: ['CmdOrCtrl+S'],
+  /** The JSON tree (ADR-018): palette commands, no keys of their own (UX F14). */
+  expandAll: [],
+  collapseAll: [],
+  copyJsonPath: [],
 } satisfies Record<string, string[]>;
 
 export type Command = keyof typeof BASE;

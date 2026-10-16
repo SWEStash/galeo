@@ -4,6 +4,7 @@ import type { ImageResult, SaveResult, TextEncoding } from '../../shared/documen
 import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
 import { FORMAT_VIEWS, workerFormat, type ViewMode } from '../../shared/formats';
+import { fileName } from '../../shared/paths';
 import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
 import { OutlinePanel } from '../outline/OutlinePanel';
@@ -26,6 +27,7 @@ import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
 import { pauseOrMax } from './pause-or-max';
 import { settleFocus } from './settle-focus';
+import { useJsonTree } from './useJsonTree';
 import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 
@@ -179,11 +181,12 @@ export function DocumentPane({
   const [ratio, setRatio] = useState(initialViewState.ratio ?? 0.5);
   const [narrow, setNarrow] = useState(false);
   // What the format's tab can show (ADR-018): Markdown and MDX render in the worker, `.txt` as
-  // reader text; the rest is source only.
+  // reader text, JSON as a tree; the rest is source only.
   const views = ready ? FORMAT_VIEWS[ready.format] : null;
   const format = ready ? workerFormat(ready.format) : null;
   const article = format !== null;
   const reader = views?.reader === true;
+  const json = ready?.format === 'json';
   const renderable = views !== null && views.rendered !== 'none';
   const splittable = views?.split === true;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
@@ -192,16 +195,30 @@ export function DocumentPane({
   const markdown = ready && article ? (previewText ?? ready.text) : null;
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
   const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large', live: previewText !== null, format: format ?? 'markdown' });
+  // JSON's tree: indexed by the worker, drawn by the page (ADR-018).
+  const jsonTree = useJsonTree(client, json ? ready.text : null, wantedView !== 'source');
+  const treeFailed = jsonTree.status === 'invalid' || jsonTree.status === 'too-large' || jsonTree.status === 'failed';
+  const treeModel = jsonTree.status === 'ready' || jsonTree.status === 'pending' ? jsonTree.model : null;
+  // Invalid JSON opens as source with the cursor where it breaks (UX F14); a new reading moves it there again.
+  const invalidAt = jsonTree.status === 'invalid' ? jsonTree : null;
+  const sourceCursor = useMemo(
+    () => (invalidAt ? { line: invalidAt.line, column: invalidAt.column } : null),
+    [invalidAt?.line, invalidAt?.column, ready?.text],
+  );
   // A document that failed to render shows its source instead.
-  const layout = wantedView !== 'source' && render.status === 'failed' ? 'source' : wantedView;
+  const layout = wantedView !== 'source' && (render.status === 'failed' || treeFailed) ? 'source' : wantedView;
   // What Ctrl+\ goes back to from split.
   const lastSingle = useRef<SingleView>('rendered');
   if (layout !== 'split') lastSingle.current = layout;
-  const loading = useDelayed(wantedView === 'rendered' && render.status === 'pending' && render.html === null, LOADING_DELAY_MS);
+  const loading = useDelayed(
+    wantedView === 'rendered' && ((render.status === 'pending' && render.html === null) || (jsonTree.status === 'pending' && treeModel === null)),
+    LOADING_DELAY_MS,
+  );
   const rendered = useMemo<RenderedContent | null>(() => {
     if (ready && reader) return { text: ready.text };
+    if (ready && json) return treeModel ? { tree: treeModel, label: fileName(ready.path) } : null;
     return render.html === null ? null : { html: render.html };
-  }, [ready, reader, render.html]);
+  }, [ready, reader, json, treeModel, render.html]);
   const endFollow = useCallback(() => setFollow(false), []);
   const showRendered = useCallback(() => {
     setRenderAnyway(true);
@@ -519,6 +536,11 @@ export function DocumentPane({
       },
       find: () => {
         if (!ready) return false;
+        // The tree draws only the rows in view: its text is searched in the source.
+        if (json && view === 'rendered') {
+          onMessage?.('Find works in the source view (Ctrl+U)');
+          return true;
+        }
         setFind((current) => ({ ...current, open: true, token: current.token + 1 }));
         return true;
       },
@@ -535,6 +557,28 @@ export function DocumentPane({
       save: () => {
         if (!editing) return false;
         void save();
+        return true;
+      },
+      expandAll: () => {
+        const tree = view === 'rendered' ? documentHandle.current?.tree() : null;
+        if (!tree) return false;
+        tree.expandAll();
+        return true;
+      },
+      collapseAll: () => {
+        const tree = view === 'rendered' ? documentHandle.current?.tree() : null;
+        if (!tree) return false;
+        tree.collapseAll();
+        return true;
+      },
+      copyJsonPath: () => {
+        const tree = view === 'rendered' ? documentHandle.current?.tree() : null;
+        if (!tree || !treeModel) return false;
+        const path = treeModel.path(tree.focusedNode());
+        void navigator.clipboard.writeText(path).then(
+          () => onMessage?.(`Copied ${path}`),
+          () => onMessage?.("Couldn't copy the path"),
+        );
         return true;
       },
       toggleOutline: () => {
@@ -622,8 +666,13 @@ export function DocumentPane({
     <>
       {disk && <DocumentBanner kind={disk} actions={diskActions[disk]} />}
       {ready.banner === 'too-large' && view === 'source' && !renderAnyway && (
-        <DocumentBanner kind="too-large" onAction={showRendered} />
+        // Render anyway stays Markdown's and the reader's (ADR-018): past its limits, JSON is source.
+        <DocumentBanner kind="too-large" {...(json ? {} : { onAction: showRendered })} />
       )}
+      {jsonTree.status === 'too-large' && view === 'source' && <DocumentBanner kind="too-large" />}
+      {jsonTree.status === 'invalid' && <DocumentBanner kind="json-invalid" detail={`line ${jsonTree.line}, column ${jsonTree.column}`} />}
+      {jsonTree.status === 'failed' &&
+        (jsonTree.reason === 'slow' ? <DocumentBanner kind="render-slow" /> : <DocumentBanner kind="render-failed" onAction={jsonTree.retry} />)}
       {ready.guessedEncoding && (
         <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]}>
           {onChooseEncoding && <EncodingMenu onChoose={onChooseEncoding}>Reopen with encoding…</EncodingMenu>}
@@ -657,6 +706,7 @@ export function DocumentPane({
           editable={editing}
           onEdit={edited}
           replacing={find.open && find.replace}
+          sourceCursor={sourceCursor}
           view={view}
           splitRatio={ratio}
           onSplitRatio={setRatio}

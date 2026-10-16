@@ -253,9 +253,11 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 
 - **JSON** opens as a **tree**: the top level expanded, each node showing its key, its type and a
   short preview (`{3 keys}`, `[120 items]`, the value for strings and numbers). ↑/↓ move, →/←
-  expand/collapse (or move to the child/parent), as in the ARIA tree pattern; *Expand all* /
-  *Collapse all* and *Copy path* (`$.items[3].name`) are commands in the palette and the node's
-  context menu. Ctrl+U toggles the highlighted source, keeping the place (node ⇄ line).
+  expand/collapse (or move to the child/parent), as in the ARIA tree pattern; a click focuses a
+  node, and its arrow or a double-click opens or closes it. *Expand all nodes* / *Collapse all
+  nodes* and *Copy JSON path* (`$.items[3].name`, the focused node's; not the file's *Copy path*)
+  are commands in the palette and the node's context menu. Find (Ctrl+F) in the tree points to the
+  source view, where the whole text is searched. Ctrl+U toggles the highlighted source, keeping the place (node ⇄ line).
 - Invalid JSON opens in the source view, with a banner "Not valid JSON: line L, column C" and the
   cursor at that point. Fixing it in edit mode and saving brings the tree back.
 - **CSV and TSV** open as a **table**: a header row that stays in view, row numbers, cells that
@@ -356,6 +358,7 @@ the native menu on the active tab.
 | Add a cursor / a column of cursors (v0.2) | Ctrl+click / Alt+drag | Edit mode; Esc goes back to one cursor |
 | Widen / narrow / reset reader width, full width (v0.3) | chosen with the feature (§8) | Per tab, like zoom |
 | Move tab to new window / to window… (v0.3) | palette | F15 |
+| Expand all nodes / Collapse all nodes / Copy JSON path (v0.3) | palette | JSON tree, F14 |
 | Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply

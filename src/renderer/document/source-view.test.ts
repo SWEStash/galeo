@@ -23,6 +23,17 @@ afterEach(() => {
 });
 
 describe('createSourceView', () => {
+  it('puts the cursor at a line and column, inside the line whatever the column', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: '{\n  "a": 1,\n}\n', language: null, wrap: false });
+    source.select(2, 9);
+    expect(source.view.state.selection.main.head).toBe(2 + 8);
+    source.select(2, 99);
+    expect(source.view.state.selection.main.head).toBe(2 + 9);
+    source.select(99, 1);
+    expect(source.view.state.selection.main.head).toBe(source.view.state.doc.line(source.view.state.doc.lines).from);
+  });
+
   it('shows the text read-only, with line numbers', () => {
     const { root, parent } = shadowContainer();
     const source = createSourceView({ root, parent, text: '# a\nb\n', language: 'markdown', wrap: false });

@@ -36,7 +36,7 @@ function setUp(theme: 'light' | 'dark') {
 }
 
 for (const [theme, keyword] of [['light', 'rgb(207, 34, 46)'], ['dark', 'rgb(255, 123, 114)']] as const) {
-  test(`source code, JSON, YAML and TOML open highlighted, with fold markers, and pass axe (${theme})`, async () => {
+  test(`source code, JSON, YAML and TOML show highlighted, with fold markers, and pass axe (${theme})`, async () => {
     const { home, ts, json } = setUp(theme);
     const { window, close } = await launchApp(['--', ts, json, path.join(docs, 'settings.yaml'), path.join(docs, 'Cargo.toml')], { home });
     try {
@@ -45,6 +45,13 @@ for (const [theme, keyword] of [['light', 'rgb(207, 34, 46)'], ['dark', 'rgb(255
       for (const [index, [name, token]] of Object.entries(expected).entries()) {
         await window.getByRole('tab').nth(index).click();
         await expect(window.getByRole('tab', { selected: true })).toContainText(name);
+        if (name === 'data.json') {
+          // JSON opens as its tree (ADR-018), which passes axe too; its source is a Ctrl+U away.
+          await expect(shownDocument(window).locator('[role=tree]')).toBeVisible();
+          const tree = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"]').analyze();
+          expect(tree.violations, 'data.json tree').toEqual([]);
+          await window.keyboard.press('Control+u');
+        }
         await expect.poll(() => colourOf(window, token), { message: `${name}: ${token} is highlighted` }).not.toBeNull();
         await expect(shownDocument(window).locator('.cm-foldGutter')).toBeAttached();
         const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"]').analyze();

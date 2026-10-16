@@ -17,6 +17,9 @@ export const MARKDOWN_RENDER_MAX_BYTES = 5 * 1024 * 1024;
 /** The `.txt` reader builds a paragraph per block of text; past this, source is lighter. */
 export const TEXT_READER_MAX_BYTES = 5 * 1024 * 1024;
 
+/** JSON past this opens as source: the tree's starting limit (ADR-018 "Limits"). */
+export const JSON_TREE_MAX_BYTES = 10 * 1024 * 1024;
+
 /** Source code: extensions and whole names, from the shared table that also names each language. */
 const CODE_FILES = Object.keys(CODE_LANGUAGES);
 const CODE_EXTENSIONS = CODE_FILES.filter((key) => key.startsWith('.'));
@@ -47,7 +50,11 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
     defaultView: 'source',
     renderMaxBytes: null,
   },
-  json: sourceOnly(['.json']),
+  json: {
+    extensions: ['.json'],
+    defaultView: 'rendered',
+    renderMaxBytes: JSON_TREE_MAX_BYTES,
+  },
   jsonl: sourceOnly(['.jsonl', '.ndjson']),
   yaml: sourceOnly(['.yaml', '.yml']),
   toml: sourceOnly(['.toml']),

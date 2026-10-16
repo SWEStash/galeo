@@ -3,6 +3,8 @@ import type { ImageResult } from '../../shared/documents';
 import { offerZoom, type ImageExpand } from './images';
 import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
+import type { TreeModel } from './json-tree-model';
+import type { JsonTreeView } from './json-tree-view';
 import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
 import type { OutlineEntry } from '../worker/pipeline/render';
@@ -14,8 +16,11 @@ import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBl
 import type { FindResult, SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 
-/** What the rendered view shows: worker HTML (Markdown) or reader text (`.txt`). */
-export type RenderedContent = { html: string } | { text: string };
+/** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`) or a JSON tree named `label`. */
+export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string };
+
+/** A tree row's weight for the warm-tab budget: its share of the worker's index and the model. */
+const TREE_BYTES_PER_NODE = 48;
 
 export interface DocumentViewProps {
   /** The rendered view's content, or null while it isn't needed or ready. */
@@ -57,6 +62,8 @@ export interface DocumentViewProps {
   onHeading?: ((id: string | null) => void) | undefined;
   /** The source view's own outline (YAML, TOML), as the text changes; set to have it. */
   onSourceOutline?: ((entries: OutlineEntry[]) => void) | undefined;
+  /** Where to put the source view's cursor (invalid JSON's error), once it shows; a new object moves it again. */
+  sourceCursor?: { line: number; column: number } | null;
   /** The source pane's share of the width in split (ADR-014). */
   splitRatio?: number;
   /** The reader moved the split's divider. */
@@ -117,10 +124,14 @@ export interface DocumentHandle extends Finder {
   replace(text: string): FindResult;
   /** Edit mode: replaces every find match in the source; how many it replaced. */
   replaceAll(text: string): number;
+  /** The JSON tree shown, or null. */
+  tree(): JsonTreeView | null;
 }
 
 /** The source line at the top of the rendered view. */
 function renderedTopLine(host: DocumentHost): number {
+  // A tree draws only the rows in view: it knows its own place.
+  if (host.tree) return host.tree.topLine();
   const viewportTop = host.renderedScroller.getBoundingClientRect().top;
   const blocks = [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => {
     const box = element.getBoundingClientRect();
@@ -130,6 +141,7 @@ function renderedTopLine(host: DocumentHost): number {
 }
 
 function scrollRenderedTo(host: DocumentHost, line: number): void {
+  if (host.tree) return host.tree.scrollToLine(line);
   const blocks = [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')];
   const index = blockAtOrBefore(
     blocks.map((element) => Number(element.dataset['srcLine'])),
@@ -166,6 +178,7 @@ export function DocumentView({
   editable = false,
   onEdit,
   replacing = false,
+  sourceCursor = null,
   splitRatio = 0.5,
   onSplitRatio,
   onNarrow,
@@ -208,7 +221,9 @@ export function DocumentView({
       // In edit mode the caret goes back into the editor; otherwise the document takes focus.
       focus: () => {
         const source = host().source;
+        const tree = host().tree;
         if (editing.current && source && showsSource(shownView.current)) source.view.focus();
+        else if (tree && shownView.current === 'rendered') tree.focus();
         else container.current?.focus();
       },
       sourceText: () => host().source?.text() ?? null,
@@ -216,6 +231,7 @@ export function DocumentView({
       scrollToLine: (line) => host().source?.scrollToLine(line),
       replace: (text) => host().source?.replace(text) ?? NO_MATCHES,
       replaceAll: (text) => host().source?.replaceAll(text) ?? 0,
+      tree: () => host().tree,
       scrollToAnchor: (anchor) => {
         if (!anchor) {
           host().renderedScroller.scrollTop = 0;
@@ -280,7 +296,8 @@ export function DocumentView({
     const element = documentHost.renderedScroller;
     // New content for the same file (it changed on disk) keeps the reader where they were,
     // anchored to the block at the top of the view, before anything paints (UX F7).
-    const before = hasContent.current && showsRendered(view) && !waking ? placedBlocks(documentHost, element) : null;
+    // A tree keeps its place itself, by node path.
+    const before = hasContent.current && showsRendered(view) && !waking && !('tree' in rendered) && !documentHost.tree ? placedBlocks(documentHost, element) : null;
     const top = element.scrollTop;
     diagrams.current?.dispose();
     diagrams.current = null;
@@ -292,7 +309,8 @@ export function DocumentView({
         scheme: shownScheme.current,
         onExpand: (diagram) => expandListener.current?.(diagram),
       });
-    } else documentHost.setReaderText(rendered.text);
+    } else if ('tree' in rendered) documentHost.setTree(rendered.tree, rendered.label);
+    else documentHost.setReaderText(rendered.text);
     if (before) {
       element.scrollTop = keptTopFor(before, top, placedBlocks(documentHost, element), { height: element.scrollHeight, viewport: element.clientHeight });
       element.dataset['reloadedAt'] = String(Date.now());
@@ -362,6 +380,12 @@ export function DocumentView({
   }, [view, sourceReady]);
 
   useLayoutEffect(() => {
+    const sourceView = host().source;
+    if (!sourceCursor || !sourceReady || !sourceView || !showsSource(view)) return;
+    sourceView.select(sourceCursor.line, sourceCursor.column);
+  }, [sourceCursor, sourceReady, view]);
+
+  useLayoutEffect(() => {
     host().setSplitRatio(splitRatio);
   }, [splitRatio]);
   const ratioListener = useRef(onSplitRatio);
@@ -426,6 +450,8 @@ export function DocumentView({
     const documentHost = host();
     if (view === 'source' && documentHost.source) {
       documentHost.source.scrollToLine(initialPosition.line);
+    } else if (showsRendered(view) && rendered && documentHost.tree) {
+      documentHost.tree.scrollToLine(initialPosition.line);
     } else if (showsRendered(view) && rendered && (view === 'rendered' || documentHost.source)) {
       const element = documentHost.renderedScroller;
       element.scrollTop = scrollTopFor(initialPosition, placedBlocks(documentHost, element), {
@@ -461,7 +487,9 @@ export function DocumentView({
       latest =
         view === 'source'
           ? { ...anchorAt([], scroll), line: documentHost.source!.topLine() }
-          : anchorAt(placedBlocks(documentHost, scroller), scroll);
+          : documentHost.tree
+            ? { ...anchorAt([], scroll), line: documentHost.tree.topLine() }
+            : anchorAt(placedBlocks(documentHost, scroller), scroll);
       clearTimeout(timer);
       timer = setTimeout(report, POSITION_SETTLE_MS);
     };
@@ -531,7 +559,11 @@ export function DocumentView({
   }, [onSourceOutline, onHeading, view, sourceReady]);
 
   useEffect(() => {
-    const renderedBytes = rendered ? 2 * ('html' in rendered ? rendered.html.length : rendered.text.length) : 0;
+    const renderedBytes = !rendered
+      ? 0
+      : 'tree' in rendered
+        ? rendered.tree.nodes * TREE_BYTES_PER_NODE
+        : 2 * ('html' in rendered ? rendered.html.length : rendered.text.length);
     const sourceBytes = showsSource(view) || host().source ? 2 * source.text.length : 0;
     onWeight?.(renderedBytes + sourceBytes);
   }, [rendered, view, source.text, onWeight]);

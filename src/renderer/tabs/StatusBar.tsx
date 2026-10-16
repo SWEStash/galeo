@@ -1,16 +1,16 @@
 import type { ReactNode } from 'react';
 import type { ChosenEncoding } from '../../shared/contracts';
-import { FORMAT_VIEWS } from '../../shared/formats';
 import { EncodingMenu } from '../document/EncodingMenu';
 import { ENCODING_NAMES } from '../document/encodings';
+import { RENDERED_VIEW_NAMES } from '../document/formats';
 import { ignoreClosedTab } from './closed-tab';
 import { metricsLabel } from './metrics';
 import type { TabStatus, TabStore, TabsView } from './store';
 
 const VIEW_NAMES = { rendered: 'Rendered', source: 'Source', split: 'Split' } as const;
 
-/** `.txt` shows its rendered view as reader text (UX F10). */
-const viewName = (status: TabStatus) => (status.format && FORMAT_VIEWS[status.format].reader && status.view === 'rendered' ? 'Reader' : VIEW_NAMES[status.view!]);
+/** `.txt` shows its rendered view as reader text (UX F10), JSON as a tree (UX F14). */
+const viewName = (status: TabStatus) => (status.format && status.view === 'rendered' ? RENDERED_VIEW_NAMES[status.format] : undefined) ?? VIEW_NAMES[status.view!];
 
 /**
  * The status bar (UX §2): the shown tab's path (a menu to copy or reveal it), view, read-only,

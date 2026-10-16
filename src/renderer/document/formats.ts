@@ -25,6 +25,9 @@ export function sourceLanguage(format: FormatId, path: string): SourceLanguage {
   return language(fileName(path).toLowerCase()) ?? language(extensionOf(path)) ?? null;
 }
 
+/** What the status bar calls a format's rendered view where "Rendered" says too little (UX F10, F14). */
+export const RENDERED_VIEW_NAMES: Partial<Record<FormatId, string>> = { text: 'Reader', json: 'Tree' };
+
 /** How messages name a format ("No split view for JSON files"). */
 export const FORMAT_NAMES: Readonly<Record<FormatId, string>> = {
   markdown: 'Markdown',

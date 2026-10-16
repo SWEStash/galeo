@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { indexJson } from '../../shared/json-index';
+import { createTreeModel } from './json-tree-model';
 import { mountDocumentHost, setCustomCss } from './host';
 
 function container(): HTMLElement {
@@ -13,6 +15,24 @@ afterEach(() => {
 });
 
 describe('mountDocumentHost', () => {
+  it('shows a JSON tree in the document column, updated in place, until other content replaces it', () => {
+    const host = mountDocumentHost(container());
+    const model = (text: string) => {
+      const parsed = indexJson(text);
+      if (parsed.state !== 'tree') throw new Error(parsed.state);
+      return createTreeModel(text, parsed.tree);
+    };
+    host.setTree(model('[1, 2]'), 'data.json');
+    const tree = host.tree;
+    expect(host.article.querySelectorAll('[role=tree]')).toHaveLength(1);
+    host.setTree(model('[1, 2, 3]'), 'data.json');
+    expect(host.tree).toBe(tree);
+    expect(host.article.querySelectorAll('[role=treeitem]')).toHaveLength(4);
+    host.setContent('<p>md</p>');
+    expect(host.tree).toBeNull();
+    expect(host.article.querySelector('[role=tree]')).toBeNull();
+  });
+
   it('gives the container a shadow root with one document article', () => {
     const host = mountDocumentHost(container());
     expect(host.root.querySelectorAll('article.galeo-document')).toHaveLength(1);

@@ -1,7 +1,9 @@
 import { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { DocumentView } from './DocumentView';
+import { indexJson } from '../../shared/json-index';
+import { DocumentView, type DocumentHandle } from './DocumentView';
+import { createTreeModel } from './json-tree-model';
 
 let root: Root | undefined;
 
@@ -22,7 +24,31 @@ const props = { source: { text: '# src', language: 'markdown' as const }, view: 
 
 const shadowOf = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-testid="document"]')!.shadowRoot!;
 
+function treeOf(text: string) {
+  const parsed = indexJson(text);
+  if (parsed.state !== 'tree') throw new Error(parsed.state);
+  return { tree: createTreeModel(text, parsed.tree), label: 'data.json' };
+}
+
 describe('DocumentView', () => {
+  it('shows a JSON tree, whose focused row takes the document\'s focus', async () => {
+    const handle = { current: null as DocumentHandle | null };
+    const json = '{\n"a": 1,\n"b": 2\n}';
+    const container = await render(<DocumentView {...props} source={{ text: json, language: 'JSON' }} rendered={treeOf(json)} scheme="light" ref={(value) => void (handle.current = value)} />);
+    const shadow = shadowOf(container);
+    expect(shadow.querySelector('[role=tree]')?.getAttribute('aria-label')).toBe('data.json');
+    expect(shadow.querySelectorAll('[role=treeitem]')).toHaveLength(3);
+    act(() => handle.current!.focus());
+    expect(shadow.activeElement?.getAttribute('role')).toBe('treeitem');
+  });
+
+  it('replaces a tree with other content', async () => {
+    const json = '[1]';
+    const container = await render(<DocumentView {...props} rendered={treeOf(json)} scheme="light" />);
+    await act(async () => root!.render(<DocumentView {...props} rendered={{ html: '<p>md</p>' }} scheme="light" />));
+    expect(shadowOf(container).querySelector('[role=tree]')).toBeNull();
+  });
+
   it('mounts one document under StrictMode, whose effects run twice', async () => {
     const container = await render(
       <StrictMode>

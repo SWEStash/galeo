@@ -48,6 +48,9 @@ export const COMMANDS = {
   quit: { label: 'Quit', group: 'App', runs: 'main' },
   editMode: { label: 'Toggle edit mode', group: 'File', runs: 'capability' },
   save: { label: 'Save', group: 'File', runs: 'page' },
+  expandAll: { label: 'Expand all nodes', group: 'View', runs: 'page' },
+  collapseAll: { label: 'Collapse all nodes', group: 'View', runs: 'page' },
+  copyJsonPath: { label: 'Copy JSON path', group: 'View', runs: 'page' },
 } as const satisfies Record<Command, CommandInfo>;
 
 // macOS writes modifiers as symbols, in this order, with no separator.

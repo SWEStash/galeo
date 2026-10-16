@@ -192,14 +192,20 @@ export function createJsonTreeView({ parent, scroller, label }: { parent: HTMLEl
     event.preventDefault();
   });
 
-  element.addEventListener('click', (event) => {
-    const item = (event.target as Element | null)?.closest<HTMLElement>('.galeo-json-row');
+  // A click focuses its row; its arrow, or a double-click, opens or closes it.
+  const pointed = (event: Event, opens: (target: Element) => boolean) => {
+    const target = event.target as Element | null;
+    const item = target?.closest<HTMLElement>('.galeo-json-row');
     if (!item || !model) return;
     const node = Number(item.dataset['node']);
     focused = node;
-    toggle(node);
+    if (opens(target!)) toggle(node);
+    else draw();
     drawn.get(node)?.focus({ preventScroll: true });
-  });
+  };
+  element.addEventListener('click', (event) => pointed(event, (target) => target.classList.contains('galeo-json-toggle')));
+  // On the arrow its two clicks already toggled.
+  element.addEventListener('dblclick', (event) => pointed(event, (target) => !target.classList.contains('galeo-json-toggle')));
 
   let listening: HTMLElement | null = null;
   const listen = () => {

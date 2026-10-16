@@ -20,9 +20,9 @@ describe('FORMAT_VIEWS', () => {
     expect([...ids].sort()).toEqual(['code', 'csv', 'json', 'jsonl', 'log', 'markdown', 'mdx', 'plain', 'text', 'toml', 'tsv', 'yaml']);
   });
 
-  it('renders Markdown and MDX in the worker and .txt as reader text on the page', () => {
+  it('renders Markdown and MDX in the worker, and .txt as reader text and JSON as a tree on the page', () => {
     expect(withViews((views) => views.rendered === 'worker')).toEqual(['markdown', 'mdx']);
-    expect(withViews((views) => views.rendered === 'host')).toEqual(['text']);
+    expect(withViews((views) => views.rendered === 'host')).toEqual(['text', 'json']);
     expect(withViews((views) => views.reader)).toEqual(['text']);
   });
 

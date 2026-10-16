@@ -1,5 +1,7 @@
 import { SPLIT_MAX_RATIO, SPLIT_MIN_RATIO, type ViewMode } from '../../shared/formats';
 import documentCss from './document.css?inline';
+import type { TreeModel } from './json-tree-model';
+import { createJsonTreeView, type JsonTreeView } from './json-tree-view';
 import type { SourceLanguage, SourceView } from './source-view';
 import { ratioAt, ratioForKey } from './split-divider';
 import { textParagraphs } from './text-reader';
@@ -16,6 +18,10 @@ export interface DocumentHost {
   setContent(html: string): void;
   /** Shows plain text in the reading column (the `.txt` reader), as text nodes only. */
   setReaderText(text: string): void;
+  /** Shows a JSON tree named `label`; a new version of the same document updates it in place (ADR-018). */
+  setTree(model: TreeModel, label: string): void;
+  /** The JSON tree shown, or null. */
+  readonly tree: JsonTreeView | null;
   /** The source view, created on first use and updated in place afterwards (after `loadSourceView`). */
   showSource(text: string, language: SourceLanguage, wrap: boolean): SourceView;
   readonly source: SourceView | null;
@@ -159,6 +165,13 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
   root.append(sourceParent, divider, renderedPane);
   let source: SourceView | null = null;
   let sourceText: string | null = null;
+  let tree: JsonTreeView | null = null;
+  /** Other content replaces a tree. */
+  const dropTree = () => {
+    tree?.dispose();
+    tree = null;
+    article.classList.remove('galeo-json');
+  };
 
   const host: DocumentHost = {
     root,
@@ -166,14 +179,19 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
     get source() {
       return source;
     },
+    get tree() {
+      return tree;
+    },
     get renderedScroller() {
       return container.dataset['view'] === 'split' ? renderedPane : container;
     },
     setContent(html) {
+      dropTree();
       article.classList.remove('galeo-text-reader');
       setTrustedHtml(article, html);
     },
     setReaderText(text) {
+      dropTree();
       article.classList.add('galeo-text-reader');
       article.replaceChildren(
         ...textParagraphs(text).map(({ line, text: paragraph }) => {
@@ -183,6 +201,15 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
           return element;
         }),
       );
+    },
+    setTree(model, label) {
+      if (!tree) {
+        article.classList.remove('galeo-text-reader');
+        article.classList.add('galeo-json');
+        article.replaceChildren();
+        tree = createJsonTreeView({ parent: article, scroller: () => host.renderedScroller, label });
+      }
+      tree.setModel(model);
     },
     showSource(text, language, wrap) {
       if (!source) {

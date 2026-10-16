@@ -21,7 +21,7 @@ export const FORMAT_VIEWS: Readonly<Record<FormatId, FormatViews>> = {
   mdx: ARTICLE,
   text: { ...SOURCE_ONLY, rendered: 'host', reader: true },
   log: { ...SOURCE_ONLY, follow: true },
-  json: SOURCE_ONLY,
+  json: { ...SOURCE_ONLY, rendered: 'host' },
   jsonl: SOURCE_ONLY,
   yaml: { ...SOURCE_ONLY, outline: true },
   toml: { ...SOURCE_ONLY, outline: true },

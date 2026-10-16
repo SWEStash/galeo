@@ -73,13 +73,15 @@ export function DocumentLoading() {
   );
 }
 
-export type BannerKind = 'too-large' | 'encoding' | 'render-failed' | 'render-slow' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
+export type BannerKind = 'too-large' | 'json-invalid' | 'encoding' | 'render-failed' | 'render-slow' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
 
 /** What happened on disk to a file with unsaved edits (UX F12). */
 export type DiskChange = 'disk-changed' | 'disk-deleted' | 'disk-unreadable';
 
 const BANNERS: Record<BannerKind, { text: (detail?: string) => string; action?: string }> = {
   'too-large': { text: () => 'Large file shown as source', action: 'Render anyway' },
+  // The detail says where: "line 3, column 7". The cursor is there in the source view.
+  'json-invalid': { text: (where) => `Not valid JSON: ${where}` },
   encoding: { text: (encoding) => `Not valid UTF-8: shown as ${encoding}, the likeliest encoding` },
   'render-failed': { text: () => "This document couldn't be rendered — showing source", action: 'Try again' },
   'render-slow': { text: () => 'Too slow to render — showing source', action: 'Render anyway' },

@@ -51,6 +51,8 @@ export interface SourceView {
   /** The line at the top of the viewport. */
   topLine(): number;
   scrollToLine(line: number): void;
+  /** Puts the cursor at a 1-based line and column (kept inside the text) and scrolls it into view. */
+  select(line: number, column: number): void;
   /** The line at the top of the viewport, with how far into it as the fraction (split's sync). */
   topPosition(): number;
   /** Scrolls a fractional line (`topPosition`'s) to the top. */
@@ -388,6 +390,11 @@ export function createSourceView(options: {
     scrollToLine(line) {
       const target = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines));
       view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: 'start', yMargin: 0 }) });
+    },
+    select(line, column) {
+      const target = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines));
+      const at = Math.min(target.from + Math.max(column, 1) - 1, target.to);
+      view.dispatch({ selection: { anchor: at }, effects: EditorView.scrollIntoView(at, { y: 'center' }) });
     },
     scrollToEnd() {
       view.dispatch({ effects: EditorView.scrollIntoView(view.state.doc.length, { y: 'end', yMargin: 0 }) });

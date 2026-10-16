@@ -79,14 +79,25 @@ describe('JSON tree view', () => {
     expect(focused()).toBe('a: [2 items]');
   });
 
-  it('toggles a node with Enter, and with a click on its row', () => {
+  it('toggles a node with Enter, a click on its arrow or a double-click on its row', () => {
     const { view, tree } = setup(SAMPLE);
     view.focus();
     press('ArrowDown');
     press('Enter');
     expect(texts(tree())).toContain('1');
-    rows(tree())[1]!.click();
+    rows(tree())[1]!.querySelector<HTMLElement>('.galeo-json-toggle')!.click();
     expect(texts(tree())).not.toContain('1');
+    rows(tree())[1]!.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    expect(texts(tree())).toContain('1');
+  });
+
+  it('focuses a clicked row without opening or closing it', () => {
+    const { tree } = setup(SAMPLE);
+    rows(tree())[0]!.click();
+    expect(texts(tree())).toHaveLength(4);
+    rows(tree())[2]!.click();
+    expect(focused()).toBe('b: {1 key}');
+    expect(texts(tree())).toHaveLength(4);
   });
 
   it('expands and collapses everything', () => {

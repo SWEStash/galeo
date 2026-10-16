@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseView, detectFormat, MARKDOWN_RENDER_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
+import { chooseView, detectFormat, JSON_TREE_MAX_BYTES, MARKDOWN_RENDER_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
 
 describe('detectFormat', () => {
   it.each([
@@ -56,7 +56,13 @@ describe('chooseView', () => {
     expect(chooseView('text', { size: 1024 })).toEqual({ view: 'rendered', banner: null });
   });
 
-  it.each(['log', 'plain', 'json', 'jsonl', 'yaml', 'toml', 'csv', 'tsv', 'code'] as const)('opens %s in the source view', (format) => {
+  it('opens JSON as a tree up to 10 MB, and as source with the too-large banner past it', () => {
+    expect(JSON_TREE_MAX_BYTES).toBe(10 * 1024 * 1024);
+    expect(chooseView('json', { size: JSON_TREE_MAX_BYTES })).toEqual({ view: 'rendered', banner: null });
+    expect(chooseView('json', { size: JSON_TREE_MAX_BYTES + 1 })).toEqual({ view: 'source', banner: 'too-large' });
+  });
+
+  it.each(['log', 'plain', 'jsonl', 'yaml', 'toml', 'csv', 'tsv', 'code'] as const)('opens %s in the source view', (format) => {
     expect(chooseView(format, { size: 1024 })).toEqual({ view: 'source', banner: null });
   });
 

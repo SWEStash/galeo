@@ -62,6 +62,43 @@
   overflow-wrap: break-word;
 }
 
+/* The JSON tree (ADR-018): the document's whole width, in the code font, one fixed-height row per
+   node (json-tree-view's ROW_HEIGHT), drawn only where in view. */
+.galeo-document.galeo-json {
+  max-width: none;
+  padding: 0.5rem 0 2rem;
+  font-family: var(--galeo-font-code);
+  font-size: var(--galeo-code-size);
+}
+.galeo-json-tree {
+  position: relative;
+}
+.galeo-json-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  height: 24px;
+  line-height: 24px;
+  padding-left: calc(var(--galeo-json-depth, 0) * 1.25em + 0.75rem);
+  overflow: hidden;
+  white-space: pre;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+.galeo-json-row:hover {
+  background: var(--galeo-color-code-bg);
+}
+.galeo-json-row:focus-visible {
+  outline-offset: -2px;
+  background: var(--galeo-color-code-bg);
+}
+.galeo-json-toggle {
+  display: inline-block;
+  width: 1.25em;
+  color: var(--galeo-color-muted);
+}
+
 .galeo-document > :first-child {
   margin-top: 0;
 }
