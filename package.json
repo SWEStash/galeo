@@ -91,7 +91,7 @@
     "remark-rehype": "11.1.2",
     "shiki": "4.5.0",
     "unified": "11.0.5",
-    "zod": "4.6.5"
+    "zod": "4.6.6"
   },
   "main": "out/main/index.js"
 }
