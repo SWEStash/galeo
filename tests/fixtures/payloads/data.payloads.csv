@@ -1,0 +1,9 @@
+kind,value,note
+link,https://example.com/tracker.png,a plain URL
+formula,"=HYPERLINK(""https://example.com"",""click"")",spreadsheet formula injection
+formula,=WEBSERVICE("https://1.1.1.1"),another formula
+script,<script>fetch('https://example.com/x')</script>,HTML in a cell
+image,"<img src=""https://example.com/pixel.png"" onerror=""alert(1)"">",an image tag
+javascript,javascript:fetch('https://1.1.1.1'),a script URL
+multi,"line one
+<img src=https://example.com/second-line.png>",a quoted multi-line cell

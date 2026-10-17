@@ -176,6 +176,29 @@ test('rendering the hostile MDX payloads as an .mdx file opens no connection (SR
   expect(connects).toEqual([]);
 });
 
+test('a JSON tree and a CSV table of hostile values show them as text and open no connection (SR-02, SR-07)', async () => {
+  const payloads = path.resolve(import.meta.dirname, '../../fixtures/payloads');
+  const files = ['data.payloads.json', 'data.payloads.csv'].map((name) => path.join(payloads, name));
+  const connects = await connectsWhile(['--', ...files], {}, async (_app, page) => {
+    const shown = page.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
+    await expect(shown.locator('[role=treeitem]').first()).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+Shift+P');
+    await page.getByTestId('palette').getByRole('combobox').fill('Expand all nodes');
+    await page.keyboard.press('Enter');
+    await expect(shown.locator('[role=treeitem]', { hasText: 'deepest' })).toBeVisible();
+    await expect(shown.locator('[role=treeitem]', { hasText: 'script: "<script>' })).toBeVisible();
+    await page.getByRole('tab').nth(1).click();
+    await expect(shown.locator('[role=gridcell]', { hasText: '=HYPERLINK' })).toBeVisible();
+    for (const tab of [0, 1]) {
+      await page.getByRole('tab').nth(tab).click();
+      const loading = await shown.evaluate((host) => host.shadowRoot!.querySelectorAll('a, img, script, iframe, svg, style:not([data-galeo]), link, object, embed').length);
+      expect(loading, `tab ${tab}: values are text, never elements`).toBe(0);
+    }
+    await page.waitForTimeout(2_000);
+  });
+  expect(connects).toEqual([]);
+});
+
 test('drawing every diagram, hostile ones included, opens no connection (SR-07)', async () => {
   const fixtures = path.resolve(import.meta.dirname, '../../fixtures');
   const corpus = [path.join(fixtures, 'docs', 'mermaid.md'), path.join(fixtures, 'payloads', 'mermaid.payloads.md')]

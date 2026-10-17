@@ -2,5 +2,7 @@
   "$comment": "Memory at the reference workload (3 profiles, 20 tabs, at most 3 warm per window), summed over every process: the v0.1 baseline from the owner's machine. GALEO_PERF_ENFORCE=1 fails 10 % above it.",
   "memoryMB": 1377,
   "measuredAt": "2026-10-06",
-  "machine": "Intel i7-8565U, 45 GB, Ubuntu 26.04, Electron 44.5.1, Mermaid 12.1.0"
+  "machine": "Intel i7-8565U, 45 GB, Ubuntu 26.04, Electron 44.5.1, Mermaid 12.1.0",
+  "largeDataMemoryMB": 1015,
+  "largeDataMeasuredAt": "2026-10-16, a 99 MB CSV table and a 10 MB JSON tree open in one window, Electron 44.8.0, headless"
 }

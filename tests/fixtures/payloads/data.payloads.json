@@ -1,0 +1,14 @@
+{
+  "link": "https://example.com/tracker.png",
+  "ip": "https://1.1.1.1/beacon",
+  "script": "<script>fetch('https://example.com/x')</script>",
+  "image": "<img src=\"https://example.com/pixel.png\" onerror=\"alert(1)\">",
+  "javascript": "javascript:fetch('https://1.1.1.1')",
+  "style": "<style>@import url('https://example.com/a.css');</style>",
+  "svg": "<svg onload=\"fetch('https://example.com')\"></svg>",
+  "__proto__": { "polluted": "https://example.com/proto" },
+  "constructor": { "prototype": { "polluted": true } },
+  "https://example.com/key-is-a-url": ["https://example.com/a", "//example.com/protocol-relative", "data:text/html,<script>1</script>"],
+  "nested": { "deeper": { "deepest": "<iframe src=\"https://example.com\"></iframe>" } },
+  "escaped": "<img src=https://example.com/escaped.png>"
+}
