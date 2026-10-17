@@ -198,6 +198,12 @@ MDX is parsed, never evaluated: imports and exports are dropped; components, the
 takes the raw-HTML path above. The one attribute the sanitizer adds for it, a text-only
 `data-galeo-mdx` on `div`, `span`, `code`, `pre` and `dl`, carries no URL, script or style; raw HTML
 in a Markdown file may use it too, which at most draws a box around that file's own content.
+JSON trees and CSV/TSV tables (ADR-018) never go through HTML: every key, value and cell is put in
+as text (`textContent`, a `title` for a cell's tooltip), so URLs, markup and spreadsheet formulas
+stay characters; the JSON index is spans into the text, no object is built from a document's keys
+(`__proto__` and `constructor` stay data), and a key or string is decoded with `JSON.parse` of its
+own slice only when shown. *AC*: the no-network harness opens a JSON and a CSV of such payloads,
+expands the whole tree, and finds no connection and no link, image, script or frame element.
 Documents render into a container isolated from the app's UI styles (for example Shadow DOM), so
 content can neither restyle nor imitate app chrome.
 *AC*: a corpus of known XSS/SVG/mXSS payloads, and of hostile MDX rendered as MDX, renders with
@@ -334,6 +340,10 @@ entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument h
   replaces the worker the same way.
 - Mermaid (`maxTextSize`, `maxEdges`) and KaTeX (`maxExpand`, `maxSize`) have limits; one failing
   block shows an inline error.
+- The JSON and CSV readers (ADR-018) are linear, with no backtracking regular expressions: a JSON
+  tree stops at 10 MB, 200,000 nodes or 1,000 levels of nesting; a table shows its first
+  1,000,000 rows and stops at 10,000,000 fields (its offsets' memory); past these the file is
+  source. The views draw only the rows in view.
 - The own file watcher watches only open files (via their parent directories), coalesces events,
   and caps its rate.
 - The quick-open walker is bounded (file count, depth, time), does not follow symlinks out of the

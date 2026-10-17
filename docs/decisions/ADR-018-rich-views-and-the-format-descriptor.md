@@ -90,7 +90,7 @@ Starting values, confirmed or adjusted by the performance harness when the views
 | View | Opens as source with the "too large" banner above | Shows part, with a notice, above |
 |---|---|---|
 | JSON tree | 10 MB, or 200,000 nodes | — |
-| CSV/TSV table | 100 MB | 1,000,000 rows ("Showing N of M rows") |
+| CSV/TSV table | 100 MB, or 10,000,000 fields (their offsets' memory) | 1,000,000 rows ("Showing N of M rows") |
 
 Nesting deeper than 1,000 levels is treated as too large. *(For tables, superseded by ADR-020: "Show as table".)* "Render anyway" stays a Markdown action
 (UX states): past these limits the source view is the answer.
