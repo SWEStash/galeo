@@ -1,3 +1,4 @@
+import type { SeparatorChoice } from '../../shared/csv';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChosenEncoding, FollowResult, HistoryResult } from '../../shared/contracts';
 import type { ImageResult, RefusalReason, SaveResult } from '../../shared/documents';
@@ -40,6 +41,8 @@ export interface TabDocumentProps {
   platform: Platform;
   scheme: ColorScheme;
   onMessage: (message: string) => void;
+  /** How tables read without a choice of their own: the settings (ADR-021). */
+  tableDefaults: { separator: SeparatorChoice; header: boolean };
 }
 
 /** One tab's content. A hibernated tab has none; it's read and rendered again when shown. */
@@ -73,7 +76,7 @@ interface Arrival {
   position: ScrollAnchor | null;
 }
 
-function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, scheme, onMessage }: TabDocumentProps) {
+function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, scheme, onMessage, tableDefaults }: TabDocumentProps) {
   // A tab not shown has no layout to keep its place in: it takes a changed file when shown again.
   const [appliedReads, setAppliedReads] = useState(staleReads);
   useEffect(() => {
@@ -206,6 +209,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
       onClose={close}
       zoom={zoom}
       initialViewState={store.viewStateOf(id)}
+      tableDefaults={tableDefaults}
       onViewState={onViewState}
       editRequest={editRequest}
       onSave={save}

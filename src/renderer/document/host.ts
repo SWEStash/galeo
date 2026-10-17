@@ -37,8 +37,8 @@ export interface DocumentHost {
   setTree(model: TreeModel, label: string): void;
   /** The JSON tree shown, or null. */
   readonly tree: JsonTreeView | null;
-  /** Shows a CSV/TSV table of `text` named `label`; a new version updates it in place (ADR-018). */
-  setTable(text: string, table: CsvTable, label: string): void;
+  /** Shows a CSV/TSV table of `text` named `label`; a new version updates it in place (ADR-018); `header: false` reads row 1 as data (ADR-021). */
+  setTable(text: string, table: CsvTable, label: string, options?: { header?: boolean }): void;
   /** The table shown, or null. */
   readonly table: CsvTableView | null;
   /** The tree or table shown, which answers for the place; null for other content. */
@@ -251,13 +251,13 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
       }
       tree.setModel(model);
     },
-    setTable(text, next, label) {
+    setTable(text, next, label, options) {
       if (!table) {
         dropTree();
         clearFor('galeo-csv');
         table = createCsvTableView({ parent: article, scroller: () => host.renderedScroller, label });
       }
-      table.setTable(text, next);
+      table.setTable(text, next, options);
     },
     showSource(text, language, wrap) {
       if (!source) {

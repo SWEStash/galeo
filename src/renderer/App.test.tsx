@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS: Settings = {
   quickOpenExclude: [],
   warmTabs: 3,
   warmMegabytes: 20,
+  tableSeparator: 'auto',
+  tableHeader: true,
 };
 
 const SOURCES = Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, 'default'])) as SettingsState['sources'];

@@ -117,7 +117,7 @@ describe('render worker messages', () => {
     await handle({ type: 'render', id: 1, format: 'markdown', text: 'x' });
     await handle({ type: 'render', kind: 'sql', id: 1, format: 'markdown', text: 'x' });
     await handle({ type: 'render', kind: 'article', id: 1, format: 'text', text: 'x' });
-    await handle({ type: 'render', kind: 'table', id: 1, separator: '|', text: 'x' });
+    await handle({ type: 'render', kind: 'table', id: 1, separator: ':', text: 'x' });
     await handle({ type: 'render', kind: 'json', id: 1, text: 2 });
     await handle(null);
     expect(replies).toEqual([]);

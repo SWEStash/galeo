@@ -10,6 +10,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   quickOpenExclude: Object.freeze([]) as unknown as string[],
   warmTabs: 3,
   warmMegabytes: 20,
+  tableSeparator: 'auto',
+  tableHeader: true,
 });
 
 /** Built-in defaults, then the global file, then the profile's overrides (ADR-005). */

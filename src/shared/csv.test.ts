@@ -80,6 +80,17 @@ describe('CSV parser', () => {
     expect(grid('"x,y";2\n', 'sniff')).toEqual([['x,y', '2']]);
   });
 
+  it('recognises a tab or a pipe the same way, and reads a pipe-separated table', () => {
+    expect(tableOf('a\tb\tc\n1\t2\t3\n', 'sniff').separator).toBe('\t');
+    expect(tableOf('a|b|"c,d"\n1|2|3\n', 'sniff').separator).toBe('|');
+    expect(grid('a|b\n"x|y"|2\n', '|')).toEqual([['a', 'b'], ['x|y', '2']]);
+  });
+
+  it('takes a comma when no separator is found more than another', () => {
+    expect(tableOf('a;b,c\n', 'sniff').separator).toBe(',');
+    expect(tableOf('plain\n', 'sniff').separator).toBe(',');
+  });
+
   it('keeps the first rows up to the cap and still counts them all', () => {
     const table = tableOf('a\nb\nc\nd\n', ',', { rows: 2, fields: 100 });
     expect(table).toMatchObject({ rows: 2, totalRows: 4 });
@@ -109,7 +120,7 @@ describe('CSV parser', () => {
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
       };
     }
-    const ALPHABET = ['a', 'Z', '7', ' ', 'é', ',', ';', '\t', '"', '\n', '\r', '\r\n'];
+    const ALPHABET = ['a', 'Z', '7', ' ', 'é', ',', ';', '\t', '|', '"', '\n', '\r', '\r\n'];
 
     /** RFC 4180 writing: quoted when it must be (and now and then when it needn't), `"` doubled. */
     function serialise(rows: string[][], separator: Separator, next: () => number): string {
@@ -118,7 +129,7 @@ describe('CSV parser', () => {
       return rows.map((row) => `${row.map(field).join(separator)}\n`).join('');
     }
 
-    it.each([',', ';', '\t'] as const)('reads back what was written with %j', (separator) => {
+    it.each([',', ';', '\t', '|'] as const)('reads back what was written with %j', (separator) => {
       for (let seed = 1; seed <= 300; seed++) {
         const next = random(seed);
         const rows = Array.from({ length: Math.floor(next() * 6) }, () =>

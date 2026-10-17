@@ -28,7 +28,7 @@ export type WorkerReply =
   /** `line`: where an MDX syntax error is. */
   | { type: 'failed'; id: number; message: string; line?: number };
 
-const SEPARATORS: readonly unknown[] = [',', ';', '\t', 'sniff'];
+const SEPARATORS: readonly unknown[] = [',', ';', '\t', '|', 'sniff'];
 
 function isRenderRequest(message: unknown): message is RenderRequest {
   const m = message as { type?: unknown; kind?: unknown; id?: unknown; text?: unknown; format?: unknown; separator?: unknown } | null;

@@ -122,6 +122,15 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('tabs.viewState takes table options: a known separator, a header flag and "show as table" (ADR-021)', () => {
+    expect(accepts('tabs.viewState', [ID, { table: { separator: '|', header: false } }])).toBe(true);
+    expect(accepts('tabs.viewState', [ID, { table: { separator: 'auto', asTable: true } }])).toBe(true);
+    expect(accepts('tabs.viewState', [ID, { table: {} }])).toBe(true);
+    for (const bad of [{ table: { separator: ':' } }, { table: { header: 'no' } }, { table: { asTable: false } }, { table: { extra: 1 } }, { table: 'csv' }]) {
+      expect(accepts('tabs.viewState', [ID, bad]), JSON.stringify(bad)).toBe(false);
+    }
+  });
+
   it('quick open takes a bounded token, a bounded query, an offered id and where to open it', () => {
     expect(accepts('quickOpen.start', [])).toBe(true);
     expect(accepts('quickOpen.start', ['/r'])).toBe(false);
@@ -165,6 +174,8 @@ describe('profile channel arguments', () => {
 describe('settings, profile and app channel arguments (SR-11)', () => {
   it('settings.set takes a scope and known settings in range, nothing else', () => {
     expect(accepts('settings.set', ['profile', { fontSize: 20 }])).toBe(true);
+    expect(accepts('settings.set', ['global', { tableSeparator: ';', tableHeader: false }])).toBe(true);
+    expect(accepts('settings.set', ['global', { tableSeparator: 'semicolon' }])).toBe(false);
     expect(accepts('settings.set', ['global', { themeMode: 'dark', quickOpenExclude: ['dist'] }])).toBe(true);
     for (const bad of [
       ['profile', { fontSize: 9 }],

@@ -13,6 +13,7 @@ describe('detectFormat', () => {
     ['/d/app.log.1', 'log'],
     ['/d/app.LOG', 'log'],
     ['/d/data.json', 'json'],
+    ['/d/export.psv', 'csv'],
     ['/d/DATA.JSON', 'json'],
     ['/d/events.jsonl', 'jsonl'],
     ['/d/events.ndjson', 'jsonl'],

@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import type { ChosenEncoding } from '../../shared/contracts';
+import { useDispatcher } from '../commands/useCommands';
 import { EncodingMenu } from '../document/EncodingMenu';
+import { TableOptionsMenu } from '../document/TableOptionsMenu';
 import { ENCODING_NAMES } from '../document/encodings';
 import { RENDERED_VIEW_NAMES } from '../document/formats';
 import { ignoreClosedTab } from './closed-tab';
@@ -9,8 +11,12 @@ import type { TabStatus, TabStore, TabsView } from './store';
 
 const VIEW_NAMES = { rendered: 'Rendered', source: 'Source', split: 'Split' } as const;
 
-/** `.txt` shows its rendered view as reader text (UX F10), JSON as a tree (UX F14). */
-const viewName = (status: TabStatus) => (status.format && status.view === 'rendered' ? RENDERED_VIEW_NAMES[status.format] : undefined) ?? VIEW_NAMES[status.view!];
+/** `.txt` shows its rendered view as reader text (UX F10), JSON as a tree, CSV and any text shown as a table as one (UX F14, ADR-021). */
+function viewName(status: TabStatus): string {
+  if (status.view !== 'rendered') return VIEW_NAMES[status.view!];
+  if (status.table) return 'Table';
+  return (status.format ? RENDERED_VIEW_NAMES[status.format] : undefined) ?? VIEW_NAMES.rendered;
+}
 
 /**
  * The status bar (UX §2): the shown tab's path (a menu to copy or reveal it), view, read-only,
@@ -22,6 +28,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
   const status = tab && view.statuses.get(tab.id);
   const zoom = tab ? (view.zooms.get(tab.id) ?? 1) : 1;
   const metrics = status ? metricsLabel(status.lines, status.words) : null;
+  const dispatcher = useDispatcher();
   const chooseEncoding = (encoding: ChosenEncoding | null) => {
     if (tab) void window.galeo.documents.setEncoding(tab.id, encoding).then(() => store.reread(tab.id), ignoreClosedTab);
   };
@@ -45,6 +52,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
           <span data-testid="status-encoding">{ENCODING_NAMES[status.encoding]}</span>
         </EncodingMenu>
       )}
+      {status?.table && <TableOptionsMenu className="status-table" options={status.table} onCommand={(command) => dispatcher.run(command)} />}
       {metrics && <span data-testid="status-metrics">{metrics}</span>}
       {zoom !== 1 && <span data-testid="status-zoom">{Math.round(zoom * 100)}%</span>}
       {/* Said once, politely: the shown file took a new version from disk (UX §7). */}

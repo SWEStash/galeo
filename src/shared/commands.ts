@@ -51,6 +51,14 @@ export const COMMANDS = {
   expandAll: { label: 'Expand all nodes', group: 'View', runs: 'page' },
   collapseAll: { label: 'Collapse all nodes', group: 'View', runs: 'page' },
   copyJsonPath: { label: 'Copy JSON path', group: 'View', runs: 'page' },
+  tableSeparatorAuto: { label: 'Table separator: detect automatically', group: 'View', runs: 'page' },
+  tableSeparatorComma: { label: 'Table separator: comma', group: 'View', runs: 'page' },
+  tableSeparatorSemicolon: { label: 'Table separator: semicolon', group: 'View', runs: 'page' },
+  tableSeparatorTab: { label: 'Table separator: tab', group: 'View', runs: 'page' },
+  tableSeparatorPipe: { label: 'Table separator: pipe', group: 'View', runs: 'page' },
+  toggleTableHeader: { label: 'First row is a header', group: 'View', runs: 'page' },
+  resetTableOptions: { label: 'Reset table options', group: 'View', runs: 'page' },
+  showAsTable: { label: 'Show as table', group: 'View', runs: 'page' },
 } as const satisfies Record<Command, CommandInfo>;
 
 // macOS writes modifiers as symbols, in this order, with no separator.

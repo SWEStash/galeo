@@ -80,4 +80,13 @@ describe('useCsvTable', () => {
     await act(async () => pending[1]!.reject(new RenderTimeout(TABLE_BUDGET_MS)));
     expect(probe.latest()).toMatchObject({ status: 'paused', reason: 'slow', text: 'a,b\n' });
   });
+
+  it('reads the same text again with a new separator (ADR-021)', async () => {
+    const { client, pending } = manualClient();
+    const probe = await mount(client, 'a;b', { separator: 'sniff' });
+    await act(async () => pending[0]!.resolve(parsed('a;b\n')));
+    await probe.rerender('a;b', { separator: ',' });
+    expect(pending.map(({ separator }) => separator)).toEqual(['sniff', ',']);
+    expect(probe.latest().status).toBe('pending');
+  });
 });

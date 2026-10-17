@@ -17,9 +17,19 @@ import {
 } from 'react-aria-components';
 import { ACCENTS, accentOf } from '../../shared/accents';
 import type { ProfileView, SettingsResult, SettingsScope, SettingsState } from '../../shared/contracts';
+import type { SeparatorChoice } from '../../shared/csv';
 import type { Settings, SettingsOverrides, ThemeMode } from '../../shared/settings';
 
 const SOURCE_NAMES = { default: 'Default', global: 'All profiles', profile: 'This profile' } as const;
+
+/** The table separators Settings offers (ADR-021), Auto first. */
+const SEPARATOR_CHOICES: readonly [SeparatorChoice, string][] = [
+  ['auto', 'Auto'],
+  [',', 'Comma'],
+  [';', 'Semicolon'],
+  ['\t', 'Tab'],
+  ['|', 'Pipe'],
+];
 
 /**
  * The Settings tab (UX §6): the v0.1 settings, for this profile or for all of them. Each shows
@@ -137,6 +147,28 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
           <SwitchButton>
             <span className="switch-track" aria-hidden="true" />
             Status bar
+          </SwitchButton>
+        </SwitchField>,
+      )}
+
+      <h2>Tables</h2>
+      {setting(
+        'tableSeparator',
+        <RadioGroup className="field" value={values.tableSeparator} onChange={(value) => set({ tableSeparator: value as SeparatorChoice })} orientation="horizontal">
+          <Label>Separator</Label>
+          {SEPARATOR_CHOICES.map(([value, name]) => (
+            <RadioField key={value} value={value}>
+              <RadioButton>{name}</RadioButton>
+            </RadioField>
+          ))}
+        </RadioGroup>,
+      )}
+      {setting(
+        'tableHeader',
+        <SwitchField className="switch" isSelected={values.tableHeader} onChange={(tableHeader) => set({ tableHeader })}>
+          <SwitchButton>
+            <span className="switch-track" aria-hidden="true" />
+            First row is a header
           </SwitchButton>
         </SwitchField>,
       )}

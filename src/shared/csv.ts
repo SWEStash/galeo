@@ -2,7 +2,10 @@
 // pass over character codes, no regular expressions; the result is offsets into the text, not
 // strings, so millions of cells cost a few typed arrays and cross from the worker as transferables.
 
-export type Separator = ',' | ';' | '\t';
+export type Separator = ',' | ';' | '\t' | '|';
+
+/** A table's separator as the reader sets it: `auto` sniffs it (ADR-021). */
+export type SeparatorChoice = 'auto' | Separator;
 
 /** How much one table may hold: past `rows` the rest is counted, past `fields` it is too large. */
 export interface CsvLimits {
@@ -54,10 +57,11 @@ class Offsets {
   }
 }
 
-/** The separator of a `.csv`: `;` when the first lines hold more of it than commas, outside quotes. */
+const SNIFFED: readonly Separator[] = [',', ';', '\t', '|'];
+
+/** The separator found most in the first lines, outside quotes; a comma on a tie (ADR-021). */
 function sniff(text: string, from: number): Separator {
-  let commas = 0;
-  let semicolons = 0;
+  const counts = [0, 0, 0, 0];
   let quoted = false;
   let lines = 0;
   for (let i = from; i < text.length && lines < 10; i++) {
@@ -65,11 +69,15 @@ function sniff(text: string, from: number): Separator {
     // `""` inside quotes toggles twice: still quoted.
     if (c === QUOTE) quoted = !quoted;
     else if (quoted) continue;
-    else if (c === 0x2c) commas++;
-    else if (c === 0x3b) semicolons++;
+    else if (c === 0x2c) counts[0]!++;
+    else if (c === 0x3b) counts[1]!++;
+    else if (c === 0x09) counts[2]!++;
+    else if (c === 0x7c) counts[3]!++;
     else if (c === LF || c === CR) lines++;
   }
-  return semicolons > commas ? ';' : ',';
+  let best = 0;
+  for (let index = 1; index < counts.length; index++) if (counts[index]! > counts[best]!) best = index;
+  return SNIFFED[best]!;
 }
 
 export function parseCsv(text: string, separator: Separator | 'sniff', limits: CsvLimits = CSV_LIMITS): CsvParse {

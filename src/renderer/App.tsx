@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import { AboutDialog } from './about/AboutDialog';
@@ -71,6 +71,9 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   const { view, store } = useTabs();
   const settings = useSettings();
   const scheme = useColorScheme(settings?.settings.themeMode ?? 'system');
+  const tableSeparator = settings?.settings.tableSeparator ?? 'auto';
+  const tableHeader = settings?.settings.tableHeader ?? true;
+  const tableDefaults = useMemo(() => ({ separator: tableSeparator, header: tableHeader }), [tableSeparator, tableHeader]);
 
   // The reading settings reach documents as tokens they inherit; custom CSS only inside them (SR-17).
   useEffect(() => {
@@ -168,6 +171,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
                     platform={platform}
                     scheme={scheme}
                     onMessage={setMessage}
+                    tableDefaults={tableDefaults}
                   />
                 )}
               </TabPanel>

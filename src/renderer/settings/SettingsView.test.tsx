@@ -16,6 +16,8 @@ const DEFAULTS: Settings = {
   quickOpenExclude: [],
   warmTabs: 3,
   warmMegabytes: 20,
+  tableSeparator: 'auto',
+  tableHeader: true,
 };
 
 const STATE: SettingsState = {
@@ -31,6 +33,8 @@ const STATE: SettingsState = {
     quickOpenExclude: 'default',
     warmTabs: 'default',
     warmMegabytes: 'default',
+    tableSeparator: 'default',
+    tableHeader: 'default',
   },
   notices: [],
   session: null,

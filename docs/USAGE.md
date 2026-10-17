@@ -99,7 +99,11 @@ the file into the window in front of you) when you want it here.
   1,000 deep) opens as source. Find (Ctrl+F) works in the source view.
 - **CSV and TSV** open as a **table**: the header row stays in view, rows are numbered, and each
   cell shows its full value as a tooltip. Arrow keys move between cells, Home/End to a row's ends,
-  Ctrl+Home/End to the table's. A `.csv` that uses `;` is recognised. Ctrl+U shows the text, and
+  Ctrl+Home/End to the table's. The separator is found from the first lines (comma, semicolon, tab
+  or pipe), and the first row is taken as the header: the **Table options** in the status bar (or
+  the palette's *Table separator: …* and *First row is a header*) change either for that tab, and
+  it keeps them; Settings has the defaults. `.psv` files open as tables, and *Show as table* in the
+  palette shows any other text file as one. Ctrl+U shows the text, and
   Ctrl+\ puts the table beside it (in edit mode the table follows your typing). Past a million
   rows the table shows the first ones and says how many there are. A file over 100 MB opens as
   source with **Show as table** (up to 256 MB); a big table may take a few seconds. Find (Ctrl+F)

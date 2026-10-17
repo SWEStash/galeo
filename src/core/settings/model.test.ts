@@ -4,6 +4,8 @@ import { DEFAULT_SETTINGS, migrate, resolveSettings } from './model';
 describe('resolveSettings', () => {
   it('starts from the built-in defaults', () => {
     expect(resolveSettings({}, {})).toEqual(DEFAULT_SETTINGS);
+    // Tables (ADR-021): the separator found, and a header row.
+    expect(DEFAULT_SETTINGS).toMatchObject({ tableSeparator: 'auto', tableHeader: true });
   });
 
   it('lets the global file override the defaults, and the profile override both', () => {

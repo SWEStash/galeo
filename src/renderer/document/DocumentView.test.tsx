@@ -48,7 +48,7 @@ describe('DocumentView', () => {
     const csv = 'a,b\n1,2\n';
     const parsed = parseCsv(csv, ',');
     if (parsed.state !== 'table') throw new Error(parsed.state);
-    const container = await render(<DocumentView {...props} source={{ text: csv, language: null }} rendered={{ table: parsed.table, source: csv, label: 'data.csv' }} scheme="light" ref={(value) => void (handle.current = value)} />);
+    const container = await render(<DocumentView {...props} source={{ text: csv, language: null }} rendered={{ table: parsed.table, source: csv, label: 'data.csv', header: true }} scheme="light" ref={(value) => void (handle.current = value)} />);
     const shadow = shadowOf(container);
     expect(shadow.querySelector('[role=grid]')?.getAttribute('aria-label')).toBe('data.csv');
     act(() => handle.current!.focus());

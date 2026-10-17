@@ -48,7 +48,7 @@ ADR-002…007).
 |---|---|---|
 | **Tab bar** (merged with title bar, client-side decorations) | Profile chip (name + accent colour, left edge), tabs, new-tab button, window controls | Always visible |
 | **Document area** | Rendered or source view of the active tab | Always visible |
-| **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width") | Always visible; can be hidden in settings |
+| **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; (v0.3) a table's options (separator and header, a menu); the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width") | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
@@ -262,8 +262,12 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   cursor at that point. Fixing it in edit mode and saving brings the tree back.
 - **CSV and TSV** open as a **table**: a header row that stays in view, row numbers, cells that
   keep their text on one line (the full value in the tooltip and when the cell has focus), and
-  horizontal scrolling for wide tables. Arrow keys move between cells. The separator is taken
-  from the extension, and a `.csv` that uses `;` is recognised. Ctrl+U shows the raw text;
+  horizontal scrolling for wide tables. Arrow keys move between cells. The separator is found
+  from the first lines (comma, semicolon, tab or pipe; a `.tsv` keeps tabs), and the first row is
+  the header. **Table options** in the status bar (`Auto (;) · Header`) set the separator and
+  whether the first row is a header for that tab, kept with it; the palette has the same commands,
+  Settings the defaults (ADR-021). `.psv` opens as a table, and the palette's *Show as table* shows
+  any other text file as one. Ctrl+U shows the raw text;
   Ctrl+\ puts the table beside its source (F13), rows aligned with their lines, and the table
   follows the text while editing.
 - **YAML, TOML and source code** open in the **source** view with syntax highlighting, fold
@@ -360,6 +364,7 @@ the native menu on the active tab.
 | Widen / narrow / reset reader width, full width (v0.3) | chosen with the feature (§8) | Per tab, like zoom |
 | Move tab to new window / to window… (v0.3) | palette | F15 |
 | Expand all nodes / Collapse all nodes / Copy JSON path (v0.3) | palette | JSON tree, F14 |
+| Table separator: … / First row is a header / Reset table options / Show as table (v0.3) | palette; also the status bar's Table options | Tables, F14, ADR-021 |
 | Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply

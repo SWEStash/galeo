@@ -9,7 +9,8 @@ import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
 import { OutlinePanel } from '../outline/OutlinePanel';
 import { useOutline } from '../outline/useOutline';
-import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
+import type { SeparatorChoice } from '../../shared/csv';
+import type { ScrollAnchor, TableOptions, TabViewState } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
@@ -41,6 +42,12 @@ const LOADING_DELAY_MS = 150;
 
 /** A render this long offers Cancel (ADR-020). */
 const CANCEL_AFTER_MS = 5000;
+
+/** A table's options with no settings to follow. */
+const TABLE_DEFAULTS = { separator: 'auto', header: true } as const;
+
+/** Formats whose rendered view is their own, which Show as table leaves alone (ADR-021). */
+const OWN_VIEWS: ReadonlySet<string> = new Set(['markdown', 'mdx', 'json', 'csv', 'tsv']);
 
 /** Row counts as the notice writes them: "Showing 1,000,000 of 1,250,000 rows". */
 const ROWS = new Intl.NumberFormat('en-US');
@@ -94,6 +101,8 @@ export interface DocumentPaneProps {
   onConfirmLeave?: () => Promise<boolean>;
   /** Hands main the unsaved text, kept in memory for a renderer crash (ADR-013). */
   onKeep?: (text: string, base: string | null) => void;
+  /** How a table reads when its tab has no choice of its own: the settings (ADR-021). */
+  tableDefaults?: { separator: SeparatorChoice; header: boolean };
   /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
   recovered?: { text: string; base: string | null } | null;
   /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
@@ -170,6 +179,7 @@ export function DocumentPane({
   onKeep,
   recovered = null,
   onReread,
+  tableDefaults = TABLE_DEFAULTS,
 }: DocumentPaneProps) {
   const [dirty, setDirty] = useState(false);
   const dirtyNow = useRef(false);
@@ -187,6 +197,8 @@ export function DocumentPane({
   // The source pane's share of a split (ADR-014), kept with the view state once moved.
   const [ratio, setRatio] = useState(initialViewState.ratio ?? 0.5);
   const [narrow, setNarrow] = useState(false);
+  // The reader's table options for this tab, kept with its view state (ADR-021).
+  const [tableOptions, setTableOptions] = useState<TableOptions>(initialViewState.table ?? {});
   // What the format's tab can show (ADR-018): Markdown and MDX render in the worker, `.txt` as
   // reader text, JSON as a tree, CSV/TSV as a table; the rest is source only.
   const views = ready ? FORMAT_VIEWS[ready.format] : null;
@@ -194,9 +206,13 @@ export function DocumentPane({
   const article = format !== null;
   const reader = views?.reader === true;
   const json = ready?.format === 'json';
-  const tabular = ready?.format === 'csv' || ready?.format === 'tsv';
-  const renderable = views !== null && views.rendered !== 'none';
-  const splittable = views?.split === true;
+  // A text file the reader asked to see as a table, unless its format has a view of its own (ADR-021).
+  const asTable = tableOptions.asTable === true && ready !== null && !OWN_VIEWS.has(ready.format);
+  const tabular = ready?.format === 'csv' || ready?.format === 'tsv' || asTable;
+  const separatorChoice = tableOptions.separator ?? tableDefaults.separator;
+  const header = tableOptions.header ?? tableDefaults.header;
+  const renderable = (views !== null && views.rendered !== 'none') || asTable;
+  const splittable = views?.split === true || asTable;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
   // Editing in split, the preview follows the editor's text rather than the file's (ADR-014).
   const [previewText, setPreviewText] = useState<string | null>(null);
@@ -216,7 +232,8 @@ export function DocumentPane({
   // CSV/TSV's table: read by the worker on its own budget, drawn by the page (ADR-018, ADR-020); in
   // split while editing it follows the editor's text.
   const csvTable = useCsvTable(client, tabular ? (previewText ?? ready.text) : null, wantedView !== 'source', {
-    separator: ready?.format === 'tsv' ? '\t' : 'sniff',
+    // Auto keeps a .tsv on tabs; anything else is sniffed (ADR-021).
+    separator: separatorChoice !== 'auto' ? separatorChoice : ready?.format === 'tsv' ? '\t' : 'sniff',
     readerAsked: ready?.banner === 'too-large',
     live: previewText !== null,
   });
@@ -238,11 +255,11 @@ export function DocumentPane({
     csvTable.cancel();
   };
   const rendered = useMemo<RenderedContent | null>(() => {
+    if (ready && tabular) return shownTable?.table ? { table: shownTable.table, source: shownTable.text, label: fileName(ready.path), header } : null;
     if (ready && reader) return { text: ready.text };
     if (ready && json) return treeModel ? { tree: treeModel, label: fileName(ready.path) } : null;
-    if (ready && tabular) return shownTable?.table ? { table: shownTable.table, source: shownTable.text, label: fileName(ready.path) } : null;
     return render.html === null ? null : { html: render.html };
-  }, [ready, reader, json, treeModel, tabular, shownTable?.table, shownTable?.text, render.html]);
+  }, [ready, reader, json, treeModel, tabular, shownTable?.table, shownTable?.text, header, render.html]);
   const endFollow = useCallback(() => setFollow(false), []);
   const showRendered = useCallback(() => {
     setRenderAnyway(true);
@@ -544,6 +561,42 @@ export function DocumentPane({
     stepFind(direction);
     return true;
   };
+  // Table options (ADR-021): from the palette, or the status bar's Table options menu, which runs
+  // these commands. A new separator reads the table again; the header only redraws it.
+  const separatorCommand = (separator: SeparatorChoice) => () => {
+    if (!tabular) return false;
+    setTableOptions((current) => ({ ...current, separator }));
+    return true;
+  };
+  const tableCommands = {
+    tableSeparatorAuto: separatorCommand('auto'),
+    tableSeparatorComma: separatorCommand(','),
+    tableSeparatorSemicolon: separatorCommand(';'),
+    tableSeparatorTab: separatorCommand('\t'),
+    tableSeparatorPipe: separatorCommand('|'),
+    toggleTableHeader: () => {
+      if (!tabular) return false;
+      setTableOptions((current) => ({ ...current, header: !header }));
+      return true;
+    },
+    resetTableOptions: () => {
+      if (!tabular) return false;
+      if (asTable) setChosenView(null);
+      setTableOptions({});
+      return true;
+    },
+    showAsTable: () => {
+      if (!ready) return false;
+      if (OWN_VIEWS.has(ready.format) && !tabular) {
+        onMessage?.(`${FORMAT_NAMES[ready.format]} files have their own view (Ctrl+U)`);
+        return true;
+      }
+      if (!tabular) setTableOptions((current) => ({ ...current, asTable: true }));
+      // Edit mode keeps the editor: the table comes beside it.
+      setChosenView(editing ? 'split' : 'rendered');
+      return true;
+    },
+  };
   useCommands(
     {
       toggleSource: () => renderable && toggle(afterToggleSource(layout, { editing })),
@@ -595,6 +648,7 @@ export function DocumentPane({
         tree.collapseAll();
         return true;
       },
+      ...tableCommands,
       copyJsonPath: () => {
         const tree = view === 'rendered' ? documentHandle.current?.tree() : null;
         if (!tree || !treeModel) return false;
@@ -654,8 +708,9 @@ export function DocumentPane({
       ...(chosenView ? { view: chosenView } : {}),
       ...(follow ? { follow: true as const } : {}),
       ...(ratio !== 0.5 ? { ratio } : {}),
+      ...(Object.keys(tableOptions).length > 0 ? { table: tableOptions } : {}),
     });
-  }, [onViewState, chosenView, follow, ratio]);
+  }, [onViewState, chosenView, follow, ratio, tableOptions]);
 
   // Only the source view shows the file's lines; rendered and reader views wrap to the window.
   const lines = useMemo(() => (ready && view !== 'rendered' ? countLines(ready.text) : null), [ready, view]);
@@ -673,8 +728,10 @@ export function DocumentPane({
       follow,
       editing,
       dirty,
+      // The status bar's Table options read these while a table shows (ADR-021).
+      table: tabular && view !== 'source' ? { separator: separatorChoice, found: shownTable?.table?.separator ?? null, header } : null,
     });
-  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty]);
+  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, tabular, separatorChoice, shownTable?.table, header]);
 
   if (!ready) {
     return (

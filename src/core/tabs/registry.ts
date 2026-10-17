@@ -16,6 +16,8 @@ export interface HistoryEntry {
   view?: TabViewState['view'];
   follow?: true;
   ratio?: number;
+  /** The reader's table options (ADR-021). */
+  table?: TabViewState['table'];
   /**
    * The reader handed this file over (command line, Files, a second launch) or confirmed editing
    * it: Ctrl+E edits it without asking (ADR-015). Main only; never in a snapshot.
@@ -112,7 +114,7 @@ export class TabRegistry {
   snapshot(window: number): TabSnapshot {
     const tabs = (this.order.get(window) ?? []).map((id): TabView => {
       const record = this.records.get(id)!;
-      const { position, view, follow, ratio } = record.entries[record.index]!;
+      const { position, view, follow, ratio, table } = record.entries[record.index]!;
       return {
         ...recordOf(record),
         ...(record.zoom ? { zoom: record.zoom } : {}),
@@ -120,6 +122,7 @@ export class TabRegistry {
         ...(view ? { view } : {}),
         ...(follow ? { follow } : {}),
         ...(ratio ? { ratio } : {}),
+        ...(table ? { table } : {}),
         ...(record.crashed ? { crashed: true as const } : {}),
       };
     });
@@ -280,9 +283,11 @@ export class TabRegistry {
     delete entry.view;
     delete entry.follow;
     delete entry.ratio;
+    delete entry.table;
     if (state.view) entry.view = state.view;
     if (state.follow) entry.follow = true;
     if (state.ratio) entry.ratio = state.ratio;
+    if (state.table) entry.table = { ...state.table };
     return true;
   }
 

@@ -1,3 +1,4 @@
+import type { Separator, SeparatorChoice } from '../../shared/csv';
 import type { GaleoApi } from '../../shared/contracts';
 import type { DocumentContent, DocumentRecord, TextEncoding } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
@@ -21,6 +22,8 @@ export interface TabStatus {
   editing: boolean;
   /** Edited, with changes not saved yet. */
   dirty: boolean;
+  /** While a table shows: its separator choice, the one the reader found (Auto's pick), its header (ADR-021). */
+  table?: { separator: SeparatorChoice; found: Separator | null; header: boolean } | null;
 }
 
 export interface TabsView {
@@ -179,6 +182,7 @@ export function createTabStore(api: TabsApi): TabStore {
         ...(tab.view ? { view: tab.view } : {}),
         ...(tab.follow ? { follow: tab.follow } : {}),
         ...(tab.ratio ? { ratio: tab.ratio } : {}),
+        ...(tab.table ? { table: tab.table } : {}),
       });
     }
     view = { ...view, zooms, crashed };

@@ -17,8 +17,11 @@ const MAX_CHARS = 40;
 
 export interface CsvTableView {
   readonly element: HTMLElement;
-  /** Shows a table; a new version of the text keeps the scroll and the focused cell, by index. */
-  setTable(text: string, table: CsvTable): void;
+  /**
+   * Shows a table; a new version of the text keeps the scroll and the focused cell, by index.
+   * `header: false`: the columns are numbered and the first row is data (ADR-021).
+   */
+  setTable(text: string, table: CsvTable, options?: { header?: boolean }): void;
   focus(): void;
   /** The source line of the row at the top of the view (the header's at the very top). */
   topLine(): number;
@@ -61,17 +64,18 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   element.className = 'galeo-csv-table';
   element.setAttribute('role', 'grid');
   element.setAttribute('aria-label', label);
-  const header = document.createElement('div');
-  header.className = 'galeo-csv-header';
-  header.setAttribute('role', 'row');
-  header.setAttribute('aria-rowindex', '1');
+  const headerRow = document.createElement('div');
+  headerRow.className = 'galeo-csv-header';
+  headerRow.setAttribute('role', 'row');
+  headerRow.setAttribute('aria-rowindex', '1');
   const body = document.createElement('div');
   body.className = 'galeo-csv-body';
-  element.append(header, body);
+  element.append(headerRow, body);
   parent.append(element);
   let text = '';
   let table: CsvTable | null = null;
-  // Body rows are the table's rows after the header: body row `i` is table row `i + 1`.
+  // Body rows are the table's rows after the header, if it has one: body row `i` is table row `i + first`.
+  let first = 1;
   let bodyCount = 0;
   // Where the last kept row ends: the line after it closes split's last range.
   let endLine = 1;
@@ -101,18 +105,18 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   function row(index: number): HTMLElement {
     const existing = drawn.get(index);
     if (existing) return existing;
-    const tableRow = index + 1;
+    const tableRow = index + first;
     const item = document.createElement('div');
     item.className = 'galeo-csv-row';
     item.setAttribute('role', 'row');
-    item.setAttribute('aria-rowindex', String(tableRow + 1));
+    item.setAttribute('aria-rowindex', String(index + 2));
     item.dataset['row'] = String(index);
     item.dataset['srcLine'] = String(table!.rowLines[tableRow]);
     const number = document.createElement('div');
     number.className = 'galeo-csv-cell galeo-csv-number';
     number.setAttribute('role', 'rowheader');
     number.setAttribute('aria-colindex', '1');
-    number.textContent = String(tableRow);
+    number.textContent = String(index + 1);
     item.append(number);
     for (let column = 0; column < table!.columns; column++) {
       const value = cell(text, table!, tableRow, column) ?? '';
@@ -235,16 +239,17 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
 
   const view: CsvTableView = {
     element,
-    setTable(nextText, next) {
+    setTable(nextText, next, { header = true } = {}) {
       text = nextText;
       table = next;
-      bodyCount = Math.max(0, next.rows - 1);
+      first = header ? 1 : 0;
+      bodyCount = Math.max(0, next.rows - first);
       const last = next.rows - 1;
       // Only the last row's own line breaks are counted: its start line is known.
       endLine = last < 0 ? 2 : lineAt(text, next.rowStarts[last]!, next.rowLines[last]!, next.fieldEnds[next.rowFields[last + 1]! - 1]!) + 1;
       drawn = new Map();
       body.replaceChildren();
-      element.setAttribute('aria-rowcount', String(next.rows));
+      element.setAttribute('aria-rowcount', String(bodyCount + 1));
       element.setAttribute('aria-colcount', String(next.columns + 1));
       // Widths from the first rows: the header and a sample of the data, in characters.
       const widths = Array.from({ length: next.columns }, (_, column) => {
@@ -254,7 +259,8 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       });
       const numberWidth = Math.max(2, String(bodyCount).length) + 1;
       element.style.setProperty('--galeo-csv-columns', [`${numberWidth}ch`, ...widths.map((chars) => `calc(${chars}ch + 1rem)`)].join(' '));
-      header.replaceChildren(columnHeader('#', 0), ...widths.map((_, column) => columnHeader(next.rows > 0 ? (cell(text, next, 0, column) ?? '') : '', column + 1)));
+      const name = (column: number) => (!header ? String(column + 1) : next.rows > 0 ? (cell(text, next, 0, column) ?? '') : '');
+      headerRow.replaceChildren(columnHeader('#', 0), ...widths.map((_, column) => columnHeader(name(column), column + 1)));
       focusRow = Math.min(focusRow, Math.max(0, bodyCount - 1));
       focusColumn = Math.min(focusColumn, Math.max(0, next.columns - 1));
       draw();
@@ -267,18 +273,18 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       if (!table) return 1;
       const pane = scroller();
       if (pane.scrollTop <= gridTop()) return table.rowLines[0] ?? 1;
-      return lineOf(Math.min(table.rows - 1, Math.floor(scrolled()) + 1));
+      return lineOf(Math.min(table.rows - 1, Math.floor(scrolled()) + first));
     },
     scrollToLine(line) {
       if (!table) return;
       const tableRow = Math.max(0, countAtMost(table.rowLines, line) - 1);
-      scroller().scrollTop = gridTop() + Math.max(0, tableRow - 1) * TABLE_ROW_HEIGHT;
+      scroller().scrollTop = gridTop() + Math.max(0, tableRow - first) * TABLE_ROW_HEIGHT;
       draw();
     },
     topPosition() {
       if (!table || table.rows === 0) return 1;
-      // Body row `i` is table row `i + 1`, spread over its lines up to the next row's.
-      const at = scrolled() + 1;
+      // Body row `i` is table row `i + first`, spread over its lines up to the next row's.
+      const at = scrolled() + first;
       const row = Math.min(table.rows - 1, Math.floor(at));
       return lineOf(row) + Math.min(1, at - row) * (lineOf(row + 1) - lineOf(row));
     },
@@ -287,7 +293,7 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       const row = Math.min(table.rows - 1, Math.max(0, countAtMost(table.rowLines, line) - 1));
       const span = lineOf(row + 1) - lineOf(row);
       const at = row + (span > 0 ? Math.min(1, Math.max(0, (line - lineOf(row)) / span)) : 0);
-      scroller().scrollTop = gridTop() + Math.max(0, at - 1) * TABLE_ROW_HEIGHT;
+      scroller().scrollTop = gridTop() + Math.max(0, at - first) * TABLE_ROW_HEIGHT;
       draw();
     },
     flush: draw,

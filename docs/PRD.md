@@ -227,7 +227,9 @@ must not obstruct (plain files only, no sidecar metadata).
    that exported data is readable at a glance.
    - AC: The header row stays visible while scrolling; quoted fields (commas, quotes and line breaks
      inside), a byte order mark, CRLF line ends and rows of uneven length all display correctly;
-     a `.csv` that uses `;` as its separator is recognised.
+     a `.csv` that uses `;` as its separator is recognised. The reader can set the separator (comma,
+     semicolon, tab, pipe) and whether the first row is a header for a file, kept with its tab, with
+     defaults in Settings; other text files can be shown as a table (ADR-021).
    - AC: Given more rows than the table shows, a notice says how many are shown out of how many;
      Ctrl+U shows the whole raw text.
    - AC: Ctrl+\ shows the table beside its source, scrolled together row by row; editing the

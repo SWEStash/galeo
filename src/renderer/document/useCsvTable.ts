@@ -38,14 +38,15 @@ export function useCsvTable(
   wanted: boolean,
   { separator, readerAsked = false, live = false }: { separator: Separator | 'sniff'; readerAsked?: boolean; live?: boolean },
 ): CsvTableState {
-  const [result, setResult] = useState<{ text: string; attempt: { count: number; long: boolean }; state: Settled } | null>(null);
+  // A result answers for its text, the separator it was read with, and the attempt.
+  const [result, setResult] = useState<{ text: string; separator: Separator | 'sniff'; attempt: { count: number; long: boolean }; state: Settled } | null>(null);
   const [attempt, setAttempt] = useState({ count: 0, long: false });
   const lastGood = useRef<Shown | null>(null);
   const running = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!client || text === null || !wanted) return;
-    if (result?.text === text && result.attempt === attempt) return;
+    if (result?.text === text && result.separator === separator && result.attempt === attempt) return;
     let current = true;
     const controller = (running.current = new AbortController());
     const budgetMs = readerAsked || attempt.long ? RENDER_ANYWAY_BUDGET_MS : TABLE_BUDGET_MS;
@@ -53,13 +54,13 @@ export function useCsvTable(
       (parsed) => {
         if (!current) return;
         if (parsed.state === 'table') lastGood.current = { text, table: parsed.table };
-        setResult({ text, attempt, state: parsed.state === 'table' ? { status: 'ready', text, table: parsed.table } : { status: 'too-large' } });
+        setResult({ text, separator, attempt, state: parsed.state === 'table' ? { status: 'ready', text, table: parsed.table } : { status: 'too-large' } });
       },
       (error: unknown) => {
         // Newer text took its place: its own job answers.
         if (!current || error instanceof RenderSuperseded) return;
         const reason = error instanceof RenderTimeout ? 'slow' : error instanceof RenderCancelled ? 'cancelled' : 'error';
-        setResult({ text, attempt, state: { status: 'failed', reason } });
+        setResult({ text, separator, attempt, state: { status: 'failed', reason } });
       },
     );
     return () => {
@@ -72,7 +73,7 @@ export function useCsvTable(
   const cancel = useCallback(() => running.current?.abort(), []);
   const actions = { retry, showAnyway, cancel };
   const good = lastGood.current ?? { text: null, table: null };
-  if (result?.text === text && result.attempt === attempt) {
+  if (result?.text === text && result.separator === separator && result.attempt === attempt) {
     if (live && result.state.status === 'failed') return { status: 'paused', reason: result.state.reason, ...good, ...actions };
     return { ...result.state, ...actions };
   }

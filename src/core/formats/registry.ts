@@ -63,7 +63,8 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
   jsonl: sourceOnly(['.jsonl', '.ndjson']),
   yaml: sourceOnly(['.yaml', '.yml']),
   toml: sourceOnly(['.toml']),
-  csv: table(['.csv']),
+  // A pipe-separated file is read as CSV: Auto finds the pipe (ADR-021).
+  csv: table(['.csv', '.psv']),
   tsv: table(['.tsv']),
   code: { ...sourceOnly(CODE_EXTENSIONS), matchesName: (name) => CODE_NAMES.has(name) },
   plain: {

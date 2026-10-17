@@ -47,6 +47,15 @@ const BASE = {
   expandAll: [],
   collapseAll: [],
   copyJsonPath: [],
+  /** Table options (ADR-021): palette commands, also run by the status bar's Table options menu. */
+  tableSeparatorAuto: [],
+  tableSeparatorComma: [],
+  tableSeparatorSemicolon: [],
+  tableSeparatorTab: [],
+  tableSeparatorPipe: [],
+  toggleTableHeader: [],
+  resetTableOptions: [],
+  showAsTable: [],
 } satisfies Record<string, string[]>;
 
 export type Command = keyof typeof BASE;

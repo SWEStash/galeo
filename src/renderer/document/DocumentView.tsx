@@ -18,7 +18,7 @@ import type { FindResult, SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 
 /** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`), or a JSON tree or a CSV table (of `source`) named `label`. */
-export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string } | { table: CsvTable; source: string; label: string };
+export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string } | { table: CsvTable; source: string; label: string; header: boolean };
 
 /** A tree row's weight for the warm-tab budget: its share of the worker's index and the model. */
 const TREE_BYTES_PER_NODE = 48;
@@ -312,7 +312,7 @@ export function DocumentView({
         onExpand: (diagram) => expandListener.current?.(diagram),
       });
     } else if ('tree' in rendered) documentHost.setTree(rendered.tree, rendered.label);
-    else if ('table' in rendered) documentHost.setTable(rendered.source, rendered.table, rendered.label);
+    else if ('table' in rendered) documentHost.setTable(rendered.source, rendered.table, rendered.label, { header: rendered.header });
     else documentHost.setReaderText(rendered.text);
     if (before) {
       element.scrollTop = keptTopFor(before, top, placedBlocks(documentHost, element), { height: element.scrollHeight, viewport: element.clientHeight });

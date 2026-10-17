@@ -1,3 +1,5 @@
+import type { SeparatorChoice } from './csv';
+
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 /** Every v0.1 setting (UX §6), as resolved for one profile. */
@@ -16,6 +18,9 @@ export interface Settings {
   warmTabs: number;
   /** Rendered weight those tabs may hold together, in MiB. */
   warmMegabytes: number;
+  /** Tables (ADR-021): the separator a tab without its own choice reads with, and whether row 1 is a header. */
+  tableSeparator: SeparatorChoice;
+  tableHeader: boolean;
 }
 
 /** What a settings file sets; anything it leaves out comes from the level below. */

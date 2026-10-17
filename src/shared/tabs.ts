@@ -1,3 +1,4 @@
+import type { SeparatorChoice } from './csv';
 import type { DocumentRecord } from './documents';
 import type { ViewMode } from './formats';
 
@@ -7,6 +8,16 @@ export interface TabViewState {
   follow?: true;
   /** The source pane's share of a split's width, when the reader moved the divider (absent at half). */
   ratio?: number;
+  /** The reader's table options (ADR-021); absent ones follow the settings. */
+  table?: TableOptions;
+}
+
+/** How a tab reads its text as a table: set by the reader, kept with the tab (ADR-021). */
+export interface TableOptions {
+  separator?: SeparatorChoice;
+  header?: boolean;
+  /** A text file the reader asked to see as a table ("Show as table"). */
+  asTable?: true;
 }
 
 /** A tab in a snapshot: its record, zoom (absent at 100 %), the last position and view state main heard of. */

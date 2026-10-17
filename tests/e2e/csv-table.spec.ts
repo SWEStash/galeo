@@ -154,3 +154,71 @@ test('a CSV over 100 MB opens as source, and Show as table shows it as a table',
     removeTempHome(home);
   }
 });
+
+const tableOptions = (window: Page) => window.locator('.status-table');
+
+async function chooseTableOption(window: Page, name: string) {
+  await tableOptions(window).click();
+  await window.getByRole('menu', { name: 'Table options' }).getByText(name, { exact: true }).click();
+}
+
+test('the status bar sets the separator and the header, and the tab keeps them across a restart (ADR-021)', async () => {
+  const { home, files } = setUp({ 'semi.csv': 'a;b;c,d\n1;2;3,4\n' });
+  const first = await launchApp(['--', files['semi.csv']!], { home });
+  try {
+    await expect(tableOptions(first.window)).toHaveText('Auto (;) · Header');
+    await expect(headers(first.window)).toHaveText(['#', 'a', 'b', 'c,d']);
+    await chooseTableOption(first.window, 'Comma');
+    await expect(headers(first.window)).toHaveText(['#', 'a;b;c', 'd']);
+    await chooseTableOption(first.window, 'First row is a header');
+    await expect(tableOptions(first.window)).toHaveText('Comma · No header');
+    await expect(headers(first.window)).toHaveText(['#', '1', '2']);
+    await expect(bodyRows(first.window)).toHaveCount(2);
+  } finally {
+    await first.close();
+  }
+  const again = await launchApp([], { home });
+  try {
+    await expect(tableOptions(again.window)).toHaveText('Comma · No header', { timeout: 15_000 });
+    await chooseTableOption(again.window, 'Reset to defaults');
+    await expect(tableOptions(again.window)).toHaveText('Auto (;) · Header');
+  } finally {
+    await again.close();
+    removeTempHome(home);
+  }
+});
+
+test('a .psv opens as a table, and Show as table shows other text as one (ADR-021)', async () => {
+  const { home, files } = setUp({ 'export.psv': 'a|b\n1|2\n', 'notes.txt': 'x|y|z\n1|2|3\n' });
+  const { window, close } = await launchApp(['--', files['export.psv']!, files['notes.txt']!], { home });
+  try {
+    await window.getByRole('tab').first().click();
+    await expect(headers(window)).toHaveText(['#', 'a', 'b']);
+    await window.getByRole('tab').nth(1).click();
+    await expect(grid(window)).toHaveCount(0);
+    await window.keyboard.press('ControlOrMeta+Shift+P');
+    await window.getByTestId('palette').getByRole('combobox').fill('Show as table');
+    await window.keyboard.press('Enter');
+    await expect(headers(window)).toHaveText(['#', 'x', 'y', 'z']);
+    await expect(window.getByTestId('status-view')).toHaveText('Table');
+    await window.keyboard.press('Control+u');
+    await expect(window.getByTestId('status-view')).toHaveText('Source');
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
+test("Settings' table defaults apply to a tab with no choice of its own (ADR-021)", async () => {
+  const { home, files } = setUp({ 'plain.csv': 'a,b\n1,2\n' });
+  saveFile(path.join(appDirs(home).config, 'settings.json'), '{"schemaVersion":1,"themeMode":"light","tableSeparator":"|","tableHeader":false}');
+  const { window, close } = await launchApp(['--', files['plain.csv']!], { home });
+  try {
+    await expect(tableOptions(window)).toHaveText('Pipe · No header');
+    await expect(headers(window)).toHaveText(['#', '1']);
+    await expect(bodyRows(window).first().locator('[role=gridcell]')).toHaveText(['a,b']);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});

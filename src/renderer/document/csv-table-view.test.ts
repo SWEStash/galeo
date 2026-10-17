@@ -47,6 +47,16 @@ describe('CSV table view', () => {
     expect(bodyRows(grid()).map((row) => row.getAttribute('aria-rowindex'))).toEqual(['2', '3', '4']);
   });
 
+  it('without a header row, numbers the columns and shows the first row as data (ADR-021)', () => {
+    const { view, grid } = setup(SAMPLE);
+    view.setTable(SAMPLE, tableOf(SAMPLE), { header: false });
+    expect([...grid().querySelectorAll('[role=columnheader]')].map((cell) => cell.textContent)).toEqual(['#', '1', '2', '3']);
+    expect(bodyRows(grid()).map(cells)[0]).toEqual(['1', 'name', 'qty', 'note']);
+    expect(bodyRows(grid())).toHaveLength(4);
+    expect(grid().getAttribute('aria-rowcount')).toBe('5');
+    expect(bodyRows(grid()).map((row) => row.dataset['srcLine'])).toEqual(['1', '2', '3', '4']);
+  });
+
   it('gives each cell its full value as a tooltip', () => {
     const { grid } = setup(SAMPLE);
     expect(bodyRows(grid())[0]!.querySelectorAll('[role=gridcell]')[2]!.getAttribute('title')).toBe('ripe, sweet');

@@ -26,6 +26,9 @@ const profileName = z.string().max(256);
 // Any colour `profile.json` may hold: the dialogs offer presets, and a hand-picked one survives a rename.
 const accent = z.string().regex(/^#[0-9a-f]{6}$/i).nullable();
 
+/** A table's separator as the reader sets it (ADR-021). */
+const separatorChoice = z.enum(['auto', ',', ';', '\t', '|']);
+
 /** Every setting a file or the Settings tab may set (SR-17), each optional. */
 export const settingsOverrides = z.strictObject({
   themeMode: z.enum(['system', 'light', 'dark']),
@@ -37,6 +40,8 @@ export const settingsOverrides = z.strictObject({
   quickOpenExclude: z.array(z.string().min(1).max(255)).max(1000),
   warmTabs: z.int().min(0).max(20),
   warmMegabytes: z.int().min(1).max(1024),
+  tableSeparator: separatorChoice,
+  tableHeader: z.boolean(),
 }).partial();
 
 /** A tab's zoom, 50 % to 300 %. */
@@ -47,6 +52,13 @@ export const tabViewState = z.strictObject({
   view: z.enum(['rendered', 'source', 'split']).exactOptional(),
   follow: z.literal(true).exactOptional(),
   ratio: z.number().min(SPLIT_MIN_RATIO).max(SPLIT_MAX_RATIO).exactOptional(),
+  table: z
+    .strictObject({
+      separator: separatorChoice.exactOptional(),
+      header: z.boolean().exactOptional(),
+      asTable: z.literal(true).exactOptional(),
+    })
+    .exactOptional(),
 });
 
 export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {

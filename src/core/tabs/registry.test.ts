@@ -244,6 +244,16 @@ describe('TabRegistry', () => {
     expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('ratio');
   });
 
+  it("keeps an entry's table options with its view, in snapshots and the session (ADR-021)", () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.csv', 1);
+    tabs.setViewState(id, 1, { table: { separator: ',', header: false } });
+    expect(tabs.snapshot(1).tabs[0]).toMatchObject({ table: { separator: ',', header: false } });
+    expect(tabs.exportWindow(1).tabs[0]!.entries[0]).toEqual({ path: '/d/a.csv', anchor: null, table: { separator: ',', header: false } });
+    tabs.setViewState(id, 1, {});
+    expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('table');
+  });
+
   it('opens a tab at the start when asked to open it after no tab', () => {
     const tabs = new TabRegistry(counterIds());
     tabs.open('/d/a.md', 1);
