@@ -75,7 +75,8 @@ Electron and Mermaid updates (1257 → 1377 MB).
 The v0.3 rows were first measured on 2026-10-16 during development (headless, Electron 44.8.0, the
 machine under a load average of 2–3, so not release figures): the JSON tree opened in 1550–1986 ms and
 the CSV table in 2957–3308 ms, both scrolling at 16.7 ms per frame (p95 16.8); the large-data memory
-was 1013–1015 MB, kept as its baseline (`largeDataMemoryMB` in `tests/perf/memory-baseline.json`).
+was 1013–1215 MB: runs land near one end or the other (when garbage is collected), so the higher is
+its baseline (`largeDataMemoryMB` in `tests/perf/memory-baseline.json`).
 Building the commit before the tree and table and the one after, and timing their cold starts in turn
 under the same load, gave the same figures: the views' code adds nothing measurable to a cold start.
 
