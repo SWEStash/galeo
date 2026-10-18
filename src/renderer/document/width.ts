@@ -1,4 +1,6 @@
+import type { CSSProperties } from 'react';
 import type { ReaderWidth } from '../../shared/tabs';
+import type { TabStatus } from '../tabs/store';
 
 /** The reading column's narrowest and widest widths in `ch`, as the `measure` setting allows. */
 const NARROWEST = 40;
@@ -29,4 +31,18 @@ export function widthStep(
 /** The width as the status bar shows it. */
 export function widthLabel(width: ReaderWidth): string {
   return width === 'full' ? 'Full width' : `${width} ch`;
+}
+
+/** Formats whose rendered view is prose in a reading column (Markdown's article, the text reader). */
+const COLUMNED = new Set<TabStatus['format']>(['markdown', 'mdx', 'text']);
+
+/** Whether the tab shows a reading column now, so its reader width means something. */
+export function hasReadingColumn(status: Pick<TabStatus, 'format' | 'view' | 'table'> | undefined): boolean {
+  return !!status && (status.view === 'rendered' || status.view === 'split') && !status.table && COLUMNED.has(status.format);
+}
+
+/** The tab's own width as the `--galeo-measure` it shows its documents with; none while it follows the setting. */
+export function readerWidthStyle(width: ReaderWidth | undefined): CSSProperties {
+  if (width === undefined) return {};
+  return { '--galeo-measure': width === 'full' ? 'none' : `${width}ch` } as CSSProperties;
 }

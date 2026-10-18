@@ -5,6 +5,7 @@ import { EncodingMenu } from '../document/EncodingMenu';
 import { TableOptionsMenu } from '../document/TableOptionsMenu';
 import { ENCODING_NAMES } from '../document/encodings';
 import { RENDERED_VIEW_NAMES } from '../document/formats';
+import { widthLabel } from '../document/width';
 import { ignoreClosedTab } from './closed-tab';
 import { metricsLabel } from './metrics';
 import type { TabStatus, TabStore, TabsView } from './store';
@@ -20,13 +21,14 @@ function viewName(status: TabStatus): string {
 
 /**
  * The status bar (UX §2): the shown tab's path (a menu to copy or reveal it), view, read-only,
- * encoding (a menu to reopen it with another), the document's metrics, and zoom; then the window's
+ * encoding (a menu to reopen it with another), the document's metrics, zoom and reader width; then the window's
  * messages.
  */
 export function StatusBar({ view, store, children }: { view: TabsView; store: TabStore; children: ReactNode }) {
   const tab = view.tabs.find((each) => each.id === view.active);
   const status = tab && view.statuses.get(tab.id);
   const zoom = tab ? (view.zooms.get(tab.id) ?? 1) : 1;
+  const width = tab && view.widths.get(tab.id);
   const metrics = status ? metricsLabel(status.lines, status.words) : null;
   const dispatcher = useDispatcher();
   const chooseEncoding = (encoding: ChosenEncoding | null) => {
@@ -55,6 +57,8 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
       {status?.table && <TableOptionsMenu className="status-table" options={status.table} onCommand={(command) => dispatcher.run(command)} />}
       {metrics && <span data-testid="status-metrics">{metrics}</span>}
       {zoom !== 1 && <span data-testid="status-zoom">{Math.round(zoom * 100)}%</span>}
+      {/* Only while the tab differs from the measure setting, as zoom shows only away from 100 %. */}
+      {width && <span data-testid="status-width">{widthLabel(width)}</span>}
       {/* Said once, politely: the shown file took a new version from disk (UX §7). */}
       <span className="status-reloaded" data-testid="status-reloaded" role="status">
         {tab && view.reloaded.has(tab.id) ? '↻ Reloaded' : ''}

@@ -104,6 +104,19 @@ describe('commandFor', () => {
     expect(commandFor(key({ key: '+', ctrlKey: true, altKey: true }), 'linux')).toBeNull();
   });
 
+  it('widens, narrows and resets the reader width with Alt, as Ctrl zooms', () => {
+    expect(commandFor(key({ key: '=', altKey: true }), 'linux')).toBe('widenReader');
+    expect(commandFor(key({ key: '+', altKey: true }), 'linux')).toBe('widenReader');
+    expect(commandFor(key({ key: '+', altKey: true, shiftKey: true }), 'linux')).toBe('widenReader');
+    expect(commandFor(key({ key: '-', altKey: true }), 'linux')).toBe('narrowReader');
+    expect(commandFor(key({ key: '0', altKey: true }), 'linux')).toBe('resetReaderWidth');
+    expect(keymap('linux').fullWidth).toEqual([]);
+    // Zoom keeps its keys; Alt with Ctrl is neither.
+    expect(commandFor(key({ key: '=', ctrlKey: true }), 'linux')).toBe('zoomIn');
+    expect(commandFor(key({ key: '-', ctrlKey: true, altKey: true }), 'linux')).toBeNull();
+    expect(commandFor(key({ key: '0', altKey: true, shiftKey: true }), 'linux')).toBeNull();
+  });
+
   it('returns null for keys with no command', () => {
     expect(commandFor(key({ key: 'q', ctrlKey: true }), 'linux')).toBeNull();
     expect(commandFor(key({ key: 'Shift', shiftKey: true }), 'linux')).toBeNull();

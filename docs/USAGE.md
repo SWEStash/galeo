@@ -119,6 +119,11 @@ the file into the window in front of you) when you want it here.
   until it widens. A tab keeps its split and divider across restarts.
 - **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
   Ctrl+0, or Ctrl and the wheel), and every command by name in the **palette** (Ctrl+Shift+P).
+- **Reader width** per tab: Alt++ or Alt+= widens the reading column of Markdown and `.txt` by
+  8 characters, Alt+- narrows it (40 to 200), Alt+0 puts it back to the setting; **Full width** in
+  the palette uses the whole window (run it again to go back). The status bar shows a tab's width
+  only while it differs from the setting, and a tab keeps it across restarts. A tab left at the
+  setting follows it when the setting changes.
 - **Status bar**: the path (click to copy it or reveal it in Files), the view, the encoding, the
   line count (in the source view) and, for Markdown and `.txt`, the word count and reading time.
   Markdown counts its prose only: code blocks, math, diagrams and front matter aren't words.

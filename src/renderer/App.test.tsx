@@ -408,6 +408,37 @@ describe('App', () => {
     expect(zoom()).toBeUndefined();
   });
 
+  it("widens the shown tab's reading column with Alt, shows it while it differs from the setting, and resets it", async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a') });
+    api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS, measure: 90 }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
+    const container = await renderApp();
+    await documentShadow(container);
+    const shown = () => container.querySelector('[data-testid="status-width"]')?.textContent;
+    const column = () => container.querySelector<HTMLElement>('[data-testid="tab-panel"]')!.style.getPropertyValue('--galeo-measure');
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="status-view"]')?.textContent).toBe('Reader'));
+    expect(shown()).toBeUndefined();
+    await press({ key: '=', altKey: true });
+    await vi.waitFor(() => expect(shown()).toBe('96 ch'));
+    expect(column()).toBe('96ch');
+    expect(api.tabs.width).toHaveBeenLastCalledWith('doc-1', 96);
+    await press({ key: '0', altKey: true });
+    await vi.waitFor(() => expect(shown()).toBeUndefined());
+    expect(column()).toBe('');
+    expect(api.tabs.width).toHaveBeenLastCalledWith('doc-1', null);
+  });
+
+  it('leaves the width alone where there is no reading column, and says why', async () => {
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a') });
+    const container = await renderApp();
+    await documentShadow(container);
+    await press({ key: 'u', ctrlKey: true });
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="status-view"]')?.textContent).toBe('Source'));
+    await press({ key: '=', altKey: true });
+    await vi.waitFor(() => expect(container.querySelector('[data-testid="status-message"]')?.textContent).toBe('Reader width applies to the rendered view'));
+    expect(container.querySelector('[data-testid="status-width"]')).toBeNull();
+    expect(api.tabs.width).not.toHaveBeenCalled();
+  });
+
   it('shows a log with level badges and follows its end on End until scrolled up', async () => {
     stubBridge({}, { records: [{ id: 'doc-1', path: '/d/app.log' }], content: readyContent('log', 'source', 'INFO a\nERROR b\n') });
     const container = await renderApp();

@@ -361,7 +361,8 @@ the native menu on the active tab.
 | Add the next match / every match as cursors (v0.2) | Ctrl+D / Ctrl+Shift+L | Edit mode |
 | Add a cursor above / below (v0.2) | Shift+Alt+↑ / Shift+Alt+↓ | Edit mode. Ctrl+Alt+↑/↓ is GNOME's (workspaces); these keys were CodeMirror's copy line up/down, which is left out |
 | Add a cursor / a column of cursors (v0.2) | Ctrl+click / Alt+drag | Edit mode; Esc goes back to one cursor |
-| Widen / narrow / reset reader width, full width (v0.3) | chosen with the feature (§8) | Per tab, like zoom |
+| Widen / narrow / reset reader width (v0.3) | Alt++ or Alt+= / Alt+- / Alt+0 | Per tab, like zoom (Ctrl); 8 ch steps, 40–200 ch; rendered Markdown and text only |
+| Full width (v0.3) | palette | Toggles back to the setting |
 | Move tab to new window / to window… (v0.3) | palette | F15 |
 | Expand all nodes / Collapse all nodes / Copy JSON path (v0.3) | palette | JSON tree, F14 |
 | Table separator: … / First row is a header / Reset table options / Show as table (v0.3) | palette; also the status bar's Table options | Tables, F14, ADR-021 |
@@ -451,6 +452,7 @@ Each is decided when the feature that needs it is built.
       from the setting (owner, 2026-10-15).
 - [x] A tab dropped on another profile's window moves into that profile; tabs with unsaved
       changes may move, without their undo history (owner, 2026-10-15).
-- [ ] Keys for the reader width commands (not Super- or Ctrl+Alt-based) — decide with the feature.
+- [x] Keys for the reader width commands: Alt++ / Alt+= widen, Alt+- narrow, Alt+0 reset, as zoom
+      has Ctrl; Full width from the palette only (owner, 2026-10-17).
 - [x] Limits for the JSON tree and the CSV table, and how `.jsonl` opens; no outline for source code
       in v0.3 ([ADR-018](../decisions/ADR-018-rich-views-and-the-format-descriptor.md), owner, 2026-10-15).

@@ -36,6 +36,11 @@ const BASE = {
   zoomIn: ['CmdOrCtrl+Plus', 'CmdOrCtrl+='],
   zoomOut: ['CmdOrCtrl+-'],
   zoomReset: ['CmdOrCtrl+0'],
+  /** The tab's reading column, with Alt as zoom has Ctrl (UX §5); Full width from the palette. */
+  widenReader: ['Alt+Plus', 'Alt+='],
+  narrowReader: ['Alt+-'],
+  resetReaderWidth: ['Alt+0'],
+  fullWidth: [],
   fullScreen: ['F11'],
   // Ctrl+Q is left unbound to avoid accidental quits.
   quit: ['Ctrl+Shift+Q'],

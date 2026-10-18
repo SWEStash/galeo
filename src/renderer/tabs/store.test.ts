@@ -243,6 +243,28 @@ describe('createTabStore', () => {
     expect(store.getSnapshot().zooms.get('a') ?? 1).toBe(1);
   });
 
+  it('widens each tab on its own from the setting, at once, tells main, and keeps nothing at the setting', async () => {
+    const { store, api } = setup(snapshot(1, ['a', 'b'], 'a'));
+    await store.start();
+    store.width('a', 'wider', 72);
+    store.width('a', 'wider', 72);
+    expect(store.getSnapshot().widths.get('a')).toBe(88);
+    expect(api.width).toHaveBeenLastCalledWith('a', 88);
+    expect(store.getSnapshot().widths.has('b')).toBe(false);
+    store.width('a', 'full', 72);
+    expect(store.getSnapshot().widths.get('a')).toBe('full');
+    store.width('a', 'reset', 72);
+    expect(store.getSnapshot().widths.has('a')).toBe(false);
+    expect(api.width).toHaveBeenLastCalledWith('a', null);
+  });
+
+  it("takes reader widths from main's snapshots (a restored session)", async () => {
+    const { store } = setup({ revision: 1, active: 'a', tabs: [{ id: 'a', path: '/d/a.md', width: 'full' }, tab('b')] });
+    await store.start();
+    expect(store.getSnapshot().widths.get('a')).toBe('full');
+    expect(store.getSnapshot().widths.has('b')).toBe(false);
+  });
+
   it('knows which tabs crashed the window, as main says', async () => {
     const { store, push } = setup({ revision: 1, active: 'a', tabs: [{ ...tab('a'), crashed: true }, tab('b')] });
     await store.start();

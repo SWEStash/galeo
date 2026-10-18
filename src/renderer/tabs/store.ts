@@ -2,8 +2,9 @@ import type { Separator, SeparatorChoice } from '../../shared/csv';
 import type { GaleoApi } from '../../shared/contracts';
 import type { DocumentContent, DocumentRecord, TextEncoding } from '../../shared/documents';
 import type { FormatId, ViewMode } from '../../shared/formats';
+import { widthStep } from '../document/width';
 import { zoomStep } from '../document/zoom';
-import type { ScrollAnchor, TabSnapshot, TabViewState } from '../../shared/tabs';
+import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabViewState } from '../../shared/tabs';
 import { ignoreClosedTab } from './closed-tab';
 
 /** What the tab bar and status bar show about a tab, as its document reports it. */
@@ -38,6 +39,8 @@ export interface TabsView {
   statuses: ReadonlyMap<string, TabStatus>;
   /** Each tab's zoom (1 when absent); zoom is per tab and scales the document only. */
   zooms: ReadonlyMap<string, number>;
+  /** Each tab's own reader width; absent while it follows the `measure` setting. */
+  widths: ReadonlyMap<string, ReaderWidth>;
   /** Tabs that took a new version of their file from disk within the last second (UX F4 `↻`). */
   reloaded: ReadonlySet<string>;
   /** Tabs that were rendering when the window's renderer crashed: not rendered until the reader asks (ADR-002). */
@@ -56,6 +59,7 @@ export type TabsApi = Pick<
   | 'reopenClosed'
   | 'position'
   | 'zoom'
+  | 'width'
   | 'viewState'
   | 'renderAgain'
   | 'onChanged'
@@ -87,6 +91,8 @@ export interface TabStore {
   /** Reads the tab again, keeping its place (a changed file, or another encoding). */
   reread(id: string): void;
   zoom(id: string, direction: 'in' | 'out' | 'reset'): void;
+  /** Steps the tab's reader width from its own or, without one, from the `measure` setting. */
+  width(id: string, direction: 'wider' | 'narrower' | 'reset' | 'full', setting: ReaderWidth): void;
   /** The tab now shows a new version of its file. */
   reloaded(id: string): void;
   /** Renders a tab that crashed the window, in the source view if the reader picked it. */
@@ -107,6 +113,7 @@ export function createTabStore(api: TabsApi): TabStore {
     reads: new Map(),
     statuses: new Map(),
     zooms: new Map(),
+    widths: new Map(),
     reloaded: new Set(),
     crashed: new Set(),
   };
@@ -128,7 +135,7 @@ export function createTabStore(api: TabsApi): TabStore {
     if (merged.active) rendered.add(merged.active);
     const own = <V,>(map: ReadonlyMap<string, V>) => new Map([...map].filter(([id]) => ids.has(id)));
     const reloaded = new Set([...merged.reloaded].filter((id) => ids.has(id)));
-    view = { ...merged, rendered, reloaded, reads: own(merged.reads), statuses: own(merged.statuses), zooms: own(merged.zooms) };
+    view = { ...merged, rendered, reloaded, reads: own(merged.reads), statuses: own(merged.statuses), zooms: own(merged.zooms), widths: own(merged.widths) };
     for (const id of positions.keys()) if (!ids.has(id)) positions.delete(id);
     for (const id of viewStates.keys()) if (!ids.has(id)) viewStates.delete(id);
     for (const listener of listeners) listener();
@@ -172,8 +179,9 @@ export function createTabStore(api: TabsApi): TabStore {
   const apply = (snapshot: TabSnapshot) => {
     if (snapshot.revision <= view.revision) return;
     const ids = snapshot.tabs.map((tab) => tab.id);
-    // Main holds each tab's zoom, and the last position it heard of: what a restored tab starts from.
+    // Main holds each tab's zoom and width, and the last position it heard of: what a restored tab starts from.
     const zooms = new Map(snapshot.tabs.flatMap((tab) => (tab.zoom ? [[tab.id, tab.zoom] as const] : [])));
+    const widths = new Map(snapshot.tabs.flatMap((tab) => (tab.width ? [[tab.id, tab.width] as const] : [])));
     const crashed = new Set(snapshot.tabs.flatMap((tab) => (tab.crashed ? [tab.id] : [])));
     for (const tab of snapshot.tabs) {
       if (tab.position && !positions.has(tab.id)) positions.set(tab.id, tab.position);
@@ -185,7 +193,7 @@ export function createTabStore(api: TabsApi): TabStore {
         ...(tab.table ? { table: tab.table } : {}),
       });
     }
-    view = { ...view, zooms, crashed };
+    view = { ...view, zooms, widths, crashed };
     if (wanted && ids.includes(wanted)) {
       const id = wanted;
       wanted = null;
@@ -266,6 +274,14 @@ export function createTabStore(api: TabsApi): TabStore {
       else zooms.set(id, next);
       set({ zooms });
       void api.zoom(id, next);
+    },
+    width(id, direction, setting) {
+      const widths = new Map(view.widths);
+      const next = widthStep(widths.get(id) ?? null, setting, direction);
+      if (next === null) widths.delete(id);
+      else widths.set(id, next);
+      set({ widths });
+      void api.width(id, next);
     },
     reloaded(id) {
       clearTimeout(reloadTimers.get(id));

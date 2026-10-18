@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
+import type { ReaderWidth } from '../shared/tabs';
 import { AboutDialog } from './about/AboutDialog';
 import type { Command, Platform } from '../shared/keymap';
 import { CommandsProvider, useCommands, useDispatcher } from './commands/useCommands';
@@ -19,6 +20,7 @@ import { useProfiles } from './profiles/useProfiles';
 import { accentOf } from '../shared/accents';
 import { useSettings } from './settings/useSettings';
 import { CrashLoop, SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
+import { hasReadingColumn, readerWidthStyle } from './document/width';
 import { tabAction } from './tabs/commands';
 import type { TabStore } from './tabs/store';
 import { EmptyWindow } from './tabs/EmptyWindow';
@@ -114,7 +116,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     // Focus goes back to the document being read (UX F8), once the dialog has let it go.
     requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]')?.focus());
   }, []);
-  useTabShortcuts(store, openQuickOpen);
+  useTabShortcuts(store, openQuickOpen, settings?.settings.measure ?? 72, setMessage);
   useUnsavedGuards(store);
   useCommands({ commandPalette: () => setOverlay('palette') });
   const [recentRevision, setRecentRevision] = useState(0);
@@ -154,7 +156,16 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
             {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow key={recentRevision} platform={platform} />}
             {view.tabs.map((tab) => (
               // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
-              <TabPanel key={tab.id} id={tab.id} shouldForceMount className="tab-panel" data-testid="tab-panel" data-active={tab.id === view.active}>
+              // The tab's own reader width overrides the profile's measure for everything it shows.
+              <TabPanel
+                key={tab.id}
+                id={tab.id}
+                shouldForceMount
+                className="tab-panel"
+                data-testid="tab-panel"
+                data-active={tab.id === view.active}
+                style={readerWidthStyle(view.widths.get(tab.id))}
+              >
                 {tab.kind === 'settings' ? (
                   settings && profile && <SettingsView state={settings} profile={profile} appImage={appImage} />
                 ) : (
@@ -222,14 +233,21 @@ function useUnsavedGuards(store: TabStore) {
   }, [store, confirm]);
 }
 
-/** The tab shortcuts and per-tab zoom (UX §5), wherever the focus is. */
-function useTabShortcuts(store: TabStore, openQuickOpen: () => void) {
+/** The tab shortcuts, per-tab zoom and reader width (UX §5), wherever the focus is. */
+function useTabShortcuts(store: TabStore, openQuickOpen: () => void, measure: ReaderWidth, say: (message: string) => void) {
   // The store's state as of the key, not of the last render: keys can come faster than renders.
   const active = () => store.getSnapshot().active;
   const zoom = (direction: 'in' | 'out' | 'reset') => () => {
     const id = active();
     if (!id) return false;
     store.zoom(id, direction);
+    return true;
+  };
+  const width = (direction: 'wider' | 'narrower' | 'reset' | 'full') => () => {
+    const id = active();
+    if (!id) return false;
+    if (!hasReadingColumn(store.getSnapshot().statuses.get(id))) say('Reader width applies to the rendered view');
+    else store.width(id, direction, measure);
     return true;
   };
   const tabs = (command: Command) => ({ tabNumber }: { tabNumber: number | null }) => {
@@ -258,6 +276,10 @@ function useTabShortcuts(store: TabStore, openQuickOpen: () => void) {
     zoomIn: zoom('in'),
     zoomOut: zoom('out'),
     zoomReset: zoom('reset'),
+    widenReader: width('wider'),
+    narrowReader: width('narrower'),
+    resetReaderWidth: width('reset'),
+    fullWidth: width('full'),
     quickOpen: openQuickOpen,
     reload: () => {
       const id = active();
