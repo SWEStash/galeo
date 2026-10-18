@@ -44,6 +44,7 @@ import { installAppLifecycle } from './adapters/lifecycle';
 import { systemClock } from './adapters/clock';
 import { ElectronOsShell, RecordingOsShell } from './adapters/os-shell';
 import { WorkerThreadTaskRunner } from './adapters/task-runner';
+import { EmptyFontCatalog, FcListFontCatalog } from './adapters/font-catalog';
 import { decodeWithPlatform } from './adapters/text-decoder';
 import { sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
@@ -705,6 +706,7 @@ function start(initialMode: StartupMode): void {
       serveImage(url, { lookup: (id) => images.lookup(id), fs }),
     );
     let restoring = false;
+    const fonts = process.platform === 'linux' ? new FcListFontCatalog() : new EmptyFontCatalog();
     registerIpc(
       {
         'app.info': (_args, event) => ({
@@ -797,6 +799,8 @@ function start(initialMode: StartupMode): void {
         },
         'settings.set': async ([scope, change], event) => written(await ownProfile(event).settings.set(scope, change)),
         'settings.reset': async ([key], event) => written(await ownProfile(event).settings.reset(key)),
+        // fc-list with fixed arguments, nothing from the page; any window may ask (zero network).
+        'settings.fonts': () => fonts.list(),
         'settings.openCustomCss': ([scope], event) => {
           const profile = ownProfile(event);
           const dir = scope === 'global' ? paths.configDir : path.join(paths.configDir, 'profiles', profile.id);

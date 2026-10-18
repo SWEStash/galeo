@@ -4,6 +4,7 @@ export type { Clock } from './clock';
 export type { Unsubscribe } from './common';
 export { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from './file-system';
 export type { FileWatcher, WatchEvent } from './file-watcher';
+export type { FontCatalog } from './font-catalog';
 export type { InstanceChannel, OpenRequest } from './instance-channel';
 export type { OsShell } from './os-shell';
 export type { SystemMetrics } from './system-metrics';

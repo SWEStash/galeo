@@ -3,6 +3,7 @@
 // `window.galeo` from `CHANNELS` and `EVENTS`, one fixed method per channel or event.
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, SaveResult } from '../documents';
 import type { Platform, WindowCommand } from '../keymap';
+import type { SystemFont } from '../fonts';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
 import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
 import type { QuickOpenResults, QuickOpenStart } from '../quick-open';
@@ -129,6 +130,7 @@ export const CHANNELS = [
   'profiles.delete',
   'settings.set',
   'settings.reset',
+  'settings.fonts',
   'settings.openCustomCss',
   'settings.openNoticeFile',
   'tabs.openSettings',
@@ -248,6 +250,8 @@ export interface Requests {
   'settings.set': [scope: SettingsScope, change: SettingsOverrides];
   /** Drops this profile's own value of a setting ("Reset to global"). */
   'settings.reset': [key: keyof Settings];
+  /** The font families installed on the system, for the font pickers (none where they can't be listed). */
+  'settings.fonts': [];
   /** Opens the global or this profile's `custom.css` in the user's editor, creating it first. */
   'settings.openCustomCss': [scope: SettingsScope];
   /** Opens the file a settings notice names (by its place in the window's notices, never a path). */
@@ -315,6 +319,7 @@ export interface Responses {
   'profiles.delete': void;
   'settings.set': SettingsResult;
   'settings.reset': SettingsResult;
+  'settings.fonts': SystemFont[];
   'settings.openCustomCss': void;
   'settings.openNoticeFile': void;
   'tabs.openSettings': string;

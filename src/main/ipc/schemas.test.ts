@@ -86,6 +86,11 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('settings.fonts takes nothing', () => {
+    expect(accepts('settings.fonts', [])).toBe(true);
+    expect(accepts('settings.fonts', ['--all'])).toBe(false);
+  });
+
   it('tabs.move takes an id and a position', () => {
     expect(accepts('tabs.move', [ID, 0])).toBe(true);
     expect(accepts('tabs.move', [ID, 9999])).toBe(true);

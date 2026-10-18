@@ -155,6 +155,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       reset: vi.fn().mockResolvedValue({ ok: true }),
       openCustomCss: vi.fn().mockResolvedValue(undefined),
       openNoticeFile: vi.fn().mockResolvedValue(undefined),
+      fonts: vi.fn().mockResolvedValue([]),
       get: vi.fn().mockResolvedValue({ settings: { ...DEFAULT_SETTINGS }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES }),
       onChanged: vi.fn((listener: (state: SettingsState) => void) => {
         events.settings = listener;

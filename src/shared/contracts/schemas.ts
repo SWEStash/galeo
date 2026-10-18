@@ -116,6 +116,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'profiles.delete': z.tuple([]),
   'settings.set': z.tuple([z.enum(['global', 'profile']), settingsOverrides as ZodType<SettingsOverrides>]),
   'settings.reset': z.tuple([z.enum(Object.keys(settingsOverrides.shape) as [keyof typeof settingsOverrides.shape, ...(keyof typeof settingsOverrides.shape)[]])]),
+  'settings.fonts': z.tuple([]),
   'settings.openCustomCss': z.tuple([z.enum(['global', 'profile'])]),
   'settings.openNoticeFile': z.tuple([z.int().min(0).max(100)]),
   'tabs.openSettings': z.tuple([]),
