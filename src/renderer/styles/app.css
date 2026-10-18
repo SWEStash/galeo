@@ -932,6 +932,34 @@ button:focus-visible {
   font-size: 13px;
 }
 
+/* Font pickers: the name with a button opening the list, then a sample line in the font. */
+.font-input {
+  display: flex;
+  gap: 4px;
+}
+.font-input input {
+  flex: 1;
+  min-width: 0;
+}
+.font-open {
+  padding: 0 10px;
+}
+.font-popover {
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+}
+.font-list .menu-item {
+  font-size: 15px;
+}
+.font-preview {
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--galeo-color-muted);
+  font-size: 15px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .field textarea {
   padding: 5px 8px;
   border: 1px solid var(--galeo-color-control-border);

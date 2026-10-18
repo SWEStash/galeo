@@ -132,3 +132,47 @@ test('the Settings tab is not part of the saved session', async () => {
     removeTempHome(home);
   }
 });
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`the code font picker lists the bundled font, then installed monospace ones, and passes axe open (${theme})`, async () => {
+    const home = tempHome();
+    writeConfig(home, 'settings.json', `{"schemaVersion":1,"themeMode":"${theme}"}`);
+    const { window, close } = await launchApp(['--', basic], { home });
+    try {
+      await expect(window.locator('[data-testid="document"] article h1')).toBeVisible();
+      await window.keyboard.press('ControlOrMeta+Comma');
+      await settingsView(window).getByRole('button', { name: 'Show code fonts' }).click();
+      const list = window.getByRole('listbox');
+      // Open, the list hides the rest of the page from assistive tech (RAC): check the list itself; the
+      // closed view is checked by the Ctrl+, test.
+      await expect(list.getByRole('option').first()).toHaveText('JetBrains Mono');
+      const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[role="listbox"]').analyze();
+      expect(results.violations).toEqual([]);
+      await window.keyboard.press('Escape');
+    } finally {
+      await close();
+      removeTempHome(home);
+    }
+  });
+}
+
+test("a font chosen in the prose picker is the article's font, and a name typed in is kept", async () => {
+  const home = tempHome();
+  const { window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect(window.locator('[data-testid="document"] article h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Comma');
+    await settingsView(window).getByRole('button', { name: 'Show prose fonts' }).click();
+    await window.getByRole('option', { name: 'Source Serif 4' }).click();
+    const proseFont = () => window.locator('[data-testid="document"] article').first().evaluate((element) => getComputedStyle(element).fontFamily);
+    await expect.poll(proseFont).toContain('Source Serif 4');
+    const field = settingsView(window).getByRole('combobox', { name: 'Prose font' });
+    await field.fill('Not An Installed Font');
+    await field.press('Enter');
+    await expect.poll(proseFont).toContain('Not An Installed Font');
+    await expect(field).toHaveValue('Not An Installed Font');
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});

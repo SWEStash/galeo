@@ -43,6 +43,12 @@ const STATE: SettingsState = {
 
 const PROFILE: ProfileView = { id: 'acme', name: 'Acme', accent: ACCENTS[1]!.color, running: true };
 
+const INSTALLED = [
+  { family: 'DejaVu Sans', mono: false },
+  { family: 'Hack', mono: true },
+  { family: 'JetBrains Mono', mono: true },
+];
+
 let roots: Root[] = [];
 
 function stubBridge() {
@@ -50,6 +56,7 @@ function stubBridge() {
     set: vi.fn().mockResolvedValue({ ok: true }),
     reset: vi.fn().mockResolvedValue({ ok: true }),
     openCustomCss: vi.fn().mockResolvedValue(undefined),
+    fonts: vi.fn().mockResolvedValue(INSTALLED),
   };
   const profiles = { update: vi.fn().mockResolvedValue({ ok: true }) };
   const app = { installLauncher: vi.fn().mockResolvedValue({ ok: true, bin: '/home/u/.local/bin/galeo' }) };
@@ -73,6 +80,20 @@ const row = (container: HTMLElement, label: string) =>
     [...each.querySelectorAll('label, [data-label], .react-aria-Label')].some((element) => element.textContent?.trim() === label),
   )!;
 const button = (root: ParentNode, name: string) => [...root.querySelectorAll('button')].find((each) => each.textContent === name)!;
+
+/** Opens a font picker's list with its button, as a reader would. */
+async function openPicker(setting: HTMLElement) {
+  await act(async () => setting.querySelector<HTMLButtonElement>('button[aria-haspopup]')!.click());
+  await vi.waitFor(() => expect(document.querySelector('[role=listbox]')).not.toBeNull());
+}
+
+/** The open picker's sections: each header and its options' names. */
+const sections = () =>
+  [...document.querySelectorAll('[role=listbox] section')].map((section) => [
+    section.querySelector('header')?.textContent,
+    [...section.querySelectorAll('[role=option]')].map((each) => each.textContent),
+  ]);
+const option = (name: string) => [...document.querySelectorAll<HTMLElement>('[role=option]')].find((each) => each.textContent === name)!;
 
 async function commit(input: HTMLInputElement | HTMLTextAreaElement, value: string) {
   await act(async () => {
@@ -143,6 +164,51 @@ describe('SettingsView (UX §6)', () => {
     expect(custom.disabled).toBe(false);
     expect(custom.value).toBe('60');
     expect(settings.set).not.toHaveBeenCalled();
+  });
+
+  it('lists the bundled fonts first, then the installed ones, asking main once', async () => {
+    const { settings } = stubBridge();
+    const container = await render();
+    await openPicker(row(container, 'Prose font'));
+    expect(sections()).toEqual([
+      ['Bundled', ['Inter', 'Source Serif 4', 'JetBrains Mono']],
+      // A bundled family isn't listed again.
+      ['Installed', ['DejaVu Sans', 'Hack']],
+    ]);
+    // Each option is drawn in its own family.
+    expect(option('Hack').style.fontFamily).toContain('Hack');
+    await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    await openPicker(row(container, 'Code font'));
+    expect(settings.fonts).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers monospace families only for the code font, and saves the one chosen', async () => {
+    const { settings } = stubBridge();
+    const container = await render();
+    await openPicker(row(container, 'Code font'));
+    expect(sections()).toEqual([
+      ['Bundled', ['JetBrains Mono']],
+      ['Installed', ['Hack']],
+    ]);
+    await act(async () => option('Hack').click());
+    expect(settings.set).toHaveBeenCalledWith('profile', { codeFont: 'Hack' });
+  });
+
+  it('offers the bundled fonts only when none can be listed', async () => {
+    const { settings } = stubBridge();
+    settings.fonts.mockResolvedValue([]);
+    const container = await render();
+    await openPicker(row(container, 'Prose font'));
+    expect(sections()).toEqual([['Bundled', ['Inter', 'Source Serif 4', 'JetBrains Mono']]]);
+  });
+
+  it('shows a preview line in the chosen font, under each picker', async () => {
+    stubBridge();
+    const container = await render({ ...STATE, settings: { ...STATE.settings, codeFont: 'Hack' } });
+    const preview = row(container, 'Code font').querySelector<HTMLElement>('.font-preview')!;
+    expect(preview.textContent).toMatch(/\S/);
+    expect(preview.style.fontFamily).toContain('Hack');
+    expect(preview.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('commits a text setting when the field is left', async () => {

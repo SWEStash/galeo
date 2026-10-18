@@ -1,12 +1,18 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Button,
+  ComboBox,
   ColorSwatch,
   ColorSwatchPicker,
   ColorSwatchPickerItem,
   Input,
+  Header,
   Label,
+  ListBox,
+  ListBoxItem,
+  ListBoxSection,
   NumberField,
+  Popover,
   RadioButton,
   RadioField,
   RadioGroup,
@@ -19,7 +25,9 @@ import { ACCENTS, accentOf } from '../../shared/accents';
 import type { ProfileView, SettingsResult, SettingsScope, SettingsState } from '../../shared/contracts';
 import type { SeparatorChoice } from '../../shared/csv';
 import type { Settings, SettingsOverrides, ThemeMode } from '../../shared/settings';
+import type { SystemFont } from '../../shared/fonts';
 import type { ReaderWidth } from '../../shared/tabs';
+import { fontStack } from './tokens';
 
 const SOURCE_NAMES = { default: 'Default', global: 'All profiles', profile: 'This profile' } as const;
 
@@ -42,6 +50,14 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
   const [launcher, setLauncher] = useState<string | null>(null);
   const [accentRefused, setAccentRefused] = useState(false);
   const values = scope === 'profile' ? state.settings : state.shared;
+  // The installed fonts, asked for when a font picker first opens (main runs fc-list once).
+  const [installed, setInstalled] = useState<readonly SystemFont[] | null>(null);
+  const asked = useRef(false);
+  const listFonts = () => {
+    if (asked.current) return;
+    asked.current = true;
+    void window.galeo.settings.fonts().then(setInstalled, () => setInstalled([]));
+  };
 
   const done = (result: SettingsResult) => setRefused(result.ok ? null : result.path);
   const set = (change: SettingsOverrides) => void window.galeo.settings.set(scope, change).then(done);
@@ -121,8 +137,8 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
       </div>
 
       <h2>Reading</h2>
-      {setting('proseFont', <TextSetting label="Prose font" value={values.proseFont} onCommit={(proseFont) => set({ proseFont })} />)}
-      {setting('codeFont', <TextSetting label="Code font" value={values.codeFont} onCommit={(codeFont) => set({ codeFont })} />)}
+      {setting('proseFont', <FontSetting kind="prose" value={values.proseFont} installed={installed} onOpen={listFonts} onCommit={(proseFont) => set({ proseFont })} />)}
+      {setting('codeFont', <FontSetting kind="code" value={values.codeFont} installed={installed} onOpen={listFonts} onCommit={(codeFont) => set({ codeFont })} />)}
       {setting(
         'fontSize',
         <NumberField className="field" value={values.fontSize} minValue={10} maxValue={40} onChange={(fontSize) => !Number.isNaN(fontSize) && fontSize !== values.fontSize && set({ fontSize })}>
@@ -251,6 +267,87 @@ function MeasureSetting({ value, onChange }: { value: ReaderWidth; onChange: (va
           characters per line
         </span>
       </NumberField>
+    </div>
+  );
+}
+
+/** The fonts galeo ships (fonts.css), offered first: all three for prose, the monospace one for code. */
+const BUNDLED_FONTS = { prose: ['Inter', 'Source Serif 4', 'JetBrains Mono'], code: ['JetBrains Mono'] } as const;
+const FALLBACKS = { prose: 'system-ui, sans-serif', code: 'ui-monospace, monospace' } as const;
+const PREVIEWS = { prose: 'The quick brown fox jumps over the lazy dog.', code: 'const total = items.reduce((sum, n) => sum + n, 0);' } as const;
+
+/**
+ * A font setting (UX §6): the bundled fonts, then the installed families (monospace ones for
+ * code), each drawn in its own face; any other name can still be typed. Written when an option
+ * is chosen, the field is left, or Enter is pressed; a preview line shows the font in use.
+ */
+function FontSetting({
+  kind,
+  value,
+  installed,
+  onOpen,
+  onCommit,
+}: {
+  kind: 'prose' | 'code';
+  value: string;
+  installed: readonly SystemFont[] | null;
+  onOpen: () => void;
+  onCommit: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  const commit = (name: string) => {
+    const next = name.trim();
+    if (next && next !== value) onCommit(next);
+  };
+  const bundled: readonly string[] = BUNDLED_FONTS[kind];
+  const others = (installed ?? []).filter((font) => (kind === 'prose' || font.mono) && !bundled.includes(font.family)).map((font) => font.family);
+  const label = kind === 'prose' ? 'Prose font' : 'Code font';
+  const item = (family: string) => (
+    <ListBoxItem key={family} id={family} textValue={family} className="menu-item" style={{ fontFamily: fontStack(family, FALLBACKS[kind]) }}>
+      {family}
+    </ListBoxItem>
+  );
+  return (
+    <div className="field font-field">
+      <ComboBox
+        className="field"
+        allowsCustomValue
+        menuTrigger="focus"
+        inputValue={draft}
+        onInputChange={setDraft}
+        onOpenChange={(open) => open && onOpen()}
+        onFocus={onOpen}
+        onSelectionChange={(key) => key !== null && (setDraft(String(key)), commit(String(key)))}
+        onBlur={() => commit(draft)}
+        onKeyDown={(event) => event.key === 'Enter' && commit(draft)}
+      >
+        <Label>{label}</Label>
+        <div className="font-input">
+          <Input />
+          <Button className="font-open" aria-label={`Show ${kind} fonts`}>
+            ▾
+          </Button>
+        </div>
+        <Popover className="menu-popover font-popover" placement="bottom start">
+          <ListBox className="menu font-list">
+            <ListBoxSection>
+              <Header className="menu-header">Bundled</Header>
+              {bundled.map(item)}
+            </ListBoxSection>
+            {others.length > 0 && (
+              <ListBoxSection>
+                <Header className="menu-header">Installed</Header>
+                {others.map(item)}
+              </ListBoxSection>
+            )}
+          </ListBox>
+        </Popover>
+      </ComboBox>
+      {/* A sample, not content: the field already names the font. */}
+      <p className="font-preview" aria-hidden="true" style={{ fontFamily: fontStack(value, FALLBACKS[kind]) }}>
+        {PREVIEWS[kind]}
+      </p>
     </div>
   );
 }

@@ -198,7 +198,10 @@ settings, never your files.
 Settings (Ctrl+,) apply to all profiles or to the current one only, as the switch at the top
 says. **Measure**, the reading column's width, is Narrow (60 characters), Normal (72), Wide (100),
 Full width, or Custom (40 to 200); in a settings file it is a number or `"full"`. galeo 0.2 reads a
-file with `"full"` as invalid and keeps its last valid settings. galeo keeps its files in the usual
+file with `"full"` as invalid and keeps its last valid settings. The **prose and code fonts** are
+pickers: the fonts galeo ships first, then the families installed on the system (monospace ones
+for code, listed by fontconfig without any network), each drawn in its own face, with a sample
+line under the field; any other family name can still be typed. galeo keeps its files in the usual
 places:
 
 | What | Where |

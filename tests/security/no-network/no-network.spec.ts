@@ -199,6 +199,21 @@ test('a JSON tree and a CSV table of hostile values show them as text and open n
   expect(connects).toEqual([]);
 });
 
+test('listing the installed fonts for the font pickers (fc-list, followed by strace) opens no connection (SR-07)', async () => {
+  const basic = path.resolve(import.meta.dirname, '../../fixtures/docs/basic.md');
+  const connects = await connectsWhile(['--', basic], {}, async (_app, page) => {
+    await expect(page.locator('[data-testid="document"] article h1')).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+Comma');
+    for (const kind of ['prose', 'code']) {
+      await page.getByTestId('settings-view').getByRole('button', { name: `Show ${kind} fonts` }).click();
+      await expect(page.getByRole('listbox').getByRole('option').first()).toBeVisible();
+      await page.keyboard.press('Escape');
+    }
+    await page.waitForTimeout(2_000);
+  });
+  expect(connects).toEqual([]);
+});
+
 test('drawing every diagram, hostile ones included, opens no connection (SR-07)', async () => {
   const fixtures = path.resolve(import.meta.dirname, '../../fixtures');
   const corpus = [path.join(fixtures, 'docs', 'mermaid.md'), path.join(fixtures, 'payloads', 'mermaid.payloads.md')]
