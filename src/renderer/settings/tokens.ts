@@ -14,6 +14,6 @@ export function settingsTokens(settings: Pick<Settings, 'proseFont' | 'codeFont'
     '--galeo-font-prose': family(settings.proseFont, 'system-ui, sans-serif'),
     '--galeo-font-code': family(settings.codeFont, 'ui-monospace, monospace'),
     '--galeo-font-size': `${settings.fontSize}px`,
-    '--galeo-measure': `${settings.measure}ch`,
+    '--galeo-measure': settings.measure === 'full' ? 'none' : `${settings.measure}ch`,
   };
 }

@@ -112,6 +112,39 @@ describe('SettingsView (UX §6)', () => {
     expect(settings.reset).toHaveBeenCalledWith('fontSize');
   });
 
+  it('offers measure presets, and a custom width for any other', async () => {
+    const { settings } = stubBridge();
+    const container = await render({ ...STATE, settings: { ...STATE.settings, measure: 72 } });
+    const measure = row(container, 'Measure');
+    const choice = (name: string) => [...measure.querySelectorAll('label')].find((each) => each.textContent === name)!;
+    const radio = (name: string) => choice(name).querySelector<HTMLInputElement>('input[type=radio]')!;
+    expect(radio('Normal (72)').checked).toBe(true);
+    const custom = () => measure.querySelector<HTMLInputElement>('input:not([type=radio])')!;
+    expect(custom().disabled).toBe(true);
+    await act(async () => choice('Wide (100)').click());
+    expect(settings.set).toHaveBeenLastCalledWith('profile', { measure: 100 });
+    await act(async () => choice('Full width').click());
+    expect(settings.set).toHaveBeenLastCalledWith('profile', { measure: 'full' });
+
+    await container.update({ ...STATE, settings: { ...STATE.settings, measure: 90 } });
+    expect(radio('Custom').checked).toBe(true);
+    expect(custom().disabled).toBe(false);
+    expect(custom().value).toBe('90');
+    await commit(custom(), '96');
+    expect(settings.set).toHaveBeenLastCalledWith('profile', { measure: 96 });
+  });
+
+  it('lets Custom start from a preset without changing the width', async () => {
+    const { settings } = stubBridge();
+    const container = await render({ ...STATE, settings: { ...STATE.settings, measure: 60 } });
+    const measure = row(container, 'Measure');
+    await act(async () => [...measure.querySelectorAll('label')].find((each) => each.textContent === 'Custom')!.click());
+    const custom = measure.querySelector<HTMLInputElement>('input:not([type=radio])')!;
+    expect(custom.disabled).toBe(false);
+    expect(custom.value).toBe('60');
+    expect(settings.set).not.toHaveBeenCalled();
+  });
+
   it('commits a text setting when the field is left', async () => {
     const { settings } = stubBridge();
     const container = await render();

@@ -13,6 +13,10 @@ describe('settingsTokens', () => {
     });
   });
 
+  it('gives a full-width measure no column limit', () => {
+    expect(settingsTokens({ ...base, measure: 'full' })['--galeo-measure']).toBe('none');
+  });
+
   it('keeps a font name from closing its quotes or adding declarations', () => {
     const tokens = settingsTokens({ ...base, proseFont: "Evil'; } body { display: none } '\\" });
     expect(tokens['--galeo-font-prose']).toBe("'Evil body display: none', system-ui, sans-serif");

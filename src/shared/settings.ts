@@ -1,4 +1,5 @@
 import type { SeparatorChoice } from './csv';
+import type { ReaderWidth } from './tabs';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -9,8 +10,8 @@ export interface Settings {
   codeFont: string;
   /** Body text size in CSS pixels. */
   fontSize: number;
-  /** Reading column width in `ch`. */
-  measure: number;
+  /** Reading column width in `ch`, or the whole window. */
+  measure: ReaderWidth;
   statusBar: boolean;
   /** Extra folder or file names quick open skips. */
   quickOpenExclude: string[];

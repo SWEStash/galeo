@@ -19,6 +19,7 @@ import { ACCENTS, accentOf } from '../../shared/accents';
 import type { ProfileView, SettingsResult, SettingsScope, SettingsState } from '../../shared/contracts';
 import type { SeparatorChoice } from '../../shared/csv';
 import type { Settings, SettingsOverrides, ThemeMode } from '../../shared/settings';
+import type { ReaderWidth } from '../../shared/tabs';
 
 const SOURCE_NAMES = { default: 'Default', global: 'All profiles', profile: 'This profile' } as const;
 
@@ -129,16 +130,7 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
           <Input />
         </NumberField>,
       )}
-      {setting(
-        'measure',
-        <NumberField className="field" value={values.measure} minValue={40} maxValue={200} onChange={(measure) => !Number.isNaN(measure) && measure !== values.measure && set({ measure })}>
-          <Label>Measure</Label>
-          <Input aria-describedby="settings-measure-unit" />
-          <span id="settings-measure-unit" className="field-hint">
-            characters per line
-          </span>
-        </NumberField>,
-      )}
+      {setting('measure', <MeasureSetting value={values.measure} onChange={(measure) => measure !== values.measure && set({ measure })} />)}
 
       <h2>Window</h2>
       {setting(
@@ -208,6 +200,58 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
         </>
       )}
     </section>
+  );
+}
+
+/** The reading column widths Settings names (UX §6); any other width is Custom. */
+const MEASURE_PRESETS: readonly [ReaderWidth, string][] = [
+  [60, 'Narrow (60)'],
+  [72, 'Normal (72)'],
+  [100, 'Wide (100)'],
+  ['full', 'Full width'],
+];
+const isPreset = (value: ReaderWidth) => MEASURE_PRESETS.some(([preset]) => preset === value);
+
+/** The measure: a preset, or Custom with a width in characters, its stepper live only while Custom is chosen. */
+function MeasureSetting({ value, onChange }: { value: ReaderWidth; onChange: (value: ReaderWidth) => void }) {
+  const [custom, setCustom] = useState(!isPreset(value));
+  // A width from main that no preset names (a hand edit, the stepper) is Custom.
+  useEffect(() => {
+    if (!isPreset(value)) setCustom(true);
+  }, [value]);
+  const choose = (choice: string) => {
+    if (choice === 'custom') return setCustom(true);
+    setCustom(false);
+    onChange(choice === 'full' ? 'full' : Number(choice));
+  };
+  return (
+    <div className="field measure-field">
+      <RadioGroup value={custom ? 'custom' : String(value)} onChange={choose} orientation="horizontal">
+        <Label>Measure</Label>
+        {MEASURE_PRESETS.map(([preset, name]) => (
+          <RadioField key={preset} value={String(preset)}>
+            <RadioButton>{name}</RadioButton>
+          </RadioField>
+        ))}
+        <RadioField value="custom">
+          <RadioButton>Custom</RadioButton>
+        </RadioField>
+      </RadioGroup>
+      <NumberField
+        className="field"
+        aria-label="Custom measure"
+        value={value === 'full' ? 200 : value}
+        minValue={40}
+        maxValue={200}
+        isDisabled={!custom}
+        onChange={(width) => !Number.isNaN(width) && onChange(width)}
+      >
+        <Input aria-describedby="settings-measure-unit" />
+        <span id="settings-measure-unit" className="field-hint">
+          characters per line
+        </span>
+      </NumberField>
+    </div>
   );
 }
 

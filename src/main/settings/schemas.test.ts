@@ -19,6 +19,10 @@ describe('parseGlobalSettings', () => {
     expect(parseGlobalSettings(file)).toEqual({ ok: true, value: settings });
   });
 
+  it('takes a full-width measure as well as one in characters', () => {
+    expect(parseGlobalSettings({ schemaVersion: 1, measure: 'full' })).toEqual({ ok: true, value: { measure: 'full' } });
+  });
+
   it('accepts a file that sets nothing', () => {
     expect(parseGlobalSettings({ schemaVersion: 1 })).toEqual({ ok: true, value: {} });
   });
@@ -29,6 +33,8 @@ describe('parseGlobalSettings', () => {
     ['a size out of range', { fontSize: 400 }],
     ['a fractional tab count', { warmTabs: 1.5 }],
     ['an unknown theme', { themeMode: 'sepia' }],
+    ['a measure out of range', { measure: 30 }],
+    ['a measure named otherwise', { measure: 'wide' }],
     ['an empty font name', { proseFont: '' }],
     ['a huge exclusion list', { quickOpenExclude: Array.from({ length: 1001 }, (_, n) => `d${n}`) }],
   ])('refuses %s, naming it', (_name, settings) => {

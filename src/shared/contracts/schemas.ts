@@ -29,13 +29,16 @@ const accent = z.string().regex(/^#[0-9a-f]{6}$/i).nullable();
 /** A table's separator as the reader sets it (ADR-021). */
 const separatorChoice = z.enum(['auto', ',', ';', '\t', '|']);
 
+/** A reading column's width: 40 to 200 ch, or the whole window (the `measure` setting and a tab's own). */
+export const readerWidth = z.union([z.int().min(40).max(200), z.literal('full')]);
+
 /** Every setting a file or the Settings tab may set (SR-17), each optional. */
 export const settingsOverrides = z.strictObject({
   themeMode: z.enum(['system', 'light', 'dark']),
   proseFont: z.string().min(1).max(100),
   codeFont: z.string().min(1).max(100),
   fontSize: z.int().min(10).max(40),
-  measure: z.int().min(40).max(200),
+  measure: readerWidth,
   statusBar: z.boolean(),
   quickOpenExclude: z.array(z.string().min(1).max(255)).max(1000),
   warmTabs: z.int().min(0).max(20),
@@ -46,8 +49,6 @@ export const settingsOverrides = z.strictObject({
 
 /** A tab's zoom, 50 % to 300 %. */
 export const zoomLevel = z.number().min(0.5).max(3);
-/** A tab's reader width: 40 to 200 ch, as the `measure` setting allows, or the whole window. */
-export const readerWidth = z.union([z.int().min(40).max(200), z.literal('full')]);
 const quickOpenToken = z.string().min(1).max(64);
 /** A tab's chosen view and follow state; only what differs from the defaults is ever set. */
 export const tabViewState = z.strictObject({

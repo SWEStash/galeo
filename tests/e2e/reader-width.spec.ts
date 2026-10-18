@@ -100,3 +100,28 @@ test('the width keys say where they apply in a view with no reading column', asy
     await close();
   }
 });
+
+test("Settings' Wide preset moves a tab left at the setting, and a widened tab keeps its own width", async () => {
+  const home = homeWith('light');
+  const { window, close } = await launchApp(['--', basic, path.join(docs, 'gfm.md')], { home });
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await window.keyboard.press('Alt+Equal');
+    await expect(window.getByTestId('status-width')).toHaveText('80 ch');
+    const widened = await columnWidth(window);
+    await window.keyboard.press('ControlOrMeta+2');
+    await expect(shownDocument(window).locator('h1').first()).toBeVisible();
+    const before = await columnWidth(window);
+    await window.keyboard.press('ControlOrMeta+Comma');
+    await window.getByTestId('settings-view').getByText('Wide (100)').click();
+    await window.keyboard.press('ControlOrMeta+2');
+    await expect.poll(() => columnWidth(window)).toBeGreaterThan(before);
+    await expect(window.getByTestId('status-width')).toHaveCount(0);
+    await window.keyboard.press('ControlOrMeta+1');
+    await expect(window.getByTestId('status-width')).toHaveText('80 ch');
+    await expect.poll(() => columnWidth(window)).toBe(widened);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
