@@ -174,3 +174,21 @@ test('deleting a profile asks first, closes its windows and removes only its own
     removeTempHome(home);
   }
 });
+
+test('About galeo opens from the profile menu, passes axe, and gives focus back to the chip', async () => {
+  const { window, close } = await launchApp(['--', basic]);
+  try {
+    await expect(window.locator('[data-testid="document"] article h1')).toBeVisible();
+    await chip(window).click();
+    await window.getByRole('menuitem', { name: 'About galeo' }).click();
+    const about = window.getByTestId('about');
+    await expect(about.getByRole('heading', { level: 2 })).toHaveText(/^galeo \d+\.\d+\.\d+/);
+    const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="about"]').analyze();
+    expect(results.violations).toEqual([]);
+    await window.keyboard.press('Escape');
+    await expect(about).toHaveCount(0);
+    await expect(chip(window)).toBeFocused();
+  } finally {
+    await close();
+  }
+});

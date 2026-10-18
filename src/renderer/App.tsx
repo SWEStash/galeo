@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import type { ReaderWidth } from '../shared/tabs';
@@ -113,16 +113,23 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   // One overlay at a time: quick open, the palette or About.
   const [overlay, setOverlay] = useState<'quickOpen' | 'palette' | 'about' | null>(null);
   const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
+  // Where focus goes when the overlay closes, if not the document: About from the profile menu, whose item is gone.
+  const returnFocus = useRef<string | null>(null);
   const closeOverlay = useCallback(() => {
     setOverlay(null);
+    const to = returnFocus.current ?? '[data-testid="tab-panel"][data-active="true"] [data-testid="document"]';
+    returnFocus.current = null;
     // Focus goes back to the document being read (UX F8), once the dialog has let it go.
-    requestAnimationFrame(() => document.querySelector<HTMLElement>('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]')?.focus());
+    requestAnimationFrame(() => document.querySelector<HTMLElement>(to)?.focus());
   }, []);
   useTabShortcuts(store, openQuickOpen, settings?.settings.measure ?? 72, setMessage);
   useUnsavedGuards(store);
   useCommands({ commandPalette: () => setOverlay('palette') });
   const [recentRevision, setRecentRevision] = useState(0);
-  const openAbout = useCallback(() => setOverlay('about'), []);
+  const openAbout = useCallback((from: string | null = null) => {
+    returnFocus.current = from;
+    setOverlay('about');
+  }, []);
   const runEntry = usePaletteActions(store, setMessage, () => setRecentRevision((revision) => revision + 1), openAbout);
   const choose = useCallback(
     (entry: PaletteEntry) => {
@@ -149,7 +156,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
         onSelectionChange={(key) => store.activate(String(key))}
         keyboardActivation="manual"
       >
-        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} />} onOpenFile={openQuickOpen} onFilesDropped={(after) => landed({ after })} />
+        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} onAbout={() => openAbout('[data-testid="profile-chip"]')} />} onOpenFile={openQuickOpen} onFilesDropped={(after) => landed({ after })} />
         <ProfileCreatedNotice />
         {settings && <SettingsNotice notices={settings.notices} />}
         {settings && <SessionNotice notice={settings.session} />}
@@ -172,7 +179,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
                   settings &&
                   profile && (
                     <Suspense fallback={null}>
-                      <SettingsView state={settings} profile={profile} appImage={appImage} />
+                      <SettingsView state={settings} profile={profile} appImage={appImage} version={version} onAbout={() => openAbout()} />
                     </Suspense>
                   )
                 ) : (

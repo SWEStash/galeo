@@ -29,7 +29,7 @@ function stubBridge() {
   return { profiles, session };
 }
 
-async function render(state: ProfilesState = STATE) {
+async function render(state: ProfilesState = STATE, onAbout: () => void = () => {}) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
@@ -37,7 +37,7 @@ async function render(state: ProfilesState = STATE) {
   await act(async () =>
     root.render(
       <CommandsProvider platform="linux">
-        <ProfileChip state={state} />
+        <ProfileChip state={state} onAbout={onAbout} />
       </CommandsProvider>,
     ),
   );
@@ -88,6 +88,15 @@ describe('ProfileChip (UX F5)', () => {
     expect(menuItem('default')?.textContent).toContain('Open');
     await act(async () => menuItem('Beta')!.click());
     expect(profiles.open).toHaveBeenCalledWith('beta');
+  });
+
+  it('opens About galeo from the menu', async () => {
+    stubBridge();
+    const onAbout = vi.fn();
+    const container = await render(STATE, onAbout);
+    await openMenu(container);
+    await act(async () => menuItem('About galeo')!.click());
+    expect(onAbout).toHaveBeenCalledTimes(1);
   });
 
   it('opens the menu on Ctrl+Shift+M', async () => {

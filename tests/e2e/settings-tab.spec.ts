@@ -176,3 +176,20 @@ test("a font chosen in the prose picker is the article's font, and a name typed 
     removeTempHome(home);
   }
 });
+
+test('Settings shows the version and opens About galeo, giving focus back to its button', async () => {
+  const { window, close } = await launchApp(['--', basic]);
+  try {
+    await expect(window.locator('[data-testid="document"] article h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Comma');
+    const row = settingsView(window).locator('[data-setting="about"]');
+    await expect(row).toContainText(/galeo \d+\.\d+\.\d+/);
+    await row.getByRole('button', { name: 'About galeo' }).click();
+    await expect(window.getByTestId('about')).toBeVisible();
+    await window.keyboard.press('Escape');
+    await expect(window.getByTestId('about')).toHaveCount(0);
+    await expect(row.getByRole('button', { name: 'About galeo' })).toBeFocused();
+  } finally {
+    await close();
+  }
+});

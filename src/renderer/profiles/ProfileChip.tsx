@@ -42,7 +42,7 @@ type Editing = { kind: 'new' } | { kind: 'edit' } | { kind: 'delete' } | null;
  * The profile chip at the tab bar's left edge (UX F5): the window's profile by name and accent,
  * and its menu (Ctrl+Shift+M): switch, new, edit, delete, restore a previous session.
  */
-export function ProfileChip({ state }: { state: ProfilesState }) {
+export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout: () => void }) {
   const current = state.profiles.find((profile) => profile.id === state.current);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
@@ -69,6 +69,7 @@ export function ProfileChip({ state }: { state: ProfilesState }) {
       const id = key.slice('open:'.length);
       if (id !== state.current) void window.galeo.profiles.open(id);
     } else if (key.startsWith('restore:')) void window.galeo.session.restorePrevious(Number(key.slice('restore:'.length)));
+    else if (key === 'about') onAbout();
   };
 
   return (
@@ -102,6 +103,12 @@ export function ProfileChip({ state }: { state: ProfilesState }) {
               </MenuItem>
               <MenuItem id="delete" className="menu-item" isDisabled={current.id === 'default'}>
                 Delete profile…
+              </MenuItem>
+            </MenuSection>
+            <Separator className="menu-separator" />
+            <MenuSection>
+              <MenuItem id="about" className="menu-item">
+                About galeo
               </MenuItem>
             </MenuSection>
             {previous.length > 0 && (

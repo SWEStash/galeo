@@ -44,7 +44,20 @@ const SEPARATOR_CHOICES: readonly [SeparatorChoice, string][] = [
  * The Settings tab (UX §6): the v0.1 settings, for this profile or for all of them. Each shows
  * where its value comes from, and this profile's own values can go back to the shared one.
  */
-export function SettingsView({ state, profile, appImage = false }: { state: SettingsState; profile: ProfileView; appImage?: boolean }) {
+export function SettingsView({
+  state,
+  profile,
+  appImage = false,
+  version,
+  onAbout,
+}: {
+  state: SettingsState;
+  profile: ProfileView;
+  appImage?: boolean;
+  /** galeo's version, and the About dialog it opens (version, licence, notices). */
+  version: string;
+  onAbout: () => void;
+}) {
   const [scope, setScope] = useState<SettingsScope>('profile');
   const [refused, setRefused] = useState<string | null>(null);
   const [launcher, setLauncher] = useState<string | null>(null);
@@ -215,6 +228,12 @@ export function SettingsView({ state, profile, appImage = false }: { state: Sett
           </p>
         </>
       )}
+
+      <h2>About</h2>
+      <div className="setting settings-about" data-setting="about">
+        <span>galeo {version}</span>
+        <Button onPress={onAbout}>About galeo</Button>
+      </div>
     </section>
   );
 }

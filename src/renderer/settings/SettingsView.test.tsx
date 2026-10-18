@@ -64,13 +64,13 @@ function stubBridge() {
   return { settings, profiles, app };
 }
 
-async function render(state: SettingsState = STATE, appImage = false) {
+async function render(state: SettingsState = STATE, appImage = false, onAbout: () => void = () => {}) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
   roots.push(root);
-  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} appImage={appImage} />));
-  const update = (next: SettingsState) => act(async () => root.render(<SettingsView state={next} profile={PROFILE} appImage={appImage} />));
+  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} />));
+  const update = (next: SettingsState) => act(async () => root.render(<SettingsView state={next} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} />));
   return Object.assign(container, { update });
 }
 
@@ -209,6 +209,16 @@ describe('SettingsView (UX §6)', () => {
     expect(preview.textContent).toMatch(/\S/);
     expect(preview.style.fontFamily).toContain('Hack');
     expect(preview.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('shows the version, with a way to About galeo', async () => {
+    stubBridge();
+    const onAbout = vi.fn();
+    const container = await render(STATE, false, onAbout);
+    const about = container.querySelector<HTMLElement>('[data-setting="about"]')!;
+    expect(about.textContent).toContain('galeo 0.3.0');
+    await act(async () => button(about, 'About galeo').click());
+    expect(onAbout).toHaveBeenCalledTimes(1);
   });
 
   it('commits a text setting when the field is left', async () => {

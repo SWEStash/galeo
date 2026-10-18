@@ -201,8 +201,9 @@ Full width, or Custom (40 to 200); in a settings file it is a number or `"full"`
 file with `"full"` as invalid and keeps its last valid settings. The **prose and code fonts** are
 pickers: the fonts galeo ships first, then the families installed on the system (monospace ones
 for code, listed by fontconfig without any network), each drawn in its own face, with a sample
-line under the field; any other family name can still be typed. galeo keeps its files in the usual
-places:
+line under the field; any other family name can still be typed. **About galeo** (the version, the
+licence and the notices of what galeo ships) is at the end of Settings, in the profile menu and in the
+palette. galeo keeps its files in the usual places:
 
 | What | Where |
 |---|---|
