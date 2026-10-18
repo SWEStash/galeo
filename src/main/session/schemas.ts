@@ -5,7 +5,7 @@ import { HISTORY_DEPTH } from '../../core/tabs/registry';
 import { isProfileId } from '../../core/profiles/names';
 import type { Parse } from '../../core/settings/json-file';
 import { CHOSEN_ENCODINGS } from '../../shared/contracts';
-import { scrollAnchor, tabViewState, zoomLevel } from '../../shared/contracts/schemas';
+import { readerWidth, scrollAnchor, tabViewState, zoomLevel } from '../../shared/contracts/schemas';
 import { parserFor } from '../schemas/parse';
 
 /**
@@ -34,6 +34,7 @@ const tab = z
     entries: z.array(entry).min(1).max(HISTORY_DEPTH),
     index: z.int().min(0),
     zoom: zoomLevel.optional(),
+    width: readerWidth.optional(),
   })
   .refine((value) => value.index < value.entries.length, 'index outside the history');
 

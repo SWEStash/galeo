@@ -12,6 +12,7 @@ type TabChannels =
   | 'tabs.renderAgain'
   | 'tabs.position'
   | 'tabs.zoom'
+  | 'tabs.width'
   | 'tabs.viewState'
   | 'tabs.close'
   | 'tabs.reopenClosed'
@@ -79,6 +80,9 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     },
     'tabs.zoom': ([id, zoom], event) => {
       if (!tabs.setZoom(id, event.sender.id, zoom)) resync(event.sender.id);
+    },
+    'tabs.width': ([id, width], event) => {
+      if (!tabs.setWidth(id, event.sender.id, width)) resync(event.sender.id);
     },
     'tabs.close': ([id], event) => {
       const window = event.sender.id;

@@ -20,9 +20,16 @@ export interface TableOptions {
   asTable?: true;
 }
 
-/** A tab in a snapshot: its record, zoom (absent at 100 %), the last position and view state main heard of. */
+/** A tab's reading column: a width in `ch` (40 to 200), or the whole window. */
+export type ReaderWidth = number | 'full';
+
+/**
+ * A tab in a snapshot: its record, zoom (absent at 100 %), reader width (absent while it follows the
+ * setting), the last position and view state main heard of.
+ */
 export interface TabView extends DocumentRecord, TabViewState {
   zoom?: number;
+  width?: ReaderWidth;
   position?: ScrollAnchor;
   /** It was rendering when the window's renderer crashed: shown only when the reader asks (ADR-002). */
   crashed?: true;

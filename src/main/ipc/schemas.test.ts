@@ -79,6 +79,13 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('tabs.width takes an id and a width from 40 to 200 ch, full width, or null', () => {
+    for (const good of [[ID, 40], [ID, 200], [ID, 'full'], [ID, null]]) expect(accepts('tabs.width', good)).toBe(true);
+    for (const bad of [[ID], [ID, 39], [ID, 201], [ID, 72.5], [ID, '72'], [ID, 'wide'], [ID, Number.NaN], [ID, 72, 'x']]) {
+      expect(accepts('tabs.width', bad)).toBe(false);
+    }
+  });
+
   it('tabs.move takes an id and a position', () => {
     expect(accepts('tabs.move', [ID, 0])).toBe(true);
     expect(accepts('tabs.move', [ID, 9999])).toBe(true);

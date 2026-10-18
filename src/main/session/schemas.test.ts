@@ -20,6 +20,7 @@ const valid = {
           ],
           index: 0,
           zoom: 1.25,
+          width: 'full',
         },
       ],
     },
@@ -43,6 +44,8 @@ describe('parseSession (SR-17)', () => {
     ['a split narrower than a fifth', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, ratio: 0.1 }], index: 0 }] }] }],
     ['a split wider than four fifths', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ entries: [{ path: '/d/a.md', anchor: null, ratio: 0.9 }], index: 0 }] }] }],
     ['a zoom out of range', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, zoom: 9 }] }] }],
+    ['a reader width out of range', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, width: 300 }] }] }],
+    ['an unknown reader width', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, width: 'wide' }] }] }],
     ['document text smuggled in', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, text: '# secret' }] }] }],
     ['too many windows', { ...valid, windows: Array.from({ length: 51 }, () => valid.windows[0]!), focusOrder: [] }],
   ])('refuses %s', (_name, session) => {

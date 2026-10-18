@@ -4,7 +4,7 @@
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, SaveResult } from '../documents';
 import type { Platform, WindowCommand } from '../keymap';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
-import type { ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
+import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
 import type { QuickOpenResults, QuickOpenStart } from '../quick-open';
 
 export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
@@ -104,6 +104,7 @@ export const CHANNELS = [
   'tabs.renderAgain',
   'tabs.position',
   'tabs.zoom',
+  'tabs.width',
   'tabs.viewState',
   'tabs.close',
   'tabs.reopenClosed',
@@ -207,6 +208,8 @@ export interface Requests {
   'tabs.position': [id: string, position: ScrollAnchor];
   /** The tab's zoom (1 is 100 %), kept by main for the session. */
   'tabs.zoom': [id: string, zoom: number];
+  /** The tab's own reader width, kept by main for the session; null when it follows the setting again. */
+  'tabs.width': [id: string, width: ReaderWidth | null];
   'tabs.viewState': [id: string, state: TabViewState];
   'tabs.close': [id: string];
   /** Brings back the window's most recently closed tab. */
@@ -284,6 +287,7 @@ export interface Responses {
   'tabs.renderAgain': void;
   'tabs.position': void;
   'tabs.zoom': void;
+  'tabs.width': void;
   'tabs.viewState': void;
   'tabs.close': void;
   /** The reopened tab's id, or null when none was closed. */

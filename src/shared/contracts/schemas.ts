@@ -46,6 +46,8 @@ export const settingsOverrides = z.strictObject({
 
 /** A tab's zoom, 50 % to 300 %. */
 export const zoomLevel = z.number().min(0.5).max(3);
+/** A tab's reader width: 40 to 200 ch, as the `measure` setting allows, or the whole window. */
+export const readerWidth = z.union([z.int().min(40).max(200), z.literal('full')]);
 const quickOpenToken = z.string().min(1).max(64);
 /** A tab's chosen view and follow state; only what differs from the defaults is ever set. */
 export const tabViewState = z.strictObject({
@@ -86,6 +88,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'tabs.renderAgain': z.tuple([documentId]),
   'tabs.position': z.tuple([documentId, scrollAnchor]),
   'tabs.zoom': z.tuple([documentId, zoomLevel]),
+  'tabs.width': z.tuple([documentId, readerWidth.nullable()]),
   'tabs.viewState': z.tuple([documentId, tabViewState]),
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),

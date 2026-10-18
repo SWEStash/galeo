@@ -349,6 +349,36 @@ describe('TabRegistry', () => {
     expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('zoom');
   });
 
+  it('shows each tab its own reader width in snapshots, and none once cleared', () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.md', 1);
+    const revision = tabs.snapshot(1).revision;
+    expect(tabs.setWidth(id, 1, 96)).toBe(true);
+    expect(tabs.setWidth(id, 2, 'full')).toBe(false);
+    expect(tabs.snapshot(1)).toMatchObject({ revision: revision + 1, tabs: [{ id, width: 96 }] });
+    tabs.setWidth(id, 1, 'full');
+    expect(tabs.snapshot(1).tabs[0]!.width).toBe('full');
+    tabs.setWidth(id, 1, null);
+    expect(tabs.snapshot(1).tabs[0]).not.toHaveProperty('width');
+  });
+
+  it('keeps reader widths across a session and brings a reopened tab back at its width', () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id: a } = tabs.open('/d/a.md', 1);
+    const { id: b } = tabs.open('/d/b.md', 1);
+    tabs.setWidth(a, 1, 'full');
+    tabs.setWidth(b, 1, 56);
+    const saved = tabs.exportWindow(1);
+    expect(saved.tabs.map((tab) => tab.width)).toEqual(['full', 56]);
+    const next = new TabRegistry(() => `new-${Math.random()}`);
+    next.restoreWindow(7, saved);
+    expect(next.snapshot(7).tabs.map((tab) => tab.width)).toEqual(['full', 56]);
+
+    tabs.close(b, 1);
+    tabs.reopenClosed(1);
+    expect(tabs.snapshot(1).tabs.map((tab) => tab.width)).toEqual(['full', 56]);
+  });
+
   it('keeps the last 50 entries of a history, so the session can always hold it', () => {
     const tabs = new TabRegistry(counterIds());
     const { id } = tabs.open('/d/a.md', 1);

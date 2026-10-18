@@ -1,5 +1,5 @@
 import type { DocumentRecord } from '../../shared/documents';
-import type { ScrollAnchor, TabSnapshot, TabView, TabViewState } from '../../shared/tabs';
+import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabView, TabViewState } from '../../shared/tabs';
 import type { WhatwgEncoding } from '../text/decode';
 
 /**
@@ -31,17 +31,21 @@ interface Stored {
   entries: HistoryEntry[];
   index: number;
   zoom?: number;
+  /** Its own reader width; absent while it follows the setting. */
+  width?: ReaderWidth;
   /** The window's settings tab: no file, never in the session. */
   settings?: true;
   /** It was rendering when its window's renderer crashed: not rendered again until the reader asks. */
   crashed?: true;
 }
 
-/** A tab as a session keeps it: its history, where in it, and its zoom (absent at 100 %). */
+/** A tab as a session keeps it: its history, where in it, its zoom (absent at 100 %) and reader width. */
 export interface TabState {
   entries: HistoryEntry[];
   index: number;
   zoom?: number;
+  /** Its own reader width; absent while it follows the setting. */
+  width?: ReaderWidth;
 }
 
 /** A window's tabs as a session keeps them, and which was shown. */
@@ -55,6 +59,8 @@ interface Closed {
   index: number;
   position: number;
   zoom?: number;
+  /** Its own reader width; absent while it follows the setting. */
+  width?: ReaderWidth;
   /** When it closed, on the registry's own clock (`stamp`). */
   at: number;
 }
@@ -118,6 +124,7 @@ export class TabRegistry {
       return {
         ...recordOf(record),
         ...(record.zoom ? { zoom: record.zoom } : {}),
+        ...(record.width ? { width: record.width } : {}),
         ...(position ? { position } : {}),
         ...(view ? { view } : {}),
         ...(follow ? { follow } : {}),
@@ -129,7 +136,7 @@ export class TabRegistry {
     return { revision: this.revisions.get(window) ?? 0, active: this.active.get(window) ?? null, tabs };
   }
 
-  /** The window's tabs for the session file: history, positions, encodings, zoom (ADR-005). */
+  /** The window's tabs for the session file: history, positions, encodings, zoom, reader width (ADR-005). */
   exportWindow(window: number): WindowState {
     const order = (this.order.get(window) ?? []).filter((id) => !this.records.get(id)!.settings);
     const active = this.active.get(window);
@@ -137,8 +144,8 @@ export class TabRegistry {
     return {
       active: shown < 0 ? null : shown,
       tabs: order.map((id) => {
-        const { entries, index, zoom } = this.records.get(id)!;
-        return { entries: entries.map((entry) => ({ ...entry })), index, ...(zoom ? { zoom } : {}) };
+        const { entries, index, zoom, width } = this.records.get(id)!;
+        return { entries: entries.map((entry) => ({ ...entry })), index, ...(zoom ? { zoom } : {}), ...(width ? { width } : {}) };
       }),
     };
   }
@@ -160,7 +167,7 @@ export class TabRegistry {
   restoreWindow(window: number, state: WindowState): DocumentRecord[] {
     const restored = state.tabs.map((tab) => {
       const record = this.insert(window, tab.entries.map((entry) => ({ ...entry })), tab.index, this.orderOf(window).length);
-      if (tab.zoom) this.records.get(record.id)!.zoom = tab.zoom;
+      this.keepLook(record.id, tab);
       return record;
     });
     const active = state.active === null ? undefined : restored[state.active];
@@ -176,6 +183,23 @@ export class TabRegistry {
     else record.zoom = zoom;
     this.changed(window);
     return true;
+  }
+
+  /** The tab's own reader width, or null to follow the setting again; part of the snapshot, like zoom. */
+  setWidth(id: string, window: number, width: ReaderWidth | null): boolean {
+    const record = this.owned(id, window);
+    if (!record) return false;
+    if (width === null) delete record.width;
+    else record.width = width;
+    this.changed(window);
+    return true;
+  }
+
+  /** A restored or reopened tab takes back its zoom and reader width. */
+  private keepLook(id: string, { zoom, width }: { zoom?: number; width?: ReaderWidth }): void {
+    const record = this.records.get(id)!;
+    if (zoom) record.zoom = zoom;
+    if (width) record.width = width;
   }
 
   /** The window says it shows `id` now (it activates tabs itself, then reports it). */
@@ -199,7 +223,14 @@ export class TabRegistry {
       return true;
     }
     const closed = this.closed.get(window) ?? [];
-    closed.push({ entries: record.entries, index: record.index, position, ...(record.zoom ? { zoom: record.zoom } : {}), at: this.stamp() });
+    closed.push({
+      entries: record.entries,
+      index: record.index,
+      position,
+      ...(record.zoom ? { zoom: record.zoom } : {}),
+      ...(record.width ? { width: record.width } : {}),
+      at: this.stamp(),
+    });
     this.closed.set(window, closed.slice(-CLOSED_DEPTH));
     this.changed(window);
     return true;
@@ -223,7 +254,7 @@ export class TabRegistry {
     const tab = this.closed.get(window)?.pop();
     if (!tab) return null;
     const record = this.insert(window, tab.entries, tab.index, tab.position);
-    if (tab.zoom) this.records.get(record.id)!.zoom = tab.zoom;
+    this.keepLook(record.id, tab);
     return record;
   }
 
