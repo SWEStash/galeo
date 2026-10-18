@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import type { ReaderWidth } from '../shared/tabs';
@@ -13,13 +13,15 @@ import { markFirstPaint } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
 import { SessionNotice, SettingsNotice } from './settings/SettingsNotice';
 import { settingsTokens } from './settings/tokens';
-import { SettingsView } from './settings/SettingsView';
 import { setCustomCss } from './document/host';
 import { ProfileChip } from './profiles/ProfileChip';
 import { useProfiles } from './profiles/useProfiles';
 import { accentOf } from '../shared/accents';
 import { useSettings } from './settings/useSettings';
 import { CrashLoop, SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
+
+// The Settings tab loads when first shown: its pickers are nothing a window needs to start.
+const SettingsView = lazy(() => import('./settings/SettingsView').then((module) => ({ default: module.SettingsView })));
 import { hasReadingColumn, readerWidthStyle } from './document/width';
 import { tabAction } from './tabs/commands';
 import type { TabStore } from './tabs/store';
@@ -167,7 +169,12 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
                 style={readerWidthStyle(view.widths.get(tab.id))}
               >
                 {tab.kind === 'settings' ? (
-                  settings && profile && <SettingsView state={settings} profile={profile} appImage={appImage} />
+                  settings &&
+                  profile && (
+                    <Suspense fallback={null}>
+                      <SettingsView state={settings} profile={profile} appImage={appImage} />
+                    </Suspense>
+                  )
                 ) : (
                   <TabDocument
                     id={tab.id}
