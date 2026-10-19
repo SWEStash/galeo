@@ -1,6 +1,7 @@
 # ADR-019 — Moving tabs between windows and profiles: the id in the drag, a single-use drag in main
 
-- Status: Accepted (2026-10-19, owner)
+- Status: Accepted (2026-10-19, owner); points 2 and 4 amended in place the same day (owner), see
+  [Amendment](#amendment-2026-10-19)
 - Date: 2026-10-19
 - Deciders: project owner
 - Builds on: [ADR-002](ADR-002-window-and-tab-model.md) (tab records; "moving tabs between windows and
@@ -43,18 +44,22 @@ The X11 behaviour was not verified (the owner's platform is Wayland).
 1. **The drag carries the tab id**, in the type `application/x-galeo-tab` only, never `text/plain`, so no
    other application takes it.
 2. **Main holds one pending drag.** When a drag starts, the page asks main `tabs.dragStart(id)`. Main
-   accepts only a tab that window owns, and only by spending a credit of real input (SR-12): the mouse press
-   that started the drag earns it. The drag ends at `tabs.dragEnd()`, at a drop or tear-off, or after
+   accepts only a tab that window owns, and only by spending real input (SR-12): the mouse press that
+   started the drag, while its button is still down however long ago it went down, or else a credit of
+   real input. When the drag ends, the source tells main `tabs.dragEnd(id, outside)`. The drag stays
+   claimable for 500 ms more, because the window it was dropped on asks for it at about the same time and
+   the two messages reach main in either order. It ends at a drop, at the end of those 500 ms, or after
    2 minutes, whichever comes first.
 3. **A drop is an adopt.** The window under the drop asks `tabs.adopt(id, position)`. Main moves the tab
    only if it is the pending drag's tab and comes from another window, and then the drag is over. So a page
    can take only a tab the reader is dragging, and a drop and a tear-off can't both happen. Main doesn't
    raise the window: the tab becomes its active tab, under the pointer, and GNOME shows no notice.
-4. **Tear-off is inferred by the source.** When its drag ends unclaimed (drop effect `none`) after the
-   pointer left the window, and the window has two or more tabs, the source asks `tabs.tearOff(id)`. Main
-   opens a new window of the source's profile, at the source's size, and moves the tab there. The compositor
-   places it. A window's only tab dragged outside does nothing. Esc pressed outside the window is the same
-   signal, so it tears off too.
+4. **Tear-off is decided by main.** The source says whether the pointer was outside the window when the
+   drag ended, whatever the drop effect: an application that accepts the drop, a desktop that doesn't, or
+   none. If it was, no galeo window claimed the drag in those 500 ms, and the window has two or more tabs,
+   main opens a new window of the source's profile, at the source's size, and moves the tab there. The
+   compositor places it. A window's only tab dragged outside does nothing. Esc pressed outside the window is
+   the same signal, so it tears off too.
 5. **A move keeps the tab's id and record.** History (with each entry's `chosen` flag, ADR-015), view
    state, scroll position, zoom, reader width and a crashed mark travel. The edit grant, its dirty mark and
    its kept text are moved to the new window before the registry changes, so no sync drops them. Warm-tab
@@ -83,7 +88,7 @@ The X11 behaviour was not verified (the owner's platform is Wayland).
 
 | Option | For | Against |
 |---|---|---|
-| **The id in the drag, a single-use drag in main (chosen)** | Uses what the spike showed working; the destination learns the id only from a real drag; one adopt or one tear-off per drag | Two more round trips per drag; tear-off can't tell Esc from a drop outside |
+| **The id in the drag, a single-use drag in main (chosen)** | Uses what the spike showed working; the destination learns the id only from a real drag; one adopt or one tear-off per drag | Two more round trips per drag; tear-off can't tell Esc from a drop outside, and waits 500 ms |
 | The id only in main, the drag carries a marker | The page never sees another window's tab id | The destination still needs to name what it takes, and the drag already proves the reader moved it there |
 | The drag carries the tab's state and unsaved text | No main lookup at the drop | Document text in drag data any window or app can read; bypasses grants (ADR-004) and SR-16 |
 | Main tracks the pointer to find the drop window | Works without drag events | Wayland gives no global pointer position or window positions (spike) |
@@ -100,7 +105,8 @@ The X11 behaviour was not verified (the owner's platform is Wayland).
 ### Negative
 
 - Esc pressed with the pointer outside the window tears the tab off. The reader drags it back.
-- A torn-off window opens where the compositor puts it, not at the pointer.
+- A torn-off window opens where the compositor puts it, not at the pointer, half a second after the drop.
+- A tab dropped on another application doesn't go to it: it gets a window of its own.
 - A moved tab loses its undo history.
 
 ### Accepted residual risk (T6)
@@ -108,6 +114,24 @@ The X11 behaviour was not verified (the owner's platform is Wayland).
 A compromised page can send its own tabs, with their grants and unsaved text, to another galeo window while
 the reader is giving input. That window runs the same code under the same rules, and it gains nothing the
 source didn't already have. Exfiltration stays blocked (SR-04, SR-06, SR-12).
+
+## Amendment (2026-10-19)
+
+The owner's first manual run on Wayland, with the packaged build, found three faults in the drag as first
+decided. The owner chose to amend points 2 and 4 here rather than supersede them.
+
+- **A tab dropped over another application's window didn't tear off.** Some applications accept any drop,
+  so the drag ended with a drop effect other than `none`, and the source took that as a drop somewhere.
+  The reader expects a window of its own wherever the tab lands outside galeo.
+- **A tab dropped on another galeo window often didn't move.** The source's end of the drag and the
+  destination's adopt reached main in either order. When the end came first, the drag was over and the
+  adopt was refused.
+- **A drag started after holding the press over a second did nothing.** The press's credit had lapsed
+  (1 s), so main refused the drag start, and later drop or tear-off.
+
+The amendment keeps the drag claimable for 500 ms after its end, lets main decide tear-off from where the
+pointer was rather than from the drop effect, and lets a held press start a drag. All of a tab now starts a
+drag, not only its name, which is a page fix outside this ADR.
 
 ## Revisit triggers
 

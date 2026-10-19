@@ -186,7 +186,8 @@ reopen what you closed last, Ctrl+N for a new window. Closing a profile's last w
 "Restore previous session" (palette or profile menu) goes back to one of the last three.
 
 To move a tab to another window, drag it onto that window's tab bar, anywhere on it, even a window
-with no tabs. Drop it outside every galeo window to give it a window of its own; the window it left
+with no tabs. Drop it anywhere outside galeo's windows, on the desktop or another application, to give it a
+window of its own; the window it left
 keeps its other tabs. Esc with the pointer outside the window does the same, so drag the tab back if
 you didn't mean to. A tab keeps its history, view, zoom, reader width, edit mode and unsaved changes
 (not their undo history). Moved into another profile's window, it becomes part of that profile's

@@ -130,10 +130,10 @@ these.
 | Reader width (v0.3): Alt+= / Alt+- / Alt+0 on a long Markdown file and a `.txt`, Full width from the palette; the width comes back after a restart; Settings' measure presets move the tabs left at the setting | |
 | Font pickers (v0.3): the installed families are listed (monospace ones only for code), each in its face; a chosen one is the documents' font; a typed name not installed falls back | |
 | About galeo (v0.3) from the profile menu and from Settings shows the version | |
-| Moving tabs (v0.3, real drags on Wayland): a tab dragged onto another window's tab bar, onto its empty part, and into a window with no tabs moves there, shown, with no "galeo is ready" notice; into another profile's window it stays there after a restart | |
-| Tear-off (v0.3): a tab dragged out to the desktop from a window of two or more gets its own window, the old one stays; a window's only tab dragged out stays; Esc outside the window tears off too | |
-| A tab with unsaved changes dragged to another window keeps its text, `●` and edit mode; saving there writes the file | |
-| Moving tabs under X11 (unverified in development: the spike ran on Wayland only) | |
+| Moving tabs (v0.3, real drags on Wayland): a tab dragged onto another window's tab bar, onto its empty part, and into a window with no tabs moves there on the first try, also back into the window it was torn off from, shown, with no "galeo is ready" notice; into another profile's window it stays there after a restart | |
+| Tear-off (v0.3): a tab dragged out to the desktop, or onto another application's window, from a window of two or more gets its own window, the old one stays; a window's only tab dragged out stays; Esc outside the window tears off too; a drag starts from anywhere on a tab, also after holding the press a moment | |
+| A tab with unsaved changes dragged to another window keeps its text, `●` and edit mode; saving there writes the file | Pass (2026-10-19) |
+| Moving tabs under X11 (unverified in development: the spike ran on Wayland only) | Not run (2026-10-19): the owner's desktop has no X11 session |
 | Installed `.deb` (Trusted Types enforced): a document with Mermaid diagrams and math draws in full, with no Trusted Types errors | Pass (2026-10-06) |
 | Outline follows the scroll; Esc returns focus to the document | Pass (2026-10-05) |
 | Zoom: Ctrl++ on an es-US layout; Ctrl+wheel over the document and the tab bar zooms the tab, and in the viewer zooms only the viewer | Pass (2026-10-07) |

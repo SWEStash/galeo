@@ -313,8 +313,9 @@ through a link, a drop, quick open or recent files) is enabled only after the re
 *Edit* in main's native dialog naming its path (ADR-015). The renderer chooses the active tab, so
 without that question it could steer the key press to a file of its choosing.
 Moving a tab to another window (v0.3, ADR-019) moves its edit grant and unsaved text in main;
-the page never sends them. A window starts a drag of its own tab only by spending an input
-credit, and another window takes a tab only by claiming that live drag, once, so a page can't
+the page never sends them. A window starts a drag of its own tab only by spending real input:
+the mouse press that started it, while its button is still down, or an input credit. Another
+window takes a tab only by claiming that live drag, once (until half a second after it ended), so a page can't
 pull a tab out of another window. The palette's moves spend a credit too, and go only to
 another galeo window. A torn-off tab's new window is main's, of the tab's profile.
 *AC*: tests showing a renderer-originated `write` to a non-edit-enabled path is rejected, and

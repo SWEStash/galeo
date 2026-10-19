@@ -281,7 +281,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   including its empty part and the bar of a window with no tabs: the insertion caret of F3 shows;
   drop → the tab moves there, at the caret, and becomes that window's active tab. The window isn't
   raised: it is already under the pointer (ADR-019).
-- Drop **outside every galeo window** → the tab opens in a new window of its profile, which stays
+- Drop **outside every galeo window**, on the desktop or on another application → the tab opens in
+  a new window of its profile, which stays
   open with its other tabs. The desktop places the new window. A window's only tab dropped outside
   stays where it is. Esc with the pointer outside the window counts as a drop outside.
 - The tab keeps its back/forward history, view, scroll position, zoom, reader width, split and
