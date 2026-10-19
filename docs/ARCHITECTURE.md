@@ -151,7 +151,7 @@ flowchart LR
     coal[Coalescing watcher<br/>quiet window · rate cap · poll fallback]
     dw[Document watches<br/>open tabs' files → stale]
     qoc[Quick open<br/>git root · bounded walk · fuzzy match]
-    grants[Grants<br/>quick-open ids · drop tokens · images · input credits]
+    grants[Grants<br/>quick-open ids · drop tokens · images · input credits · tab drag]
   end
   subgraph adapt[Adapters · Electron + Node]
     inst[InstanceChannel<br/>requestSingleInstanceLock]
@@ -338,7 +338,7 @@ While a tab has unsaved changes, the page reports it (`documents.dirty`) and han
 a second after typing stops (`documents.keep`, memory only). Main holds window closes, quits and
 profile deletes until each affected page has asked its reader (`documents.confirmClose`, answered
 by `documents.closeAnswer`: *asking* within 5 s, then the choice). After a renderer crash, a tab
-gets its kept text back (`documents.recover`).
+gets its kept text back (`documents.recover`), and so does a tab moved to another window (§5.7).
 
 In split view (ADR-014) the rendered pane previews the editor's text, not the file's: the page
 sends it to the worker 150 ms after typing pauses, and at least once a second while it goes on.
@@ -351,6 +351,32 @@ The Launcher starts the app. Main takes the single-instance lock, sets up the Ne
 **before any window exists**, loads app-state and the target profile's session, and creates
 its windows. Each renderer loads Chrome UI (heavy features lazily), receives its Tab Records, and
 renders only its active tab. Budget: first document painted within 500 ms.
+
+### 5.7 Moving a tab to another window (ADR-019)
+
+```mermaid
+sequenceDiagram
+  participant A as Window A page
+  participant M as Main
+  participant B as Window B page
+  A->>M: tabs.dragStart(id) · spends an input credit
+  M-->>A: tabs.dragging(true) · and every other window
+  Note over B: the whole tab bar takes drops
+  B->>M: tabs.adopt(id, position) · claims the drag, once
+  M->>M: grant + kept text → B · record → B (same id) · warm set · breadcrumb
+  M-->>A: tabs.changed (without the tab)
+  M-->>B: tabs.changed (with it, shown)
+  B->>M: documents.recover(id)
+  M-->>B: edit mode · unsaved text
+```
+
+The drag carries only the tab id, in galeo's own type. Main keeps one pending drag (`TabDrags`):
+a window takes a tab only by claiming it, so a page can't pull tabs out of other windows, and a
+drop and a tear-off can't both happen. A drag that ends unclaimed while the pointer is out of
+window A is a tear-off: A asks `tabs.tearOff(id)`, and main opens a window of A's profile, at A's
+size, and moves the tab there. The palette's moves (`tabs.moveTo`) take the same path in main,
+`tabMover`, which closes a window its last tab left; a profile whose last window closed that way
+saves a session without it. Into another profile's window, the tab joins that profile's session.
 
 ## 6. Security architecture (map of ADR-004)
 

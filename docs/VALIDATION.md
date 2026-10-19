@@ -24,6 +24,8 @@ Wayland) before each release.
   in both schemes (`reader-width` and `settings-tab` specs); About opened from the profile menu
   (`profiles` spec). An open picker hides the rest of the page from assistive tech, so axe checks the
   list there and the closed Settings view on its own.
+  Moving tabs (v0.3): the *Move tab to window…* list, its first window focused, in both schemes
+  (`tab-move` spec).
 - **Contrast** (`tests/unit/design/colour-contrast.test.ts`): text tokens at 4.5:1 and focus ring
   and text-field borders at 3:1 on the page and on panels, in both schemes; the 8 accent presets
   at 3:1 on the tab bar; every code-highlighting colour at 4.5:1 on code blocks.
@@ -128,6 +130,10 @@ these.
 | Reader width (v0.3): Alt+= / Alt+- / Alt+0 on a long Markdown file and a `.txt`, Full width from the palette; the width comes back after a restart; Settings' measure presets move the tabs left at the setting | |
 | Font pickers (v0.3): the installed families are listed (monospace ones only for code), each in its face; a chosen one is the documents' font; a typed name not installed falls back | |
 | About galeo (v0.3) from the profile menu and from Settings shows the version | |
+| Moving tabs (v0.3, real drags on Wayland): a tab dragged onto another window's tab bar, onto its empty part, and into a window with no tabs moves there, shown, with no "galeo is ready" notice; into another profile's window it stays there after a restart | |
+| Tear-off (v0.3): a tab dragged out to the desktop from a window of two or more gets its own window, the old one stays; a window's only tab dragged out stays; Esc outside the window tears off too | |
+| A tab with unsaved changes dragged to another window keeps its text, `●` and edit mode; saving there writes the file | |
+| Moving tabs under X11 (unverified in development: the spike ran on Wayland only) | |
 | Installed `.deb` (Trusted Types enforced): a document with Mermaid diagrams and math draws in full, with no Trusted Types errors | Pass (2026-10-06) |
 | Outline follows the scroll; Esc returns focus to the document | Pass (2026-10-05) |
 | Zoom: Ctrl++ on an es-US layout; Ctrl+wheel over the document and the tab bar zooms the tab, and in the viewer zooms only the viewer | Pass (2026-10-07) |
