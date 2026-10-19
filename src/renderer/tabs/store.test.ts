@@ -13,7 +13,16 @@ function setup(initial: TabSnapshot) {
   let push: (snapshot: TabSnapshot) => void = () => {};
   let demote: (ids: string[]) => void = () => {};
   let stale: (id: string) => void = () => {};
+  let dragging: (on: boolean) => void = () => {};
   const api = {
+    dragStart: vi.fn().mockResolvedValue(true),
+    dragEnd: vi.fn().mockResolvedValue(undefined),
+    adopt: vi.fn().mockResolvedValue(true),
+    tearOff: vi.fn().mockResolvedValue(true),
+    onDragging: vi.fn((listener: (on: boolean) => void) => {
+      dragging = listener;
+      return () => {};
+    }),
     snapshot: vi.fn().mockResolvedValue(initial),
     activated: vi.fn().mockResolvedValue(undefined),
     close: vi.fn().mockResolvedValue(undefined),
@@ -38,7 +47,14 @@ function setup(initial: TabSnapshot) {
     }),
   };
   const store = createTabStore(api);
-  return { api, store, push: (next: TabSnapshot) => push(next), demote: (ids: string[]) => demote(ids), stale: (id: string) => stale(id) };
+  return {
+    api,
+    store,
+    push: (next: TabSnapshot) => push(next),
+    demote: (ids: string[]) => demote(ids),
+    stale: (id: string) => stale(id),
+    dragging: (on: boolean) => dragging(on),
+  };
 }
 
 describe('createTabStore', () => {
@@ -372,5 +388,50 @@ describe('createTabStore', () => {
     const { store } = setup(initial);
     await store.start();
     expect(store.viewStateOf('a')).toEqual({ view: 'split', ratio: 0.3 });
+  });
+
+  describe('tabs moving between windows (ADR-019)', () => {
+    it('knows while a tab drag is under way in any window, as main says', async () => {
+      const { store, dragging } = setup(snapshot(1, ['a'], 'a'));
+      await store.start();
+      expect(store.getSnapshot().dragging).toBe(false);
+      dragging(true);
+      expect(store.getSnapshot().dragging).toBe(true);
+      dragging(false);
+      expect(store.getSnapshot().dragging).toBe(false);
+    });
+
+    it('tells main a drag started, and how it ended: outside every window, or not', async () => {
+      const { store, api } = setup(snapshot(1, ['a', 'b'], 'a'));
+      await store.start();
+      store.dragStarted('a');
+      expect(api.dragStart).toHaveBeenCalledWith('a');
+      store.dragEnded('a', false);
+      expect(api.dragEnd).toHaveBeenCalled();
+      expect(api.tearOff).not.toHaveBeenCalled();
+      store.dragEnded('a', true);
+      expect(api.tearOff).toHaveBeenCalledWith('a');
+    });
+
+    it('takes a tab dropped from another window where it landed, and shows it once main sends it', async () => {
+      const { store, api, push } = setup(snapshot(1, ['a', 'b'], 'a'));
+      await store.start();
+      store.adopt('x', 1);
+      expect(api.adopt).toHaveBeenCalledWith('x', 1);
+      push(snapshot(2, ['a', 'x', 'b'], 'a'));
+      expect(store.getSnapshot().active).toBe('x');
+      expect(api.activated).toHaveBeenLastCalledWith('x');
+    });
+
+    it("doesn't wait for a tab main refused to hand over", async () => {
+      const { store, api, push } = setup(snapshot(1, ['a'], 'a'));
+      await store.start();
+      api.adopt.mockResolvedValueOnce(false);
+      store.adopt('x', 0);
+      await vi.waitFor(() => expect(api.adopt).toHaveBeenCalled());
+      await Promise.resolve();
+      push(snapshot(2, ['a', 'x'], 'a'));
+      expect(store.getSnapshot().active).toBe('a');
+    });
   });
 });

@@ -153,13 +153,19 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
   const leaveEdit = useCallback(() => void window.galeo.documents.leaveEdit(id).catch(ignoreClosedTab), [id]);
   const onEditor = useCallback((editor: Editor | null) => (editor ? editors.set(id, editor) : editors.delete(id)), [id]);
   const keep = useCallback((text: string, base: string | null) => void window.galeo.documents.keep(id, text, base).catch(ignoreClosedTab), [id]);
-  // Unsaved text main kept from before a renderer crash, for the tab's first document only.
+  // What main holds for the tab, for its first document only: unsaved text from before a renderer
+  // crash, or edit mode and unsaved text it had in the window it moved from (ADR-019).
   const [recovered, setRecovered] = useState<{ text: string; base: string | null } | null>(null);
   useEffect(() => {
     let current = true;
     void window.galeo.documents
       .recover(id)
-      .then(({ kept }) => current && setRecovered(kept))
+      .then(({ edit, kept }) => {
+        if (!current) return;
+        if (kept) setRecovered(kept);
+        // In edit mode with nothing unsaved: as if main had just granted it.
+        else if (edit) setEditRequest((last) => ({ edit: 'granted', token: (last?.token ?? 0) + 1 }));
+      })
       .catch(ignoreClosedTab);
     return () => {
       current = false;

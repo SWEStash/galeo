@@ -33,6 +33,11 @@ body,
   color: var(--galeo-color-fg);
 }
 
+/* While a tab is dragged, in any window, the bar's empty space takes the drop instead of moving the window (ADR-019). */
+.tab-bar[data-tab-drag] {
+  -webkit-app-region: no-drag;
+}
+
 /* macOS puts its window buttons at the bar's start. */
 :root[data-platform='darwin'] .tab-bar {
   padding-left: 78px;

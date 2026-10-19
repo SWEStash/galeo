@@ -323,16 +323,18 @@ export function DocumentPane({
   const keepListener = useRef(onKeep);
   keepListener.current = onKeep;
   const keepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const keepNow = useCallback(() => {
+    clearTimeout(keepTimer.current);
+    const text = documentHandle.current?.sourceText();
+    if (dirtyNow.current && text != null) keepListener.current?.(text, base.current);
+  }, []);
   const edited = useCallback(() => {
     edits.current++;
     if (liveNow.current) preview.poke();
     if (!dirtyNow.current) markDirty(true);
     clearTimeout(keepTimer.current);
-    keepTimer.current = setTimeout(() => {
-      const text = documentHandle.current?.sourceText();
-      if (dirtyNow.current && text != null) keepListener.current?.(text, base.current);
-    }, KEEP_MS);
-  }, []);
+    keepTimer.current = setTimeout(keepNow, KEEP_MS);
+  }, [keepNow]);
   useEffect(() => () => clearTimeout(keepTimer.current), []);
   // Back from a crash with unsaved text: edit mode again, that text, still unsaved, still against
   // the version it was loaded from.
@@ -463,7 +465,7 @@ export function DocumentPane({
   actions.current = { save, discard };
   useEffect(() => {
     if (!editing) return;
-    onEditor?.({ save: () => actions.current.save(), discard: () => actions.current.discard(), focus: () => documentHandle.current?.focus() });
+    onEditor?.({ save: () => actions.current.save(), discard: () => actions.current.discard(), focus: () => documentHandle.current?.focus(), keepNow });
     return () => onEditor?.(null);
   }, [editing, onEditor]);
   const [viewer, setViewer] = useState<{ content: ZoomContent; name: string; returnFocus: () => void } | null>(null);

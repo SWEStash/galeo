@@ -45,6 +45,8 @@ export interface TabsView {
   reloaded: ReadonlySet<string>;
   /** Tabs that were rendering when the window's renderer crashed: not rendered until the reader asks (ADR-002). */
   crashed: ReadonlySet<string>;
+  /** A tab is being dragged, in this window or another: the whole tab bar takes the drop (ADR-019). */
+  dragging: boolean;
 }
 
 /** How long a tab shows that it reloaded. */
@@ -65,6 +67,11 @@ export type TabsApi = Pick<
   | 'onChanged'
   | 'onDemote'
   | 'onStale'
+  | 'dragStart'
+  | 'dragEnd'
+  | 'adopt'
+  | 'tearOff'
+  | 'onDragging'
 >;
 
 export interface TabStore {
@@ -97,6 +104,12 @@ export interface TabStore {
   reloaded(id: string): void;
   /** Renders a tab that crashed the window, in the source view if the reader picked it. */
   renderAgain(id: string, view?: 'source'): void;
+  /** The reader started dragging the tab: another window may take it (ADR-019). */
+  dragStarted(id: string): void;
+  /** The drag ended without another window taking the tab; `outside`: dropped outside every window. */
+  dragEnded(id: string, outside: boolean): void;
+  /** Another window's tab was dropped here, at `position`: shown once main's snapshot brings it. */
+  adopt(id: string, position: number): void;
 }
 
 /**
@@ -116,6 +129,7 @@ export function createTabStore(api: TabsApi): TabStore {
     widths: new Map(),
     reloaded: new Set(),
     crashed: new Set(),
+    dragging: false,
   };
   const reloadTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const positions = new Map<string, ScrollAnchor>();
@@ -220,7 +234,7 @@ export function createTabStore(api: TabsApi): TabStore {
     },
     getSnapshot: () => view,
     async start() {
-      unsubscribe = [api.onChanged(apply), api.onDemote(demote), api.onStale(reread)];
+      unsubscribe = [api.onChanged(apply), api.onDemote(demote), api.onStale(reread), api.onDragging((dragging) => set({ dragging }))];
       apply(await api.snapshot());
     },
     stop() {
@@ -295,6 +309,18 @@ export function createTabStore(api: TabsApi): TabStore {
         }, RELOADED_MS),
       );
       if (!view.reloaded.has(id)) set({ reloaded: new Set(view.reloaded).add(id) });
+    },
+    dragStarted(id) {
+      void api.dragStart(id).catch(ignoreClosedTab);
+    },
+    dragEnded(id, outside) {
+      void (outside ? api.tearOff(id) : api.dragEnd()).catch(ignoreClosedTab);
+    },
+    adopt(id, position) {
+      wanted = id;
+      void api.adopt(id, position).then((taken) => {
+        if (!taken && wanted === id) wanted = null;
+      });
     },
     reopenClosed() {
       void api.reopenClosed().then((id) => {

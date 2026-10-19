@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
-import { isTextDropItem, Tab, TabList, useDrag, useDrop } from 'react-aria-components';
+import { isTextDropItem, Tab, TabList, useDrag, useDrop, type DropOperation } from 'react-aria-components';
 import type { DocumentRecord } from '../../shared/documents';
 import { tabLabels } from '../../shared/tab-labels';
+import { editors } from '../edit/editors';
+import { watchDragExit } from './drag-exit';
 import type { TabStatus, TabStore, TabsView } from './store';
 import { insertion, overflowEdges, wheelScroll } from './strip';
 
-/** A tab being dragged within the tab bar; nothing else accepts it. */
+/** A tab being dragged: the tab bars of every galeo window take it, nothing else does (ADR-019). */
 const TAB_TYPE = 'application/x-galeo-tab';
 
 /**
  * The window's tabs (UX §2): an ARIA tablist in the title bar. Its empty space, and a grip at its
- * end that tabs never fill, drag the window.
+ * end that tabs never fill, drag the window; while a tab is dragged, only the grip does.
  * ←/→ move between tabs, Enter or Space shows one, Delete closes it; a tab closes on middle-click
- * or its ✕ too, and drags to a new place.
+ * or its ✕ too, and drags to a new place, to another window's tab bar, or out to a window of its
+ * own (UX F15).
  */
 export function TabBar({
   view,
@@ -98,11 +101,29 @@ export function TabBar({
       const id = await item.getText(TAB_TYPE);
       const from = view.tabs.findIndex((tab) => tab.id === id);
       let to = insertionAt(event.x).index;
-      if (from < 0) return;
+      // Another window's tab: main hands it over if that window's drag still carries it.
+      if (from < 0) return store.adopt(id, to);
       if (to > from) to -= 1;
       if (to !== from) store.move(id, to);
     },
   });
+
+  // Where the pointer is while one of this window's tabs is dragged: out of the window at an unclaimed end is a tear-off.
+  const exit = useRef<ReturnType<typeof watchDragExit> | null>(null);
+  useEffect(() => () => exit.current?.stop(), []);
+  const dragStarted = (id: string) => {
+    exit.current?.stop();
+    exit.current = watchDragExit(document);
+    // Main moves the tab's unsaved text: it must have the latest before another window takes it.
+    editors.get(id)?.keepNow();
+    store.dragStarted(id);
+  };
+  const dragEnded = (id: string, operation: DropOperation) => {
+    const outside = operation === 'cancel' && (exit.current?.outside() ?? false);
+    exit.current?.stop();
+    exit.current = null;
+    store.dragEnded(id, outside);
+  };
 
   const onKeyDown = (event: KeyboardEvent) => {
     const tab = (event.target as HTMLElement).closest<HTMLElement>('[data-tab-id]');
@@ -113,7 +134,7 @@ export function TabBar({
   };
 
   return (
-    <div className="tab-bar" data-testid="tab-bar">
+    <div className="tab-bar" data-testid="tab-bar" data-tab-drag={view.dragging || undefined}>
       {start}
       {edges.overflows && <ScrollButton direction={-1} disabled={!edges.canLeft} onScroll={scrollBy} />}
       <div className="tab-strip" ref={listRef} {...dropProps} onKeyDown={onKeyDown}>
@@ -127,6 +148,8 @@ export function TabBar({
               reloaded={view.reloaded.has(tab.id)}
               crashed={view.crashed.has(tab.id)}
               onClose={() => store.close(tab.id)}
+              onDragStart={dragStarted}
+              onDragEnd={dragEnded}
             />
           )}
         </TabList>
@@ -177,6 +200,8 @@ function TabItem({
   reloaded,
   crashed,
   onClose,
+  onDragStart,
+  onDragEnd,
 }: {
   tab: DocumentRecord;
   label: string;
@@ -185,9 +210,14 @@ function TabItem({
   reloaded: boolean;
   crashed: boolean;
   onClose: () => void;
+  onDragStart: (id: string) => void;
+  onDragEnd: (id: string, operation: DropOperation) => void;
 }) {
   const { dragProps, isDragging } = useDrag({
+    // The custom type only: no other application takes a tab (ADR-019).
     getItems: () => [{ [TAB_TYPE]: tab.id }],
+    onDragStart: () => onDragStart(tab.id),
+    onDragEnd: (event) => onDragEnd(tab.id, event.dropOperation),
     // Keyboard users reorder with Ctrl+Shift+PgUp/PgDn; Enter on a tab still shows it.
     hasDragButton: true,
   });

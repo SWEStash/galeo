@@ -66,6 +66,7 @@ const events: {
   tabs?: (snapshot: TabSnapshot) => void;
   demote?: (ids: string[]) => void;
   stale?: (id: string) => void;
+  dragging?: (on: boolean) => void;
   editMode?: (request: { id: string; edit: 'granted' | 'leave' | 'refused' }) => void;
   confirmClose?: (ids: string[]) => void;
   settings?: (state: SettingsState) => void;
@@ -110,7 +111,10 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       tearOff: vi.fn().mockResolvedValue(true),
       moveTo: vi.fn().mockResolvedValue(true),
       windows: vi.fn().mockResolvedValue([]),
-      onDragging: vi.fn(() => () => {}),
+      onDragging: vi.fn((listener: (on: boolean) => void) => {
+        events.dragging = listener;
+        return () => {};
+      }),
       snapshot: vi.fn().mockResolvedValue({ revision: 1, active: null, tabs: documents.records ?? [] }),
       activated: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
@@ -894,6 +898,19 @@ describe('App', () => {
     expect(shown()).toBeNull();
   });
 
+  it('lets the whole tab bar take a dragged tab while one is dragged in any window, not the window (ADR-019)', async () => {
+    // A window with no tabs too: its bar still takes the drop.
+    stubBridge();
+    const container = await renderApp();
+    const bar = () => container.querySelector<HTMLElement>('.tab-bar')!;
+    await vi.waitFor(() => expect(bar()).not.toBeNull());
+    expect(bar().dataset['tabDrag']).toBeUndefined();
+    await act(async () => events.dragging!(true));
+    expect(bar().dataset['tabDrag']).toBe('true');
+    await act(async () => events.dragging!(false));
+    expect(bar().dataset['tabDrag']).toBeUndefined();
+  });
+
   it("shows the window's profile at the tab bar's start, in its accent, and follows changes to it", async () => {
     stubBridge();
     const container = await renderApp();
@@ -1309,6 +1326,33 @@ describe('App editing', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('hands main its unsaved text at once when the tab is about to move to another window (ADR-019)', async () => {
+    const { api, type } = await editing();
+    const { editors } = await import('./edit/editors');
+    type('!');
+    expect(api.documents.keep).not.toHaveBeenCalled();
+    act(() => editors.get('doc-1')!.keepNow());
+    expect(api.documents.keep).toHaveBeenCalledWith('doc-1', '# hi!', 'v1');
+  });
+
+  it('arrives editable, with nothing unsaved, when main says the tab is in edit mode (moved in, ADR-019)', async () => {
+    const { EditorView } = await import('@codemirror/view');
+    vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const content = { ...readyContent('markdown', 'rendered', '# on disk'), path: '/d/a.md', version: 'v2' };
+    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    api.documents.recover.mockResolvedValue({ edit: true, kept: null });
+    const container = await renderApp();
+    const shadow = await documentShadow(container);
+    const editor = await vi.waitFor(() => {
+      const element = shadow.querySelector<HTMLElement>('.cm-editor');
+      expect(element?.querySelector('.cm-content')?.getAttribute('aria-readonly')).toBeNull();
+      return EditorView.findFromDOM(element!)!;
+    }, { timeout: 5_000 });
+    expect(editor.state.doc.toString()).toBe('# on disk');
+    expect(container.querySelector('[role="tab"]')?.textContent).toContain('edit mode');
+    expect(container.querySelector('[role="tab"]')?.textContent).not.toContain('unsaved changes');
   });
 
   it('comes back after a crash in edit mode with the unsaved text main kept, against its version', async () => {

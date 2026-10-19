@@ -6,6 +6,8 @@ export interface Editor {
   discard(): void;
   /** Puts the caret back in the editor. */
   focus(): void;
+  /** Hands main the unsaved text now, not a moment after typing stops: the tab is about to move (ADR-019). */
+  keepNow(): void;
 }
 
 /** The window's tabs in edit mode, by tab id. */
