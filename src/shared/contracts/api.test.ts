@@ -47,10 +47,17 @@ describe('buildApi', () => {
       'close',
       'reopenClosed',
       'move',
+      'dragStart',
+      'dragEnd',
+      'adopt',
+      'tearOff',
+      'moveTo',
+      'windows',
       'openSettings',
       'onChanged',
       'onDemote',
       'onStale',
+      'onDragging',
     ]);
     expect(Object.keys(api.settings)).toEqual(['get', 'set', 'reset', 'fonts', 'openCustomCss', 'openNoticeFile', 'onChanged']);
     expect(Object.keys(api.profiles)).toEqual(['created', 'undoCreate', 'list', 'open', 'create', 'update', 'delete', 'onChanged']);

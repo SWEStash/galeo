@@ -111,6 +111,6 @@ export function documentHandlers(deps: {
     'documents.leaveEdit': ([id], event) => grants.revoke(id, event.sender.id),
     'documents.closeAnswer': ([answer], event) => unsaved.answer(event.sender.id, answer),
     'documents.keep': ([id, text, base], event) => grants.keep(id, event.sender.id, text, base),
-    'documents.recover': ([id], event) => grants.kept(id, event.sender.id),
+    'documents.recover': ([id], event) => ({ edit: grants.granted(id, event.sender.id), kept: grants.kept(id, event.sender.id) }),
   };
 }

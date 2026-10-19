@@ -17,6 +17,8 @@ export interface WindowOptions {
   title?: readonly (string | null)[];
   /** Where the window was last time (a restored session); the platform may place it itself. */
   bounds?: WindowBounds | null;
+  /** Without `bounds`: its size, placed by the platform (a tab torn off another window, ADR-019). */
+  size?: { width: number; height: number };
   /** The window's profile's theme mode, which colours its title-bar controls (see `followScheme`). */
   themeMode?: () => ThemeMode;
 }
@@ -30,7 +32,7 @@ export function followScheme(window: BrowserWindow): void {
 }
 
 /** The only place that constructs a `BrowserWindow`. Main owns the title (never the page). */
-export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bounds, title: parts = [], themeMode }: WindowOptions): BrowserWindow {
+export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bounds, size, title: parts = [], themeMode }: WindowOptions): BrowserWindow {
   const title = windowTitle(parts, { sandboxed });
   const scheme = () => schemeFor(themeMode?.() ?? 'system', nativeTheme.shouldUseDarkColors);
   // A place on a display that's gone isn't restored; the size is.
@@ -42,7 +44,7 @@ export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bou
     ...(dialog
       ? { width: 560, height: 340, resizable: false }
       : {
-          ...(placed ? { ...(placed.x === undefined ? {} : { x: placed.x, y: placed.y }), width: placed.width, height: placed.height } : { width: 1100, height: 800 }),
+          ...(placed ? { ...(placed.x === undefined ? {} : { x: placed.x, y: placed.y }), width: placed.width, height: placed.height } : (size ?? { width: 1100, height: 800 })),
           // macOS draws its own window buttons inset in the bar; the overlay is for Windows and Linux.
           ...(process.platform === 'darwin'
             ? { titleBarStyle: 'hiddenInset' as const }

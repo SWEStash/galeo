@@ -40,8 +40,9 @@ export class SessionKeeper {
     if (this.running && !this.held) this.scheduler.changed();
   }
 
-  capture(): SessionFile {
-    const windows = this.deps.windows();
+  /** The session as it is; `without` leaves out a window that closes because its last tab moved away (ADR-019). */
+  capture(without?: number): SessionFile {
+    const windows = this.deps.windows().filter((window) => window.id !== without);
     const ids = windows.map((window) => window.id);
     return {
       savedAt: this.deps.clock.now(),
@@ -51,8 +52,8 @@ export class SessionKeeper {
   }
 
   /** The last window is closing: what it holds now is what the quit saves, not the empty aftermath. */
-  holdForQuit(): void {
-    this.held = this.capture();
+  holdForQuit({ without }: { without?: number } = {}): void {
+    this.held = this.capture(without);
     this.scheduler.stop();
   }
 

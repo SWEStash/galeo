@@ -17,6 +17,14 @@ describe('TabDrags (ADR-019)', () => {
     expect(drags.claim('t1', 0)).toBe(1);
   });
 
+  it('hands the drag to its own window only when asked to, leaving it for the drop otherwise', () => {
+    const drags = new TabDrags();
+    drags.start('t1', 1, 0);
+    expect(drags.claim('t1', 0, 2)).toBeNull();
+    expect(drags.claim('t1', 0, 1)).toBe(1);
+    expect(drags.claim('t1', 0)).toBeNull();
+  });
+
   it('keeps only the latest drag', () => {
     const drags = new TabDrags();
     drags.start('t1', 1, 0);

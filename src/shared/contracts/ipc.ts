@@ -36,6 +36,20 @@ export interface ProfileView {
   running: boolean;
 }
 
+/** Another window a tab can move to (ADR-019): its profile, and the file its shown tab has (null: none). */
+export interface OtherWindow {
+  window: number;
+  profile: string;
+  accent: string | null;
+  shows: string | null;
+}
+
+/** What main holds for a tab a page shows anew (after a crash, or moved in): edit mode, and unsaved text. */
+export interface Recovered {
+  edit: boolean;
+  kept: { text: string; base: string | null } | null;
+}
+
 /** The profiles, and which one the window belongs to. */
 export interface ProfilesState {
   current: string;
@@ -110,6 +124,12 @@ export const CHANNELS = [
   'tabs.close',
   'tabs.reopenClosed',
   'tabs.move',
+  'tabs.dragStart',
+  'tabs.dragEnd',
+  'tabs.adopt',
+  'tabs.tearOff',
+  'tabs.moveTo',
+  'tabs.windows',
   'settings.get',
   'session.previous',
   'session.restorePrevious',
@@ -194,7 +214,7 @@ export interface Requests {
   'documents.closeAnswer': [answer: 'asking' | 'proceed' | 'cancel'];
   /** The tab's unsaved text, which main holds in memory only so a renderer crash doesn't lose it (ADR-013). */
   'documents.keep': [id: string, text: string, base: string | null];
-  /** After a crash: the unsaved text main held for the tab, if any. */
+  /** A tab shown anew (after a crash, or moved in): whether it is in edit mode, and its unsaved text. */
   'documents.recover': [id: string];
   /** The sender's tabs, as main knows them. */
   'tabs.snapshot': [];
@@ -218,6 +238,18 @@ export interface Requests {
   'tabs.reopenClosed': [];
   /** Moves a tab to `position` in the window's order. */
   'tabs.move': [id: string, position: number];
+  /** The reader started dragging the tab: another window may take it, once (ADR-019). Spends real input. */
+  'tabs.dragStart': [id: string];
+  /** The window's drag ended without a window taking the tab. */
+  'tabs.dragEnd': [];
+  /** The tab another window's drag carries was dropped here, at `position`. */
+  'tabs.adopt': [id: string, position: number];
+  /** The window's dragged tab was dropped outside every window: it gets a window of its own. */
+  'tabs.tearOff': [id: string];
+  /** Moves the tab to another window, or to a new one (the palette). Spends real input. */
+  'tabs.moveTo': [id: string, target: number | 'new'];
+  /** The other windows a tab can move to. */
+  'tabs.windows': [];
   'settings.get': [];
   /** The profile's previous sessions ("Restore previous session", UX F6). */
   'session.previous': [];
@@ -283,7 +315,7 @@ export interface Responses {
   'documents.leaveEdit': void;
   'documents.closeAnswer': void;
   'documents.keep': void;
-  'documents.recover': { text: string; base: string | null } | null;
+  'documents.recover': Recovered;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendering': void;
@@ -297,6 +329,16 @@ export interface Responses {
   /** The reopened tab's id, or null when none was closed. */
   'tabs.reopenClosed': string | null;
   'tabs.move': void;
+  /** False when main refused: a tab the window doesn't have, the settings tab, or no real input. */
+  'tabs.dragStart': boolean;
+  'tabs.dragEnd': void;
+  /** False when no live drag carried that tab from another window. */
+  'tabs.adopt': boolean;
+  /** False when the drag was over, or the window had only that tab. */
+  'tabs.tearOff': boolean;
+  /** False when main refused: not the window's tab, the settings tab, no real input, or no such window. */
+  'tabs.moveTo': boolean;
+  'tabs.windows': OtherWindow[];
   'settings.get': SettingsState;
   'session.previous': PreviousSession[];
   'session.restorePrevious': void;
@@ -328,7 +370,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'documents.editMode', 'documents.confirmClose', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'tabs.dragging', 'documents.editMode', 'documents.confirmClose', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -340,6 +382,8 @@ export interface Events {
   'tabs.demote': string[];
   /** The tab's file changed since the read it shows; read it again. */
   'tabs.stale': string;
+  /** A tab is being dragged, in any window: the whole tab bar takes drops until it ends (ADR-019). */
+  'tabs.dragging': boolean;
   /**
    * Ctrl+E (seen by main, never sent by the page): `granted`, the tab is now in edit mode; `leave`,
    * the reader asks to leave it, which the page does once its text is saved or discarded (ADR-013).

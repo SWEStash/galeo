@@ -61,6 +61,16 @@ describe('SessionKeeper (ADR-005)', () => {
     expect(saved[0]!.windows[0]!.tabs[0]!.entries[0]!.path).toBe('/d/a.md');
   });
 
+  it('keeps no empty window when the last one closes because its last tab moved to another profile (ADR-019)', async () => {
+    const { tabs, saved, keeper, windows } = setup();
+    windows.splice(1);
+    keeper.holdForQuit({ without: 1 });
+    tabs.closeWindow(1);
+    windows.splice(0);
+    await keeper.flushOnQuit();
+    expect(saved[0]).toMatchObject({ windows: [], focusOrder: [] });
+  });
+
   it('saves the current session on quit when no window was closing', async () => {
     const { tabs, saved, keeper } = setup();
     tabs.open('/d/a.md', 2);

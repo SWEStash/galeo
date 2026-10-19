@@ -1,7 +1,10 @@
 import type { ReadIdentities } from '../../core/documents/identities';
+import type { InputCredits } from '../../core/documents/input-credits';
 import type { CrashRecovery } from '../../core/tabs/crashes';
+import type { TabDrags } from '../../core/tabs/drags';
 import type { WarmTabs } from '../../core/tabs/lifecycle';
 import type { TabRegistry } from '../../core/tabs/registry';
+import type { OtherWindow } from '../../shared/contracts/ipc';
 import type { Handlers } from '../ipc/register';
 
 type TabChannels =
@@ -16,7 +19,13 @@ type TabChannels =
   | 'tabs.viewState'
   | 'tabs.close'
   | 'tabs.reopenClosed'
-  | 'tabs.move';
+  | 'tabs.move'
+  | 'tabs.dragStart'
+  | 'tabs.dragEnd'
+  | 'tabs.adopt'
+  | 'tabs.tearOff'
+  | 'tabs.moveTo'
+  | 'tabs.windows';
 
 export interface TabHandlerDeps {
   tabs: TabRegistry;
@@ -36,6 +45,20 @@ export interface TabHandlerDeps {
   positioned: (window: number) => void;
   /** The windows of the sender's profile that closed and can come back: when the last one closed, and how. */
   closedWindows: { at: (window: number) => number | null; reopen: (window: number) => void };
+  /** The tab being dragged, if any (ADR-019). */
+  drags: TabDrags;
+  now: () => number;
+  /** Real input per window: starting a drag or a palette move spends one. */
+  input: Pick<InputCredits, 'spend'>;
+  /** Moves a tab to another window, at `position`: false when main refused. */
+  move: (id: string, from: number, to: number, position: number) => boolean;
+  /** Moves a tab to a new window of its profile. */
+  tearOff: (id: string, from: number) => boolean;
+  /** The galeo windows other than this one. */
+  windows: (window: number) => Promise<OtherWindow[]>;
+  focus: (window: number) => void;
+  /** Tells every window a tab drag started or ended. */
+  dragging: (on: boolean) => void;
 }
 
 /**
@@ -43,7 +66,14 @@ export interface TabHandlerDeps {
  * step with main; it gets main's snapshot again instead of an error (ADR-002).
  */
 export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
-  const { tabs, warm, reads, crashes, resync, closed, demote, stale, positioned, closedWindows } = deps;
+  const { tabs, warm, reads, crashes, resync, closed, demote, stale, positioned, closedWindows, drags, now, input } = deps;
+  /** A tab of the window that can move: not the settings tab. */
+  const movable = (id: string, window: number) => {
+    const tab = tabs.get(id, window);
+    return tab !== undefined && tab.kind !== 'settings';
+  };
+  /** A tab leaves for a window of its own only when the window keeps another one. */
+  const tearOff = (id: string, window: number) => tabs.list(window).length > 1 && deps.tearOff(id, window);
   const demoteAll = (window: number, ids: string[]) => {
     if (ids.length > 0) demote(window, ids);
   };
@@ -105,5 +135,39 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     'tabs.move': ([id, position], event) => {
       if (!tabs.move(id, event.sender.id, position)) resync(event.sender.id);
     },
+    'tabs.dragStart': ([id], event) => {
+      const window = event.sender.id;
+      if (!movable(id, window) || !input.spend(window)) return false;
+      drags.start(id, window, now());
+      deps.dragging(true);
+      return true;
+    },
+    'tabs.dragEnd': (_args, event) => {
+      if (drags.end(event.sender.id)) deps.dragging(false);
+    },
+    'tabs.adopt': ([id, position], event) => {
+      const to = event.sender.id;
+      const from = drags.claim(id, now());
+      if (from === null) return false;
+      deps.dragging(false);
+      return from !== to && deps.move(id, from, to, position);
+    },
+    'tabs.tearOff': ([id], event) => {
+      const window = event.sender.id;
+      if (drags.claim(id, now(), window) === null) return false;
+      deps.dragging(false);
+      return movable(id, window) && tearOff(id, window);
+    },
+    'tabs.moveTo': async ([id, target], event) => {
+      const window = event.sender.id;
+      if (!movable(id, window)) return false;
+      if (target === 'new') return tabs.list(window).length > 1 && input.spend(window) && deps.tearOff(id, window);
+      const others = await deps.windows(window);
+      if (!movable(id, window) || !others.some((other) => other.window === target) || !input.spend(window)) return false;
+      if (!deps.move(id, window, target, tabs.list(target).length)) return false;
+      deps.focus(target);
+      return true;
+    },
+    'tabs.windows': (_args, event) => deps.windows(event.sender.id),
   };
 }

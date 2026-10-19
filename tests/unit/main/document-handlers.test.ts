@@ -237,11 +237,18 @@ describe('documentHandlers saving', () => {
     const { handlers, grants, id } = setup({ '/d/a.md': 'old' });
     grants.grant(id, 1, '/d/a.md');
     handlers['documents.keep']([id, 'theirs', 'v'], otherWindow);
-    expect(handlers['documents.recover']([id], event)).toBeNull();
+    expect(handlers['documents.recover']([id], event)).toEqual({ edit: true, kept: null });
     handlers['documents.keep']([id, '# mine', 'v1'], event);
-    expect(handlers['documents.recover']([id], otherWindow)).toBeNull();
-    expect(handlers['documents.recover']([id], event)).toEqual({ text: '# mine', base: 'v1' });
+    expect(handlers['documents.recover']([id], otherWindow)).toEqual({ edit: false, kept: null });
+    expect(handlers['documents.recover']([id], event)).toEqual({ edit: true, kept: { text: '# mine', base: 'v1' } });
     handlers['documents.keep']([id, '# mine', null], event);
-    expect(handlers['documents.recover']([id], event)).toEqual({ text: '# mine', base: null });
+    expect(handlers['documents.recover']([id], event)).toEqual({ edit: true, kept: { text: '# mine', base: null } });
+  });
+
+  it('says a tab is in edit mode with nothing unsaved, so a tab moved in arrives editable (ADR-019)', () => {
+    const { handlers, grants, id } = setup({ '/d/a.md': 'old' });
+    expect(handlers['documents.recover']([id], event)).toEqual({ edit: false, kept: null });
+    grants.grant(id, 1, '/d/a.md');
+    expect(handlers['documents.recover']([id], event)).toEqual({ edit: true, kept: null });
   });
 });

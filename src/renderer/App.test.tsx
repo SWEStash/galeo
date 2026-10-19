@@ -93,7 +93,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       leaveEdit: vi.fn().mockResolvedValue(undefined),
       closeAnswer: vi.fn().mockResolvedValue(undefined),
       keep: vi.fn().mockResolvedValue(undefined),
-      recover: vi.fn().mockResolvedValue(null),
+      recover: vi.fn().mockResolvedValue({ edit: false, kept: null }),
       onConfirmClose: vi.fn((listener: (ids: string[]) => void) => {
         events.confirmClose = listener;
         return () => {};
@@ -104,6 +104,13 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       }),
     },
     tabs: {
+      dragStart: vi.fn().mockResolvedValue(true),
+      dragEnd: vi.fn().mockResolvedValue(undefined),
+      adopt: vi.fn().mockResolvedValue(true),
+      tearOff: vi.fn().mockResolvedValue(true),
+      moveTo: vi.fn().mockResolvedValue(true),
+      windows: vi.fn().mockResolvedValue([]),
+      onDragging: vi.fn(() => () => {}),
       snapshot: vi.fn().mockResolvedValue({ revision: 1, active: null, tabs: documents.records ?? [] }),
       activated: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
@@ -1309,7 +1316,7 @@ describe('App editing', () => {
     vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
     const content = { ...readyContent('markdown', 'rendered', '# on disk'), path: '/d/a.md', version: 'v2' };
     const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
-    api.documents.recover.mockResolvedValue({ text: '# mine', base: 'v1' });
+    api.documents.recover.mockResolvedValue({ edit: true, kept: { text: '# mine', base: 'v1' } });
     const container = await renderApp();
     const shadow = await documentShadow(container);
     const editor = await vi.waitFor(() => {

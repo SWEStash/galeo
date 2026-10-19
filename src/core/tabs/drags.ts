@@ -19,10 +19,13 @@ export class TabDrags {
     this.drag = { id, window, at: now };
   }
 
-  /** Takes the drag of tab `id`: the window it came from, or null when no live drag carries it. */
-  claim(id: string, now: number): number | null {
+  /**
+   * Takes the drag of tab `id`: the window it came from, or null when no live drag carries it, or
+   * (given `from`) when another window started it.
+   */
+  claim(id: string, now: number, from?: number): number | null {
     const drag = this.live(now);
-    if (drag?.id !== id) return null;
+    if (drag?.id !== id || (from !== undefined && drag.window !== from)) return null;
     this.drag = null;
     return drag.window;
   }

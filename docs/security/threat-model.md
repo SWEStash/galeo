@@ -312,10 +312,16 @@ A file the reader didn't hand over from the command line, Files or a second laun
 through a link, a drop, quick open or recent files) is enabled only after the reader answers
 *Edit* in main's native dialog naming its path (ADR-015). The renderer chooses the active tab, so
 without that question it could steer the key press to a file of its choosing.
+Moving a tab to another window (v0.3, ADR-019) moves its edit grant and unsaved text in main;
+the page never sends them. A window starts a drag of its own tab only by spending an input
+credit, and another window takes a tab only by claiming that live drag, once, so a page can't
+pull a tab out of another window. The palette's moves spend a credit too, and go only to
+another galeo window. A torn-off tab's new window is main's, of the tab's profile.
 *AC*: tests showing a renderer-originated `write` to a non-edit-enabled path is rejected, and
 that reads of paths never surfaced to the user are rejected; that Ctrl+E on a missing file is
 refused by main, and that a tab the page makes active just before Ctrl+E is asked about, not
-enabled (`edit.spec`).
+enabled (`edit.spec`); that a window can't take a tab no drag offered, or start a drag or a
+palette move without input (`tab-handlers.test`).
 
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as
 absolute paths. The `.desktop` entry uses `%F`. Main parses argv with a strict schema and never
@@ -384,7 +390,8 @@ the rename that replaces the old one.
 `0600`. Session files, their rotated snapshots, and recent files store paths, view state and
 scroll positions only, never document content. Recent files are capped at 200 per profile, and
 there is a "Clear recent files" command per profile. Crash dumps stay local, and the crash
-reporter is not enabled for upload.
+reporter is not enabled for upload. A tab's unsaved text stays in main's memory, also when the tab
+moves to another window or profile (ADR-019).
 *AC*: tests for file modes and for no document content in state files.
 
 **SR-17 — Robust configuration.** Settings and session files are schema-validated on load, and

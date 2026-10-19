@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ReadIdentities } from '../../../src/core/documents/identities';
+import { InputCredits } from '../../../src/core/documents/input-credits';
 import { CrashRecovery } from '../../../src/core/tabs/crashes';
+import { TabDrags } from '../../../src/core/tabs/drags';
 import { WarmTabs } from '../../../src/core/tabs/lifecycle';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
@@ -23,6 +25,12 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
   const stale: [number, string][] = [];
   const positioned: number[] = [];
   const crashes = new CrashRecovery(() => 0);
+  let now = 0;
+  const input = new InputCredits(() => now);
+  const moved: [string, number, number, number][] = [];
+  const tornOff: [string, number][] = [];
+  const focused: number[] = [];
+  const dragging: boolean[] = [];
   const handlers = tabHandlers({
     crashes,
     positioned: (window) => positioned.push(window),
@@ -34,10 +42,22 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
     demote: (window, ids) => demoted.push([window, ids]),
     stale: (window, id) => stale.push([window, id]),
     closedWindows: { at: () => closedWindows.at, reopen: (window) => closedWindows.reopened.push(window) },
+    drags: new TabDrags(),
+    now: () => now,
+    input,
+    move: (id, fromWindow, to, position) => {
+      moved.push([id, fromWindow, to, position]);
+      return tabs.transfer(id, fromWindow, to, position);
+    },
+    tearOff: (id, fromWindow) => (tornOff.push([id, fromWindow]), true),
+    windows: async (window) => [1, 2].filter((each) => each !== window).map((each) => ({ window: each, profile: 'p', accent: null, shows: null })),
+    focus: (window) => focused.push(window),
+    dragging: (on) => dragging.push(on),
   });
   const a = tabs.open('/d/a.md', 1).id;
   const b = tabs.open('/d/b.md', 1).id;
-  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, crashes, positioned: () => positioned };
+  const later = (ms: number) => (now += ms);
+  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, crashes, positioned: () => positioned, input, moved, tornOff, focused, dragging, later };
 }
 
 describe('tabHandlers', () => {
@@ -172,5 +192,115 @@ describe('tabHandlers', () => {
     tabs.markCrashed(a, 1);
     handlers['tabs.renderAgain']([a], from(1));
     expect(tabs.snapshot(1).tabs[0]!.crashed).toBeUndefined();
+  });
+
+  describe('moving tabs between windows (ADR-019)', () => {
+    it('lets another window take a dragged tab once, where it was dropped, and says the drag is over', () => {
+      const { handlers, input, moved, dragging, a } = setup();
+      input.received(1);
+      expect(handlers['tabs.dragStart']([a], from(1))).toBe(true);
+      expect(handlers['tabs.adopt']([a, 3], from(2))).toBe(true);
+      expect(moved).toEqual([[a, 1, 2, 3]]);
+      expect(handlers['tabs.adopt']([a, 0], from(2))).toBe(false);
+      expect(dragging).toEqual([true, false]);
+    });
+
+    it('starts a drag only for a tab of the window, never the settings tab, and only on real input', () => {
+      const { handlers, input, tabs, a } = setup();
+      const settings = tabs.openSettings(1).id;
+      input.received(1);
+      expect(handlers['tabs.dragStart']([a], from(2))).toBe(false);
+      expect(handlers['tabs.dragStart']([settings], from(1))).toBe(false);
+      expect(handlers['tabs.dragStart']([a], from(1))).toBe(true);
+      expect(handlers['tabs.dragStart']([a], from(1))).toBe(false);
+    });
+
+    it('gives no tab to a window when no drag carries it', () => {
+      const { handlers, input, moved, later, a, b } = setup();
+      expect(handlers['tabs.adopt']([a, 0], from(2))).toBe(false);
+      input.received(1);
+      handlers['tabs.dragStart']([a], from(1));
+      expect(handlers['tabs.adopt']([b, 0], from(2))).toBe(false);
+      later(120_000);
+      expect(handlers['tabs.adopt']([a, 0], from(2))).toBe(false);
+      expect(moved).toEqual([]);
+    });
+
+    it('moves nothing when the drag is dropped back in its own window (a reorder there)', () => {
+      const { handlers, input, moved, a } = setup();
+      input.received(1);
+      handlers['tabs.dragStart']([a], from(1));
+      expect(handlers['tabs.adopt']([a, 0], from(1))).toBe(false);
+      expect(moved).toEqual([]);
+    });
+
+    it('ends a drag only for the window that started it', () => {
+      const { handlers, input, dragging, a } = setup();
+      input.received(1);
+      handlers['tabs.dragStart']([a], from(1));
+      handlers['tabs.dragEnd']([], from(2));
+      handlers['tabs.dragEnd']([], from(1));
+      handlers['tabs.dragEnd']([], from(1));
+      expect(dragging).toEqual([true, false]);
+      expect(handlers['tabs.adopt']([a, 0], from(2))).toBe(false);
+    });
+
+    it("tears off a dragged tab of the window's own drag, when the window has another tab", () => {
+      const { handlers, input, tornOff, dragging, a } = setup();
+      input.received(1);
+      handlers['tabs.dragStart']([a], from(1));
+      expect(handlers['tabs.tearOff']([a], from(2))).toBe(false);
+      expect(handlers['tabs.tearOff']([a], from(1))).toBe(true);
+      expect(tornOff).toEqual([[a, 1]]);
+      expect(dragging).toEqual([true, false]);
+      expect(handlers['tabs.tearOff']([a], from(1))).toBe(false);
+    });
+
+    it("doesn't tear off a window's only tab, and ends its drag", () => {
+      const { handlers, input, tornOff, dragging, tabs, a, b } = setup();
+      tabs.close(b, 1);
+      input.received(1);
+      handlers['tabs.dragStart']([a], from(1));
+      expect(handlers['tabs.tearOff']([a], from(1))).toBe(false);
+      expect(tornOff).toEqual([]);
+      expect(dragging).toEqual([true, false]);
+    });
+
+    it('moves a tab to another window from the palette, on real input, and focuses that window', async () => {
+      const { handlers, input, moved, focused, tabs, a } = setup();
+      tabs.open('/d/x.md', 2);
+      expect(await handlers['tabs.moveTo']([a, 2], from(1))).toBe(false);
+      input.received(1);
+      expect(await handlers['tabs.moveTo']([a, 2], from(1))).toBe(true);
+      expect(moved).toEqual([[a, 1, 2, 1]]);
+      expect(focused).toEqual([2]);
+    });
+
+    it('moves a tab to a new window from the palette, when the window has another tab', async () => {
+      const { handlers, input, tornOff, tabs, a, b } = setup();
+      input.received(1);
+      expect(await handlers['tabs.moveTo']([a, 'new'], from(1))).toBe(true);
+      expect(tornOff).toEqual([[a, 1]]);
+      tabs.close(b, 1);
+      input.received(1);
+      expect(await handlers['tabs.moveTo']([a, 'new'], from(1))).toBe(false);
+    });
+
+    it('refuses a palette move of a tab the window lacks, the settings tab, or to a window that is not another galeo window', async () => {
+      const { handlers, input, moved, tornOff, tabs, a } = setup();
+      const settings = tabs.openSettings(1).id;
+      for (let i = 0; i < 5; i++) input.received(1);
+      expect(await handlers['tabs.moveTo']([a, 2], from(3))).toBe(false);
+      expect(await handlers['tabs.moveTo']([settings, 2], from(1))).toBe(false);
+      expect(await handlers['tabs.moveTo']([a, 1], from(1))).toBe(false);
+      expect(await handlers['tabs.moveTo']([a, 7], from(1))).toBe(false);
+      expect(moved).toEqual([]);
+      expect(tornOff).toEqual([]);
+    });
+
+    it('lists the other windows a tab can move to', async () => {
+      const { handlers } = setup();
+      expect(await handlers['tabs.windows']([], from(1))).toEqual([{ window: 2, profile: 'p', accent: null, shows: null }]);
+    });
   });
 });

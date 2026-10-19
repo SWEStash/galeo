@@ -159,7 +159,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
     let current = true;
     void window.galeo.documents
       .recover(id)
-      .then((kept) => current && setRecovered(kept))
+      .then(({ kept }) => current && setRecovered(kept))
       .catch(ignoreClosedTab);
     return () => {
       current = false;

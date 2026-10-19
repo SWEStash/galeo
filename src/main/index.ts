@@ -23,11 +23,12 @@ import type { SessionFile, WindowBounds } from '../core/session/model';
 import { DEFAULT_SETTINGS, settingSources } from '../core/settings/model';
 import { openConfigFile } from '../core/settings/open-config';
 import { CrashRecovery } from '../core/tabs/crashes';
+import { TabDrags } from '../core/tabs/drags';
 import { WarmTabs } from '../core/tabs/lifecycle';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
 import type { OpenRequest, OsShell } from '../core/ports';
-import type { EventName, Events, ProfileResult, ProfilesState, SettingsResult, SettingsState } from '../shared/contracts';
+import type { EventName, Events, OtherWindow, ProfileResult, ProfilesState, SettingsResult, SettingsState } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
@@ -65,6 +66,7 @@ import { hardenWebContents } from './security/harden';
 import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
+import { tabMover } from './tabs/transfer';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { applicationMenu } from './window/menu';
 import { keymapPlatform } from './window/policy';
@@ -218,6 +220,10 @@ function start(initialMode: StartupMode): void {
   const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
   const reads = new ReadIdentities(fs);
   const crashes = new CrashRecovery(Date.now);
+  // The tab the reader is dragging, which another window may take once (ADR-019).
+  const drags = new TabDrags();
+  /** Windows closing because their last tab moved away: their profile's session keeps no empty window. */
+  const emptiedByMove = new Set<number>();
   // Closing, quitting or deleting a profile with unsaved changes asks the reader first (ADR-013).
   const unsaved = new UnsavedChanges({
     dirty: (windowId) => grants.dirty(windowId),
@@ -338,12 +344,16 @@ function start(initialMode: StartupMode): void {
     sendTo(windowId, 'documents.editMode', { id, edit: 'granted' });
   };
 
-  const openMainWindow = (profile: ProfileRuntime, { bounds = null, state }: { bounds?: WindowBounds | null; state?: WindowState } = {}) => {
+  const openMainWindow = (
+    profile: ProfileRuntime,
+    { bounds = null, state, size }: { bounds?: WindowBounds | null; state?: WindowState; size?: { width: number; height: number } } = {},
+  ) => {
     const window: BrowserWindow = createAppWindow({
       url: rendererUrl(runtime),
       sandboxed,
       onMainKey: (command) => mainKey(command, profile, window),
       bounds,
+      ...(size ? { size } : {}),
       title: [null, profile.name],
       themeMode: () => profile.settings.current.themeMode,
     });
@@ -388,7 +398,7 @@ function start(initialMode: StartupMode): void {
       }
       if (quitting || profile.discard) return;
       // The profile's last window: what it holds now is what the save keeps, not the empty aftermath.
-      if (profile.windows.length === 1) return void profile.keeper.holdForQuit();
+      if (profile.windows.length === 1) return void profile.keeper.holdForQuit(emptiedByMove.has(windowId) ? { without: windowId } : {});
       // One of several: its tabs stay recoverable with Ctrl+Shift+T while the profile runs (UX F5).
       const closed = documents.exportWindow(windowId);
       if (closed.tabs.length > 0) profile.keepClosed({ state: closed, bounds: windowBounds(window), at: documents.stamp() });
@@ -414,6 +424,8 @@ function start(initialMode: StartupMode): void {
       grants.closeWindow(windowId);
       unsaved.closeWindow(windowId);
       agreedToClose.delete(windowId);
+      emptiedByMove.delete(windowId);
+      if (drags.end(windowId)) broadcastDragging(false);
       images.closeWindow(windowId);
       quickOpen.close(windowId);
       drops.closeWindow(windowId);
@@ -536,6 +548,49 @@ function start(initialMode: StartupMode): void {
     profile.keeper.start();
     void broadcastProfiles();
     return front;
+  };
+
+  const windowOf = (windowId: number) => {
+    const contents = webContents.fromId(windowId);
+    return contents ? BrowserWindow.fromWebContents(contents) : null;
+  };
+  /** Every window hears a tab drag start and end: the whole tab bar takes drops meanwhile (ADR-019). */
+  const broadcastDragging = (on: boolean) => {
+    for (const profile of running.values()) for (const window of profile.windows) sendEvent(window.webContents, 'tabs.dragging', on);
+  };
+  const moveTab = tabMover({
+    tabs: documents,
+    grants,
+    warm,
+    crashes,
+    demote,
+    emptied: (windowId) => {
+      emptiedByMove.add(windowId);
+      windowOf(windowId)?.close();
+    },
+  });
+  /** The tab gets a window of its own, of its profile, at the size of the one it left; the platform places it. */
+  const tearOff = (id: string, from: number) => {
+    const profile = profileOf(from);
+    const source = windowOf(from);
+    if (!profile || !source || profile.discard) return false;
+    const { width, height } = source.getNormalBounds();
+    const window = openMainWindow(profile, { size: { width, height } });
+    return moveTab(id, from, window.webContents.id, 0);
+  };
+  /** The galeo windows other than this one, last focused first, by profile and shown file. */
+  const otherWindows = async (windowId: number): Promise<OtherWindow[]> => {
+    const accents = new Map((await catalog.list()).map((profile) => [profile.id, profile.accent]));
+    return focusOrder
+      .filter((id) => id !== windowId)
+      .flatMap((id) => {
+        const profile = profileOf(id);
+        if (!profile) return [];
+        const { tabs, active } = documents.snapshot(id);
+        const shown = tabs.find((tab) => tab.id === active);
+        const shows = !shown ? null : shown.kind === 'settings' ? 'Settings' : path.basename(shown.path);
+        return [{ window: id, profile: profile.name, accent: accents.get(profile.id) ?? null, shows }];
+      });
   };
 
   const stopProfile = (profile: ProfileRuntime) => {
@@ -861,6 +916,14 @@ function start(initialMode: StartupMode): void {
               if (profile && closed) openMainWindow(profile, { bounds: closed.bounds, state: closed.state });
             },
           },
+          drags,
+          now: Date.now,
+          input,
+          move: moveTab,
+          tearOff,
+          windows: otherWindows,
+          focus: (windowId) => windowOf(windowId)?.focus(),
+          dragging: broadcastDragging,
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, input, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
         ...dropHandlers({
