@@ -86,6 +86,9 @@ describe('ProfileChip (UX F5)', () => {
     await openMenu(container);
     expect(menuItem('Beta')?.textContent).toContain('Not open');
     expect(menuItem('default')?.textContent).toContain('Open');
+    // Its name says what it shows, so a voice command naming the visible text finds it.
+    const labelledBy = menuItem('Beta')!.getAttribute('aria-labelledby')!;
+    expect(document.getElementById(labelledBy)?.textContent).toBe('Beta Not open');
     await act(async () => menuItem('Beta')!.click());
     expect(profiles.open).toHaveBeenCalledWith('beta');
   });
@@ -176,6 +179,8 @@ describe('ProfileChip (UX F5)', () => {
     const container = await render();
     await openMenu(container);
     await vi.waitFor(() => expect(menuItem('3 tabs')).toBeDefined());
+    const labelledBy = menuItem('3 tabs')!.getAttribute('aria-labelledby')!;
+    expect(document.getElementById(labelledBy)?.textContent).toMatch(/ 3 tabs$/);
     await act(async () => menuItem('3 tabs')!.click());
     expect(session.restorePrevious).toHaveBeenCalledWith(1);
   });

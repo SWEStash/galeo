@@ -112,6 +112,13 @@ body,
   color: var(--galeo-color-muted);
 }
 
+.menu-label {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  align-items: center;
+}
+
 .menu-description {
   margin-left: auto;
   color: var(--galeo-color-muted);

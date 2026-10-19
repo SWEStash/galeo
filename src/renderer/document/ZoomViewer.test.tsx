@@ -50,4 +50,16 @@ describe('ZoomViewer', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('names each toolbar button with the text it shows, so a voice command naming it finds it', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    act(() => {
+      root = createRoot(host);
+      root.render(<ZoomViewer content={{ kind: 'image', url: 'galeo://image/1' }} name="A chart" onClose={vi.fn()} />);
+    });
+    const worded = [...document.querySelectorAll('button')].filter((button) => /\w/.test(button.textContent ?? ''));
+    expect(worded.map((button) => button.textContent)).toEqual(['Fit', '100 %']);
+    for (const button of worded) expect(button.getAttribute('aria-label')).toContain(button.textContent);
+  });
 });

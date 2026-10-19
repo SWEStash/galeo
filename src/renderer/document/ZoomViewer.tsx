@@ -139,7 +139,7 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
                 <Button aria-label="Fit to window (0)" onPress={fitted}>
                   Fit
                 </Button>
-                <Button aria-label="Actual size (1)" onPress={() => setView(actualSize(natural.current, box()))}>
+                <Button aria-label="100 %, actual size (1)"onPress={() => setView(actualSize(natural.current, box()))}>
                   100 %
                 </Button>
                 <Button aria-label="Zoom in (+)" onPress={() => zoomCentred(STEP)}>

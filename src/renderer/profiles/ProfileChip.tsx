@@ -86,9 +86,12 @@ export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout:
               {state.profiles.map((profile) => (
                 <MenuItem key={profile.id} id={`open:${profile.id}`} className="menu-item" textValue={profile.name}>
                   <span className="profile-chip-swatch" aria-hidden="true" style={{ background: accentOf(profile.accent) }} />
-                  <Text slot="label">{profile.name}</Text>
-                  <Text slot="description" className="menu-description">
-                    {profile.id === state.current ? 'This window' : profile.running ? 'Open' : 'Not open'}
+                  {/* One label holding the state too: the item's name is all of its visible text. */}
+                  <Text slot="label" className="menu-label">
+                    {profile.name}{' '}
+                    <span className="menu-description">
+                      {profile.id === state.current ? 'This window' : profile.running ? 'Open' : 'Not open'}
+                    </span>
                   </Text>
                 </MenuItem>
               ))}
@@ -118,9 +121,8 @@ export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout:
                   const tabs = `${session.tabs} ${session.tabs === 1 ? 'tab' : 'tabs'}${session.windows > 1 ? ` in ${session.windows} windows` : ''}`;
                   return (
                     <MenuItem key={session.snapshot} id={`restore:${session.snapshot}`} className="menu-item" textValue={`${WHEN.format(session.savedAt)}, ${tabs}`}>
-                      <Text slot="label">{WHEN.format(session.savedAt)}</Text>
-                      <Text slot="description" className="menu-description">
-                        {tabs}
+                      <Text slot="label" className="menu-label">
+                        {WHEN.format(session.savedAt)} <span className="menu-description">{tabs}</span>
                       </Text>
                     </MenuItem>
                   );
