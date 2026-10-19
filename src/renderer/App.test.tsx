@@ -439,6 +439,59 @@ describe('App', () => {
     expect(api.tabs.width).toHaveBeenLastCalledWith('doc-1', null);
   });
 
+  describe('moving the shown tab to another window from the palette (UX F15)', () => {
+    const twoTabs = () =>
+      stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', '# a') });
+    const runFromPalette = async (label: string) => {
+      await press({ key: 'P', ctrlKey: true, shiftKey: true });
+      const entry = await vi.waitFor(() => {
+        const found = [...document.querySelectorAll<HTMLElement>('[data-testid="palette-list"] [role="option"]')].find((option) => option.textContent?.startsWith(label));
+        if (!found) throw new Error(`no "${label}" in the palette`);
+        return found;
+      });
+      await act(async () => entry.click());
+    };
+    const message = (container: HTMLElement) => container.querySelector('[data-testid="status-message"]')?.textContent;
+
+    it('moves it to a new window', async () => {
+      const api = twoTabs();
+      const container = await renderApp();
+      await documentShadow(container);
+      await runFromPalette('Move tab to new window');
+      await vi.waitFor(() => expect(api.tabs.moveTo).toHaveBeenCalledWith('doc-1', 'new'));
+    });
+
+    it("says so, and asks main nothing, when it is the window's only tab", async () => {
+      const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# a') });
+      const container = await renderApp();
+      await documentShadow(container);
+      await runFromPalette('Move tab to new window');
+      await vi.waitFor(() => expect(message(container)).toBe("It's this window's only tab"));
+      expect(api.tabs.moveTo).not.toHaveBeenCalled();
+    });
+
+    it('moves it to the window chosen from the list of the others', async () => {
+      const api = twoTabs();
+      api.tabs.windows.mockResolvedValue([{ window: 7, profile: 'Work', accent: null, shows: 'notes.md' }]);
+      const container = await renderApp();
+      await documentShadow(container);
+      await runFromPalette('Move tab to window…');
+      const option = await vi.waitFor(() => document.querySelector<HTMLElement>('[data-testid="move-tab"] [role="option"]')!);
+      await act(async () => option.click());
+      await vi.waitFor(() => expect(api.tabs.moveTo).toHaveBeenCalledWith('doc-1', 7));
+      expect(document.querySelector('[data-testid="move-tab"]')).toBeNull();
+    });
+
+    it('says the tab stayed when main refused the move', async () => {
+      const api = twoTabs();
+      api.tabs.moveTo.mockResolvedValue(false);
+      const container = await renderApp();
+      await documentShadow(container);
+      await runFromPalette('Move tab to new window');
+      await vi.waitFor(() => expect(message(container)).toBe("The tab didn't move"));
+    });
+  });
+
   it('leaves the width alone where there is no reading column, and says why', async () => {
     const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a') });
     const container = await renderApp();

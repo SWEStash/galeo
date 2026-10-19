@@ -185,6 +185,14 @@ reopen what you closed last, Ctrl+N for a new window. Closing a profile's last w
 (Ctrl+Shift+Q), keeps its session: next time its windows and tabs come back where you left them.
 "Restore previous session" (palette or profile menu) goes back to one of the last three.
 
+To move a tab to another window, drag it onto that window's tab bar, anywhere on it, even a window
+with no tabs. Drop it outside every galeo window to give it a window of its own; the window it left
+keeps its other tabs. Esc with the pointer outside the window does the same, so drag the tab back if
+you didn't mean to. A tab keeps its history, view, zoom, reader width, edit mode and unsaved changes
+(not their undo history). Moved into another profile's window, it becomes part of that profile's
+session. The window a last tab leaves closes. From the keyboard, the palette has *Move tab to new
+window* and *Move tab to window…*. The Settings tab stays in its window.
+
 ## Profiles
 
 A profile is a separate set of windows, session, recent files and settings, for example one per

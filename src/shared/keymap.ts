@@ -30,6 +30,9 @@ const BASE = {
   goToLastTab: ['CmdOrCtrl+9'],
   moveTabLeft: ['CmdOrCtrl+Shift+PageUp'],
   moveTabRight: ['CmdOrCtrl+Shift+PageDown'],
+  // Palette only (UX §5), as is dragging the tab (ADR-019).
+  moveTabToNewWindow: [],
+  moveTabToWindow: [],
   profileMenu: ['CmdOrCtrl+Shift+M'],
   settings: ['CmdOrCtrl+,'],
   /** Ctrl++ as most apps; Ctrl+= too, on layouts where = needs no Shift. */

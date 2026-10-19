@@ -26,6 +26,9 @@ import { hasReadingColumn, readerWidthStyle } from './document/width';
 import { tabAction } from './tabs/commands';
 import type { TabStore } from './tabs/store';
 import { EmptyWindow } from './tabs/EmptyWindow';
+import { MoveTabDialog } from './tabs/MoveTabDialog';
+import { ignoreClosedTab } from './tabs/closed-tab';
+import { editors } from './edit/editors';
 import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
 import { TabDocument } from './tabs/TabDocument';
@@ -110,8 +113,8 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     return () => client.dispose();
   }, []);
 
-  // One overlay at a time: quick open, the palette or About.
-  const [overlay, setOverlay] = useState<'quickOpen' | 'palette' | 'about' | null>(null);
+  // One overlay at a time: quick open, the palette, About or the windows a tab can move to.
+  const [overlay, setOverlay] = useState<'quickOpen' | 'palette' | 'about' | 'moveTab' | null>(null);
   const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
   // Where focus goes when the overlay closes, if not the document: About from the profile menu, whose item is gone.
   const returnFocus = useRef<string | null>(null);
@@ -124,7 +127,22 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   }, []);
   useTabShortcuts(store, openQuickOpen, settings?.settings.measure ?? 72, setMessage);
   useUnsavedGuards(store);
-  useCommands({ commandPalette: () => setOverlay('palette') });
+  useCommands({
+    commandPalette: () => setOverlay('palette'),
+    moveTabToWindow: () => {
+      const shown = movableTab(store, setMessage);
+      if (shown) setOverlay('moveTab');
+      return shown !== undefined;
+    },
+  });
+  const moveToChosenWindow = useCallback(
+    (target: number) => {
+      const id = store.getSnapshot().active;
+      closeOverlay();
+      if (id) moveShownTab(id, target, setMessage);
+    },
+    [store, closeOverlay],
+  );
   const [recentRevision, setRecentRevision] = useState(0);
   const openAbout = useCallback((from: string | null = null) => {
     returnFocus.current = from;
@@ -216,6 +234,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} />}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}
       {overlay === 'about' && <AboutDialog version={version} onClose={closeOverlay} />}
+      {overlay === 'moveTab' && <MoveTabDialog onChoose={moveToChosenWindow} onClose={closeOverlay} />}
     </>
   );
 }
@@ -245,6 +264,27 @@ function useUnsavedGuards(store: TabStore) {
       store.setCloseGuard(null);
     };
   }, [store, confirm]);
+}
+
+/**
+ * The shown tab, if it can move to another window: the settings tab stays (UX F15). Undefined when
+ * no tab is shown; null, said why, for the settings tab.
+ */
+function movableTab(store: TabStore, say: (message: string) => void): string | null | undefined {
+  const view = store.getSnapshot();
+  const shown = view.tabs.find((tab) => tab.id === view.active);
+  if (!shown) return undefined;
+  if (shown.kind !== 'settings') return shown.id;
+  say('The Settings tab stays in its window');
+  return null;
+}
+
+/** Moves the tab to another window or a new one (ADR-019), its unsaved text handed to main first. */
+function moveShownTab(id: string, target: number | 'new', say: (message: string) => void) {
+  editors.get(id)?.keepNow();
+  void window.galeo.tabs.moveTo(id, target).then((moved) => {
+    if (!moved) say("The tab didn't move");
+  }, ignoreClosedTab);
 }
 
 /** The tab shortcuts, per-tab zoom and reader width (UX §5), wherever the focus is. */
@@ -308,6 +348,14 @@ function useTabShortcuts(store: TabStore, openQuickOpen: () => void, measure: Re
     goToLastTab: tabs('goToLastTab'),
     moveTabLeft: tabs('moveTabLeft'),
     moveTabRight: tabs('moveTabRight'),
+    moveTabToNewWindow: () => {
+      const id = movableTab(store, say);
+      if (id === undefined) return false;
+      if (id === null) return true;
+      if (store.getSnapshot().tabs.length < 2) say("It's this window's only tab");
+      else moveShownTab(id, 'new', say);
+      return true;
+    },
     closeTab: tabs('closeTab'),
     reopenClosed: tabs('reopenClosed'),
   });
