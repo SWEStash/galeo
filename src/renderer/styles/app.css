@@ -822,6 +822,11 @@ button:focus-visible {
   color: var(--galeo-color-bg);
 }
 
+/* A focused item's state (a profile's "Open", a window's file) takes the item's colour on the focus background. */
+.menu-item[data-focused] .menu-description {
+  color: inherit;
+}
+
 /* A window without tabs (UX §4). */
 .empty-window {
   box-sizing: border-box;
