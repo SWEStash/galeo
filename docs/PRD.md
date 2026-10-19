@@ -252,8 +252,8 @@ must not obstruct (plain files only, no sidecar metadata).
 - **Move a tab to another window.** Drag a tab onto another window's tab bar, of the same or
   another profile, to move it there; drop it outside every window to open it in a new window.
   A keyboard path does the same from the palette. The tab keeps its history, view, zoom, reader
-  width and unsaved text (undo history does not travel); moved into another profile, it becomes
-  part of that profile's session.
+  width, edit mode and unsaved text (undo history does not travel); moved into another profile,
+  it becomes part of that profile's session (ADR-019).
 - **Reader width while reading.** Commands and shortcuts widen, narrow and reset the reading
   column, or make it full width, per tab, kept across restarts (like zoom). The status bar shows
   the width only while it differs from the profile's setting. Settings offers width presets

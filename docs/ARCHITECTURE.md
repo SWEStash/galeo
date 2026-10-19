@@ -21,6 +21,7 @@
   [016](decisions/ADR-016-name-galeo.md) ·
   [017](decisions/ADR-017-release-workflow-with-attestations.md) ·
   [018](decisions/ADR-018-rich-views-and-the-format-descriptor.md) ·
+  [019](decisions/ADR-019-moving-tabs-between-windows.md) ·
   [020](decisions/ADR-020-table-budget-and-show-as-table.md) ·
   [021](decisions/ADR-021-table-options.md)
 

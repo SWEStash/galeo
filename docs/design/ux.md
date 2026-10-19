@@ -277,10 +277,13 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 
 ### F15 — Move a tab to another window (v0.3)
 
-- Drag a tab over **another window's tab bar** (same profile or another one): the insertion
-  caret of F3 shows; drop → the tab moves there, at the caret, and becomes active.
-- Drop **outside every galeo window** → the tab opens in a new window of its profile, at the
-  pointer where the platform allows.
+- Drag a tab over **another window's tab bar** (same profile or another one), anywhere on it,
+  including its empty part and the bar of a window with no tabs: the insertion caret of F3 shows;
+  drop → the tab moves there, at the caret, and becomes that window's active tab. The window isn't
+  raised: it is already under the pointer (ADR-019).
+- Drop **outside every galeo window** → the tab opens in a new window of its profile, which stays
+  open with its other tabs. The desktop places the new window. A window's only tab dropped outside
+  stays where it is. Esc with the pointer outside the window counts as a drop outside.
 - The tab keeps its back/forward history, view, scroll position, zoom, reader width, split and
   edit mode. Unsaved text moves with it (`●` stays); its undo history doesn't.
 - Into **another profile**, the tab becomes that profile's: it is saved in that profile's session
@@ -289,7 +292,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   (F5).
 - The **Settings tab** doesn't move.
 - **Keyboard**: the palette's *Move tab to new window* and *Move tab to window…* (a list of the
-  other windows, named by profile and active tab) do the same.
+  other windows, named by profile and active tab) do the same, and focus the window the tab went to.
 
 ## 4. States
 
