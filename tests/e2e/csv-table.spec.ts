@@ -96,6 +96,8 @@ test('split puts the table beside its source, and the table follows typing', asy
     await window.keyboard.press('Control+\\');
     await expect(window.getByTestId('status-view')).toHaveText('Split');
     await expect(grid(window)).toBeVisible();
+    // Keys go to the editor once it has the focus back after the split opened.
+    await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
     await window.keyboard.press('Control+End');
     await window.keyboard.type('3,4\n');
     await expect(bodyRows(window)).toHaveCount(2);
