@@ -327,6 +327,11 @@ entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument h
 (ADR-009). At first launch, main refuses to start when a switch follows a file name without `--`.
 *AC*: tests with switch-like file names (`--inspect`, `--gpu-launcher=…`, `--no-sandbox`) after
 `--` open them as files.
+The one program main runs itself (v0.3) is fontconfig's `fc-list`, for the font pickers: found on
+`PATH` by name, started without a shell, with fixed arguments and nothing from the page; its output
+is data (family names a setting couldn't hold are dropped, the rest are quoted and escaped into the
+font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens the pickers under
+`strace -f`, which follows the child.
 
 **SR-14 — Bounded work.**
 - Size thresholds from the PRD apply: Markdown over 5 MB is shown as source; binary files are
@@ -346,6 +351,8 @@ entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument h
   source. The views draw only the rows in view.
 - The own file watcher watches only open files (via their parent directories), coalesces events,
   and caps its rate.
+- `fc-list` (the font pickers' list) gets 5 s and 4 MB of output; past either it is stopped and the
+  pickers offer the bundled fonts only. A list is kept for the app's life, so it runs once.
 - The quick-open walker is bounded (file count, depth, time), does not follow symlinks out of the
   root, and detects loops.
 - Before inserting a document, the renderer sends main a "rendering tab X" breadcrumb. If a

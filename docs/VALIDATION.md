@@ -20,6 +20,10 @@ Wayland) before each release.
   MDX syntax error, each in both schemes (`accessibility`, `split`, `edit`, `replace` and `mdx`
   specs).
   The drop overlay is decorative (`aria-hidden`); quick open is the keyboard way to open files.
+  Reading comfort (v0.3): the status bar showing a tab's reader width, and an open font picker's list,
+  in both schemes (`reader-width` and `settings-tab` specs); About opened from the profile menu
+  (`profiles` spec). An open picker hides the rest of the page from assistive tech, so axe checks the
+  list there and the closed Settings view on its own.
 - **Contrast** (`tests/unit/design/colour-contrast.test.ts`): text tokens at 4.5:1 and focus ring
   and text-field borders at 3:1 on the page and on panels, in both schemes; the 8 accent presets
   at 3:1 on the tab bar; every code-highlighting colour at 4.5:1 on code blocks.
@@ -98,6 +102,9 @@ gave the 750 ms above; cold starts in the regular test runs since v0.2 began mea
   and Alt+←/→, which GNOME doesn't bind. Edit mode, checked against the `wm` and `media-keys`
   bindings on 2026-10-10: GNOME switches workspaces with Ctrl+Alt+↑/↓, so adding a cursor
   above/below is Shift+Alt+↑/↓; its window-drag modifier is Super, leaving Alt+drag to the editor.
+  Reader width (v0.3), checked on 2026-10-18: Alt++ / Alt+=, Alt+- and Alt+0 are bound nowhere in
+  those schemas (the magnifier's zoom keys are Super+Alt+= and Super+Alt+-), nor in CodeMirror's edit
+  keys; the palette spec lists them with the keyboard map.
 
 ## Desktop and Wayland (manual)
 
@@ -118,6 +125,9 @@ these.
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
+| Reader width (v0.3): Alt+= / Alt+- / Alt+0 on a long Markdown file and a `.txt`, Full width from the palette; the width comes back after a restart; Settings' measure presets move the tabs left at the setting | |
+| Font pickers (v0.3): the installed families are listed (monospace ones only for code), each in its face; a chosen one is the documents' font; a typed name not installed falls back | |
+| About galeo (v0.3) from the profile menu and from Settings shows the version | |
 | Installed `.deb` (Trusted Types enforced): a document with Mermaid diagrams and math draws in full, with no Trusted Types errors | Pass (2026-10-06) |
 | Outline follows the scroll; Esc returns focus to the document | Pass (2026-10-05) |
 | Zoom: Ctrl++ on an es-US layout; Ctrl+wheel over the document and the tab bar zooms the tab, and in the viewer zooms only the viewer | Pass (2026-10-07) |

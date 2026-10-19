@@ -31,7 +31,7 @@ Defined on `:root`; the dark values apply when the root element has `data-scheme
 | `--galeo-font-ui` | Inter | App chrome |
 | `--galeo-font-size` | `17px` | Body text size |
 | `--galeo-line-height` | `1.6` | Body line height |
-| `--galeo-measure` | `72ch` | Reading column width |
+| `--galeo-measure` | `72ch` | Reading column width (`none` at full width); a tab with its own width sets it on its panel |
 | `--galeo-code-size` | `0.9em` | Code size relative to the text around it |
 | `--galeo-space-block` | `1em` | Space after paragraphs, lists, tables and code blocks |
 | `--galeo-radius` | `6px` | Code block corners |

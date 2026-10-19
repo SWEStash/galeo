@@ -37,7 +37,7 @@ Every diagram uses these names exactly.
 | **Launcher** | The `gal` shell script. Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that routes every launch through `gal`'s argument handling and relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
 | **Main** | The Electron main process (Node). Hosts the Core and the Adapters |
 | **Core** | Pure TypeScript domain logic: routing, tab registry, lifecycle policy, sessions, settings, capability checks, argv parsing, link extraction (ADR-007) |
-| **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `WindowHost`, `OsShell`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `Clock` |
+| **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `WindowHost`, `OsShell`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `FontCatalog`, `Clock` |
 | **Network Guard** | The part of Main that cancels every non-`galeo:`/`data:` request, makes every host unresolvable in the network stack, and registers the `galeo:` protocol (ADR-004) |
 | **Preload** | The only bridge. Exposes the typed `window.galeo` API from Contracts |
 | **Contracts** | Shared IPC and domain types plus runtime schemas (`src/shared`) |
@@ -75,7 +75,9 @@ flowchart LR
 
 galeo has **no network dependency**. It exchanges data only with local files, the Launcher,
 the Files app (open and drag-and-drop) and OS URL handlers. That last channel is restricted to
-link targets that appear in the open document (ADR-004).
+link targets that appear in the open document (ADR-004). On Linux it also asks fontconfig's
+`fc-list` for the installed font families, for Settings' font pickers: fixed arguments, nothing
+from the page.
 
 ## 3. Containers (processes and stores)
 
@@ -156,6 +158,7 @@ flowchart LR
     fsys[FileSystem<br/>caps · atomic write]
     watch[FileWatcher<br/>one fs.watch per folder]
     shellp[OsShell<br/>openExternal · openPath · reveal]
+    fonts[FontCatalog<br/>fc-list · fixed args · cached]
     paths[AppPaths<br/>XDG]
     ipc[IPC handlers<br/>sender check · schema validate]
     netg[Network Guard<br/>webRequest block · galeo: protocol · permission deny]
@@ -170,6 +173,7 @@ flowchart LR
   fmt --> fsys
   watch --> coal --> dw --> reg
   ipc --> qoc --> grants
+  ipc --> fonts
   caps --> grants
   paths --> sess & prof
 ```
@@ -364,7 +368,7 @@ The pre-release security audits check these layers against the code:
 
 | PRD target | Mechanism |
 |---|---|
-| Cold start < 500 ms | Network Guard before windows; only the active tab renders; Mermaid, KaTeX (worker and styles), Shiki, CodeMirror and each CodeMirror grammar load with the first document that needs them, which `npm run check:bundle` enforces |
+| Cold start < 500 ms | Network Guard before windows; only the active tab renders; Mermaid, KaTeX (worker and styles), Shiki, CodeMirror and each CodeMirror grammar load with the first document that needs them, which `npm run check:bundle` enforces; the Settings tab loads when first shown |
 | New tab < 100 ms | Worker parse; grammars only as needed; no process start (one renderer per window) |
 | Warm switch within the next frame | Warm DOM kept (LRU budget); switching toggles visibility only |
 | Hibernated wake < 150 ms | Re-read and re-parse in the worker, hidden insert, anchor, reveal |
