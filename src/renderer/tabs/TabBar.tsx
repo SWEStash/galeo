@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
-import { isTextDropItem, Tab, TabList, useDrag, useDrop, type DropOperation } from 'react-aria-components';
+import { isTextDropItem, Tab, TabList, useDrag, useDrop } from 'react-aria-components';
 import type { DocumentRecord } from '../../shared/documents';
 import { tabLabels } from '../../shared/tab-labels';
 import { editors } from '../edit/editors';
@@ -108,7 +108,8 @@ export function TabBar({
     },
   });
 
-  // Where the pointer is while one of this window's tabs is dragged: out of the window at an unclaimed end is a tear-off.
+  // Where the pointer is while one of this window's tabs is dragged: a drag that ends out of the window,
+  // over another application or none, gives the tab a window of its own unless a galeo window takes it.
   const exit = useRef<ReturnType<typeof watchDragExit> | null>(null);
   useEffect(() => () => exit.current?.stop(), []);
   const dragStarted = (id: string) => {
@@ -118,8 +119,8 @@ export function TabBar({
     editors.get(id)?.keepNow();
     store.dragStarted(id);
   };
-  const dragEnded = (id: string, operation: DropOperation) => {
-    const outside = operation === 'cancel' && (exit.current?.outside() ?? false);
+  const dragEnded = (id: string) => {
+    const outside = exit.current?.outside() ?? false;
     exit.current?.stop();
     exit.current = null;
     store.dragEnded(id, outside);
@@ -211,13 +212,13 @@ function TabItem({
   crashed: boolean;
   onClose: () => void;
   onDragStart: (id: string) => void;
-  onDragEnd: (id: string, operation: DropOperation) => void;
+  onDragEnd: (id: string) => void;
 }) {
   const { dragProps, isDragging } = useDrag({
     // The custom type only: no other application takes a tab (ADR-019).
     getItems: () => [{ [TAB_TYPE]: tab.id }],
     onDragStart: () => onDragStart(tab.id),
-    onDragEnd: (event) => onDragEnd(tab.id, event.dropOperation),
+    onDragEnd: () => onDragEnd(tab.id),
     // Keyboard users reorder with Ctrl+Shift+PgUp/PgDn; Enter on a tab still shows it.
     hasDragButton: true,
   });
@@ -233,15 +234,18 @@ function TabItem({
       data-hibernated={hibernated || undefined}
       data-missing={status?.state === 'missing' || undefined}
     >
-      <span className="tab-label" title={tab.path} {...dragProps} onAuxClick={onAuxClick}>
-        {label}
-      </span>
-      {indicators(status, reloaded, crashed).map(({ glyph, words }) => (
-        <span key={glyph} className="tab-indicator" data-indicator={words} title={words}>
-          <span aria-hidden="true">{glyph}</span>
-          <span className="visually-hidden">, {words}</span>
+      {/* All of the tab but its ✕ starts a drag, edge to edge. */}
+      <span className="tab-grab" {...dragProps} onAuxClick={onAuxClick}>
+        <span className="tab-label" title={tab.path}>
+          {label}
         </span>
-      ))}
+        {indicators(status, reloaded, crashed).map(({ glyph, words }) => (
+          <span key={glyph} className="tab-indicator" data-indicator={words} title={words}>
+            <span aria-hidden="true">{glyph}</span>
+            <span className="visually-hidden">, {words}</span>
+          </span>
+        ))}
+      </span>
       {/* Pointer only: a tab can't hold another control, and Delete closes it from the keyboard. */}
       <span
         className="tab-close"

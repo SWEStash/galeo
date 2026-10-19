@@ -101,17 +101,15 @@ describe('document channel arguments (SR-11)', () => {
 
   it('tab moves take an id, and where to: a position, a window id or a new window (ADR-019)', () => {
     expect(accepts('tabs.dragStart', [ID])).toBe(true);
-    expect(accepts('tabs.tearOff', [ID])).toBe(true);
-    expect(accepts('tabs.dragEnd', [])).toBe(true);
+    expect(accepts('tabs.dragEnd', [ID, true])).toBe(true);
     expect(accepts('tabs.windows', [])).toBe(true);
     expect(accepts('tabs.adopt', [ID, 0])).toBe(true);
     expect(accepts('tabs.moveTo', [ID, 7])).toBe(true);
     expect(accepts('tabs.moveTo', [ID, 'new'])).toBe(true);
     for (const bad of [[], [''], [ID, 'extra']]) {
       expect(accepts('tabs.dragStart', bad)).toBe(false);
-      expect(accepts('tabs.tearOff', bad)).toBe(false);
     }
-    expect(accepts('tabs.dragEnd', [ID])).toBe(false);
+    for (const bad of [[], [ID], [ID, 'yes'], ['', false], [ID, true, 'extra']]) expect(accepts('tabs.dragEnd', bad)).toBe(false);
     expect(accepts('tabs.windows', [1])).toBe(false);
     for (const bad of [[ID], [ID, -1], [ID, 1.5], [ID, 10_000], [ID, 'new']]) expect(accepts('tabs.adopt', bad)).toBe(false);
     for (const bad of [[ID], [ID, 0], [ID, -3], [ID, 1.5], [ID, 'old'], [ID, '7'], ['', 7], [ID, 7, 'extra']]) {

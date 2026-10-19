@@ -18,7 +18,6 @@ function setup(initial: TabSnapshot) {
     dragStart: vi.fn().mockResolvedValue(true),
     dragEnd: vi.fn().mockResolvedValue(undefined),
     adopt: vi.fn().mockResolvedValue(true),
-    tearOff: vi.fn().mockResolvedValue(true),
     onDragging: vi.fn((listener: (on: boolean) => void) => {
       dragging = listener;
       return () => {};
@@ -407,10 +406,9 @@ describe('createTabStore', () => {
       store.dragStarted('a');
       expect(api.dragStart).toHaveBeenCalledWith('a');
       store.dragEnded('a', false);
-      expect(api.dragEnd).toHaveBeenCalled();
-      expect(api.tearOff).not.toHaveBeenCalled();
+      expect(api.dragEnd).toHaveBeenCalledWith('a', false);
       store.dragEnded('a', true);
-      expect(api.tearOff).toHaveBeenCalledWith('a');
+      expect(api.dragEnd).toHaveBeenCalledWith('a', true);
     });
 
     it('takes a tab dropped from another window where it landed, and shows it once main sends it', async () => {

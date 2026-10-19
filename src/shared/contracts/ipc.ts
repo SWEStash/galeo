@@ -127,7 +127,6 @@ export const CHANNELS = [
   'tabs.dragStart',
   'tabs.dragEnd',
   'tabs.adopt',
-  'tabs.tearOff',
   'tabs.moveTo',
   'tabs.windows',
   'settings.get',
@@ -241,11 +240,10 @@ export interface Requests {
   /** The reader started dragging the tab: another window may take it, once (ADR-019). Spends real input. */
   'tabs.dragStart': [id: string];
   /** The window's drag ended without a window taking the tab. */
-  'tabs.dragEnd': [];
+  'tabs.dragEnd': [id: string, outside: boolean];
   /** The tab another window's drag carries was dropped here, at `position`. */
   'tabs.adopt': [id: string, position: number];
   /** The window's dragged tab was dropped outside every window: it gets a window of its own. */
-  'tabs.tearOff': [id: string];
   /** Moves the tab to another window, or to a new one (the palette). Spends real input. */
   'tabs.moveTo': [id: string, target: number | 'new'];
   /** The other windows a tab can move to. */
@@ -335,7 +333,6 @@ export interface Responses {
   /** False when no live drag carried that tab from another window. */
   'tabs.adopt': boolean;
   /** False when the drag was over, or the window had only that tab. */
-  'tabs.tearOff': boolean;
   /** False when main refused: not the window's tab, the settings tab, no real input, or no such window. */
   'tabs.moveTo': boolean;
   'tabs.windows': OtherWindow[];

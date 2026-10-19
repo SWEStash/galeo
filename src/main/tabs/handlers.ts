@@ -1,7 +1,7 @@
 import type { ReadIdentities } from '../../core/documents/identities';
 import type { InputCredits } from '../../core/documents/input-credits';
 import type { CrashRecovery } from '../../core/tabs/crashes';
-import type { TabDrags } from '../../core/tabs/drags';
+import { SETTLE_MS, type TabDrags } from '../../core/tabs/drags';
 import type { WarmTabs } from '../../core/tabs/lifecycle';
 import type { TabRegistry } from '../../core/tabs/registry';
 import type { OtherWindow } from '../../shared/contracts/ipc';
@@ -23,7 +23,6 @@ type TabChannels =
   | 'tabs.dragStart'
   | 'tabs.dragEnd'
   | 'tabs.adopt'
-  | 'tabs.tearOff'
   | 'tabs.moveTo'
   | 'tabs.windows';
 
@@ -48,8 +47,8 @@ export interface TabHandlerDeps {
   /** The tab being dragged, if any (ADR-019). */
   drags: TabDrags;
   now: () => number;
-  /** Real input per window: starting a drag or a palette move spends one. */
-  input: Pick<InputCredits, 'spend'>;
+  /** Real input per window: starting a drag or a palette move spends one; a drag can spend a held press instead. */
+  input: Pick<InputCredits, 'spend' | 'spendPress'>;
   /** Moves a tab to another window, at `position`: false when main refused. */
   move: (id: string, from: number, to: number, position: number) => boolean;
   /** Moves a tab to a new window of its profile. */
@@ -59,6 +58,8 @@ export interface TabHandlerDeps {
   focus: (window: number) => void;
   /** Tells every window a tab drag started or ended. */
   dragging: (on: boolean) => void;
+  /** Runs `run` once `ms` have passed. */
+  after: (ms: number, run: () => void) => void;
 }
 
 /**
@@ -137,13 +138,23 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     },
     'tabs.dragStart': ([id], event) => {
       const window = event.sender.id;
-      if (!movable(id, window) || !input.spend(window)) return false;
+      // The press that started the drag, however long the reader held it before moving.
+      if (!movable(id, window) || !(input.spendPress(window) || input.spend(window))) return false;
       drags.start(id, window, now());
       deps.dragging(true);
       return true;
     },
-    'tabs.dragEnd': (_args, event) => {
-      if (drags.end(event.sender.id)) deps.dragging(false);
+    // The window the tab was dropped on may ask for it after this: the drag ends a moment later, if
+    // no window took it, and a tab dropped outside the window gets a window of its own (ADR-019).
+    'tabs.dragEnd': ([id, outside], event) => {
+      const window = event.sender.id;
+      const drag = drags.pending(id, window);
+      if (!drag) return;
+      deps.after(SETTLE_MS, () => {
+        if (!drags.settle(drag)) return;
+        deps.dragging(false);
+        if (outside && movable(id, window)) tearOff(id, window);
+      });
     },
     'tabs.adopt': ([id, position], event) => {
       const to = event.sender.id;
@@ -151,12 +162,6 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
       if (from === null) return false;
       deps.dragging(false);
       return from !== to && deps.move(id, from, to, position);
-    },
-    'tabs.tearOff': ([id], event) => {
-      const window = event.sender.id;
-      if (drags.claim(id, now(), window) === null) return false;
-      deps.dragging(false);
-      return movable(id, window) && tearOff(id, window);
     },
     'tabs.moveTo': async ([id, target], event) => {
       const window = event.sender.id;

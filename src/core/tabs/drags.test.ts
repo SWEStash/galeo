@@ -60,4 +60,28 @@ describe('TabDrags (ADR-019)', () => {
     drags.claim('t1', 1);
     expect(drags.dragging(1)).toBe(false);
   });
+
+  it('keeps a drag claimable after its window says it ended, until it is settled', () => {
+    const drags = new TabDrags();
+    drags.start('t1', 1, 0);
+    expect(drags.pending('t1', 2)).toBeNull();
+    expect(drags.pending('t2', 1)).toBeNull();
+    const ended = drags.pending('t1', 1)!;
+    expect(drags.claim('t1', 0)).toBe(1);
+    expect(drags.settle(ended)).toBe(false);
+  });
+
+  it('settles a drag once, and never a later one that took its place', () => {
+    const drags = new TabDrags();
+    drags.start('t1', 1, 0);
+    const ended = drags.pending('t1', 1)!;
+    expect(drags.settle(ended)).toBe(true);
+    expect(drags.dragging(0)).toBe(false);
+    expect(drags.settle(ended)).toBe(false);
+    drags.start('t1', 1, 0);
+    const first = drags.pending('t1', 1)!;
+    drags.start('t1', 1, 5);
+    expect(drags.settle(first)).toBe(false);
+    expect(drags.claim('t1', 6)).toBe(1);
+  });
 });

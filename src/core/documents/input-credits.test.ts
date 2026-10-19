@@ -43,7 +43,26 @@ describe('InputCredits', () => {
   it('forgets a closed window', () => {
     const { input } = credits();
     input.received(1);
+    input.pressed(1);
     input.closeWindow(1);
     expect(input.spend(1)).toBe(false);
+    expect(input.spendPress(1)).toBe(false);
+  });
+
+  it('lets a window spend a mouse press while the button is still down, however long ago it went down, once', () => {
+    const { input, advance } = credits();
+    expect(input.spendPress(1)).toBe(false);
+    input.pressed(1);
+    advance(5000);
+    expect(input.spendPress(2)).toBe(false);
+    expect(input.spendPress(1)).toBe(true);
+    expect(input.spendPress(1)).toBe(false);
+  });
+
+  it('lets no window spend a press once its button is up', () => {
+    const { input } = credits();
+    input.pressed(1);
+    input.released(1);
+    expect(input.spendPress(1)).toBe(false);
   });
 });

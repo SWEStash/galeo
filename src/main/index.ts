@@ -405,6 +405,8 @@ function start(initialMode: StartupMode): void {
     });
     window.webContents.on('input-event', (_event, event) => {
       if (REAL_INPUT.has(event.type)) input.received(windowId);
+      if (event.type === 'mouseDown') input.pressed(windowId);
+      else if (event.type === 'mouseUp') input.released(windowId);
     });
     window.webContents.on('render-process-gone', (_event, details) => {
       if (details.reason === 'clean-exit' || quitting || window.isDestroyed()) return;
@@ -924,6 +926,7 @@ function start(initialMode: StartupMode): void {
           windows: otherWindows,
           focus: (windowId) => windowOf(windowId)?.focus(),
           dragging: broadcastDragging,
+          after: (ms, run) => void setTimeout(run, ms),
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, input, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
         ...dropHandlers({

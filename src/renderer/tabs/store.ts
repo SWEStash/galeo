@@ -70,7 +70,6 @@ export type TabsApi = Pick<
   | 'dragStart'
   | 'dragEnd'
   | 'adopt'
-  | 'tearOff'
   | 'onDragging'
 >;
 
@@ -106,7 +105,7 @@ export interface TabStore {
   renderAgain(id: string, view?: 'source'): void;
   /** The reader started dragging the tab: another window may take it (ADR-019). */
   dragStarted(id: string): void;
-  /** The drag ended without another window taking the tab; `outside`: dropped outside every window. */
+  /** The drag ended; `outside`: with the pointer out of the window, where the tab gets a window of its own unless another galeo window takes it. */
   dragEnded(id: string, outside: boolean): void;
   /** Another window's tab was dropped here, at `position`: shown once main's snapshot brings it. */
   adopt(id: string, position: number): void;
@@ -314,7 +313,7 @@ export function createTabStore(api: TabsApi): TabStore {
       void api.dragStart(id).catch(ignoreClosedTab);
     },
     dragEnded(id, outside) {
-      void (outside ? api.tearOff(id) : api.dragEnd()).catch(ignoreClosedTab);
+      void api.dragEnd(id, outside).catch(ignoreClosedTab);
     },
     adopt(id, position) {
       wanted = id;

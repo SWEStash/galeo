@@ -252,7 +252,7 @@ body,
   gap: 6px;
   align-items: center;
   min-width: 72px;
-  padding: 0 8px 0 12px;
+  padding: 0 8px 0 0;
   border-right: 1px solid var(--galeo-color-border);
   color: var(--galeo-color-fg);
   cursor: default;
@@ -273,6 +273,16 @@ body,
 
 .tab[data-dragging] {
   opacity: 0.5;
+}
+
+.tab-grab {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  align-items: center;
+  align-self: stretch;
+  min-width: 0;
+  padding-left: 12px;
 }
 
 .tab-label {

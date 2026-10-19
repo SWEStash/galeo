@@ -11,6 +11,8 @@ const MAX_CREDITS = 5;
  */
 export class InputCredits {
   private readonly credits = new Map<number, number[]>();
+  /** Windows whose mouse button went down and hasn't come up: a drag starts however long the press. */
+  private readonly held = new Set<number>();
 
   constructor(private readonly now: () => number) {}
 
@@ -25,8 +27,22 @@ export class InputCredits {
     return true;
   }
 
+  pressed(window: number): void {
+    this.held.add(window);
+  }
+
+  released(window: number): void {
+    this.held.delete(window);
+  }
+
+  /** Spends the window's held mouse press, once. */
+  spendPress(window: number): boolean {
+    return this.held.delete(window);
+  }
+
   closeWindow(window: number): void {
     this.credits.delete(window);
+    this.held.delete(window);
   }
 
   private live(window: number): number[] {

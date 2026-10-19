@@ -108,7 +108,6 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       dragStart: vi.fn().mockResolvedValue(true),
       dragEnd: vi.fn().mockResolvedValue(undefined),
       adopt: vi.fn().mockResolvedValue(true),
-      tearOff: vi.fn().mockResolvedValue(true),
       moveTo: vi.fn().mockResolvedValue(true),
       windows: vi.fn().mockResolvedValue([]),
       onDragging: vi.fn((listener: (on: boolean) => void) => {

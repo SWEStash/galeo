@@ -50,7 +50,6 @@ describe('buildApi', () => {
       'dragStart',
       'dragEnd',
       'adopt',
-      'tearOff',
       'moveTo',
       'windows',
       'openSettings',
