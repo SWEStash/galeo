@@ -116,12 +116,17 @@ test('in split, scrolling the table brings the source to the same row', async ()
     await expect(bodyRows(window).first()).toBeVisible();
     await window.keyboard.press('Control+\\');
     await expect(window.getByTestId('status-view')).toHaveText('Split');
-    await shownDocument(window).evaluate((view) => {
-      const pane = view.shadowRoot!.querySelector<HTMLElement>('.galeo-rendered-pane')!;
-      pane.scrollTop = 3000 * 24;
-    });
-    await expect(grid(window).locator('[role=gridcell]', { hasText: /^row 3000$/ })).toBeVisible();
-    await expect(shownDocument(window).locator('.cm-line', { hasText: /^row 300\d$/ }).first()).toBeVisible();
+    // As a reader would, scrolling again if the panes' first alignment, a frame after the split
+    // opened, took the table back to the source's place.
+    await expect(async () => {
+      await shownDocument(window).evaluate((view) => {
+        const pane = view.shadowRoot!.querySelector<HTMLElement>('.galeo-rendered-pane')!;
+        pane.dispatchEvent(new WheelEvent('wheel', { deltaY: 1 }));
+        pane.scrollTop = 3000 * 24;
+      });
+      await expect(grid(window).locator('[role=gridcell]', { hasText: /^row 3000$/ })).toBeVisible({ timeout: 1000 });
+      await expect(shownDocument(window).locator('.cm-line', { hasText: /^row 300\d$/ }).first()).toBeVisible({ timeout: 1000 });
+    }).toPass({ timeout: 10_000 });
   } finally {
     await close();
     removeTempHome(home);
