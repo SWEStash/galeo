@@ -496,4 +496,89 @@ describe('TabRegistry', () => {
     expect(records.snapshot(1).tabs.every((tab) => !('crashed' in tab))).toBe(true);
     expect(changes).toEqual([1, 1, 1, 1]);
   });
+
+  describe('moving a tab to another window (ADR-019)', () => {
+    it('keeps its id, history, place, look and choices, at the position asked, shown there', () => {
+      const tabs = new TabRegistry(counterIds());
+      const a = tabs.open('/d/a.md', 1).id;
+      tabs.navigate(a, 1, { path: '/d/b.md', anchor: null });
+      tabs.markChosen(a, 1);
+      tabs.setPosition(a, 1, { line: 4, offset: 2, heading: 'Intro', fraction: 0.5 });
+      tabs.setViewState(a, 1, { view: 'split', ratio: 0.4 });
+      tabs.setZoom(a, 1, 1.25);
+      tabs.setWidth(a, 1, 'full');
+      tabs.markCrashed(a, 1);
+      tabs.open('/d/x.md', 2);
+      tabs.open('/d/y.md', 2);
+      const before = tabs.snapshot(1).tabs[0]!;
+
+      expect(tabs.transfer(a, 1, 2, 1)).toBe(true);
+
+      expect(tabs.list(1)).toEqual([]);
+      expect(tabs.get(a, 1)).toBeUndefined();
+      expect(tabs.list(2).map((tab) => tab.path)).toEqual(['/d/x.md', '/d/b.md', '/d/y.md']);
+      const after = tabs.snapshot(2);
+      expect(after.active).toBe(a);
+      expect(after.tabs[1]).toEqual(before);
+      expect(tabs.chosen(a, 2)).toBe(true);
+      expect(tabs.back(a, 2)?.path).toBe('/d/a.md');
+    });
+
+    it('clamps the position to the ends of the window it goes to', () => {
+      const tabs = new TabRegistry(counterIds());
+      const a = tabs.open('/d/a.md', 1).id;
+      tabs.open('/d/x.md', 2);
+      tabs.transfer(a, 1, 2, 99);
+      expect(tabs.list(2).map((tab) => tab.path)).toEqual(['/d/x.md', '/d/a.md']);
+    });
+
+    it('leaves the window it left with no shown tab of its own choosing, and the rest in order', () => {
+      const tabs = new TabRegistry(counterIds());
+      const a = tabs.open('/d/a.md', 1).id;
+      const b = tabs.open('/d/b.md', 1).id;
+      tabs.activate(b, 1);
+      tabs.transfer(b, 1, 2, 0);
+      expect(tabs.list(1).map((tab) => tab.id)).toEqual([a]);
+      expect(tabs.snapshot(1).active).toBeNull();
+    });
+
+    it('is not a close: the window it left cannot reopen it', () => {
+      const tabs = new TabRegistry(counterIds());
+      tabs.open('/d/a.md', 1);
+      const b = tabs.open('/d/b.md', 1).id;
+      tabs.transfer(b, 1, 2, 0);
+      expect(tabs.closedAt(1)).toBeNull();
+      expect(tabs.reopenClosed(1)).toBeNull();
+    });
+
+    it('moves only a tab the window owns, never the settings tab, and never into the same window', () => {
+      const tabs = new TabRegistry(counterIds());
+      const a = tabs.open('/d/a.md', 1).id;
+      const settings = tabs.openSettings(1).id;
+      expect(tabs.transfer(a, 3, 2, 0)).toBe(false);
+      expect(tabs.transfer(settings, 1, 2, 0)).toBe(false);
+      expect(tabs.transfer(a, 1, 1, 0)).toBe(false);
+      expect(tabs.list(1).map((tab) => tab.id)).toEqual([a, settings]);
+      expect(tabs.list(2)).toEqual([]);
+    });
+
+    it('tells of the window it left before the window it reached, once each', () => {
+      const changes: number[] = [];
+      const tabs = new TabRegistry(counterIds(), (window) => changes.push(window));
+      const a = tabs.open('/d/a.md', 1).id;
+      changes.length = 0;
+      tabs.transfer(a, 1, 2, 0);
+      expect(changes).toEqual([1, 2]);
+    });
+
+    it('goes into the session of the window it reached', () => {
+      const tabs = new TabRegistry(counterIds());
+      const a = tabs.open('/d/a.md', 1).id;
+      tabs.open('/d/b.md', 1);
+      tabs.setZoom(a, 1, 1.5);
+      tabs.transfer(a, 1, 2, 0);
+      expect(tabs.exportWindow(1).tabs.map((tab) => tab.entries[0]!.path)).toEqual(['/d/b.md']);
+      expect(tabs.exportWindow(2)).toEqual({ tabs: [{ entries: [{ path: '/d/a.md', anchor: null }], index: 0, zoom: 1.5 }], active: 0 });
+    });
+  });
 });

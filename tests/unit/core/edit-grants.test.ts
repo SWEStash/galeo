@@ -102,4 +102,38 @@ describe('EditGrants', () => {
     expect(grants.allows('t2', 1, '/d/b.md')).toBe(true);
     expect(grants.allows('t3', 2, '/d/c.md')).toBe(true);
   });
+
+  describe('a tab moving to another window (ADR-019)', () => {
+    it('takes its grant, unsaved mark and kept text along, so the window it left drops nothing', () => {
+      const grants = new EditGrants();
+      grants.grant('t1', 1, '/d/a.md');
+      grants.keep('t1', 1, '# mine', 'v1');
+      grants.transfer('t1', 1, 2);
+      expect(grants.sync(1, [])).toEqual([]);
+      expect(grants.sync(2, [{ id: 't1', path: '/d/a.md' }])).toEqual([]);
+      expect(grants.allows('t1', 2, '/d/a.md')).toBe(true);
+      expect(grants.allows('t1', 1, '/d/a.md')).toBe(false);
+      expect(grants.kept('t1', 2)).toEqual({ text: '# mine', base: 'v1' });
+      expect(grants.dirty(2)).toEqual(['t1']);
+      expect(grants.dirty(1)).toEqual([]);
+    });
+
+    it("moves only the grant of the window the tab left, and doesn't make one", () => {
+      const grants = new EditGrants();
+      grants.grant('t1', 1, '/d/a.md');
+      grants.transfer('t1', 3, 2);
+      grants.transfer('t2', 1, 2);
+      expect(grants.allows('t1', 1, '/d/a.md')).toBe(true);
+      expect(grants.granted('t1', 2)).toBe(false);
+      expect(grants.granted('t2', 2)).toBe(false);
+    });
+
+    it('says whether a tab of the window is in edit mode, unsaved text or not', () => {
+      const grants = new EditGrants();
+      grants.grant('t1', 1, '/d/a.md');
+      expect(grants.granted('t1', 1)).toBe(true);
+      expect(grants.granted('t1', 2)).toBe(false);
+      expect(grants.granted('t2', 1)).toBe(false);
+    });
+  });
 });

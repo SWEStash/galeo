@@ -51,6 +51,17 @@ export class EditGrants {
     grant.kept = { text, base };
   }
 
+  /** Whether the window's tab is in edit mode. */
+  granted(id: string, window: number): boolean {
+    return this.grants.get(id)?.window === window;
+  }
+
+  /** The tab moved to another window (ADR-019): its grant, unsaved mark and kept text go with it. */
+  transfer(id: string, from: number, to: number): void {
+    const grant = this.grants.get(id);
+    if (grant?.window === from) grant.window = to;
+  }
+
   kept(id: string, window: number): KeptText | null {
     const grant = this.grants.get(id);
     return grant?.window === window ? grant.kept : null;

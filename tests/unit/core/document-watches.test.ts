@@ -65,4 +65,16 @@ describe('DocumentWatches', () => {
     });
     expect(() => watches.sync(1, [tab('a', '/gone/a.md'), tab('b', '/d/b.md')])).not.toThrow();
   });
+
+  it.each([
+    ['the window it left first', [1, 2]],
+    ['the window it reached first', [2, 1]],
+  ] as const)('follows a tab moved to another window, whichever window syncs first: %s', (_order, windows) => {
+    const { watcher, heard, watches } = setup();
+    watches.sync(1, [tab('a', '/d/a.md'), tab('b', '/d/b.md')]);
+    const now: Record<number, DocumentRecord[]> = { 1: [tab('b', '/d/b.md')], 2: [tab('a', '/d/a.md')] };
+    for (const window of windows) watches.sync(window, now[window]!);
+    watcher.emit({ path: '/d/a.md', kind: 'change' });
+    expect(heard).toEqual([[2, 'a']]);
+  });
 });

@@ -268,6 +268,25 @@ export class TabRegistry {
     return true;
   }
 
+  /**
+   * Moves the tab, as it is and under its id, to `position` in another window, shown there (ADR-019).
+   * Not a close: the window it left can't reopen it. Never the settings tab.
+   */
+  transfer(id: string, from: number, to: number, position: number): boolean {
+    const record = this.owned(id, from);
+    if (!record || record.settings || from === to) return false;
+    const source = this.orderOf(from);
+    source.splice(source.indexOf(id), 1);
+    if (this.active.get(from) === id) this.active.delete(from);
+    record.window = to;
+    const target = this.orderOf(to);
+    target.splice(Math.max(0, Math.min(position, target.length)), 0, id);
+    this.active.set(to, id);
+    this.changed(from);
+    this.changed(to);
+    return true;
+  }
+
   /** Moves the tab to `entry`, dropping any forward history. A link within the same file keeps its choice. */
   navigate(id: string, window: number, entry: HistoryEntry): boolean {
     const record = this.owned(id, window);

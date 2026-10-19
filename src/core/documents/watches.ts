@@ -31,7 +31,11 @@ export class DocumentWatches {
       this.watched.delete(id);
     }
     for (const [id, path] of wanted) {
-      if (this.watched.has(id)) continue;
+      const current = this.watched.get(id);
+      if (current?.window === window) continue;
+      // A tab that moved here from another window (ADR-019): its changes are this window's now.
+      current?.stop();
+      this.watched.delete(id);
       let stop: Unsubscribe;
       try {
         stop = this.deps.watcher.watch(path, () => this.deps.changed(window, id));
