@@ -135,7 +135,9 @@ describe.skipIf(process.platform !== 'linux')('Linux launcher wrapper', () => {
     expect(Date.now() - started).toBeLessThan(5_000);
   });
 
-  it("forwards termination to the app and exits with the app's status", async () => {
+  // Twenty launches take up to 300 ms each on a loaded machine; each gets its own deadline, so a
+  // wrapper that hangs still fails, and says so.
+  it("forwards termination to the app and exits with the app's status", { timeout: 60_000 }, async () => {
     const { wrapper } = install(`trap 'echo stopped; exit 7' TERM; echo started; while :; do sleep 0.05; done`);
     // The app often exits while the wrapper is still in its signal trap; repeat to cover that race.
     for (let i = 0; i < 20; i++) {
@@ -145,9 +147,12 @@ describe.skipIf(process.platform !== 'linux')('Linux launcher wrapper', () => {
         out += chunk.toString();
         if (out.includes('started')) child.kill('SIGTERM');
       });
-      const status = await new Promise<number | null>((resolve) => child.once('exit', resolve));
+      const status = await new Promise<number | null | 'hung'>((resolve) => {
+        const deadline = setTimeout(() => (child.kill('SIGKILL'), resolve('hung')), 2500);
+        child.once('exit', (code) => (clearTimeout(deadline), resolve(code)));
+      });
+      expect(status, `launch ${i + 1}`).toBe(7);
       expect(out).toContain('stopped');
-      expect(status).toBe(7);
     }
   });
 });

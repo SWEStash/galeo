@@ -50,13 +50,19 @@ describe('topMatches', () => {
     const paths = Array.from({ length: 100_000 }, (_, n) => `${words[n % 10]}/${words[(n * 7) % 10]}-${n}/${words[(n * 3) % 10]}${n}.md`);
     const index = indexPaths(paths);
     const times: number[] = [];
+    // CPU time, not wall time: on a machine busy with other test files, this process may wait for
+    // a core longer than the ranking takes.
+    const cpuMs = () => {
+      const { user, system } = process.cpuUsage();
+      return (user + system) / 1000;
+    };
     for (const query of ['plan', 'rdme', 'a', 'cfgidx', 'zzz']) {
-      const start = performance.now();
+      const start = cpuMs();
       topMatches(query, index, 50);
-      times.push(performance.now() - start);
+      times.push(cpuMs() - start);
     }
     times.sort((a, b) => a - b);
-    // The median of five queries; generous for a loaded test machine (the target is ~50 ms).
+    // The median of five queries (the target is ~50 ms).
     expect(times[2]).toBeLessThan(250);
   });
 });

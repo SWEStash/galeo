@@ -225,9 +225,10 @@ async function renderApp() {
 }
 
 describe('App', () => {
-  // The first import loads the whole UI (React Aria, CodeMirror); on a busy machine that alone
-  // can outlast a test's timeout, and it isn't what any test here checks.
-  beforeAll(() => import('./App'), 30_000);
+  // The first import loads the whole UI (React Aria, CodeMirror), and Settings loads on its own
+  // when first shown; on a busy machine either can outlast a test's wait, and neither is what
+  // any test here checks.
+  beforeAll(() => Promise.all([import('./App'), import('./settings/SettingsView')]), 30_000);
 
   afterEach(() => {
     act(() => roots.splice(0).forEach((root) => root.unmount()));
