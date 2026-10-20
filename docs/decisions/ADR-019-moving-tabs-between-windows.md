@@ -1,7 +1,8 @@
 # ADR-019 — Moving tabs between windows and profiles: the id in the drag, a single-use drag in main
 
 - Status: Accepted (2026-10-19, owner); points 2 and 4 amended in place the same day (owner), see
-  [Amendment](#amendment-2026-10-19)
+  [Amendment](#amendment-2026-10-19); point 1 and the claim in point 3 superseded by
+  [ADR-022](ADR-022-drag-tokens.md) (2026-10-20)
 - Date: 2026-10-19
 - Deciders: project owner
 - Builds on: [ADR-002](ADR-002-window-and-tab-model.md) (tab records; "moving tabs between windows and
