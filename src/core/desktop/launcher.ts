@@ -64,7 +64,7 @@ export function appImageLauncher(
     '[Desktop Entry]',
     'Name=galeo',
     // The .deb's entry takes its Comment from package.json's description (electron-builder).
-    'Comment=A fast, private desktop reader for Markdown, text and log files',
+    'Comment=A fast, private desktop reader for Markdown, text, logs, JSON, CSV and source code',
     `Exec=${exec} -- %F`,
     'Icon=galeo',
     'Type=Application',

@@ -66,7 +66,7 @@ gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo
   `galeo` with no files brings the last window used forward (or opens an empty one).
   The `.deb` also installs `gal`, a shorter name for the same command.
 - **From Files**: double-click, or *Open With → galeo*. galeo can be the default app for
-  `.md`, `.txt` and `.log` files.
+  Markdown, MDX, text, log, JSON, YAML, TOML, CSV and TSV files and source code.
 - **Drag and drop**: drop files from Files onto the document (they open after the tab shown) or
   onto the tab bar (they open where the caret is). Dropping a folder opens quick open on it.
 - **Quick open** (Ctrl+P, or the `+` in the tab bar): type part of a file name to search the open
