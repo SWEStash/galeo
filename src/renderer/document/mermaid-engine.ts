@@ -18,7 +18,8 @@ const MERMAID_CONFIG: MermaidConfig = {
   // Mermaid 12's default, ELK.
   look: 'classic',
   suppressErrorRendering: true,
-  secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'htmlLabels', 'themeCSS'],
+  // The fonts too: Mermaid only checks a document's font for balanced braces, and it lands in the style sheet.
+  secure: ['secure', 'securityLevel', 'startOnLoad', 'maxTextSize', 'suppressErrorRendering', 'maxEdges', 'htmlLabels', 'themeCSS', 'fontFamily', 'altFontFamily'],
 };
 
 /**
@@ -56,22 +57,56 @@ const SVG_CONFIG: PurifyConfig = {
   FORBID_TAGS: ['foreignObject', 'script', 'a'],
 };
 
-const URL_REFERENCE = /url\(\s*(['"]?)(.*?)\1\s*\)/gi;
 
 /** Drops an attribute that points anywhere but a fragment: `href="#m"` and `url(#m)` stay. */
 export function onlyFragments(_node: Element, data: { attrName: string; attrValue: string; keepAttr: boolean }): void {
   const value = data.attrValue.trim();
   if (/href$/i.test(data.attrName) && !value.startsWith('#')) data.keepAttr = false;
-  for (const [, , target] of value.matchAll(URL_REFERENCE)) if (!target!.trim().startsWith('#')) data.keepAttr = false;
+  if (fragmentUrlsOnly(value) !== value) data.keepAttr = false;
+}
+
+/** The CSS functions that load an image. */
+const IMAGE_FUNCTIONS = new Set(['url', 'src', 'image-set', '-webkit-image-set']);
+/** A CSS function's name, escapes included (`u\72l`, `\75 rl`), up to its `(`. */
+const FUNCTION_NAME = /(?:[\w-]|\\[0-9a-fA-F]{1,6}[ \t\n\r\f]?|\\[^\n\r\f0-9a-fA-F])+(?=\()/g;
+const FRAGMENT_URL = /^url\(\s*(['"]?)#[^'")]*\1\s*\)$/i;
+
+/** A CSS name with its escapes decoded, lower case. */
+function cssName(raw: string): string {
+  return raw.replace(/\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?|\\(.)/g, (_all, hex: string | undefined, char: string) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : char)).toLowerCase();
+}
+
+/** Where the `(` at `open` closes, skipping quoted strings; the end when it never does. */
+function closingParen(css: string, open: number): number {
+  let depth = 0;
+  for (let at = open; at < css.length; at++) {
+    const char = css[at];
+    if (char === '"' || char === "'") {
+      const end = css.indexOf(char, at + 1);
+      if (end === -1) return css.length - 1;
+      at = end;
+    } else if (char === '(') depth++;
+    else if (char === ')' && --depth === 0) return at;
+  }
+  return css.length - 1;
 }
 
 /**
- * The diagram's `<style>` with every `url()` that isn't one of its own fragments replaced by
- * `none`. Mermaid already filters what a document's `%%{init}%%` may put there; this keeps the
- * same rule as `onlyFragments` whatever reaches the style sheet.
+ * The diagram's `<style>` with every image it would load replaced by `none`, unless it is a plain
+ * `url()` to one of the diagram's own fragments: the same rule as `onlyFragments`, whatever reaches
+ * the style sheet and however it is written (image sets, `src()`, escaped names).
  */
 export function fragmentUrlsOnly(css: string): string {
-  return css.replace(URL_REFERENCE, (reference, _quote: string, target: string) => (target.trim().startsWith('#') ? reference : 'none'));
+  let kept = '';
+  let at = 0;
+  for (const match of css.matchAll(FUNCTION_NAME)) {
+    if (match.index < at || !IMAGE_FUNCTIONS.has(cssName(match[0]))) continue;
+    const end = closingParen(css, match.index + match[0].length);
+    const call = css.slice(match.index, end + 1);
+    kept += css.slice(at, match.index) + (FRAGMENT_URL.test(call) ? call : 'none');
+    at = end + 1;
+  }
+  return kept + css.slice(at);
 }
 
 function styleUrls(node: Node, data: { tagName: string }): void {
@@ -88,6 +123,9 @@ let drawn = 0;
 export function renderMermaid(source: string, scheme: ColorScheme): Promise<string> {
   const run = queue.then(async () => {
     const engine = await (mermaid ??= import('mermaid').then((module) => module.default));
+    // Mermaid keeps a document's directives until a render ends well: a diagram it refused would
+    // otherwise pass them on to every diagram after it, in any tab.
+    engine.mermaidAPI.reset();
     engine.initialize({ ...MERMAID_CONFIG, ...(scheme === 'dark' ? { theme: 'dark', themeVariables: DARK_PIE } : { theme: 'default' }) });
     return (await engine.render(`galeo-diagram-${++drawn}`, source)).svg;
   });

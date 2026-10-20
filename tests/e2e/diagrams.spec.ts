@@ -248,7 +248,7 @@ test('hostile diagrams draw inert: no script, link, foreign content or outside U
         wrappers.flatMap((wrapper) =>
           [...wrapper.shadowRoot!.querySelectorAll('*')].flatMap((element) => [
             ...(['a', 'foreignObject', 'script'].includes(element.localName) ? [`<${element.localName}>`] : []),
-            ...(element.localName === 'style' && /url\(\s*['"]?(?!#)/i.test(element.textContent ?? '') ? [`<style> ${element.textContent}`] : []),
+            ...(element.localName === 'style' && /url\(\s*['"]?(?!#)|image-set\(|\\|pwned/i.test(element.textContent ?? '') ? [`<style> ${element.textContent}`] : []),
             ...[...element.attributes]
               .filter(
                 (attribute) =>
@@ -261,8 +261,15 @@ test('hostile diagrams draw inert: no script, link, foreign content or outside U
         ),
       );
     expect(findings).toEqual([]);
-    // Over the edge limit: an error box, not a hang.
+    // Over the edge limit: an error box, not a hang. Mermaid refuses the base theme's URL colours,
+    // and that diagram's directives don't reach the diagrams drawn after it; Trusted Types stop the
+    // sequence diagram's javascript: actor links. Every other payload draws, inert.
     await expect(diagrams(window).last()).toHaveAttribute('data-state', 'error');
+    expect(await diagrams(window).evaluateAll((all) => all.filter((each) => (each as HTMLElement).dataset['state'] === 'error').map((each) => each.textContent?.slice(0, 40)))).toEqual([
+      expect.stringContaining('Unsupported color format'),
+      expect.stringContaining("Failed to execute 'setAttribute'"),
+      expect.stringContaining('Edge limit exceeded'),
+    ]);
     expect(window.url()).toBe(url);
     expect(refused).toEqual([]);
   } finally {

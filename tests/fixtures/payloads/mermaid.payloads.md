@@ -40,6 +40,12 @@ graph TD
 ```
 %%%
 ```mermaid
+%%{init: {"fontFamily": "x; background: image-set(\"pwned-set.png\" 1x); fill: u\\72l(pwned-escaped.png)", "altFontFamily": "y; background: image-set(\"pwned-alt.png\" 1x)"}}%%
+graph TD
+  A --> B
+```
+%%%
+```mermaid
 %%{init: {"theme": "base", "themeVariables": {"primaryColor": "url(pwned.png)", "lineColor": "red url(pwned.png)", "fontFamily": "x url(pwned.png)", "background": "url(pwned.png)", "mainBkg": "url(pwned.png)", "nodeBorder": "url(pwned.png)"}}}%%
 graph TD
   A --> B
