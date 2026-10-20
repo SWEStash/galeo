@@ -1,8 +1,10 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
-import { WorkerThreadTaskRunner } from './task-runner';
+import { EventEmitter } from 'node:events';
+import type { Worker } from 'node:worker_threads';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { WORKER_START_MS, WorkerThreadTaskRunner } from './task-runner';
 
 // A worker speaking the task protocol, with tasks that echo, fail, spin forever or crash.
 const WORKER = `
@@ -92,5 +94,76 @@ describe('WorkerThreadTaskRunner', () => {
     ]);
     expect(crashed).toMatchObject({ ok: false, reason: 'error' });
     expect(echoed).toEqual({ ok: true, value: 'survives' });
+  });
+
+  describe('a worker slow to start (a loaded machine)', () => {
+    /** A worker that comes online only when told, and echoes once it is. */
+    class SlowWorker extends EventEmitter {
+      online = false;
+      postMessage(message: { id: number; input: unknown }) {
+        const reply = () => this.emit('message', { id: message.id, ok: true, value: message.input });
+        if (this.online) setTimeout(reply, 10);
+        else this.once('online', () => setTimeout(reply, 10));
+      }
+      start() {
+        this.online = true;
+        this.emit('online');
+      }
+      async terminate() {
+        return 0;
+      }
+    }
+
+    it("doesn't spend a task's budget on the worker starting", async () => {
+      vi.useFakeTimers();
+      try {
+        let worker: SlowWorker | undefined;
+        const tasks = new WorkerThreadTaskRunner('unused', () => (worker = new SlowWorker()) as unknown as Worker);
+        const result = tasks.run('echo', 'late', { timeoutMs: 100 });
+        await vi.advanceTimersByTimeAsync(500);
+        worker!.start();
+        await vi.advanceTimersByTimeAsync(20);
+        expect(await result).toEqual({ ok: true, value: 'late' });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('gives up on a worker that never starts, and starts a fresh one for the next task', async () => {
+      vi.useFakeTimers();
+      try {
+        const workers: SlowWorker[] = [];
+        const tasks = new WorkerThreadTaskRunner('unused', () => (workers.push(new SlowWorker()), workers.at(-1)) as unknown as Worker);
+        const stuck = tasks.run('echo', 'stuck', { timeoutMs: 100 });
+        await vi.advanceTimersByTimeAsync(WORKER_START_MS);
+        expect(await stuck).toEqual({ ok: false, reason: 'error', message: "the task worker didn't start" });
+        const next = tasks.run('echo', 'next', { timeoutMs: 100 });
+        workers[1]!.start();
+        await vi.advanceTimersByTimeAsync(20);
+        expect(await next).toEqual({ ok: true, value: 'next' });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('still times out a task that overruns once the worker is up', async () => {
+      vi.useFakeTimers();
+      try {
+        // Up, but the task never answers.
+        class Spinning extends SlowWorker {
+          override postMessage() {}
+        }
+        let worker: SlowWorker | undefined;
+        const tasks = new WorkerThreadTaskRunner('unused', () => (worker = new Spinning()) as unknown as Worker);
+        const result = tasks.run('spin', null, { timeoutMs: 100 });
+        worker!.start();
+        await vi.advanceTimersByTimeAsync(99);
+        expect(await Promise.race([result, 'running'])).toBe('running');
+        await vi.advanceTimersByTimeAsync(100);
+        expect(await result).toEqual({ ok: false, reason: 'timeout' });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
   });
 });
