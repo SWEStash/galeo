@@ -85,6 +85,10 @@ test('the divider moves with the arrow keys, resets with Home, and a restart kee
       await expect(divider(first.window)).toHaveAttribute('aria-valuenow', '50');
       for (let i = 0; i < 6; i++) await first.window.keyboard.press('ArrowLeft');
       await expect(divider(first.window)).toHaveAttribute('aria-valuenow', '20');
+      // The divider shows a move at once; the page tells main after its next render. Main has it once
+      // a request sent after that render comes back (one page's messages arrive in order).
+      await first.window.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await first.window.evaluate(() => window.galeo.tabs.snapshot());
     } finally {
       await first.close();
     }
