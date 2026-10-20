@@ -63,12 +63,21 @@ async function startDragging(window: Page, file: string) {
 }
 
 /** Ends the window's drag of the tab named `name` as a drop elsewhere does: the pointer left the window, and something may have taken it. */
-async function endDragOutside(window: Page, name: string, dropEffect: 'none' | 'copy') {
+/** The pointer crosses the window's edge over `selector`: a drop target there keeps the event to itself. */
+async function crossEdge(window: Page, type: 'dragleave' | 'dragenter', selector: string) {
+  await window.evaluate(
+    ({ type, selector }) => {
+      const edge = new DragEvent(type, { bubbles: true });
+      Object.defineProperty(edge, 'relatedTarget', { value: null });
+      document.querySelector(selector)!.dispatchEvent(edge);
+    },
+    { type, selector },
+  );
+}
+
+async function endDrag(window: Page, name: string, dropEffect: 'none' | 'copy' | 'move') {
   await window.evaluate(
     ({ name, dropEffect }) => {
-      const leave = new DragEvent('dragleave', { bubbles: true });
-      Object.defineProperty(leave, 'relatedTarget', { value: null });
-      document.body.dispatchEvent(leave);
       const dataTransfer = new DataTransfer();
       dataTransfer.dropEffect = dropEffect;
       const label = [...document.querySelectorAll('.tab-label')].find((each) => each.textContent === name)!;
@@ -76,6 +85,11 @@ async function endDragOutside(window: Page, name: string, dropEffect: 'none' | '
     },
     { name, dropEffect },
   );
+}
+
+async function endDragOutside(window: Page, name: string, dropEffect: 'none' | 'copy', across = '.drop-area') {
+  await crossEdge(window, 'dragleave', across);
+  await endDrag(window, name, dropEffect);
 }
 
 for (const theme of ['light', 'dark'] as const) {
@@ -239,15 +253,19 @@ test("a tab dragged onto another window's empty tab bar moves there", async () =
   }
 });
 
-for (const dropEffect of ['none', 'copy'] as const) {
-  test(`a tab dropped outside every galeo window gets a window of its own, ${dropEffect === 'none' ? 'on the desktop' : 'over an app that took the drop'}; the one it left keeps its other tabs`, async () => {
+const leaves = [
+  { dropEffect: 'none', across: '.drop-area', how: 'on the desktop, leaving across the document' },
+  { dropEffect: 'copy', across: '.tab-grab', how: 'over an app that took the drop, leaving across the tabs' },
+] as const;
+for (const { dropEffect, across, how } of leaves) {
+  test(`a tab dropped outside every galeo window gets a window of its own, ${how}; the one it left keeps its other tabs`, async () => {
     const { app, window, close } = await launchApp(['--', basic, gfm]);
     try {
       await expect(shownDocument(window).locator('h1')).toBeVisible();
       await startDragging(window, basic);
       await expect(window.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
       const opened = app.waitForEvent('window');
-      await endDragOutside(window, 'basic.md', dropEffect);
+      await endDragOutside(window, 'basic.md', dropEffect, across);
       const torn = await opened;
       await window.mouse.up();
       await expect.poll(() => paths(torn)).toEqual([basic]);
@@ -257,6 +275,26 @@ for (const dropEffect of ['none', 'copy'] as const) {
     }
   });
 }
+
+test('a tab dragged out and back in over the document is not torn off when the drag ends in its window', async () => {
+  const { app, window, close } = await launchApp(['--', basic, gfm]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await startDragging(window, basic);
+    await expect(window.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
+    await crossEdge(window, 'dragleave', '.tab-bar');
+    await crossEdge(window, 'dragenter', '.drop-area');
+    await endDrag(window, 'basic.md', 'none');
+    await window.mouse.up();
+    await expect(window.getByTestId('tab-bar')).not.toHaveAttribute('data-tab-drag');
+    // A tear-off would open its window right after the drag settles.
+    await window.waitForTimeout(1000);
+    expect(app.windows()).toHaveLength(1);
+    expect(await paths(window)).toEqual([basic, gfm]);
+  } finally {
+    await close();
+  }
+});
 
 test('a tab dropped on another window still moves there when that window asks for it after the drag ended, and gets no window of its own', async () => {
   const { app, window, home, close } = await launchApp(['--', basic, gfm]);
