@@ -111,4 +111,29 @@ describe('saveDocument', () => {
     })({ '/d/a.md': 'old' });
     expect(await save(fs, 'new', hash(utf8('old')))).toEqual({ kind: 'failed', reason: 'no-permission' });
   });
+
+  describe('the size cap counts the bytes written, not the characters', () => {
+    const capped = (fs: FakeFileSystem, text: string, base: string | null, maxBytes: number) =>
+      saveDocument({ fs, decode, hash, maxBytes }, { path: '/d/a.md', text, base });
+
+    it('refuses UTF-8 text whose bytes exceed the cap though its characters fit, and writes nothing', async () => {
+      const fs = new FakeFileSystem({ '/d/a.md': 'old\n' });
+      // Four characters, eight bytes in UTF-8.
+      expect(await capped(fs, 'éééé', hash(utf8('old\n')), 7)).toEqual({ kind: 'failed', reason: 'too-large' });
+      expect(fs.saves).toEqual([]);
+    });
+
+    it('writes text whose bytes are exactly the cap', async () => {
+      const fs = new FakeFileSystem({ '/d/a.md': 'old\n' });
+      expect(await capped(fs, 'éééé', hash(utf8('old\n')), 8)).toEqual({ kind: 'saved', version: hash(utf8('éééé')) });
+    });
+
+    it('counts a UTF-16 file at two bytes a character, plus its byte order mark', async () => {
+      const utf16 = new Uint8Array([0xff, 0xfe, 0x6f, 0x00, 0x0a, 0x00]);
+      const fs = new FakeFileSystem({ '/d/a.md': utf16 });
+      const base = hash(utf16);
+      expect(await capped(fs, 'abc', base, 7)).toEqual({ kind: 'failed', reason: 'too-large' });
+      expect(await capped(fs, 'abc', base, 8)).toMatchObject({ kind: 'saved' });
+    });
+  });
 });

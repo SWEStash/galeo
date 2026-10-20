@@ -45,7 +45,7 @@ export type SaveResult =
   | { kind: 'saved'; version: string }
   | { kind: 'conflict'; version: string | null }
   | { kind: 'unencodable'; character: string; line: number }
-  | { kind: 'failed'; reason: 'no-permission' | 'not-a-file' | 'unavailable' }
+  | { kind: 'failed'; reason: 'no-permission' | 'not-a-file' | 'unavailable' | 'too-large' }
   | { kind: 'refused'; reason: 'not-editable' | 'no-input' };
 
 /** Why a link wasn't followed; the page shows it in the status bar. */

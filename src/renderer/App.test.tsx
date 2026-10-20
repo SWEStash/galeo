@@ -1221,6 +1221,7 @@ describe('App editing', () => {
       [{ kind: 'conflict', version: null }, 'Not saved: the file is gone'],
       [{ kind: 'unencodable', character: '😀', line: 3 }, "Not saved: UTF-8 can't hold “😀” (line 3)"],
       [{ kind: 'failed', reason: 'no-permission' }, 'Not saved: no permission to write this file'],
+      [{ kind: 'failed', reason: 'too-large' }, 'Not saved: the file would be over 256 MB'],
     ] as const;
     for (const [result, text] of answers) {
       api.documents.save.mockResolvedValueOnce(result);

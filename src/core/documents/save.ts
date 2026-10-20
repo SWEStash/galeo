@@ -9,10 +9,11 @@ import { READ_MAX_BYTES, type Hash } from './read';
  * page loaded (`base`, its content hash): then its bytes are the ones the page's text came from,
  * so they give the encoding, byte order mark and line endings to write back. Otherwise nothing is
  * written and the page is told what is there now. With no `base`, the reader saves a file that was
- * gone: it is written only if it's still gone, in the `shape` of its last read.
+ * gone: it is written only if it's still gone, in the `shape` of its last read. Text that would
+ * write more bytes than a read takes (`maxBytes`) isn't written: the channel's cap counts characters.
  */
 export async function saveDocument(
-  { fs, decode, hash }: { fs: FileSystem; decode: Decode; hash: Hash },
+  { fs, decode, hash, maxBytes = READ_MAX_BYTES }: { fs: FileSystem; decode: Decode; hash: Hash; maxBytes?: number },
   {
     path,
     text,
@@ -34,6 +35,7 @@ export async function saveDocument(
   const target = current ? targetOf(current, decode, encoding) : absentTarget(shape ?? null, encoding);
   const encoded = encodeText(text, target, decode);
   if (encoded.kind === 'unencodable') return encoded;
+  if (encoded.bytes.length > maxBytes) return { kind: 'failed', reason: 'too-large' };
   try {
     await fs.saveFile(path, encoded.bytes);
   } catch (error) {

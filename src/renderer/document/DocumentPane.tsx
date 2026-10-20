@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
-import type { ImageResult, SaveResult, TextEncoding } from '../../shared/documents';
+import { READ_MAX_BYTES, type ImageResult, type SaveResult, type TextEncoding } from '../../shared/documents';
 import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
 import { FORMAT_VIEWS, workerFormat, type ViewMode } from '../../shared/formats';
@@ -26,6 +26,7 @@ import { useDelayed } from './useDelayed';
 import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
+import { formatBytes } from './format-bytes';
 import { pauseOrMax } from './pause-or-max';
 import { settleFocus } from './settle-focus';
 import { useCsvTable } from './useCsvTable';
@@ -130,7 +131,7 @@ function notSaved(result: Exclude<SaveResult, { kind: 'saved' }>, encoding: Text
     case 'unencodable':
       return `Not saved: ${ENCODING_NAMES[encoding]} can't hold “${result.character}” (line ${result.line})`;
     case 'failed':
-      return { 'no-permission': 'Not saved: no permission to write this file', 'not-a-file': "Not saved: this isn't a regular file", unavailable: "Not saved: the file couldn't be written" }[result.reason];
+      return { 'no-permission': 'Not saved: no permission to write this file', 'not-a-file': "Not saved: this isn't a regular file", unavailable: "Not saved: the file couldn't be written", 'too-large': `Not saved: the file would be over ${formatBytes(READ_MAX_BYTES)}` }[result.reason];
     case 'refused':
       return result.reason === 'not-editable' ? "Not saved: this tab isn't in edit mode" : 'Not saved: press Ctrl+S to save';
   }
