@@ -147,7 +147,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
     },
     drops: {
       open: vi.fn().mockResolvedValue({ folder: false }),
-      onReceived: vi.fn(() => () => {}),
+      onReceived: vi.fn((_listener: (drop: { token: string; count: number }) => void) => () => {}),
     },
     quickOpen: {
       start: vi.fn().mockResolvedValue({ token: 'qo-1', scope: null }),
@@ -481,6 +481,15 @@ describe('App', () => {
       expect(document.querySelector('[data-testid="move-tab"]')).toBeNull();
     });
 
+    it('says the tab stayed when the move failed in main', async () => {
+      const api = twoTabs();
+      api.tabs.moveTo.mockRejectedValue(new Error("Error invoking remote method 'tabs.moveTo': Error: boom"));
+      const container = await renderApp();
+      await documentShadow(container);
+      await runFromPalette('Move tab to new window');
+      await vi.waitFor(() => expect(message(container)).toBe("The tab didn't move"));
+    });
+
     it('says the tab stayed when main refused the move', async () => {
       const api = twoTabs();
       api.tabs.moveTo.mockResolvedValue(false);
@@ -655,6 +664,45 @@ describe('App', () => {
         'Links open at most once a second',
       ),
     );
+  });
+
+  describe('a request main fails', () => {
+    const fromMain = (channel: string, reason: string) => new Error(`Error invoking remote method '${channel}': Error: ${reason}`);
+    const statusOf = (container: HTMLElement) => container.querySelector('[data-testid="status-message"]')?.textContent ?? '';
+
+    async function clickLink(failure: Error) {
+      const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[x](next.md)') });
+      api.documents.followLink.mockRejectedValue(failure);
+      workerMode = 'links';
+      const container = await renderApp();
+      const shadow = await documentShadow(container);
+      const link = await vi.waitFor(() => shadow.querySelector<HTMLAnchorElement>('a[href="next.md"]')!);
+      await act(async () => link.click());
+      await vi.waitFor(() => expect(api.documents.followLink).toHaveBeenCalled());
+      await act(async () => {});
+      return container;
+    }
+
+    it('says so in the status bar', async () => {
+      const container = await clickLink(fromMain('documents.followLink', 'boom'));
+      await vi.waitFor(() => expect(statusOf(container)).toBe("The link couldn't be followed"));
+    });
+
+    it('stays quiet when the tab closed before main answered', async () => {
+      const container = await clickLink(fromMain('documents.followLink', 'unknown document'));
+      expect(statusOf(container)).toBe('');
+    });
+
+    it('says so when dropped files fail to open', async () => {
+      const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'a') });
+      let received: (drop: { token: string; count: number }) => void = () => {};
+      api.drops.onReceived.mockImplementation((listener: typeof received) => ((received = listener), () => {}));
+      api.drops.open.mockRejectedValue(fromMain('drops.open', 'not dropped here'));
+      const container = await renderApp();
+      await documentShadow(container);
+      await act(async () => received({ token: 'drop-1', count: 1 }));
+      await vi.waitFor(() => expect(statusOf(container)).toBe("The dropped files couldn't be opened"));
+    });
   });
 
   it('goes back and forward with Alt+Left and Alt+Right', async () => {
@@ -1388,6 +1436,15 @@ describe('App editing', () => {
     expect(api.documents.keep).not.toHaveBeenCalled();
     act(() => editors.get('doc-1')!.keepNow());
     expect(api.documents.keep).toHaveBeenCalledWith('doc-1', '# hi!', 'v1');
+  });
+
+  it("says so when main couldn't keep the unsaved text", async () => {
+    const { api, type, message } = await editing();
+    const { editors } = await import('./edit/editors');
+    api.documents.keep.mockRejectedValue(new Error("Error invoking remote method 'documents.keep': Error: boom"));
+    type('!');
+    act(() => editors.get('doc-1')!.keepNow());
+    await vi.waitFor(() => expect(message()).toBe("Couldn't keep the unsaved text for recovery: save it to be safe"));
   });
 
   it('arrives editable, with nothing unsaved, when main says the tab is in edit mode (moved in, ADR-019)', async () => {

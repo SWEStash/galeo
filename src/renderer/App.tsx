@@ -27,7 +27,7 @@ import { tabAction } from './tabs/commands';
 import type { TabStore } from './tabs/store';
 import { EmptyWindow } from './tabs/EmptyWindow';
 import { MoveTabDialog } from './tabs/MoveTabDialog';
-import { ignoreClosedTab } from './tabs/closed-tab';
+import { unlessClosed } from './tabs/closed-tab';
 import { editors } from './edit/editors';
 import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
@@ -157,7 +157,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     },
     [closeOverlay, runEntry],
   );
-  const { landed } = useFileDrops(openQuickOpen);
+  const { landed } = useFileDrops(openQuickOpen, setMessage);
 
   useEffect(() => {
     if (!message) return;
@@ -222,7 +222,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
           </DropArea>
         </main>
         {settings?.settings.statusBar !== false && (
-          <StatusBar view={view} store={store}>
+          <StatusBar view={view} store={store} say={setMessage}>
             <span className="status-message" data-testid="status-message" role="status">
               {message ?? ''}
             </span>
@@ -231,7 +231,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
         )}
       </Tabs>
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
-      {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} />}
+      {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} say={setMessage} />}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}
       {overlay === 'about' && <AboutDialog version={version} onClose={closeOverlay} />}
       {overlay === 'moveTab' && <MoveTabDialog onChoose={moveToChosenWindow} onClose={closeOverlay} />}
@@ -284,7 +284,7 @@ function moveShownTab(id: string, target: number | 'new', say: (message: string)
   editors.get(id)?.keepNow();
   void window.galeo.tabs.moveTo(id, target).then((moved) => {
     if (!moved) say("The tab didn't move");
-  }, ignoreClosedTab);
+  }, unlessClosed(say, "The tab didn't move"));
 }
 
 /** The tab shortcuts, per-tab zoom and reader width (UX §5), wherever the focus is. */

@@ -35,7 +35,7 @@ describe('QuickOpen', () => {
     const container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
-    await act(async () => root!.render(<QuickOpen platform="linux" onClose={() => {}} />));
+    await act(async () => root!.render(<QuickOpen platform="linux" onClose={() => {}} say={() => {}} />));
     await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('README.md'));
     expect(document.activeElement?.getAttribute('role')).toBe('combobox');
     expect(document.querySelector('[role="group"]')?.getAttribute('aria-labelledby')).toBeTruthy();
@@ -54,7 +54,7 @@ describe('QuickOpen', () => {
     await act(async () =>
       root!.render(
         <StrictMode>
-          <QuickOpen platform="linux" onClose={() => {}} />
+          <QuickOpen platform="linux" onClose={() => {}} say={() => {}} />
         </StrictMode>,
       ),
     );
@@ -80,7 +80,7 @@ describe('QuickOpen', () => {
     const container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
-    await act(async () => root!.render(<QuickOpen platform="linux" onClose={onClose} />));
+    await act(async () => root!.render(<QuickOpen platform="linux" onClose={onClose} say={() => {}} />));
     await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('README.md'));
     const input = document.querySelector('input')!;
     await act(async () => {
@@ -97,5 +97,17 @@ describe('QuickOpen', () => {
     await vi.waitFor(() => expect(api.open).toHaveBeenCalledWith('t1', 'pick-notes', false));
     expect(onClose).toHaveBeenCalled();
   });
-});
 
+  it('says so when main refuses to open the chosen file', async () => {
+    const api = stub();
+    api.open.mockRejectedValue(new Error("Error invoking remote method 'quickOpen.open': Error: not offered"));
+    const say = vi.fn();
+    const container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<QuickOpen platform="linux" onClose={() => {}} say={say} />));
+    await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('README.md'));
+    await act(async () => document.querySelector('input')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+    await vi.waitFor(() => expect(say).toHaveBeenCalledWith("Couldn't open README.md"));
+  });
+});

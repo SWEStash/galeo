@@ -9,7 +9,7 @@ import type { TabRegistry } from '../../core/tabs/registry';
 import type { FileSystem } from '../../core/ports';
 import type { Decode, WhatwgEncoding } from '../../core/text/decode';
 import type { Hash } from '../../core/documents/read';
-import type { DocumentContent } from '../../shared/documents';
+import { UNKNOWN_DOCUMENT, type DocumentContent } from '../../shared/documents';
 import { workerFormat } from '../../shared/formats';
 import type { Handlers } from '../ipc/register';
 
@@ -75,7 +75,7 @@ export function documentHandlers(deps: {
   return {
     'documents.read': ([id], event) => {
       const record = records.get(id, event.sender.id);
-      if (!record) throw new Error('unknown document');
+      if (!record) throw new Error(UNKNOWN_DOCUMENT);
       if (record.kind === 'settings') throw new Error('not a document');
       const encoding = records.encoding(id, event.sender.id);
       const key = `${id}\0${record.path}\0${encoding ?? ''}`;
@@ -87,7 +87,7 @@ export function documentHandlers(deps: {
       return pending;
     },
     'documents.setEncoding': ([id, encoding], event) => {
-      if (!records.setEncoding(id, event.sender.id, encoding)) throw new Error('unknown document');
+      if (!records.setEncoding(id, event.sender.id, encoding)) throw new Error(UNKNOWN_DOCUMENT);
     },
     'documents.followLink': ([id, href, target], event) => links.follow(id, event.sender.id, href, target),
     'documents.back': ([id], event) => links.back(id, event.sender.id),
@@ -96,7 +96,7 @@ export function documentHandlers(deps: {
     'documents.save': async ([id, text, base], event) => {
       const window = event.sender.id;
       const record = records.get(id, window);
-      if (!record || record.kind === 'settings') throw new Error('unknown document');
+      if (!record || record.kind === 'settings') throw new Error(UNKNOWN_DOCUMENT);
       if (!grants.allows(id, window, record.path)) return { kind: 'refused', reason: 'not-editable' };
       if (!input.spend(window)) return { kind: 'refused', reason: 'no-input' };
       const result = await saveDocument(

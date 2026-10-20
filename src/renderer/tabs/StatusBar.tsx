@@ -6,7 +6,7 @@ import { TableOptionsMenu } from '../document/TableOptionsMenu';
 import { ENCODING_NAMES } from '../document/encodings';
 import { RENDERED_VIEW_NAMES } from '../document/formats';
 import { widthLabel } from '../document/width';
-import { ignoreClosedTab } from './closed-tab';
+import { unlessClosed } from './closed-tab';
 import { metricsLabel } from './metrics';
 import type { TabStatus, TabStore, TabsView } from './store';
 
@@ -24,7 +24,7 @@ function viewName(status: TabStatus): string {
  * encoding (a menu to reopen it with another), the document's metrics, zoom and reader width; then the window's
  * messages.
  */
-export function StatusBar({ view, store, children }: { view: TabsView; store: TabStore; children: ReactNode }) {
+export function StatusBar({ view, store, say, children }: { view: TabsView; store: TabStore; say: (message: string) => void; children: ReactNode }) {
   const tab = view.tabs.find((each) => each.id === view.active);
   const status = tab && view.statuses.get(tab.id);
   const zoom = tab ? (view.zooms.get(tab.id) ?? 1) : 1;
@@ -32,7 +32,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
   const metrics = status ? metricsLabel(status.lines, status.words) : null;
   const dispatcher = useDispatcher();
   const chooseEncoding = (encoding: ChosenEncoding | null) => {
-    if (tab) void window.galeo.documents.setEncoding(tab.id, encoding).then(() => store.reread(tab.id), ignoreClosedTab);
+    if (tab) void window.galeo.documents.setEncoding(tab.id, encoding).then(() => store.reread(tab.id), unlessClosed(say, "The encoding didn't change"));
   };
   return (
     <footer className="status-bar" data-testid="status-bar">
@@ -42,7 +42,7 @@ export function StatusBar({ view, store, children }: { view: TabsView; store: Ta
           className="status-path"
           data-testid="status-path"
           title={`${tab.path} — copy or reveal`}
-          onClick={() => void window.galeo.documents.pathMenu(tab.id).catch(ignoreClosedTab)}
+          onClick={() => void window.galeo.documents.pathMenu(tab.id).catch(unlessClosed(say, "The file's menu couldn't open"))}
         >
           {tab.path}
         </button>

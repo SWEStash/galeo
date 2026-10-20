@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { DocumentContent } from '../../shared/contracts';
-import { ignoreClosedTab } from '../tabs/closed-tab';
+import { unlessClosed } from '../tabs/closed-tab';
 
 export interface OpenDocument {
   content: DocumentContent;
@@ -14,7 +14,11 @@ export interface OpenDocument {
  * One tab's document, read from main. `navigated` reads it again after main navigated the tab;
  * a new `staleReads` count (the file changed) reads it again in place.
  */
-export function useDocument(id: string, staleReads = 0): { document: OpenDocument | null; navigated: () => void } {
+export function useDocument(
+  id: string,
+  staleReads: number,
+  say: (message: string) => void,
+): { document: OpenDocument | null; navigated: () => void } {
   const [document, setDocument] = useState<OpenDocument | null>(null);
   const [navigation, setNavigation] = useState(0);
 
@@ -25,11 +29,11 @@ export function useDocument(id: string, staleReads = 0): { document: OpenDocumen
       .then((content) => {
         if (current) setDocument({ content, navigation, generation: navigation + staleReads });
       })
-      .catch(ignoreClosedTab);
+      .catch(unlessClosed(say, "galeo couldn't read this file"));
     return () => {
       current = false;
     };
-  }, [id, navigation, staleReads]);
+  }, [id, navigation, staleReads, say]);
 
   const navigated = useCallback(() => setNavigation((n) => n + 1), []);
   return { document, navigated };

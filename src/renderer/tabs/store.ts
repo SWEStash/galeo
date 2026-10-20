@@ -5,7 +5,7 @@ import type { FormatId, ViewMode } from '../../shared/formats';
 import { widthStep } from '../document/width';
 import { zoomStep } from '../document/zoom';
 import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabViewState } from '../../shared/tabs';
-import { ignoreClosedTab } from './closed-tab';
+import { ignoreFailure } from './closed-tab';
 
 /** What the tab bar and status bar show about a tab, as its document reports it. */
 export interface TabStatus {
@@ -102,7 +102,7 @@ export interface TabStore {
   /** The tab now shows a new version of its file. */
   reloaded(id: string): void;
   /** Renders a tab that crashed the window, in the source view if the reader picked it. */
-  renderAgain(id: string, view?: 'source'): void;
+  renderAgain(id: string, view?: 'source'): Promise<void>;
   /** The reader started dragging the tab: another window may take it (ADR-019). */
   dragStarted(id: string): void;
   /** The drag ended; `outside`: with the pointer out of the window, where the tab gets a window of its own unless another galeo window takes it. */
@@ -272,7 +272,7 @@ export function createTabStore(api: TabsApi): TabStore {
     },
     renderAgain(id, view) {
       if (view) store.setViewState(id, { ...store.viewStateOf(id), view });
-      void api.renderAgain(id).catch(ignoreClosedTab);
+      return api.renderAgain(id);
     },
     reread,
     setStatus(id, status) {
@@ -310,10 +310,10 @@ export function createTabStore(api: TabsApi): TabStore {
       if (!view.reloaded.has(id)) set({ reloaded: new Set(view.reloaded).add(id) });
     },
     dragStarted(id) {
-      void api.dragStart(id).catch(ignoreClosedTab);
+      void api.dragStart(id).catch(ignoreFailure);
     },
     dragEnded(id, outside) {
-      void api.dragEnd(id, outside).catch(ignoreClosedTab);
+      void api.dragEnd(id, outside).catch(ignoreFailure);
     },
     adopt(id, position) {
       wanted = id;

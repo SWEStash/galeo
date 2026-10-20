@@ -10,7 +10,7 @@ import { useDocument } from '../document/useDocument';
 import { editors, type Editor } from '../edit/editors';
 import { useConfirmUnsaved } from '../edit/UnsavedPrompt';
 import type { RenderClient } from '../worker/client';
-import { ignoreClosedTab } from './closed-tab';
+import { unlessClosed } from './closed-tab';
 import type { TabStatus, TabStore } from './store';
 
 const REFUSALS: Record<RefusalReason, string> = {
@@ -48,21 +48,22 @@ export interface TabDocumentProps {
 /** One tab's content. A hibernated tab has none; it's read and rendered again when shown. */
 export function TabDocument(props: TabDocumentProps) {
   if (!props.rendered) return null;
-  if (props.crashed) return <CrashedTab id={props.id} path={props.path} store={props.store} />;
+  if (props.crashed) return <CrashedTab id={props.id} path={props.path} store={props.store} onMessage={props.onMessage} />;
   return <LiveTab {...props} />;
 }
 
 /** A tab that was rendering when the window's renderer crashed (UX §4 "Crashed"). */
-function CrashedTab({ id, path, store }: { id: string; path: string; store: TabStore }) {
+function CrashedTab({ id, path, store, onMessage }: { id: string; path: string; store: TabStore; onMessage: (message: string) => void }) {
+  const renderAgain = (view?: 'source') => void store.renderAgain(id, view).catch(unlessClosed(onMessage, "The document couldn't be drawn again"));
   return (
     <section className="document-state" data-testid="document-state" data-state="crashed" role="status">
       <p className="document-state-title">This document crashed the viewer and won't be rendered automatically</p>
       <p className="document-state-path">{path}</p>
       <div className="document-state-actions">
-        <button type="button" onClick={() => store.renderAgain(id)}>
+        <button type="button" onClick={() => renderAgain()}>
           Try again
         </button>
-        <button type="button" onClick={() => store.renderAgain(id, 'source')}>
+        <button type="button" onClick={() => renderAgain('source')}>
           Open as source
         </button>
       </div>
@@ -82,7 +83,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
   useEffect(() => {
     if (active) setAppliedReads(staleReads);
   }, [active, staleReads]);
-  const { document, navigated } = useDocument(id, appliedReads);
+  const { document, navigated } = useDocument(id, appliedReads, onMessage);
   const [arrival, setArrival] = useState<Arrival | null>(null);
   // An anchor within the current read (a link or a history step inside the document).
   const [pendingAnchor, setPendingAnchor] = useState<{ anchor: string; token: number; navigation: number } | null>(
@@ -117,9 +118,11 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
 
   const followLink = useCallback(
     (href: string, { background }: { background: boolean }) => {
-      void window.galeo.documents.followLink(id, href, background ? 'background' : 'current').then(moved, ignoreClosedTab);
+      void window.galeo.documents
+        .followLink(id, href, background ? 'background' : 'current')
+        .then(moved, unlessClosed(onMessage, "The link couldn't be followed"));
     },
-    [id, moved],
+    [id, moved, onMessage],
   );
 
   const resolveImage = useCallback(
@@ -129,9 +132,9 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
 
   const history = useCallback(
     (direction: 'back' | 'forward') => {
-      void window.galeo.documents[direction](id).then(moved, ignoreClosedTab);
+      void window.galeo.documents[direction](id).then(moved, unlessClosed(onMessage, `Couldn't go ${direction}`));
     },
-    [id, moved],
+    [id, moved, onMessage],
   );
 
   // Main's Ctrl+E for this tab (ADR-013): each one is a new request for the pane.
@@ -149,10 +152,18 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
       window.galeo.documents.save(id, text, base).catch((): SaveResult => ({ kind: 'failed', reason: 'unavailable' })),
     [id],
   );
-  const dirty = useCallback((isDirty: boolean) => void window.galeo.documents.dirty(id, isDirty).catch(ignoreClosedTab), [id]);
-  const leaveEdit = useCallback(() => void window.galeo.documents.leaveEdit(id).catch(ignoreClosedTab), [id]);
+  const dirty = useCallback(
+    (isDirty: boolean) =>
+      void window.galeo.documents.dirty(id, isDirty).catch(unlessClosed(onMessage, "Couldn't track the unsaved changes: save them to be safe")),
+    [id, onMessage],
+  );
+  const leaveEdit = useCallback(() => void window.galeo.documents.leaveEdit(id).catch(unlessClosed(onMessage, "Couldn't leave edit mode")), [id, onMessage]);
   const onEditor = useCallback((editor: Editor | null) => (editor ? editors.set(id, editor) : editors.delete(id)), [id]);
-  const keep = useCallback((text: string, base: string | null) => void window.galeo.documents.keep(id, text, base).catch(ignoreClosedTab), [id]);
+  const keep = useCallback(
+    (text: string, base: string | null) =>
+      void window.galeo.documents.keep(id, text, base).catch(unlessClosed(onMessage, "Couldn't keep the unsaved text for recovery: save it to be safe")),
+    [id, onMessage],
+  );
   // What main holds for the tab, for its first document only: unsaved text from before a renderer
   // crash, or edit mode and unsaved text it had in the window it moved from (ADR-019).
   const [recovered, setRecovered] = useState<{ text: string; base: string | null } | null>(null);
@@ -166,11 +177,11 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
         // In edit mode with nothing unsaved: as if main had just granted it.
         else if (edit) setEditRequest((last) => ({ edit: 'granted', token: (last?.token ?? 0) + 1 }));
       })
-      .catch(ignoreClosedTab);
+      .catch(unlessClosed(onMessage, "Couldn't restore this tab's unsaved text"));
     return () => {
       current = false;
     };
-  }, [id]);
+  }, [id, onMessage]);
   const confirm = useConfirmUnsaved();
   const confirmLeave = useCallback(() => confirm(id, path.split('/').pop() ?? 'this file'), [confirm, id, path]);
 
@@ -179,13 +190,13 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
   const onRendering = useCallback(() => void window.galeo.tabs.rendering(id), [id]);
   const onStatus = useCallback((status: TabStatus) => store.setStatus(id, status), [id, store]);
   const onViewState = useCallback((state: TabViewState) => store.setViewState(id, state), [id, store]);
-  const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id).catch(ignoreClosedTab), [id]);
+  const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id).catch(unlessClosed(onMessage, "The menu couldn't open")), [id, onMessage]);
   const close = useCallback(() => store.close(id), [id, store]);
   const reread = useCallback(() => store.reread(id), [id, store]);
   const chooseEncoding = useCallback(
     (encoding: ChosenEncoding | null) =>
-      void window.galeo.documents.setEncoding(id, encoding).then(() => store.reread(id), ignoreClosedTab),
-    [id, store],
+      void window.galeo.documents.setEncoding(id, encoding).then(() => store.reread(id), unlessClosed(onMessage, "The encoding didn't change")),
+    [id, store, onMessage],
   );
 
   if (!document) return null;

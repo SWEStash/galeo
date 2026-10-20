@@ -41,6 +41,9 @@ export type DocumentContent =
  * it's gone), and nothing was written. `refused`: the tab isn't in edit mode, or no input of the
  * reader's asked for it.
  */
+/** Main's refusal of a request about a tab it no longer has (closed, or moved to another window). */
+export const UNKNOWN_DOCUMENT = 'unknown document';
+
 export type SaveResult =
   | { kind: 'saved'; version: string }
   | { kind: 'conflict'; version: string | null }

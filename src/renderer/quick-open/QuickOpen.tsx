@@ -16,14 +16,13 @@ import {
 } from 'react-aria-components';
 import type { Platform } from '../../shared/keymap';
 import type { QuickOpenEntry, QuickOpenResults } from '../../shared/quick-open';
-import { ignoreClosedTab } from '../tabs/closed-tab';
 
 /**
  * Quick open (UX F8): a field over main's results, open tabs and recent files first, then the
  * repository of the shown file as its search streams in. Enter opens (the tab if it's open),
  * Ctrl+Enter opens in a new window, Esc closes. The page opens only by the ids main gave it.
  */
-export function QuickOpen({ platform, onClose }: { platform: Platform; onClose: () => void }) {
+export function QuickOpen({ platform, onClose, say }: { platform: Platform; onClose: () => void; say: (message: string) => void }) {
   const [start, setStart] = useState<{ token: string; scope: string | null } | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<QuickOpenResults | null>(null);
@@ -72,7 +71,7 @@ export function QuickOpen({ platform, onClose }: { platform: Platform; onClose: 
     const entry = entries.get(String(key));
     if (!entry || !start) return;
     if (entry.folder) return setQuery(entry.path!);
-    void window.galeo.quickOpen.open(start.token, entry.id, newWindow.current).catch(ignoreClosedTab);
+    void window.galeo.quickOpen.open(start.token, entry.id, newWindow.current).catch(() => say(`Couldn't open ${entry.name}`));
     onClose();
   };
   // A stable list: the collection rebuilds whenever its items change identity.
