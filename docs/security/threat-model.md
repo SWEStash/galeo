@@ -378,6 +378,9 @@ e2e test.
   the user can't write is not replaced.
 - A save that would write more bytes than a read takes (256 MB, counted after encoding, since
   the channel's cap counts characters) is refused and writes nothing.
+- A crash between creating the temp file and the rename leaves the temp file behind. The next
+  write of the same file removes such leftovers older than an hour: only its own name pattern
+  (`.<name>.<uuid>.tmp`), only regular files the user owns, never a symlink.
 - Before writing, main compares the hash of the file's current bytes with the version the user
   loaded. On mismatch it refuses the save (UX F12) and never overwrites silently: the page asks
   the user first (*Keep mine* / *Load theirs*).
@@ -385,8 +388,8 @@ e2e test.
   only if it is still gone; one that came back in the meantime is a mismatch. As with any save,
   a write by another program between main's check and its write isn't detected.
 *AC*: e2e tests for concurrent external writes, a deleted file, symlinks and permissions (`edit.spec`); the
-write path's atomic, in-place and refusal cases in the file system adapter's tests; the size
-cap in the save's unit tests. A crash in
+write path's atomic, in-place and refusal cases, and the leftover sweep, in the file system
+adapter's tests; the size cap in the save's unit tests. A crash in
 the middle of a save has no automated test: the atomic path writes the whole temp file before
 the rename that replaces the old one.
 

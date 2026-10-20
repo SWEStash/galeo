@@ -372,3 +372,52 @@ describe('NodeFileSystem.saveFile', () => {
     expect(await codeOf(fs.saveFile(dir, bytes('x')))).toBe('EISDIR');
   });
 });
+
+describe('NodeFileSystem: temp files a crashed save left behind', () => {
+  const uuid = '3f2a9c1e-7b4d-4e8a-9c21-5d6e7f8a9b0c';
+  const hoursAgo = (hours: number) => new Date(Date.now() - hours * 3_600_000);
+  const aged = (dir: string, name: string, hours: number) => {
+    const at = file(dir, name, 'half a save');
+    utimesSync(at, hoursAgo(hours), hoursAgo(hours));
+    return name;
+  };
+
+  it.runIf(posix)('a save removes its own file’s temp files older than an hour, and keeps younger ones', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'a.md', 'old');
+    aged(dir, `.a.md.${uuid}.tmp`, 2);
+    const young = aged(dir, `.a.md.${uuid.replace('3f', '4f')}.tmp`, 0.5);
+
+    await fs.saveFile(target, new TextEncoder().encode('new'));
+
+    expect(readdirSync(dir).sort()).toEqual([young, 'a.md'].sort());
+  });
+
+  it.runIf(posix)('keeps old files that only look like ours: another file’s, no id, no leading dot, a link', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'a.md', 'old');
+    const kept = [
+      aged(dir, `.b.md.${uuid}.tmp`, 2),
+      aged(dir, '.a.md.tmp', 2),
+      aged(dir, '.a.md.not-an-id.tmp', 2),
+      aged(dir, `a.md.${uuid}.tmp`, 2),
+      aged(dir, `.a.md.${uuid}.tmp.bak`, 2),
+    ];
+    const link = `.a.md.${uuid.replace('3f', '5f')}.tmp`;
+    symlinkSync(file(dir, 'elsewhere', 'keep me'), path.join(dir, link));
+    execFileSync('touch', ['-h', '-d', '2 hours ago', path.join(dir, link)]);
+
+    await fs.saveFile(target, new TextEncoder().encode('new'));
+
+    expect(readdirSync(dir).sort()).toEqual([...kept, link, 'a.md', 'elsewhere'].sort());
+  });
+
+  it.runIf(posix)('a settings write sweeps its own old temp files too', async () => {
+    const dir = tempDir();
+    aged(dir, `.settings.json.${uuid}.tmp`, 2);
+
+    await fs.writeFileAtomic(path.join(dir, 'settings.json'), new TextEncoder().encode('{}'), { mode: 0o600 });
+
+    expect(readdirSync(dir)).toEqual(['settings.json']);
+  });
+});

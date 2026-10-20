@@ -326,8 +326,8 @@ Otherwise it encodes the text the way those bytes were (encoding, byte order mar
 and saves through the file system port: on the symlink's target, through a temp file that keeps
 mode, owner and group, then a rename; in place for a hard-linked file or one whose owner or group
 the temp file can't take; refused for a file the user can't write, or when the encoded text is
-over 256 MB. The new identity is remembered
-before the watcher reports the write, so the page reads the file again itself after each save. A null `version` writes back a file that was deleted, only
+over 256 MB. The same write removes that file's temp files left by a crash more than an hour
+ago. The new identity is remembered before the watcher reports the write, so the page reads the file again itself after each save. A null `version` writes back a file that was deleted, only
 while it is still gone, in the shape of the tab's last read (`ReadIdentities` keeps the encoding,
 byte order mark and line endings, never the text).
 
