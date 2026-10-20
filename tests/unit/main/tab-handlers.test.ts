@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ReadIdentities } from '../../../src/core/documents/identities';
 import { InputCredits } from '../../../src/core/documents/input-credits';
 import { CrashRecovery } from '../../../src/core/tabs/crashes';
-import { SETTLE_MS, TabDrags } from '../../../src/core/tabs/drags';
+import { DRAG_MS, SETTLE_MS, TabDrags } from '../../../src/core/tabs/drags';
 import { WarmTabs } from '../../../src/core/tabs/lifecycle';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
@@ -31,6 +31,7 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
   const tornOff: [string, number][] = [];
   const focused: number[] = [];
   const dragging: boolean[] = [];
+  const told: number[] = [];
   const timers: { at: number; run: () => void }[] = [];
   const handlers = tabHandlers({
     crashes,
@@ -54,6 +55,7 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
     windows: async (window) => [1, 2].filter((each) => each !== window).map((each) => ({ window: each, profile: 'p', accent: null, shows: null })),
     focus: (window) => focused.push(window),
     dragging: (on) => dragging.push(on),
+    tellDragging: (window) => told.push(window),
     after: (ms, run) => void timers.push({ at: now + ms, run }),
   });
   const a = tabs.open('/d/a.md', 1).id;
@@ -65,7 +67,7 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
       timer.run();
     }
   };
-  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, crashes, positioned: () => positioned, input, moved, tornOff, focused, dragging, later };
+  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, crashes, positioned: () => positioned, input, moved, tornOff, focused, dragging, told, later, setNow: (at: number) => void (now = at) };
 }
 
 describe('tabHandlers', () => {
@@ -203,6 +205,29 @@ describe('tabHandlers', () => {
   });
 
   describe('moving tabs between windows (ADR-019)', () => {
+    it('tells a window that opens during a drag that the drag is going on, when it first asks for its tabs', () => {
+      const { handlers, input, told, a } = setup();
+      handlers['tabs.snapshot']([], from(3));
+      expect(told).toEqual([]);
+      input.received(1);
+      handlers['tabs.dragStart']([a], from(1));
+      handlers['tabs.snapshot']([], from(3));
+      expect(told).toEqual([3]);
+    });
+
+    it('tells it nothing once the drag has ended or run out', () => {
+      const { handlers, input, told, setNow, a } = setup();
+      input.received(1);
+      handlers['tabs.dragStart']([a], from(1));
+      handlers['tabs.adopt']([a, 0], from(2));
+      handlers['tabs.snapshot']([], from(3));
+      input.received(2);
+      handlers['tabs.dragStart']([a], from(2));
+      setNow(DRAG_MS);
+      handlers['tabs.snapshot']([], from(3));
+      expect(told).toEqual([]);
+    });
+
     it('lets another window take a dragged tab once, where it was dropped, and says the drag is over', () => {
       const { handlers, input, moved, dragging, a } = setup();
       input.received(1);

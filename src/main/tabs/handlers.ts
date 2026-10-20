@@ -58,6 +58,8 @@ export interface TabHandlerDeps {
   focus: (window: number) => void;
   /** Tells every window a tab drag started or ended. */
   dragging: (on: boolean) => void;
+  /** Tells one window a tab drag is going on: it opened after the drag started. */
+  tellDragging: (window: number) => void;
   /** Runs `run` once `ms` have passed. */
   after: (ms: number, run: () => void) => void;
 }
@@ -79,7 +81,11 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     if (ids.length > 0) demote(window, ids);
   };
   return {
-    'tabs.snapshot': (_args, event) => tabs.snapshot(event.sender.id),
+    // A page asks for its tabs first thing, listening already: one that opened during a drag hears of it too.
+    'tabs.snapshot': (_args, event) => {
+      if (drags.dragging(now())) deps.tellDragging(event.sender.id);
+      return tabs.snapshot(event.sender.id);
+    },
     'tabs.activated': async ([id], event) => {
       const window = event.sender.id;
       if (!tabs.activate(id, window)) return resync(window);

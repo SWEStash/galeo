@@ -253,6 +253,31 @@ test("a tab dragged onto another window's empty tab bar moves there", async () =
   }
 });
 
+test('a window opened while a tab is being dragged takes the drop on its empty tab bar too', async () => {
+  const { app, window, close } = await launchApp(['--', basic, gfm]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    const id = await idOf(window, basic);
+    await startDragging(window, basic);
+    await expect(window.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
+
+    const opened = app.waitForEvent('window');
+    await pressInMain(app, window, 'N');
+    const late = await opened;
+    await expect(late.getByTestId('empty-window')).toBeVisible();
+    await expect(late.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
+    const strip = (await late.locator('.tab-strip').boundingBox())!;
+    await dropTab(late, id, { x: strip.x + strip.width / 2, y: strip.y + strip.height / 2 });
+    await window.mouse.up();
+
+    await expect.poll(() => paths(late)).toEqual([basic]);
+    await expect.poll(() => paths(window)).toEqual([gfm]);
+    await expect(late.getByTestId('tab-bar')).not.toHaveAttribute('data-tab-drag');
+  } finally {
+    await close();
+  }
+});
+
 const leaves = [
   { dropEffect: 'none', across: '.drop-area', how: 'on the desktop, leaving across the document' },
   { dropEffect: 'copy', across: '.tab-grab', how: 'over an app that took the drop, leaving across the tabs' },

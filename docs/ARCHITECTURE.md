@@ -373,7 +373,8 @@ sequenceDiagram
 
 The drag carries only the tab id, in galeo's own type. Main keeps one pending drag (`TabDrags`):
 a window takes a tab only by claiming it, so a page can't pull tabs out of other windows, and a
-drop and a tear-off can't both happen. When the drag ends, A tells main
+drop and a tear-off can't both happen. A window opened during the drag hears of it when it first
+asks for its tabs. When the drag ends, A tells main
 `tabs.dragEnd(id, outside)`, and the drag stays claimable for half a second: B's adopt may reach
 main after it. A drag still unclaimed then, that ended with the pointer out of window A, over the
 desktop or any other application, is a tear-off: main opens a window of A's profile, at A's size,

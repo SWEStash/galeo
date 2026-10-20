@@ -931,6 +931,10 @@ function start(initialMode: StartupMode): void {
           windows: otherWindows,
           focus: (windowId) => windowOf(windowId)?.focus(),
           dragging: broadcastDragging,
+          tellDragging: (window) => {
+            const contents = webContents.fromId(window);
+            if (contents) sendEvent(contents, 'tabs.dragging', true);
+          },
           after: (ms, run) => void setTimeout(run, ms),
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, input, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
