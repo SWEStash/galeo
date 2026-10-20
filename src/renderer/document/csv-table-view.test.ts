@@ -8,14 +8,15 @@ function tableOf(text: string) {
   return parsed.table;
 }
 
-/** A table in a scroller showing `rowsHigh` rows at a time. */
+/** A table in a scroller showing `rowsHigh` rows at a time, 800 px wide. */
 function setup(text: string, rowsHigh = 20): { view: CsvTableView; scroller: HTMLElement; grid: () => HTMLElement } {
   const scroller = document.createElement('div');
   Object.defineProperty(scroller, 'clientHeight', { configurable: true, get: () => rowsHigh * TABLE_ROW_HEIGHT });
+  Object.defineProperty(scroller, 'clientWidth', { configurable: true, get: () => 800 });
   document.body.append(scroller);
   const view = createCsvTableView({ parent: scroller, scroller: () => scroller, label: 'data.csv' });
-  // happy-dom lays nothing out: the grid's top moves up as its scroller scrolls, as in a browser.
-  Object.defineProperty(view.element, 'getBoundingClientRect', { value: () => ({ top: -scroller.scrollTop }) as DOMRect });
+  // happy-dom lays nothing out: the grid moves up and left as its scroller scrolls, as in a browser.
+  Object.defineProperty(view.element, 'getBoundingClientRect', { value: () => ({ top: -scroller.scrollTop, left: -scroller.scrollLeft }) as DOMRect });
   view.setTable(text, tableOf(text));
   return { view, scroller, grid: () => scroller.querySelector<HTMLElement>('[role=grid]')! };
 }
@@ -151,5 +152,58 @@ describe('CSV table view', () => {
     scroller.scrollTop = 40 * TABLE_ROW_HEIGHT;
     view.setTable(text(120), tableOf(text(120)));
     expect(scroller.scrollTop).toBe(40 * TABLE_ROW_HEIGHT);
+  });
+
+  describe('a wide table', () => {
+    // 5,000 columns: each at least 4 characters wide (happy-dom measures nothing: 8 px a character).
+    const wide = (rows: number) =>
+      [Array.from({ length: 5000 }, (_, i) => `c${i}`).join(','), ...Array.from({ length: rows }, (_, r) => Array.from({ length: 5000 }, (_, i) => `${r}.${i}`).join(','))].join('\n') + '\n';
+    const columnsOf = (row: Element) => [...row.querySelectorAll<HTMLElement>('[role=gridcell], [role=columnheader]')].map((cell) => Number(cell.getAttribute('aria-colindex')));
+
+    it('draws only the columns in view, in the header and in each row, and counts them all', () => {
+      const { grid } = setup(wide(3));
+      expect(grid().getAttribute('aria-colcount')).toBe('5001');
+      const header = grid().querySelector('.galeo-csv-header')!;
+      expect(columnsOf(header).length).toBeLessThan(60);
+      expect(columnsOf(header).slice(0, 3)).toEqual([1, 2, 3]);
+      for (const row of bodyRows(grid())) expect(columnsOf(row).length).toBeLessThan(60);
+    });
+
+    it('draws the columns a sideways scroll brings into view', () => {
+      const { view, scroller, grid } = setup(wide(3));
+      // Most of the way across (columns are 6 characters and 1rem: 64 px).
+      scroller.scrollLeft = 3000 * 64;
+      scroller.dispatchEvent(new Event('scroll'));
+      view.flush();
+      // Row 1: row 0 also keeps the focused cell, in column 1.
+      const shown = columnsOf(bodyRows(grid())[1]!);
+      expect(Math.min(...shown)).toBeGreaterThan(2900);
+      expect(Math.max(...shown) - Math.min(...shown)).toBeLessThan(60);
+      expect(shown.length).toBeLessThan(60);
+    });
+
+    it('goes to the last column with End, and keeps the focused cell while the view scrolls away', () => {
+      const { view, scroller } = setup(wide(3));
+      view.focus();
+      press('End');
+      expect(focused().getAttribute('aria-colindex')).toBe('5001');
+      expect(focused().textContent).toBe('0.4999');
+      expect(scroller.scrollLeft).toBeGreaterThan(0);
+      scroller.scrollLeft = 0;
+      scroller.dispatchEvent(new Event('scroll'));
+      view.flush();
+      expect(document.activeElement?.isConnected).toBe(true);
+      expect(focused().getAttribute('aria-colindex')).toBe('5001');
+      press('ArrowLeft');
+      expect(focused().textContent).toBe('0.4998');
+    });
+  });
+
+  it('shows at most 1,000 characters of a cell, and says it is cut', () => {
+    const long = 'x'.repeat(5000);
+    const { grid } = setup(`a\n${long}\n`);
+    const shown = bodyRows(grid())[0]!.querySelector('[role=gridcell]')!;
+    expect(shown.textContent).toBe(`${'x'.repeat(1000)}…`);
+    expect(shown.getAttribute('title')).toBe(`${'x'.repeat(1000)}…`);
   });
 });

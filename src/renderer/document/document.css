@@ -94,7 +94,8 @@
   background: var(--galeo-color-code-bg);
 }
 /* The CSV/TSV table (ADR-018): the document's whole width and more (it scrolls sideways), one
-   fixed-height row per record (csv-table-view's TABLE_ROW_HEIGHT), the header row in view. */
+   fixed-height row per record (csv-table-view's TABLE_ROW_HEIGHT), the header row in view. Only
+   the cells in view are drawn, each placed at its column's offset (set by csv-table-view). */
 .galeo-document.galeo-csv {
   max-width: none;
   padding: 0 0 2rem;
@@ -102,13 +103,16 @@
   font-size: var(--galeo-code-size);
 }
 .galeo-csv-table {
-  width: max-content;
+  position: relative;
   min-width: 100%;
+}
+.galeo-csv-probe {
+  position: absolute;
+  visibility: hidden;
+  height: 0;
 }
 .galeo-csv-header,
 .galeo-csv-row {
-  display: grid;
-  grid-template-columns: var(--galeo-csv-columns);
   height: 24px;
   line-height: 24px;
 }
@@ -130,6 +134,10 @@
   border-bottom: 1px solid color-mix(in srgb, var(--galeo-color-border) 50%, transparent);
 }
 .galeo-csv-cell {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  box-sizing: border-box;
   padding: 0 0.5rem;
   overflow: hidden;
   white-space: pre;

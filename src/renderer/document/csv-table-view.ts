@@ -1,7 +1,7 @@
-// The CSV/TSV table view (ADR-018, UX F14): an ARIA grid that draws only the rows in view, so a
-// million rows open and scroll like a few. Plain DOM inside the document's shadow root (ADR-006),
-// like the JSON tree. The first row is the header and stays in view; one cell is in the tab order,
-// and the focused one is always drawn, wherever the view scrolls.
+// The CSV/TSV table view (ADR-018, UX F14): an ARIA grid that draws only the rows and columns in
+// view, so a million rows or thousands of columns open and scroll like a few. Plain DOM inside the
+// document's shadow root (ADR-006), like the JSON tree. The first row is the header and stays in
+// view; one cell is in the tab order, and the focused one is always drawn, wherever the view scrolls.
 import { cell, type CsvTable } from '../../shared/csv';
 
 /** Every row is this tall (px), so a row's place is its index times this. */
@@ -10,10 +10,20 @@ export const TABLE_ROW_HEIGHT = 24;
 /** Rows drawn beyond each edge of the view, so a scroll shows no gap before the next frame. */
 const OVERSCAN = 10;
 
-/** Column widths come from the first rows, in characters, within these bounds. */
+/** Columns drawn beyond each side of the view, and at most this many in all (a very wide window). */
+const COLUMN_OVERSCAN = 2;
+const MAX_DRAWN_COLUMNS = 300;
+
+/** Column widths come from the first rows (fewer for a wide table), in characters, within these bounds. */
 const SAMPLE_ROWS = 200;
+const SAMPLE_CELLS = 100_000;
 const MIN_CHARS = 4;
 const MAX_CHARS = 40;
+
+/** A cell shows at most this much of its text: laying out a megabyte in one cell would stall the page. */
+const MAX_CELL_CHARS = 1000;
+
+const clipped = (value: string) => (value.length > MAX_CELL_CHARS ? `${value.slice(0, MAX_CELL_CHARS)}…` : value);
 
 export interface CsvTableView {
   readonly element: HTMLElement;
@@ -82,7 +92,26 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   let focusRow = 0;
   let focusColumn = 0;
   let drawn = new Map<number, HTMLElement>();
+  // The cells drawn in each drawn row (by body row), and in the header, by column.
+  let drawnCells = new Map<number, Map<number, HTMLElement>>();
+  const headerCells = new Map<number, HTMLElement>();
+  let columnName: (column: number) => string = () => '';
+  // Column `c` starts `starts[c]` characters plus `c` rem after the row number (each column, the
+  // row number's too, is its width in characters plus 1rem of padding): CSS lengths, so zoom and
+  // fonts keep them right.
+  let numberChars = 2;
+  let widths: number[] = [];
+  let starts = new Float64Array(1);
   let frame = 0;
+  // 100ch and 100rem wide, to measure both units in the table's font with one layout.
+  const [chProbe, remProbe] = ['100ch', '100rem'].map((width) => {
+    const probe = document.createElement('span');
+    probe.className = 'galeo-csv-probe';
+    probe.setAttribute('aria-hidden', 'true');
+    probe.style.width = width;
+    element.append(probe);
+    return probe;
+  }) as [HTMLElement, HTMLElement];
 
   const gridTop = () => {
     const pane = scroller();
@@ -91,15 +120,80 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   /** How many body rows are scrolled past, fractional. */
   const scrolled = () => Math.max(0, (scroller().scrollTop - gridTop()) / TABLE_ROW_HEIGHT);
   const lineOf = (row: number) => (row < table!.rows ? table!.rowLines[row]! : endLine);
+  const tableRowOf = (index: number) => index + first;
+
+  const leftOf = (column: number) => `calc(${numberChars + starts[column]!}ch + ${column + 1}rem)`;
+  const widthOf = (column: number) => `calc(${widths[column]!}ch + 1rem)`;
+  /** One `ch` and one `rem`, in px, as the table's font draws them (a layout that measures nothing: 8 and 16). */
+  const units = () => ({ ch: chProbe.getBoundingClientRect().width / 100 || 8, rem: remProbe.getBoundingClientRect().width / 100 || 16 });
+  const pxLeftOf = (column: number, { ch, rem }: { ch: number; rem: number }) => (numberChars + starts[column]!) * ch + (column + 1) * rem;
+  /** Where the table starts in its scroller's content, sideways. */
+  const gridLeft = () => {
+    const pane = scroller();
+    return (element.getBoundingClientRect().left || 0) - (pane.getBoundingClientRect().left || 0) + pane.scrollLeft;
+  };
+  /** The columns in view, with a few beyond each side. */
+  function columnWindow(): [number, number] {
+    if (!table || table.columns === 0) return [0, 0];
+    const size = units();
+    const pane = scroller();
+    const from = pane.scrollLeft - gridLeft();
+    const to = from + pane.clientWidth;
+    // The first column whose right edge is past `from`, and the first that starts at or past `to`.
+    const search = (x: number, right: boolean) => {
+      let low = 0;
+      let high = table!.columns;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (pxLeftOf(middle + (right ? 1 : 0), size) <= x) low = middle + 1;
+        else high = middle;
+      }
+      return low;
+    };
+    const start = Math.max(0, search(from, true) - COLUMN_OVERSCAN);
+    const end = Math.min(table.columns, search(to, false) + COLUMN_OVERSCAN, start + MAX_DRAWN_COLUMNS);
+    return [start, Math.max(end, Math.min(table.columns, start + 1))];
+  }
+
+  /** Puts `cells` (by column) in `parent` for the columns wanted: new ones made, others removed. */
+  function syncCells(parent: HTMLElement, cells: Map<number, HTMLElement>, wanted: number[], make: (column: number) => HTMLElement) {
+    const keep = new Set(wanted);
+    for (const [column, item] of cells) {
+      if (keep.has(column)) continue;
+      item.remove();
+      cells.delete(column);
+    }
+    for (const column of wanted) {
+      if (cells.has(column)) continue;
+      const item = make(column);
+      item.style.left = leftOf(column);
+      item.style.width = widthOf(column);
+      cells.set(column, item);
+      parent.append(item);
+    }
+  }
 
   function columnHeader(text: string, index: number): HTMLElement {
     const item = document.createElement('div');
     item.className = 'galeo-csv-cell';
     item.setAttribute('role', 'columnheader');
     item.setAttribute('aria-colindex', String(index + 1));
-    item.textContent = text;
-    item.title = text;
+    item.textContent = clipped(text);
+    item.title = clipped(text);
     return item;
+  }
+
+  function dataCell(tableRow: number, column: number): HTMLElement {
+    const value = cell(text, table!, tableRow, column) ?? '';
+    const each = document.createElement('div');
+    each.className = 'galeo-csv-cell';
+    each.setAttribute('role', 'gridcell');
+    each.setAttribute('aria-colindex', String(column + 2));
+    each.dataset['column'] = String(column);
+    each.tabIndex = -1;
+    each.textContent = clipped(value);
+    if (value) each.title = clipped(value);
+    return each;
   }
 
   function row(index: number): HTMLElement {
@@ -117,23 +211,15 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     number.setAttribute('role', 'rowheader');
     number.setAttribute('aria-colindex', '1');
     number.textContent = String(index + 1);
+    number.style.left = '0';
+    number.style.width = `calc(${numberChars}ch + 1rem)`;
     item.append(number);
-    for (let column = 0; column < table!.columns; column++) {
-      const value = cell(text, table!, tableRow, column) ?? '';
-      const each = document.createElement('div');
-      each.className = 'galeo-csv-cell';
-      each.setAttribute('role', 'gridcell');
-      each.setAttribute('aria-colindex', String(column + 2));
-      each.dataset['column'] = String(column);
-      each.textContent = value;
-      if (value) each.title = value;
-      item.append(each);
-    }
     drawn.set(index, item);
+    drawnCells.set(index, new Map());
     return item;
   }
 
-  const cellAt = (index: number, column: number) => drawn.get(index)?.querySelectorAll<HTMLElement>('[role=gridcell]')[column];
+  const cellAt = (index: number, column: number) => drawnCells.get(index)?.get(column);
 
   function draw() {
     cancelAnimationFrame(frame);
@@ -151,7 +237,11 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       if (keep.has(index)) continue;
       item.remove();
       drawn.delete(index);
+      drawnCells.delete(index);
     }
+    const [start, end] = columnWindow();
+    const columns = Array.from({ length: end - start }, (_, at) => start + at);
+    syncCells(headerRow, headerCells, columns, (column) => columnHeader(columnName(column), column + 1));
     // Rows already drawn keep their order, so only new ones are inserted: the focused cell's row is
     // never moved, and keeps focus.
     let cursor = body.firstElementChild;
@@ -162,9 +252,11 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       else body.insertBefore(item, cursor);
     }
     for (const [index, item] of drawn) {
-      item.querySelectorAll<HTMLElement>('[role=gridcell]').forEach((each, column) => {
-        each.tabIndex = index === focusRow && column === focusColumn ? 0 : -1;
-      });
+      const cells = drawnCells.get(index)!;
+      // The focused cell stays drawn, wherever the view scrolls sideways.
+      const wanted = index === focusRow && (focusColumn < start || focusColumn >= end) ? [...columns, focusColumn] : columns;
+      syncCells(item, cells, wanted, (column) => dataCell(tableRowOf(index), column));
+      for (const [column, each] of cells) each.tabIndex = index === focusRow && column === focusColumn ? 0 : -1;
     }
   }
 
@@ -183,6 +275,12 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     const visible = pane.clientHeight - TABLE_ROW_HEIGHT;
     if (top < pane.scrollTop) pane.scrollTop = top;
     else if (top + TABLE_ROW_HEIGHT > pane.scrollTop + visible) pane.scrollTop = top + TABLE_ROW_HEIGHT - visible;
+    // Sideways too, the cell whole in view (its left edge first, for a cell wider than the view).
+    const size = units();
+    const left = gridLeft() + pxLeftOf(focusColumn, size);
+    const right = left + widths[focusColumn]! * size.ch + size.rem;
+    if (right > pane.scrollLeft + pane.clientWidth) pane.scrollLeft = right - pane.clientWidth;
+    if (left < pane.scrollLeft) pane.scrollLeft = left;
     draw();
     cellAt(focusRow, focusColumn)?.focus({ preventScroll: true });
   }
@@ -248,19 +346,27 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       // Only the last row's own line breaks are counted: its start line is known.
       endLine = last < 0 ? 2 : lineAt(text, next.rowStarts[last]!, next.rowLines[last]!, next.fieldEnds[next.rowFields[last + 1]! - 1]!) + 1;
       drawn = new Map();
+      drawnCells = new Map();
       body.replaceChildren();
       element.setAttribute('aria-rowcount', String(bodyCount + 1));
       element.setAttribute('aria-colcount', String(next.columns + 1));
       // Widths from the first rows: the header and a sample of the data, in characters.
-      const widths = Array.from({ length: next.columns }, (_, column) => {
+      const sampled = Math.min(next.rows, SAMPLE_ROWS, Math.max(1, Math.floor(SAMPLE_CELLS / Math.max(1, next.columns))));
+      widths = Array.from({ length: next.columns }, (_, column) => {
         let longest = MIN_CHARS;
-        for (let row = 0; row < Math.min(next.rows, SAMPLE_ROWS); row++) longest = Math.max(longest, (cell(text, next, row, column) ?? '').length);
+        for (let row = 0; row < sampled; row++) longest = Math.max(longest, (cell(text, next, row, column) ?? '').length);
         return Math.min(longest, MAX_CHARS);
       });
-      const numberWidth = Math.max(2, String(bodyCount).length) + 1;
-      element.style.setProperty('--galeo-csv-columns', [`${numberWidth}ch`, ...widths.map((chars) => `calc(${chars}ch + 1rem)`)].join(' '));
-      const name = (column: number) => (!header ? String(column + 1) : next.rows > 0 ? (cell(text, next, 0, column) ?? '') : '');
-      headerRow.replaceChildren(columnHeader('#', 0), ...widths.map((_, column) => columnHeader(name(column), column + 1)));
+      starts = new Float64Array(next.columns + 1);
+      for (let column = 0; column < next.columns; column++) starts[column + 1] = starts[column]! + widths[column]!;
+      numberChars = Math.max(2, String(bodyCount).length) + 1;
+      element.style.width = `calc(${numberChars + starts[next.columns]!}ch + ${next.columns + 1}rem)`;
+      columnName = (column: number) => (!header ? String(column + 1) : next.rows > 0 ? (cell(text, next, 0, column) ?? '') : '');
+      const corner = columnHeader('#', 0);
+      corner.style.left = '0';
+      corner.style.width = `calc(${numberChars}ch + 1rem)`;
+      headerCells.clear();
+      headerRow.replaceChildren(corner);
       focusRow = Math.min(focusRow, Math.max(0, bodyCount - 1));
       focusColumn = Math.min(focusColumn, Math.max(0, next.columns - 1));
       draw();

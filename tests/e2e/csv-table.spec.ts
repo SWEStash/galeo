@@ -145,6 +145,31 @@ test('past a million rows the table shows the first and says how many there are'
   }
 });
 
+test('a table thousands of columns wide opens at once and goes to its last column', async () => {
+  const wide = (columns: number, rows: number) =>
+    [Array.from({ length: columns }, (_, i) => `c${i}`).join(','), ...Array.from({ length: rows }, (_, r) => Array.from({ length: columns }, (_, i) => `${r}.${i}`).join(','))].join('\n') + '\n';
+  const { home, files } = setUp({ 'wide.csv': wide(9000, 60), 'wider.csv': wide(12_000, 2) });
+  const { window, close } = await launchApp(['--', files['wide.csv']!, files['wider.csv']!], { home });
+  try {
+    await window.getByRole('tab').first().click();
+    const firstCell = bodyRows(window).first().locator('[role=gridcell]').first();
+    await expect(firstCell).toHaveText('0.0');
+    expect(await headers(window).count()).toBeLessThan(200);
+    await firstCell.click();
+    await window.keyboard.press('End');
+    const current = grid(window).locator('[role=gridcell][tabindex="0"]');
+    await expect(current).toHaveText('0.8999');
+    await expect(current).toBeFocused();
+    await expect(current).toBeInViewport();
+    // Past 10,000 columns no table is drawn: the source, saying why.
+    await window.getByRole('tab').nth(1).click();
+    await expect(banner(window)).toHaveText(/Large file shown as source/);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
 test('a CSV over 100 MB opens as source, and Show as table shows it as a table', async () => {
   const { home, files } = setUp({ 'huge.csv': `a,b\n${'xxxxxxxxxxxxxxxxxxxx,yyyyyyyyyyyyyyyyyyyy\n'.repeat(2_500_000)}` });
   const { window, close } = await launchApp(['--', files['huge.csv']!], { home });

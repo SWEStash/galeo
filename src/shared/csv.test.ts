@@ -92,17 +92,20 @@ describe('CSV parser', () => {
   });
 
   it('keeps the first rows up to the cap and still counts them all', () => {
-    const table = tableOf('a\nb\nc\nd\n', ',', { rows: 2, fields: 100 });
+    const table = tableOf('a\nb\nc\nd\n', ',', { rows: 2, fields: 100, columns: 100 });
     expect(table).toMatchObject({ rows: 2, totalRows: 4 });
-    expect(grid('a\nb\nc\nd\n', ',', { rows: 2, fields: 100 })).toEqual([['a'], ['b']]);
+    expect(grid('a\nb\nc\nd\n', ',', { rows: 2, fields: 100, columns: 100 })).toEqual([['a'], ['b']]);
   });
 
   it('counts rows past the cap by records, not lines, so quoted line breaks do not add rows', () => {
-    expect(tableOf('a\nb\n"c\nc"\nd\n', ',', { rows: 1, fields: 100 }).totalRows).toBe(4);
+    expect(tableOf('a\nb\n"c\nc"\nd\n', ',', { rows: 1, fields: 100, columns: 100 }).totalRows).toBe(4);
   });
 
   it('is too large past the field cap, however few the rows', () => {
-    expect(parseCsv('a,b,c,d,e,f\n', ',', { rows: 100, fields: 5 })).toEqual({ state: 'too-large' });
+    expect(parseCsv('a,b,c,d,e,f\n', ',', { rows: 100, fields: 5, columns: 100 })).toEqual({ state: 'too-large' });
+    // A row wider than the column limit: no table draws that many columns well.
+    expect(parseCsv('a,b,c,d\n', ',', { rows: 100, fields: 1000, columns: 3 })).toEqual({ state: 'too-large' });
+    expect(parseCsv('a,b,c\nd\n', ',', { rows: 100, fields: 1000, columns: 3 })).toMatchObject({ state: 'table' });
   });
 
   it('answers null for a column past the end of a ragged row', () => {

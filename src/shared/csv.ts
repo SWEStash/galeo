@@ -7,14 +7,18 @@ export type Separator = ',' | ';' | '\t' | '|';
 /** A table's separator as the reader sets it: `auto` sniffs it (ADR-021). */
 export type SeparatorChoice = 'auto' | Separator;
 
-/** How much one table may hold: past `rows` the rest is counted, past `fields` it is too large. */
+/**
+ * How much one table may hold: past `rows` the rest is counted, past `fields` or with a row wider
+ * than `columns` it is too large.
+ */
 export interface CsvLimits {
   rows: number;
   fields: number;
+  columns: number;
 }
 
-/** The starting values (ADR-018 "Limits"): 10M fields' offsets are 40 MB. */
-export const CSV_LIMITS: CsvLimits = { rows: 1_000_000, fields: 10_000_000 };
+/** The starting values (ADR-018 "Limits"): 10M fields' offsets are 40 MB; 10,000 columns still scroll sideways well. */
+export const CSV_LIMITS: CsvLimits = { rows: 1_000_000, fields: 10_000_000, columns: 10_000 };
 
 export interface CsvTable {
   separator: Separator;
@@ -141,6 +145,7 @@ export function parseCsv(text: string, separator: Separator | 'sniff', limits: C
       line++;
       break;
     }
+    if (keep && fields > limits.columns) return { state: 'too-large' };
     if (keep && fields > columns) columns = fields;
   }
   rowFields.push(fieldEnds.length);
