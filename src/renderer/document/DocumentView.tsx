@@ -395,8 +395,10 @@ export function DocumentView({
   ratioListener.current = onSplitRatio;
   useEffect(() => host().onSplitRatio((ratio) => ratioListener.current?.(ratio)), []);
 
-  // Split keeps both panes on the same block, whichever the reader scrolls (ADR-014).
-  useEffect(() => {
+  // Split keeps both panes on the same block, whichever the reader scrolls (ADR-014). Listening
+  // from before the split paints: a scroll in between would be missed, and the panes' first
+  // alignment would then take it back.
+  useLayoutEffect(() => {
     const documentHost = host();
     const sourceView = documentHost.source;
     if (view !== 'split' || !sourceReady || !sourceView) return;
