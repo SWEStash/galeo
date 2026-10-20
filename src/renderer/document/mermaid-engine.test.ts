@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DARK_PIE, onlyFragments, renderMermaid } from './mermaid-engine';
+import { DARK_PIE, fragmentUrlsOnly, onlyFragments, renderMermaid } from './mermaid-engine';
 
 const engine = vi.hoisted(() => ({ initialize: vi.fn(), render: vi.fn(async () => ({ svg: '<svg></svg>' })) }));
 vi.mock('mermaid', () => ({ default: engine }));
@@ -39,5 +39,18 @@ describe('renderMermaid', () => {
     await renderMermaid('pie\n"a": 1', 'light');
     expect(engine.initialize).toHaveBeenLastCalledWith(expect.not.objectContaining({ themeVariables: expect.anything() }));
     expect(engine.initialize).toHaveBeenLastCalledWith(expect.objectContaining({ theme: 'default' }));
+  });
+});
+
+describe("fragmentUrlsOnly: the diagram's own style sheet", () => {
+  it('keeps its rules and its references to the diagram itself', () => {
+    const css = '#d .node rect{fill:#ececff;stroke:#9370db;} #d .edge{marker-end:url(#arrow);fill:url( "#grad" );}';
+    expect(fragmentUrlsOnly(css)).toBe(css);
+  });
+
+  it('drops URLs that point anywhere else, however they are written', () => {
+    expect(fragmentUrlsOnly('#d .node{fill:url(theme.png);stroke:red;}')).toBe('#d .node{fill:none;stroke:red;}');
+    expect(fragmentUrlsOnly("#d .a{background:URL( 'x.png' ) red;}")).toBe('#d .a{background:none red;}');
+    expect(fragmentUrlsOnly('#d .a{fill:url(#ok);mask:url("galeo://app/a.svg");}')).toBe('#d .a{fill:url(#ok);mask:none;}');
   });
 });

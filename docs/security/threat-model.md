@@ -211,7 +211,10 @@ no script execution (detected by a test hook) and no CSP bypass.
 
 **SR-03 — Safe rich renderers.** Mermaid runs with `securityLevel: 'strict'` (no click callbacks,
 no HTML labels). KaTeX runs with `trust: false` and `maxExpand`/`maxSize` limits. Shiki falls back
-to plain text for unknown languages. Diagram output SVG is sanitized before insertion.
+to plain text for unknown languages. Diagram output SVG is sanitized before insertion: SVG
+elements only, and every URL, in attributes and in the diagram's own style sheet, must point to
+one of the diagram's own fragments. A document's `%%{init}%%` can't change the security settings
+or `themeCSS`, and Mermaid blanks theme values with characters that could start new CSS.
 *AC*: payload tests for Mermaid and KaTeX injection vectors pass.
 
 **SR-04 — Only safe URLs reach the OS.** `shell.openExternal` accepts only `http:`, `https:` and

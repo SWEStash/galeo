@@ -65,6 +65,19 @@ export function onlyFragments(_node: Element, data: { attrName: string; attrValu
   for (const [, , target] of value.matchAll(URL_REFERENCE)) if (!target!.trim().startsWith('#')) data.keepAttr = false;
 }
 
+/**
+ * The diagram's `<style>` with every `url()` that isn't one of its own fragments replaced by
+ * `none`. Mermaid already filters what a document's `%%{init}%%` may put there; this keeps the
+ * same rule as `onlyFragments` whatever reaches the style sheet.
+ */
+export function fragmentUrlsOnly(css: string): string {
+  return css.replace(URL_REFERENCE, (reference, _quote: string, target: string) => (target.trim().startsWith('#') ? reference : 'none'));
+}
+
+function styleUrls(node: Node, data: { tagName: string }): void {
+  if (data.tagName === 'style' && node.textContent) node.textContent = fragmentUrlsOnly(node.textContent);
+}
+
 // Both load with the first diagram, never before (they are heavy).
 let mermaid: Promise<Mermaid> | undefined;
 let purify: Promise<DOMPurify> | undefined;
@@ -85,11 +98,13 @@ export function renderMermaid(source: string, scheme: ColorScheme): Promise<stri
 export async function sanitizeSvg(svg: string): Promise<string> {
   const instance = await (purify ??= import('dompurify').then((module) => module.default));
   // Mermaid shares this instance (a second one would create a second `dompurify` Trusted Types
-  // policy), so the hook is there only while our synchronous pass runs.
+  // policy), so the hooks are there only while our synchronous pass runs.
   instance.addHook('uponSanitizeAttribute', onlyFragments);
+  instance.addHook('uponSanitizeElement', styleUrls);
   try {
     return instance.sanitize(svg, SVG_CONFIG);
   } finally {
     instance.removeHook('uponSanitizeAttribute', onlyFragments);
+    instance.removeHook('uponSanitizeElement', styleUrls);
   }
 }

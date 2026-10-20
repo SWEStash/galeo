@@ -248,6 +248,7 @@ test('hostile diagrams draw inert: no script, link, foreign content or outside U
         wrappers.flatMap((wrapper) =>
           [...wrapper.shadowRoot!.querySelectorAll('*')].flatMap((element) => [
             ...(['a', 'foreignObject', 'script'].includes(element.localName) ? [`<${element.localName}>`] : []),
+            ...(element.localName === 'style' && /url\(\s*['"]?(?!#)/i.test(element.textContent ?? '') ? [`<style> ${element.textContent}`] : []),
             ...[...element.attributes]
               .filter(
                 (attribute) =>

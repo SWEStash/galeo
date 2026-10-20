@@ -40,6 +40,12 @@ graph TD
 ```
 %%%
 ```mermaid
+%%{init: {"theme": "base", "themeVariables": {"primaryColor": "url(pwned.png)", "lineColor": "red url(pwned.png)", "fontFamily": "x url(pwned.png)", "background": "url(pwned.png)", "mainBkg": "url(pwned.png)", "nodeBorder": "url(pwned.png)"}}}%%
+graph TD
+  A --> B
+```
+%%%
+```mermaid
 sequenceDiagram
   participant A
   link A: Pwn @ javascript:window.__galeoPwned='actor-link'
