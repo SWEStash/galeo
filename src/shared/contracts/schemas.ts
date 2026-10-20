@@ -10,6 +10,8 @@ import { SPLIT_MAX_RATIO, SPLIT_MIN_RATIO } from '../formats';
  * of `index.ts` so the preload and renderer never reach zod.
  */
 const documentId = z.string().min(1).max(64);
+/** A tab drag's single-use token, made by the page that starts the drag (ADR-022). */
+const dragToken = z.uuid();
 /** A document version: the content hash a read gave (ADR-013). */
 const version = z.string().min(1).max(128);
 
@@ -94,9 +96,9 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),
   'tabs.move': z.tuple([documentId, z.int().min(0).max(9999)]),
-  'tabs.dragStart': z.tuple([documentId]),
+  'tabs.dragStart': z.tuple([documentId, dragToken]),
   'tabs.dragEnd': z.tuple([documentId, z.boolean()]),
-  'tabs.adopt': z.tuple([documentId, z.int().min(0).max(9999)]),
+  'tabs.adopt': z.tuple([dragToken, z.int().min(0).max(9999)]),
   'tabs.moveTo': z.tuple([documentId, z.union([z.int().min(1).max(2 ** 31), z.literal('new')])]),
   'tabs.windows': z.tuple([]),
   'settings.get': z.tuple([]),

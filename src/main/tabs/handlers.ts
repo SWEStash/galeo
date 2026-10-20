@@ -142,11 +142,12 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     'tabs.move': ([id, position], event) => {
       if (!tabs.move(id, event.sender.id, position)) resync(event.sender.id);
     },
-    'tabs.dragStart': ([id], event) => {
+    // The page's token for this drag is what a drop claims it by (ADR-022).
+    'tabs.dragStart': ([id, token], event) => {
       const window = event.sender.id;
       // The press that started the drag, however long the reader held it before moving.
       if (!movable(id, window) || !(input.spendPress(window) || input.spend(window))) return false;
-      drags.start(id, window, now());
+      if (!drags.start(id, token, window, now())) return false;
       deps.dragging(true);
       return true;
     },
@@ -162,12 +163,12 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
         if (outside && movable(id, window)) tearOff(id, window);
       });
     },
-    'tabs.adopt': ([id, position], event) => {
+    'tabs.adopt': ([token, position], event) => {
       const to = event.sender.id;
-      const from = drags.claim(id, now());
-      if (from === null) return false;
+      const drag = drags.claim(token, now());
+      if (!drag) return null;
       deps.dragging(false);
-      return from !== to && deps.move(id, from, to, position);
+      return drag.window !== to && deps.move(drag.id, drag.window, to, position) ? drag.id : null;
     },
     'tabs.moveTo': async ([id, target], event) => {
       const window = event.sender.id;

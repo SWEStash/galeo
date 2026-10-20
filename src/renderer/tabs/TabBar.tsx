@@ -98,11 +98,13 @@ export function TabBar({
         onFilesDropped?.(at === 0 ? null : view.tabs[at - 1]!.id);
         return;
       }
-      const id = await item.getText(TAB_TYPE);
-      const from = view.tabs.findIndex((tab) => tab.id === id);
+      const token = await item.getText(TAB_TYPE);
+      const own = store.draggedHere(token);
+      const from = own === null ? -1 : view.tabs.findIndex((tab) => tab.id === own);
       let to = insertionAt(event.x).index;
-      // Another window's tab: main hands it over if that window's drag still carries it.
-      if (from < 0) return store.adopt(id, to);
+      // Another window's tab: main hands it over if that window's drag still has this token (ADR-022).
+      if (from < 0) return store.adopt(token, to);
+      const id = view.tabs[from]!.id;
       if (to > from) to -= 1;
       if (to !== from) store.move(id, to);
     },
@@ -112,12 +114,12 @@ export function TabBar({
   // over another application or none, gives the tab a window of its own unless a galeo window takes it.
   const exit = useRef<ReturnType<typeof watchDragExit> | null>(null);
   useEffect(() => () => exit.current?.stop(), []);
-  const dragStarted = (id: string) => {
+  const dragStarted = (id: string, token: string) => {
     exit.current?.stop();
     exit.current = watchDragExit(document);
     // Main moves the tab's unsaved text: it must have the latest before another window takes it.
     editors.get(id)?.keepNow();
-    store.dragStarted(id);
+    store.dragStarted(id, token);
   };
   const dragEnded = (id: string) => {
     const outside = exit.current?.outside() ?? false;
@@ -211,13 +213,19 @@ function TabItem({
   reloaded: boolean;
   crashed: boolean;
   onClose: () => void;
-  onDragStart: (id: string) => void;
+  onDragStart: (id: string, token: string) => void;
   onDragEnd: (id: string) => void;
 }) {
+  // Each drag's single-use token: the drag carries it, not the tab id (ADR-022). React Aria asks for
+  // the items after it reports the start.
+  const token = useRef('');
   const { dragProps, isDragging } = useDrag({
     // The custom type only: no other application takes a tab (ADR-019).
-    getItems: () => [{ [TAB_TYPE]: tab.id }],
-    onDragStart: () => onDragStart(tab.id),
+    getItems: () => [{ [TAB_TYPE]: token.current }],
+    onDragStart: () => {
+      token.current = crypto.randomUUID();
+      onDragStart(tab.id, token.current);
+    },
     onDragEnd: () => onDragEnd(tab.id),
     // Keyboard users reorder with Ctrl+Shift+PgUp/PgDn; Enter on a tab still shows it.
     hasDragButton: true,

@@ -238,11 +238,11 @@ export interface Requests {
   /** Moves a tab to `position` in the window's order. */
   'tabs.move': [id: string, position: number];
   /** The reader started dragging the tab: another window may take it, once (ADR-019). Spends real input. */
-  'tabs.dragStart': [id: string];
+  'tabs.dragStart': [id: string, token: string];
   /** The window's drag ended without a window taking the tab. */
   'tabs.dragEnd': [id: string, outside: boolean];
   /** The tab another window's drag carries was dropped here, at `position`. */
-  'tabs.adopt': [id: string, position: number];
+  'tabs.adopt': [token: string, position: number];
   /** The window's dragged tab was dropped outside every window: it gets a window of its own. */
   /** Moves the tab to another window, or to a new one (the palette). Spends real input. */
   'tabs.moveTo': [id: string, target: number | 'new'];
@@ -331,7 +331,7 @@ export interface Responses {
   'tabs.dragStart': boolean;
   'tabs.dragEnd': void;
   /** False when no live drag carried that tab from another window. */
-  'tabs.adopt': boolean;
+  'tabs.adopt': string | null;
   /** False when the drag was over, or the window had only that tab. */
   /** False when main refused: not the window's tab, the settings tab, no real input, or no such window. */
   'tabs.moveTo': boolean;

@@ -9,31 +9,41 @@ export const SETTLE_MS = 500;
 /** One drag, as its window said it ended: settled, it ends unless another window took it first. */
 export interface Drag {
   id: string;
+  token: string;
   window: number;
   at: number;
 }
 
+/** Tokens remembered so none is taken twice; a drag's token is a fresh random one (ADR-022). */
+const USED_TOKENS = 1000;
+
 /**
  * The tab the reader is dragging, if any (ADR-019). A window takes a tab from another window only by
- * claiming the drag that carries it, once: so a page takes only a tab the reader is dragging, and a
- * drop and a tear-off can't both happen.
+ * claiming the drag with its token, once (ADR-022): so a page takes only a tab the reader dragged over
+ * it, whatever tab ids it knows, and a drop and a tear-off can't both happen.
  */
 export class TabDrags {
   private drag: Drag | null = null;
+  private readonly used = new Set<string>();
 
-  start(id: string, window: number, now: number): void {
-    this.drag = { id, window, at: now };
+  /** Starts a drag of tab `id` from `window`, claimed by `token`; false for a token taken before. */
+  start(id: string, token: string, window: number, now: number): boolean {
+    if (this.used.has(token)) return false;
+    this.used.add(token);
+    if (this.used.size > USED_TOKENS) this.used.delete(this.used.values().next().value!);
+    this.drag = { id, token, window, at: now };
+    return true;
   }
 
   /**
-   * Takes the drag of tab `id`: the window it came from, or null when no live drag carries it, or
-   * (given `from`) when another window started it.
+   * Takes the drag with `token`: its tab and the window it came from, or null when no live drag has
+   * that token, or (given `from`) when another window started it.
    */
-  claim(id: string, now: number, from?: number): number | null {
+  claim(token: string, now: number, from?: number): { id: string; window: number } | null {
     const drag = this.live(now);
-    if (drag?.id !== id || (from !== undefined && drag.window !== from)) return null;
+    if (drag?.token !== token || (from !== undefined && drag.window !== from)) return null;
     this.drag = null;
-    return drag.window;
+    return { id: drag.id, window: drag.window };
   }
 
   /** The window's drag ended unclaimed; whether it had one going. */

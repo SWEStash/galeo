@@ -17,7 +17,7 @@ function setup(initial: TabSnapshot) {
   const api = {
     dragStart: vi.fn().mockResolvedValue(true),
     dragEnd: vi.fn().mockResolvedValue(undefined),
-    adopt: vi.fn().mockResolvedValue(true),
+    adopt: vi.fn().mockResolvedValue('x'),
     onDragging: vi.fn((listener: (on: boolean) => void) => {
       dragging = listener;
       return () => {};
@@ -403,29 +403,48 @@ describe('createTabStore', () => {
     it('tells main a drag started, and how it ended: outside every window, or not', async () => {
       const { store, api } = setup(snapshot(1, ['a', 'b'], 'a'));
       await store.start();
-      store.dragStarted('a');
-      expect(api.dragStart).toHaveBeenCalledWith('a');
+      expect(store.draggedHere('token-1')).toBeNull();
+      store.dragStarted('a', 'token-1');
+      expect(api.dragStart).toHaveBeenCalledWith('a', 'token-1');
+      // Its own drag, for a drop back in this window (a reorder), even after the drag ended.
+      expect(store.draggedHere('token-1')).toBe('a');
+      expect(store.draggedHere('token-2')).toBeNull();
       store.dragEnded('a', false);
       expect(api.dragEnd).toHaveBeenCalledWith('a', false);
       store.dragEnded('a', true);
       expect(api.dragEnd).toHaveBeenCalledWith('a', true);
     });
 
-    it('takes a tab dropped from another window where it landed, and shows it once main sends it', async () => {
+    it("takes a tab dropped from another window by the drag's token, and shows the tab main names once it arrives", async () => {
       const { store, api, push } = setup(snapshot(1, ['a', 'b'], 'a'));
       await store.start();
-      store.adopt('x', 1);
-      expect(api.adopt).toHaveBeenCalledWith('x', 1);
+      store.adopt('token-1', 1);
+      expect(api.adopt).toHaveBeenCalledWith('token-1', 1);
+      await vi.waitFor(() => expect(api.adopt).toHaveBeenCalled());
+      await Promise.resolve();
       push(snapshot(2, ['a', 'x', 'b'], 'a'));
       expect(store.getSnapshot().active).toBe('x');
+      expect(api.activated).toHaveBeenLastCalledWith('x');
+    });
+
+    it('shows the tab at once when it arrived before main answered', async () => {
+      const { store, api, push } = setup(snapshot(1, ['a', 'b'], 'a'));
+      await store.start();
+      let answer: (id: string | null) => void = () => {};
+      api.adopt.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+      store.adopt('token-1', 1);
+      push(snapshot(2, ['a', 'x', 'b'], 'a'));
+      expect(store.getSnapshot().active).toBe('a');
+      answer('x');
+      await vi.waitFor(() => expect(store.getSnapshot().active).toBe('x'));
       expect(api.activated).toHaveBeenLastCalledWith('x');
     });
 
     it("doesn't wait for a tab main refused to hand over", async () => {
       const { store, api, push } = setup(snapshot(1, ['a'], 'a'));
       await store.start();
-      api.adopt.mockResolvedValueOnce(false);
-      store.adopt('x', 0);
+      api.adopt.mockResolvedValueOnce(null);
+      store.adopt('token-1', 0);
       await vi.waitFor(() => expect(api.adopt).toHaveBeenCalled());
       await Promise.resolve();
       push(snapshot(2, ['a', 'x'], 'a'));

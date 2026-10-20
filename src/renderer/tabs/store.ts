@@ -104,11 +104,13 @@ export interface TabStore {
   /** Renders a tab that crashed the window, in the source view if the reader picked it. */
   renderAgain(id: string, view?: 'source'): Promise<void>;
   /** The reader started dragging the tab: another window may take it (ADR-019). */
-  dragStarted(id: string): void;
+  dragStarted(id: string, token: string): void;
+  /** The tab this window's latest drag carried, if `token` is that drag's: a drop back here is a reorder. */
+  draggedHere(token: string): string | null;
   /** The drag ended; `outside`: with the pointer out of the window, where the tab gets a window of its own unless another galeo window takes it. */
   dragEnded(id: string, outside: boolean): void;
   /** Another window's tab was dropped here, at `position`: shown once main's snapshot brings it. */
-  adopt(id: string, position: number): void;
+  adopt(token: string, position: number): void;
 }
 
 /**
@@ -136,6 +138,8 @@ export function createTabStore(api: TabsApi): TabStore {
   let unsubscribe: (() => void)[] = [];
   /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
   let wanted: string | null = null;
+  // This window's latest tab drag, kept past its end: the drop back here comes after it (ADR-022).
+  let ownDrag: { id: string; token: string } | null = null;
   /** Activations reported to main that it hasn't answered yet; until then its snapshots may predate them. */
   let reporting = 0;
   const listeners = new Set<() => void>();
@@ -309,16 +313,22 @@ export function createTabStore(api: TabsApi): TabStore {
       );
       if (!view.reloaded.has(id)) set({ reloaded: new Set(view.reloaded).add(id) });
     },
-    dragStarted(id) {
-      void api.dragStart(id).catch(ignoreFailure);
+    dragStarted(id, token) {
+      ownDrag = { id, token };
+      void api.dragStart(id, token).catch(ignoreFailure);
+    },
+    draggedHere(token) {
+      return ownDrag?.token === token ? ownDrag.id : null;
     },
     dragEnded(id, outside) {
       void api.dragEnd(id, outside).catch(ignoreFailure);
     },
-    adopt(id, position) {
-      wanted = id;
-      void api.adopt(id, position).then((taken) => {
-        if (!taken && wanted === id) wanted = null;
+    // Main names the tab it handed over (ADR-022); its snapshot may come first.
+    adopt(token, position) {
+      void api.adopt(token, position).then((id) => {
+        if (!id) return;
+        if (view.tabs.some((tab) => tab.id === id)) store.activate(id);
+        else wanted = id;
       });
     },
     reopenClosed() {

@@ -45,21 +45,44 @@ function homeWith(theme: 'light' | 'dark') {
   return home;
 }
 
-/** Drops the tab on the window the way another galeo window's drag does: a trusted drop carrying its id. */
-async function dropTab(window: Page, id: string, at: { x: number; y: number }) {
+/** Drops a tab on the window the way another galeo window's drag does: a trusted drop carrying `data`, the drag's token (ADR-022). */
+async function dropTab(window: Page, data: string, at: { x: number; y: number }) {
   const session = await window.context().newCDPSession(window);
-  const data = { items: [{ mimeType: TAB_TYPE, data: id }], dragOperationsMask: 16 };
-  for (const type of ['dragEnter', 'dragOver', 'drop'] as const) await session.send('Input.dispatchDragEvent', { type, x: at.x, y: at.y, data });
+  const drag = { items: [{ mimeType: TAB_TYPE, data }], dragOperationsMask: 16 };
+  for (const type of ['dragEnter', 'dragOver', 'drop'] as const) await session.send('Input.dispatchDragEvent', { type, x: at.x, y: at.y, data: drag });
   await session.detach();
 }
 
-/** Starts dragging the tab with the mouse from near its top edge, away from its name, and holds it. */
-async function startDragging(window: Page, file: string) {
+/**
+ * Starts dragging the tab with the mouse from near its top edge, away from its name, and holds it.
+ * Resolves with the token the drag carries, read from its own dragstart.
+ */
+async function startDragging(window: Page, file: string): Promise<string> {
+  // What the page writes into the drag, as it writes it: once the drag has started, its data can't be read.
+  await window.evaluate((type) => {
+    const seen = globalThis as { __galeoDragToken?: string; __galeoDragWatch?: boolean };
+    delete seen.__galeoDragToken;
+    if (seen.__galeoDragWatch) return;
+    seen.__galeoDragWatch = true;
+    const setData = DataTransfer.prototype.setData;
+    DataTransfer.prototype.setData = function (format, data) {
+      if (format === type) seen.__galeoDragToken = data;
+      return setData.call(this, format, data);
+    };
+    const add = DataTransferItemList.prototype.add as (data: string, type: string) => DataTransferItem | null;
+    DataTransferItemList.prototype.add = function (this: DataTransferItemList, data: string | File, format?: string) {
+      if (typeof data === 'string' && format === type) seen.__galeoDragToken = data;
+      return (add as (...args: unknown[]) => DataTransferItem | null).call(this, data, format);
+    } as typeof DataTransferItemList.prototype.add;
+  }, TAB_TYPE);
   const tab = window.getByRole('tab', { name: new RegExp(path.basename(file)) });
   const box = (await tab.boundingBox())!;
   await window.mouse.move(box.x + 6, box.y + 3);
   await window.mouse.down();
   await window.mouse.move(box.x + 46, box.y + 8, { steps: 5 });
+  const token = () => window.evaluate(() => (globalThis as { __galeoDragToken?: string }).__galeoDragToken ?? '');
+  await expect.poll(token).toMatch(/^[0-9a-f-]{36}$/);
+  return token();
 }
 
 /** Ends the window's drag of the tab named `name` as a drop elsewhere does: the pointer left the window, and something may have taken it. */
@@ -235,13 +258,11 @@ test("a tab dragged onto another window's empty tab bar moves there", async () =
     await pressInMain(app, window, 'N');
     const empty = await opened;
     await expect(empty.getByTestId('empty-window')).toBeVisible();
-    const id = await idOf(window, basic);
-
-    await startDragging(window, basic);
+    const token = await startDragging(window, basic);
     // Every window's tab bar takes the drop while the drag lasts, not only beside a tab.
     await expect(empty.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
     const strip = (await empty.locator('.tab-strip').boundingBox())!;
-    await dropTab(empty, id, { x: strip.x + strip.width / 2, y: strip.y + strip.height / 2 });
+    await dropTab(empty, token, { x: strip.x + strip.width / 2, y: strip.y + strip.height / 2 });
     await window.mouse.up();
 
     await expect.poll(() => paths(empty)).toEqual([basic]);
@@ -253,12 +274,34 @@ test("a tab dragged onto another window's empty tab bar moves there", async () =
   }
 });
 
+test("a drop that names the dragged tab by its id, not the drag's token, takes nothing (ADR-022)", async () => {
+  const { app, window, close } = await launchApp(['--', basic, gfm]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    const opened = app.waitForEvent('window');
+    await pressInMain(app, window, 'N');
+    const empty = await opened;
+    await expect(empty.getByTestId('empty-window')).toBeVisible();
+    const id = await idOf(window, basic);
+    await startDragging(window, basic);
+    await expect(empty.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
+    const strip = (await empty.locator('.tab-strip').boundingBox())!;
+    await dropTab(empty, id, { x: strip.x + strip.width / 2, y: strip.y + strip.height / 2 });
+    await window.mouse.up();
+
+    await expect(empty.getByTestId('tab-bar')).not.toHaveAttribute('data-tab-drag');
+    // The drop took nothing (the source may still tear the tab off: its drag ended unclaimed).
+    expect(await paths(empty)).toEqual([]);
+  } finally {
+    await close();
+  }
+});
+
 test('a window opened while a tab is being dragged takes the drop on its empty tab bar too', async () => {
   const { app, window, close } = await launchApp(['--', basic, gfm]);
   try {
     await expect(shownDocument(window).locator('h1')).toBeVisible();
-    const id = await idOf(window, basic);
-    await startDragging(window, basic);
+    const token = await startDragging(window, basic);
     await expect(window.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
 
     const opened = app.waitForEvent('window');
@@ -267,7 +310,7 @@ test('a window opened while a tab is being dragged takes the drop on its empty t
     await expect(late.getByTestId('empty-window')).toBeVisible();
     await expect(late.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
     const strip = (await late.locator('.tab-strip').boundingBox())!;
-    await dropTab(late, id, { x: strip.x + strip.width / 2, y: strip.y + strip.height / 2 });
+    await dropTab(late, token, { x: strip.x + strip.width / 2, y: strip.y + strip.height / 2 });
     await window.mouse.up();
 
     await expect.poll(() => paths(late)).toEqual([basic]);
@@ -327,14 +370,12 @@ test('a tab dropped on another window still moves there when that window asks fo
     await expect(shownDocument(window).locator('h1')).toBeVisible();
     const other = await secondWindow(app, home, ['--new-window', '--', math]);
     await expect(other.getByRole('tab')).toHaveCount(1);
-    const id = await idOf(window, basic);
-
-    await startDragging(window, basic);
+    const token = await startDragging(window, basic);
     await expect(other.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
     // The source hears the drag ended before the window it was dropped on asks for the tab.
     await endDragOutside(window, 'basic.md', 'none');
     const tab = (await other.getByRole('tab').first().boundingBox())!;
-    await dropTab(other, id, { x: tab.x + tab.width * 0.75, y: tab.y + tab.height / 2 });
+    await dropTab(other, token, { x: tab.x + tab.width * 0.75, y: tab.y + tab.height / 2 });
     await window.mouse.up();
 
     await expect.poll(() => paths(other)).toEqual([math, basic]);
