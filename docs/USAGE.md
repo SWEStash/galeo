@@ -18,8 +18,10 @@ sudo apt install ./galeo_<version>_amd64.deb
 ```
 
 It installs galeo in `/opt/galeo`, puts `galeo` and the shorter `gal` on your `PATH` (it leaves
-alone a `gal` command that belongs to another package), adds galeo to *Open With* for `.md`, `.txt`
-and `.log` files, and installs the AppArmor profile Chromium's sandbox needs on Ubuntu.
+alone a `gal` command that belongs to another package), adds galeo to *Open With* for Markdown,
+MDX, text, log, JSON, YAML, TOML, CSV and TSV files and source code (it adds an MDX file type, since
+Ubuntu takes `.mdx` for a game ROM), and installs the AppArmor profile Chromium's sandbox needs on
+Ubuntu.
 `sudo apt remove galeo` removes it; your settings and sessions stay in your home folder.
 
 ### The AppImage
@@ -27,7 +29,7 @@ and `.log` files, and installs the AppArmor profile Chromium's sandbox needs on 
 For other distributions: make `galeo-<version>.AppImage` executable and run it. To get the
 `galeo` command and a desktop entry, open Settings (Ctrl+,) and choose
 **Install command-line launcher**: it writes `~/.local/bin/galeo` and an entry in your
-applications, both pointing at that AppImage.
+applications, both pointing at that AppImage, and the MDX file type in `~/.local/share/mime`.
 
 On Ubuntu 24.04 and later the AppImage can't start Chromium's sandbox, which needs an AppArmor
 profile only the `.deb` provides. galeo then shows why and offers **Quit** or
@@ -138,8 +140,7 @@ the file into the window in front of you) when you want it here.
   are hidden, a component shows as a dashed box labelled with its tag and props, with its content
   inside, and `{expressions}` show as code (comment-only ones are hidden). Lowercase HTML tags work
   as in Markdown. A syntax error opens the file as source with a banner naming the line; in split
-  while editing, the last good preview stays with *Preview paused*. galeo isn't offered as the
-  default app for `.mdx` files yet: open them from galeo or with `galeo`.
+  while editing, the last good preview stays with *Preview paused*.
 - **Large or slow documents**: Markdown or MDX over 5 MB, or that takes more than 2 s to render, opens as
   source with a banner; **Render anyway** renders it (and waits up to a minute). A render still
   going after 5 s offers **Cancel** under the loading lines: the source shows at once.

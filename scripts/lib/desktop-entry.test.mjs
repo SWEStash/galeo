@@ -7,7 +7,7 @@ Exec=/opt/galeo/galeo -- %F
 Type=Application
 Icon=galeo
 StartupWMClass=galeo
-MimeType=text/markdown;text/x-markdown;text/plain;text/x-log;application/json;application/yaml;application/toml;text/csv;text/tab-separated-values;text/javascript;text/x-python;text/x-python3;text/rust;text/x-go;application/x-shellscript;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-csharp;text/x-java;text/x-kotlin;application/x-ruby;application/x-php;text/x-lua;application/x-perl;application/sql;text/css;text/x-scss;application/xml;text/x-patch;text/x-makefile;
+MimeType=text/markdown;text/x-markdown;text/mdx;text/plain;text/x-log;application/json;application/yaml;application/toml;text/csv;text/tab-separated-values;text/javascript;text/x-python;text/x-python3;text/rust;text/x-go;application/x-shellscript;text/x-csrc;text/x-chdr;text/x-c++src;text/x-c++hdr;text/x-csharp;text/x-java;text/x-kotlin;application/x-ruby;application/x-php;text/x-lua;application/x-perl;application/sql;text/css;text/x-scss;application/xml;text/x-patch;text/x-makefile;
 Actions=new-window;
 
 [Desktop Action new-window]
@@ -27,6 +27,7 @@ describe('desktopEntryProblems (ADR-008, SR-13)', () => {
 
   it('wants every MIME type galeo reads', () => {
     expect(desktopEntryProblems(GOOD.replace('text/x-log;', ''))).toEqual(['MimeType lacks text/x-log']);
+    expect(desktopEntryProblems(GOOD.replace('text/mdx;', ''))).toEqual(['MimeType lacks text/mdx']);
     expect(desktopEntryProblems(GOOD.replace('application/yaml;', ''))).toEqual(['MimeType lacks application/yaml']);
     expect(desktopEntryProblems(GOOD.replace('text/x-python;', ''))).toEqual(['MimeType lacks text/x-python']);
   });

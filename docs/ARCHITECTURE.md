@@ -428,7 +428,8 @@ Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `gale
 Electron binary, ADR-009), `/etc/apparmor.d/galeo` (`userns` profile for `galeo-bin`, for
 Chromium's sandbox on Ubuntu 24.04+), `/usr/bin/gal` (Launcher),
 `/usr/share/applications/galeo.desktop` (`Exec=/opt/galeo/galeo -- %F`, MIME types),
-`/usr/share/icons/hicolor/*/apps/galeo.png`. Per-user data lives only in the Config, State and
+`/usr/share/mime/packages/galeo.xml` (the `text/mdx` type, copied there by the post-install
+script), `/usr/share/icons/hicolor/*/apps/galeo.png`. Per-user data lives only in the Config, State and
 Cache stores.
 
 ## 9. Source layout (ADR-007)

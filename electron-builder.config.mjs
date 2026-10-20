@@ -17,7 +17,11 @@ export default {
     target: ['deb', 'AppImage'],
     // The hicolor sizes, named <size>x<size>.png; the window and the AppImage launcher use resources/icon.png.
     icon: 'packaging/icons/png',
-    extraResources: [{ from: 'packaging/icons/png/256x256.png', to: 'icon.png' }],
+    // The MDX type: the .deb's after-install copies it into /usr/share/mime, the AppImage launcher into ~/.local.
+    extraResources: [
+      { from: 'packaging/icons/png/256x256.png', to: 'icon.png' },
+      { from: 'packaging/linux/galeo-mime.xml', to: 'mime.xml' },
+    ],
     category: 'Utility',
     maintainer: 'SWEStash <swestash.admin@gmail.com>',
     executableName: 'galeo',

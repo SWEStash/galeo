@@ -1,15 +1,7 @@
-import { execFile } from 'node:child_process';
 import type { FontCatalog } from '../../core/ports';
 import { FC_LIST_FORMAT, parseFontList } from '../../core/fonts/fc-list';
 import type { SystemFont } from '../../shared/fonts';
-
-/** Runs a program without a shell and resolves with its output. */
-export type RunFile = (file: string, args: readonly string[], options: { timeout: number; maxBuffer: number }) => Promise<string>;
-
-const runFile: RunFile = (file, args, options) =>
-  new Promise((resolve, reject) =>
-    execFile(file, args, { ...options, encoding: 'utf8', windowsHide: true }, (error, stdout) => (error ? reject(error) : resolve(stdout))),
-  );
+import { runFile, type RunFile } from './run-file';
 
 /** fc-list gets this long, and this much output (the owner's 250 families are about 10 KB). */
 const TIMEOUT_MS = 5000;

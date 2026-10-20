@@ -46,6 +46,7 @@ import { systemClock } from './adapters/clock';
 import { ElectronOsShell, RecordingOsShell } from './adapters/os-shell';
 import { WorkerThreadTaskRunner } from './adapters/task-runner';
 import { EmptyFontCatalog, FcListFontCatalog } from './adapters/font-catalog';
+import { runFile } from './adapters/run-file';
 import { decodeWithPlatform } from './adapters/text-decoder';
 import { sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
@@ -788,13 +789,17 @@ function start(initialMode: StartupMode): void {
               binDir: path.join(home, '.local', 'bin'),
               applicationsDir: path.join(xdgDataHome(home), 'applications'),
               iconsDir: path.join(xdgDataHome(home), 'icons'),
+              mimeDir: path.join(xdgDataHome(home), 'mime'),
             },
             script,
           );
           if (!files.ok) return files;
           const icon = await fs.readFile(path.join(process.resourcesPath, 'icon.png'), { maxBytes: 1024 * 1024 }).catch(() => null);
+          const mime = await fs.readFile(path.join(process.resourcesPath, 'mime.xml'), { maxBytes: 64 * 1024 }).catch(() => null);
           const packageEntries = xdgDataDirs().map((dir) => path.join(dir, 'applications', 'galeo.desktop'));
-          const installed = await installLauncher({ fs, utf8 }, files, icon, packageEntries);
+          // Fixed program and arguments; the folder is the user's own MIME database.
+          const refreshMime = (database: string) => runFile('update-mime-database', [database], { timeout: 30_000, maxBuffer: 1024 * 1024 }).then(() => undefined);
+          const installed = await installLauncher({ fs, utf8, refreshMime }, files, { icon, mime }, packageEntries);
           return installed.ok ? { ok: true, bin: files.bin.path } : installed;
         },
         'app.resolveSandboxUnavailable': ([choice]) => {

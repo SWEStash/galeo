@@ -3,11 +3,11 @@
 
 /**
  * The MIME types of the files galeo reads, as the desktop names them (shared-mime-info): Markdown,
- * text and logs; JSON, YAML, TOML, CSV and TSV; the source code it highlights. Not HTML or SVG,
+ * MDX (galeo's own type, `packaging/linux/galeo-mime.xml`), text and logs; JSON, YAML, TOML, CSV and TSV; the source code it highlights. Not HTML or SVG,
  * which belong to a browser and an image viewer.
  */
 export const MIME_TYPES = [
-  'text/markdown', 'text/x-markdown', 'text/plain', 'text/x-log',
+  'text/markdown', 'text/x-markdown', 'text/mdx', 'text/plain', 'text/x-log',
   'application/json', 'application/yaml', 'application/toml', 'text/csv', 'text/tab-separated-values',
   'text/javascript', 'text/x-python', 'text/x-python3', 'text/rust', 'text/x-go', 'application/x-shellscript',
   'text/x-csrc', 'text/x-chdr', 'text/x-c++src', 'text/x-c++hdr', 'text/x-csharp', 'text/x-java', 'text/x-kotlin',

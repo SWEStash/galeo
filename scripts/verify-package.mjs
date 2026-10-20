@@ -95,6 +95,21 @@ if (process.platform === 'linux') {
     if (themed.status !== 0 || !icon.equals(themed.stdout)) failures.push("icon: the .deb's 256x256 hicolor icon is not packaging/icons/png/256x256.png");
     else if (!resourceIcon?.equals(icon)) failures.push('icon: resources/icon.png is not packaging/icons/png/256x256.png');
     else console.log("icon: galeo's own, in the hicolor theme and in resources");
+
+    // The MDX type: in resources (the AppImage launcher reads it there), copied in by postinst, removed by postrm.
+    const mime = readFileSync(path.resolve(import.meta.dirname, '../packaging/linux/galeo-mime.xml'));
+    let resourceMime = null;
+    try {
+      resourceMime = readFileSync(path.join(resources, 'mime.xml'));
+    } catch {
+      // Reported below.
+    }
+    const script = (name) => spawnSync('sh', ['-c', `dpkg-deb --ctrl-tarfile "$1" | tar -xO ./${name}`, 'sh', path.join(RELEASE, deb)], { encoding: 'utf8' }).stdout;
+    const target = '/usr/share/mime/packages/galeo.xml';
+    if (!resourceMime?.equals(mime)) failures.push('mime: resources/mime.xml is not packaging/linux/galeo-mime.xml');
+    else if (!script('postinst').includes(`cp -f '/opt/galeo/resources/mime.xml' '${target}'`)) failures.push(`mime: postinst doesn't copy it to ${target}`);
+    else if (!script('postrm').includes(`rm -f '${target}'`)) failures.push(`mime: postrm doesn't remove ${target}`);
+    else console.log('mime: the MDX type in resources, installed and removed by the .deb');
   }
 }
 

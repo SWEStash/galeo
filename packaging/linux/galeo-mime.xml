@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The MDX document type, installed by galeo. shared-mime-info gives *.mdx to a game ROM at the
+     default weight (50); this glob outweighs it, so file managers offer galeo for MDX documents. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="text/mdx">
+    <comment>MDX document</comment>
+    <sub-class-of type="text/markdown"/>
+    <glob pattern="*.mdx" weight="60"/>
+  </mime-type>
+</mime-info>

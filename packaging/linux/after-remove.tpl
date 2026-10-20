@@ -1,5 +1,5 @@
 #!/bin/bash
-# Based on electron-builder's after-remove template (MIT). galeo removes /usr/bin/gal.
+# Based on electron-builder's after-remove template (MIT). galeo removes /usr/bin/gal and the MDX type.
 
 # Delete the link to the binary
 # update-alternatives --remove <name> <path>: 'path' must be the registered alternative binary,
@@ -12,6 +12,11 @@ fi
 
 if [ "`readlink '/usr/bin/gal'`" = '/opt/${sanitizedProductName}/gal' ]; then
     rm -f '/usr/bin/gal'
+fi
+
+rm -f '/usr/share/mime/packages/${executable}.xml'
+if hash update-mime-database 2>/dev/null; then
+    update-mime-database /usr/share/mime || true
 fi
 
 APPARMOR_PROFILE_DEST='/etc/apparmor.d/${executable}'

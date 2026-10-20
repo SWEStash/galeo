@@ -1,5 +1,5 @@
 #!/bin/bash
-# Based on electron-builder's after-install template (MIT). galeo adds /usr/bin/gal.
+# Based on electron-builder's after-install template (MIT). galeo adds /usr/bin/gal and the MDX type.
 
 if type update-alternatives >/dev/null 2>&1; then
     # Remove previous link if it doesn't use update-alternatives
@@ -24,6 +24,10 @@ fi
 if [ ! -e '/usr/bin/gal' ] || [ "`readlink '/usr/bin/gal'`" = '/opt/${sanitizedProductName}/gal' ]; then
     ln -sf '/opt/${sanitizedProductName}/gal' '/usr/bin/gal'
 fi
+
+# The MDX type (shared-mime-info gives *.mdx to a game ROM).
+mkdir -p /usr/share/mime/packages
+cp -f '/opt/${sanitizedProductName}/resources/mime.xml' '/usr/share/mime/packages/${executable}.xml' || true
 
 if hash update-mime-database 2>/dev/null; then
     update-mime-database /usr/share/mime || true

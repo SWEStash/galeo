@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { describe, expect, it, vi } from 'vitest';
-import { EmptyFontCatalog, FcListFontCatalog, type RunFile } from './font-catalog';
+import { EmptyFontCatalog, FcListFontCatalog } from './font-catalog';
+import type { RunFile } from './run-file';
 
 describe('FcListFontCatalog', () => {
   it('runs fc-list once with fixed arguments, a timeout and an output cap, and caches the list', async () => {
