@@ -23,7 +23,8 @@
   [018](decisions/ADR-018-rich-views-and-the-format-descriptor.md) ·
   [019](decisions/ADR-019-moving-tabs-between-windows.md) ·
   [020](decisions/ADR-020-table-budget-and-show-as-table.md) ·
-  [021](decisions/ADR-021-table-options.md)
+  [021](decisions/ADR-021-table-options.md) ·
+  [022](decisions/ADR-022-drag-tokens.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -44,7 +45,7 @@ Every diagram uses these names exactly.
 | **Contracts** | Shared IPC and domain types plus runtime schemas (`src/shared`) |
 | **Window Renderer** | One sandboxed renderer process per window: Chrome UI + Document Host (ADR-002) |
 | **Chrome UI** | React + React Aria app UI: tab bar, quick open, palette, find, outline, profile menu, settings, status bar (ADR-006) |
-| **Document Host** | Owns one Shadow-DOM container per tab; inserts rendered HTML, mounts CodeMirror, renders Mermaid lazily, runs find, and replace in the source in edit mode (ADR-003); draws a JSON tree or a CSV/TSV table itself from the worker's offsets, only the rows in view, which then answer for the reader's place (ADR-018, ADR-021); in split view shows the source and rendered panes side by side and keeps them on the same block (ADR-014) |
+| **Document Host** | Owns one Shadow-DOM container per tab; inserts rendered HTML, mounts CodeMirror, renders Mermaid lazily, runs find, and replace in the source in edit mode (ADR-003); draws a JSON tree or a CSV/TSV table itself from the worker's offsets, only the rows (and table columns) in view, which then answer for the reader's place (ADR-018, ADR-021); in split view shows the source and rendered panes side by side and keeps them on the same block (ADR-014) |
 | **Render Worker** | One Web Worker per window running the unified pipeline + Shiki + KaTeX (ADR-003), for Markdown and MDX (MDX is parsed, never run), and the CSV/TSV and JSON readers, which hand a table or a tree back as offsets into the text (ADR-018). The pipeline loads with the window's first Markdown or MDX document, and the MDX parser with the first `.mdx`; a render over its budget (2 s; a CSV/TSV table 30 s, ADR-020) is refused and the worker replaced, so the tab shows source, and the reader can cancel one that runs over 5 s the same way; a live preview's render (split while editing) skips the cache, only its latest text is rendered, and over budget the last good preview stays (ADR-014) |
 | **Format Registry** | One descriptor per format, split by layer (ADR-003, ADR-018): core detects the format by extension or name (source code by a shared table that also names each file's language) and picks the default view and size limit; a shared table says which views and modes its tab offers (rendered by the worker, by the page, or not at all; reader, split, outline, follow, edit); the page adds the source language, whose grammar `@codemirror/language-data` loads with the first file that needs it, and the format's display name |
 | **Tab Record** | Plain data for a tab: path, view, scroll anchor, file identity, history (ADR-002) |
@@ -353,17 +354,17 @@ The Launcher starts the app. Main takes the single-instance lock, sets up the Ne
 its windows. Each renderer loads Chrome UI (heavy features lazily), receives its Tab Records, and
 renders only its active tab. Budget: first document painted within 500 ms.
 
-### 5.7 Moving a tab to another window (ADR-019)
+### 5.7 Moving a tab to another window (ADR-019, ADR-022)
 
 ```mermaid
 sequenceDiagram
   participant A as Window A page
   participant M as Main
   participant B as Window B page
-  A->>M: tabs.dragStart(id) · spends an input credit
+  A->>M: tabs.dragStart(id, token) · spends an input credit; the drag carries the token
   M-->>A: tabs.dragging(true) · and every other window
   Note over B: the whole tab bar takes drops
-  B->>M: tabs.adopt(id, position) · claims the drag, once
+  B->>M: tabs.adopt(token, position) · claims the drag, once; main answers the tab's id
   M->>M: grant + kept text → B · record → B (same id) · warm set · breadcrumb
   M-->>A: tabs.changed (without the tab)
   M-->>B: tabs.changed (with it, shown)
@@ -371,7 +372,8 @@ sequenceDiagram
   M-->>B: edit mode · unsaved text
 ```
 
-The drag carries only the tab id, in galeo's own type. Main keeps one pending drag (`TabDrags`):
+The drag carries only a single-use token the page makes for it, in galeo's own type, never the tab
+id (ADR-022): only a window the reader drags over learns it. Main keeps one pending drag (`TabDrags`):
 a window takes a tab only by claiming it, so a page can't pull tabs out of other windows, and a
 drop and a tear-off can't both happen. A window opened during the drag hears of it when it first
 asks for its tabs. When the drag ends, A tells main
@@ -393,7 +395,8 @@ saves a session without it. Into another profile's window, the tab joins that pr
 | 5. Proof | CI: socket-connect harness, fuse read-back, payload corpus | SR-07, SR-08, SR-10 |
 
 The pre-release security audits check these layers against the code:
-[v0.1](security/audits/2026-10-07-v0.1.md) and [v0.2](security/audits/2026-10-10-v0.2.md).
+[v0.1](security/audits/2026-10-07-v0.1.md), [v0.2](security/audits/2026-10-10-v0.2.md) and
+[v0.3](security/audits/2026-10-20-v0.3.md).
 
 ## 7. Performance architecture
 

