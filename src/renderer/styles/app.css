@@ -438,8 +438,31 @@ body,
   background: var(--galeo-color-code-bg);
   box-shadow: inset 2px 0 0 var(--galeo-color-focus);
 }
+.quick-open-label {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  align-items: baseline;
+  min-width: 0;
+}
 .quick-open-name {
   white-space: nowrap;
+}
+/* The fill icon (Tab's mouse shortcut) shows on the row under the pointer and the highlighted one. */
+.quick-open-fill {
+  visibility: hidden;
+  padding: 0 4px;
+  border-radius: 3px;
+  color: var(--galeo-color-muted);
+  cursor: pointer;
+}
+.quick-open-item[data-focused] .quick-open-fill,
+.quick-open-item[data-hovered] .quick-open-fill {
+  visibility: visible;
+}
+.quick-open-fill:hover {
+  color: var(--galeo-color-fg);
+  background: var(--galeo-color-control-border);
 }
 .quick-open-detail {
   overflow: hidden;

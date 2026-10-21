@@ -5,9 +5,10 @@ export interface QuickOpenEntry {
   name: string;
   /** The folder it's in, as `~/…` under the home folder; '' when `name` says it. */
   detail: string;
-  /** A folder of a typed path: choosing it types `path` into the field instead of opening. */
+  /** The path as shown (`~/…` or absolute) that Tab types into the field; a folder's ends in a separator. */
+  fill: string;
+  /** A folder of a typed path: choosing it types `fill` into the field instead of opening. */
   folder?: true;
-  path?: string;
 }
 
 export interface QuickOpenSection {

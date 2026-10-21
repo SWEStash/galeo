@@ -6,6 +6,12 @@ import { findGitRoot } from './git-root';
 import { indexPaths, matchPath, topMatches, type PathIndex } from './matcher';
 import { walk } from './walker';
 
+/** A result before main offers it: files carry the path main opens, which the page never gets. */
+type Listed = Omit<QuickOpenEntry, 'id'> & { id?: string; path?: string };
+interface ListedSection extends Omit<QuickOpenSection, 'entries'> {
+  entries: Listed[];
+}
+
 /** How many entries a section shows. */
 const SHOWN = { tabs: 50, recentEmpty: 8, recent: 20, repo: 50, path: 50 } as const;
 
@@ -134,7 +140,7 @@ export class QuickOpen {
     this.deps.onUpdate(window, this.offer(window, session, session.query, sections));
   }
 
-  private sections(session: Session, query: string): QuickOpenSection[] {
+  private sections(session: Session, query: string): ListedSection[] {
     const { tabs, recent } = session.request;
     const tabSet = new Set(tabs);
     const recentFiles = recent.filter((path) => !tabSet.has(path));
@@ -145,7 +151,7 @@ export class QuickOpen {
       const byShown = new Map(paths.map((path) => [this.shown(path), path]));
       return topMatches(query, [...byShown.keys()], limit).map((match) => byShown.get(match.path)!);
     };
-    const sections: QuickOpenSection[] = [
+    const sections: ListedSection[] = [
       { kind: 'tabs', title: 'Open tabs', entries: pick(tabs, SHOWN.tabs).map((path) => this.fileEntry(path)) },
       { kind: 'recent', title: 'Recent', entries: pick(recentFiles, query ? SHOWN.recent : SHOWN.recentEmpty).map((path) => this.fileEntry(path)) },
     ];
@@ -156,14 +162,14 @@ export class QuickOpen {
         .map((match) => ({ relative: match.path, path: joinPath(root, ...match.path.split('/')) }))
         .filter(({ path }) => !listed.has(path))
         .slice(0, SHOWN.repo)
-        .map(({ relative, path }) => ({ id: '', name: relative, detail: '', path }));
+        .map(({ relative, path }) => ({ name: relative, detail: '', fill: this.shown(path), path }));
       sections.push({ kind: 'repo', title: `In ${session.scope}`, entries, walking: session.walking, ...(session.truncated ? { truncated: true } : {}) });
     }
     return sections.filter((section) => section.kind === 'repo' || section.entries.length > 0);
   }
 
-  private fileEntry(path: string): QuickOpenEntry {
-    return { id: '', name: fileName(path), detail: this.shown(folderOf(path)), path };
+  private fileEntry(path: string): Listed {
+    return { name: fileName(path), detail: this.shown(folderOf(path)), fill: this.shown(path), path };
   }
 
   /** `~/…` under the home folder; other paths as they are. */
@@ -173,7 +179,7 @@ export class QuickOpen {
   }
 
 
-  private async pathSection(folder: string, filter: string, shown: string): Promise<QuickOpenSection> {
+  private async pathSection(folder: string, filter: string, shown: string): Promise<ListedSection> {
     const entries: { name: string; path: string; folder: boolean }[] = [];
     try {
       for await (const entry of this.deps.fs.readDir(folder)) {
@@ -196,14 +202,14 @@ export class QuickOpen {
       title: 'Files',
       entries: matched.slice(0, SHOWN.path).map((entry) =>
         entry.folder
-          ? { id: `folder:${entry.path}`, name: `${entry.name}/`, detail: '', folder: true as const, path: `${shown}${entry.name}/` }
-          : { id: '', name: entry.name, detail: '', path: entry.path },
+          ? { id: `folder:${entry.path}`, name: `${entry.name}/`, detail: '', fill: `${shown}${entry.name}/`, folder: true as const }
+          : { name: entry.name, detail: '', fill: `${shown}${entry.name}`, path: entry.path },
       ),
     };
   }
 
   /** Offers the files the results list, and gives each its id; folders aren't offered. */
-  private offer(window: number, session: Session, query: string, sections: QuickOpenSection[]): QuickOpenResults {
+  private offer(window: number, session: Session, query: string, sections: ListedSection[]): QuickOpenResults {
     const files = sections.flatMap((section) => section.entries.filter((entry) => !entry.folder).map((entry) => entry.path!));
     const ids = new Map(this.deps.grants.offer(window, 'quick-open', [...new Set(files)]).map(({ id, path }) => [path, id]));
     return {
@@ -211,11 +217,7 @@ export class QuickOpen {
       query,
       sections: sections.map((section) => ({
         ...section,
-        entries: section.entries.map((entry) => {
-          if (entry.folder) return entry;
-          const { path: _path, ...rest } = entry;
-          return { ...rest, id: ids.get(entry.path!)! };
-        }),
+        entries: section.entries.map(({ path, ...entry }) => ({ ...entry, id: entry.folder ? entry.id! : ids.get(path!)! })),
       })),
     };
   }

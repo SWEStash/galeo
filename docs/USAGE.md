@@ -71,7 +71,8 @@ gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo
   onto the tab bar (they open where the caret is). Dropping a folder opens quick open on it.
 - **Quick open** (Ctrl+P, or the `+` in the tab bar): type part of a file name to search the open
   tabs, recent files and the repository of the file shown. Type `~/` or `/` to browse any folder.
-  Enter opens the file; Ctrl+Enter opens it in a new window.
+  Enter opens the file; Ctrl+Enter opens it in a new window. Tab (or the ⇥ icon at the end of a row)
+  fills in the highlighted file's path instead, to edit it or go on into its folder.
 
 A file already open in the window gets focused, not opened twice. A path that doesn't exist opens
 as a *missing* tab, which fills in by itself once the file is written.

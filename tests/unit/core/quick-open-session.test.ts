@@ -117,9 +117,27 @@ describe('QuickOpen', () => {
     const absolute = await quickOpen.query(1, token, `${HOME}/notes/tod`);
     expect(names(absolute, 'path')).toEqual(['today.md']);
     const folder = home.sections.find((section) => section.kind === 'path')!.entries[1]!;
-    expect(folder.path).toBe('~/notes/week/');
+    expect(folder.fill).toBe('~/notes/week/');
     expect(quickOpen.choose(1, token, folder.id)).toBeNull();
     expect(names(await quickOpen.query(1, token, '~/nowhere/'), 'path')).toEqual([]);
+  });
+
+  it('gives every result the path Tab fills in, as shown (~/… or absolute), and no other path', async () => {
+    const { quickOpen, start } = setup({ '/srv/plan-x.md': '' });
+    const { token } = await start({ recent: ['/srv/plan-x.md'] });
+    await quickOpen.walked(token);
+    const fills = (results: QuickOpenResults) =>
+      results.sections.flatMap((section) => section.entries.map((entry) => [section.kind, entry.fill, 'path' in entry]));
+    expect(fills(await quickOpen.query(1, token, 'plan'))).toEqual([
+      ['tabs', '~/git/acme/docs/plan-old.md', false],
+      ['recent', '/srv/plan-x.md', false],
+      ['repo', '~/git/acme/.local/plans/plan.md', false],
+    ]);
+    expect(fills(await quickOpen.query(1, token, '~/notes/'))).toEqual([
+      ['path', '~/notes/today.md', false],
+      ['path', '~/notes/week/', false],
+    ]);
+    expect(fills(await quickOpen.query(1, token, `${HOME}/notes/tod`))).toEqual([['path', `${HOME}/notes/today.md`, false]]);
   });
 
   it('keeps offering the latest query’s files when an earlier listing finishes after it', async () => {

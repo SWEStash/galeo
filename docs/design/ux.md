@@ -184,6 +184,11 @@ placement is not restorable on Wayland).
   Ctrl+Enter opens in a new window, Esc closes and returns focus to the document.
 - Empty query shows open tabs and recent files; "no matches" shows the scope and a hint to type
   a path (`~/…` or `/…`, or a drive such as `C:\…` on Windows, jumps to arbitrary paths).
+- Tab types the highlighted result's path into the field (`~/…` or absolute) instead of opening it,
+  so the reader can edit it or go on into its folder; Enter then opens it. A small fill icon at the
+  end of the row under the pointer and of the highlighted row does the same with the mouse. Each
+  row's description tells a screen reader that Tab fills in its path; filling says "Filled …".
+  With no result highlighted, Tab moves focus as usual.
 - The tab bar's `+` button opens it too ("Open file… (Ctrl+P)").
 
 ### F9 — Find in document (Ctrl+F)
@@ -388,6 +393,7 @@ the native menu on the active tab.
 | Action | Shortcut | Notes |
 |---|---|---|
 | Quick open | Ctrl+P | Overrides print (print is not in v0.1) |
+| Fill in the highlighted path (quick open) | Tab | F8; the row's fill icon with the mouse |
 | Command palette | Ctrl+Shift+P | |
 | Find / next / previous | Ctrl+F / Enter, F3 / Shift+Enter, Shift+F3 | |
 | Toggle source view | Ctrl+U | Chrome's view-source key |

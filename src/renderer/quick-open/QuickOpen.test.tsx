@@ -14,7 +14,7 @@ afterEach(() => {
 const results = (query: string): QuickOpenResults => ({
   token: 't1',
   query,
-  sections: [{ kind: 'tabs', title: 'Open tabs', entries: [{ id: 'pick-1', name: 'README.md', detail: '~/acme' }] }],
+  sections: [{ kind: 'tabs', title: 'Open tabs', entries: [{ id: 'pick-1', name: 'README.md', detail: '~/acme', fill: '~/acme/README.md' }] }],
 });
 
 function stub() {
@@ -45,7 +45,7 @@ describe('QuickOpen', () => {
     const api = stub();
     api.query.mockImplementation(async (_token: string, query: string) =>
       query
-        ? { token: 't1', query, sections: [{ kind: 'repo', title: 'In acme (git root)', walking: true, entries: [{ id: 'pick-2', name: '.local/plans/plan.md', detail: '' }] }] }
+        ? { token: 't1', query, sections: [{ kind: 'repo', title: 'In acme (git root)', walking: true, entries: [{ id: 'pick-2', name: '.local/plans/plan.md', detail: '', fill: '~/acme/.local/plans/plan.md' }] }] }
         : results(query),
     );
     const container = document.createElement('div');
@@ -92,7 +92,7 @@ describe('QuickOpen', () => {
     // The list still shows the answer to the empty query: nothing opens from it.
     expect(api.open).not.toHaveBeenCalled();
     await act(async () =>
-      answer({ token: 't1', query: 'notes', sections: [{ kind: 'repo', title: 'In acme', entries: [{ id: 'pick-notes', name: 'notes.md', detail: '' }] }] }),
+      answer({ token: 't1', query: 'notes', sections: [{ kind: 'repo', title: 'In acme', entries: [{ id: 'pick-notes', name: 'notes.md', detail: '', fill: '~/acme/notes.md' }] }] }),
     );
     await vi.waitFor(() => expect(api.open).toHaveBeenCalledWith('t1', 'pick-notes', false));
     expect(onClose).toHaveBeenCalled();
@@ -115,6 +115,63 @@ describe('QuickOpen', () => {
       expect(event.defaultPrevented).toBe(false);
       expect(input.getAttribute('aria-activedescendant')).toBe(highlighted);
     }
+  });
+
+  async function shown() {
+    const api = stub();
+    const container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<QuickOpen platform="linux" onClose={() => {}} say={() => {}} />));
+    await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('README.md'));
+    return { api, input: document.querySelector('input')! };
+  }
+  const press = async (target: Element, key: string) => {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    await act(async () => target.dispatchEvent(event));
+    return event;
+  };
+
+  it('Tab fills the field with the highlighted result’s path instead of opening it, and says so', async () => {
+    const { api, input } = await shown();
+    await press(input, 'ArrowDown');
+    expect(input.getAttribute('aria-activedescendant')).toBeTruthy();
+    await press(input, 'Tab');
+    await vi.waitFor(() => expect(input.value).toBe('~/acme/README.md'));
+    expect(document.activeElement).toBe(input);
+    expect(api.query).toHaveBeenLastCalledWith('t1', '~/acme/README.md');
+    expect(api.open).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-testid="quick-open-filled"]')?.textContent).toBe('Filled ~/acme/README.md');
+  });
+
+  it('Tab with no result highlighted leaves the field alone', async () => {
+    const { api, input } = await shown();
+    expect(input.getAttribute('aria-activedescendant')).toBeNull();
+    await press(input, 'Tab');
+    expect(input.value).toBe('');
+    expect(api.open).not.toHaveBeenCalled();
+  });
+
+  it('each result’s fill icon fills its path on click without opening it, hidden from screen readers', async () => {
+    const { api, input } = await shown();
+    const icon = document.querySelector('[role="option"] .quick-open-fill')!;
+    expect(icon.getAttribute('aria-hidden')).toBe('true');
+    expect(icon.getAttribute('tabindex')).toBeNull();
+    await act(async () => {
+      for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup']) icon.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0 }));
+      icon.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
+    });
+    await vi.waitFor(() => expect(input.value).toBe('~/acme/README.md'));
+    expect(api.open).not.toHaveBeenCalled();
+  });
+
+  it('describes each result with the key that fills it', async () => {
+    await shown();
+    const option = document.querySelector('[role="option"]')!;
+    const hint = document.getElementById(option.getAttribute('aria-describedby') ?? '');
+    expect(hint?.textContent).toBe('Tab fills in its path');
+    // The name stays the file and its folder.
+    expect(document.getElementById(option.getAttribute('aria-labelledby') ?? '')?.textContent).toBe('README.md~/acme');
   });
 
   it('says so when main refuses to open the chosen file', async () => {

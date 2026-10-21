@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
 import {
   Autocomplete,
   Collection,
@@ -11,6 +11,7 @@ import {
   ListBoxSection,
   Modal,
   ModalOverlay,
+  Text,
   TextField,
   type Key,
 } from 'react-aria-components';
@@ -21,12 +22,15 @@ import { keepCaretKeys } from '../overlay-keys';
 /**
  * Quick open (UX F8): a field over main's results, open tabs and recent files first, then the
  * repository of the shown file as its search streams in. Enter opens (the tab if it's open),
- * Ctrl+Enter opens in a new window, Esc closes. The page opens only by the ids main gave it.
+ * Ctrl+Enter opens in a new window, Tab (or a row's fill icon) types the result's path into the
+ * field, Esc closes. The page opens only by the ids main gave it.
  */
 export function QuickOpen({ platform, onClose, say }: { platform: Platform; onClose: () => void; say: (message: string) => void }) {
   const [start, setStart] = useState<{ token: string; scope: string | null } | null>(null);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<QuickOpenResults | null>(null);
+  /** What a screen reader hears after Tab filled the field. */
+  const [filled, setFilled] = useState('');
   const latest = useRef({ token: '', query: '' });
   const newWindow = useRef(false);
   /** Enter came before main answered what was typed: it opens the first result of that answer. */
@@ -71,14 +75,33 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
   const choose = (key: Key) => {
     const entry = entries.get(String(key));
     if (!entry || !start) return;
-    if (entry.folder) return setQuery(entry.path!);
+    if (entry.folder) return setQuery(entry.fill);
     void window.galeo.quickOpen.open(start.token, entry.id, newWindow.current).catch(() => say(`Couldn't open ${entry.name}`));
     onClose();
+  };
+  const fill = (entry: QuickOpenEntry) => {
+    setQuery(entry.fill);
+    setFilled(`Filled ${entry.fill}`);
+  };
+  const type = (next: string) => {
+    setQuery(next);
+    setFilled('');
   };
   // A stable list: the collection rebuilds whenever its items change identity.
   const sections = useMemo(() => (results?.sections ?? []).filter((section) => section.entries.length > 0), [results]);
   const onKeyDown = (event: KeyboardEvent) => {
-    if (keepCaretKeys(event) || event.key !== 'Enter') return;
+    if (keepCaretKeys(event)) return;
+    if (event.key === 'Tab' && !event.shiftKey) {
+      // The highlighted result, if any: its fill icon names it. (The field's aria-activedescendant
+      // follows the highlight only after a moment, so a quick Tab would miss it.)
+      const id = event.currentTarget.querySelector('[role="option"][data-focused] [data-entry]')?.getAttribute('data-entry');
+      const entry = id ? entries.get(id) : undefined;
+      if (!entry) return;
+      event.preventDefault();
+      event.stopPropagation();
+      return fill(entry);
+    }
+    if (event.key !== 'Enter') return;
     // Read by the choice Enter makes a moment later: Ctrl+Enter (⌘ on macOS) opens a new window.
     newWindow.current = platform === 'darwin' ? event.metaKey : event.ctrlKey;
     // The list still answers an earlier query (the reader typed faster than main answered).
@@ -113,7 +136,7 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
       <Modal className="modal quick-open">
         <Dialog className="quick-open-dialog" aria-label="Quick open" data-testid="quick-open">
           <div className="quick-open-body" onKeyDownCapture={onKeyDown}>
-            <Autocomplete inputValue={query} onInputChange={setQuery}>
+            <Autocomplete inputValue={query} onInputChange={type}>
               <TextField className="quick-open-field">
                 <Label className="visually-hidden">Open a file by name, or type ~/ or / for a path</Label>
                 {/* The combobox pattern (UX §7): the list below is always shown, so it's always expanded. */}
@@ -137,11 +160,14 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
                       {section.title}
                       {section.walking ? ' · searching…' : section.truncated ? ' · stopped at its limit' : ''}
                     </Header>
-                    <Collection items={section.entries}>{(entry) => <Entry entry={entry} />}</Collection>
+                    <Collection items={section.entries}>{(entry) => <Entry entry={entry} onFill={fill} />}</Collection>
                   </ListBoxSection>
                 )}
               </ListBox>
             </Autocomplete>
+            <span className="visually-hidden" role="status" data-testid="quick-open-filled">
+              {filled}
+            </span>
             <span className="visually-hidden" role="status" data-testid="quick-open-count">
               {results ? `${count} ${count === 1 ? 'result' : 'results'}${searching ? ', searching' : ''}` : ''}
             </span>
@@ -152,11 +178,39 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
   );
 }
 
-function Entry({ entry }: { entry: QuickOpenEntry }) {
+/** Keeps a press on the fill icon from reaching the row, which would open the file. */
+const stop = (event: SyntheticEvent) => {
+  event.preventDefault();
+  event.stopPropagation();
+};
+
+function Entry({ entry, onFill }: { entry: QuickOpenEntry; onFill: (entry: QuickOpenEntry) => void }) {
   return (
     <ListBoxItem id={entry.id} textValue={entry.detail ? `${entry.name} ${entry.detail}` : entry.name} className="quick-open-item">
-      <span className="quick-open-name">{entry.name}</span>
-      {entry.detail && <span className="quick-open-detail">{entry.detail}</span>}
+      <Text slot="label" className="quick-open-label">
+        <span className="quick-open-name">{entry.name}</span>
+        {entry.detail && <span className="quick-open-detail">{entry.detail}</span>}
+      </Text>
+      <Text slot="description" className="visually-hidden">
+        Tab fills in its path
+      </Text>
+      {/* A mouse shortcut for Tab: an option's content is presentational, so it is hidden and not focusable. */}
+      <span
+        className="quick-open-fill"
+        aria-hidden="true"
+        title="Fill in the path (Tab)"
+        data-entry={entry.id}
+        onPointerDown={stop}
+        onMouseDown={stop}
+        onPointerUp={stop}
+        onMouseUp={stop}
+        onClick={(event) => {
+          stop(event);
+          onFill(entry);
+        }}
+      >
+        ⇥
+      </span>
     </ListBoxItem>
   );
 }

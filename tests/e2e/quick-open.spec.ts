@@ -121,6 +121,43 @@ test('Home and End move the caret in the field; the arrows still choose the resu
   });
 });
 
+test('Tab fills the field with the highlighted path and Enter opens it; the fill icon does the same with the mouse', async () => {
+  await withRepository(async (root, home) => {
+    const { window, close } = await launchApp(['--', path.join(root, 'README.md')], { home });
+    try {
+      await expect(shownDocument(window).locator('h1')).toHaveText('Acme');
+      await window.keyboard.press('ControlOrMeta+P');
+      await field(window).fill('plan');
+      const plan = option(window, /\.local\/plans\/plan\.md/);
+      await expect(plan).toBeVisible();
+      await field(window).press('ArrowDown');
+      await expect(plan).toHaveAttribute('data-focused', 'true');
+      await expect(plan.locator('.quick-open-fill')).toBeVisible();
+      const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="quick-open"]').analyze();
+      expect(results.violations).toEqual([]);
+      await field(window).press('Tab');
+      // The test's home isn't the app's home folder, so the path shows whole.
+      await expect(field(window)).toHaveValue(path.join(root, '.local', 'plans', 'plan.md'));
+      await expect(field(window)).toBeFocused();
+      await expect(window.getByRole('tab')).toHaveCount(1);
+      await expect(option(window, /^plan\.md/)).toBeVisible();
+      await window.keyboard.press('Enter');
+      await expect(shownDocument(window).locator('h1')).toHaveText('The plan');
+
+      await window.keyboard.press('ControlOrMeta+P');
+      await field(window).fill('notes');
+      const notes = option(window, /notes\.md/);
+      await notes.hover();
+      await notes.locator('.quick-open-fill').click();
+      await expect(field(window)).toHaveValue(path.join(root, 'docs', 'notes.md'));
+      await expect(quickOpen(window)).toBeVisible();
+      await expect(window.getByRole('tab')).toHaveCount(2);
+    } finally {
+      await close();
+    }
+  });
+});
+
 test('Ctrl+Enter opens the file in a new window of the profile', async () => {
   await withRepository(async (root, home) => {
     const { app, window, close } = await launchApp(['--', path.join(root, 'README.md')], { home });
