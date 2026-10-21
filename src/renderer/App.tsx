@@ -9,7 +9,7 @@ import type { PaletteEntry } from './palette/entries';
 import { Palette } from './palette/Palette';
 import { OutlineProvider } from './outline/useOutline';
 import { useColorScheme } from './document/theme';
-import { markFirstPaint } from './perf';
+import { markFirstPaint, markStart } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
 import { SessionNotice, SettingsNotice } from './settings/SettingsNotice';
 import { settingsTokens } from './settings/tokens';
@@ -46,6 +46,7 @@ export function App() {
 
   useEffect(() => {
     void window.galeo.app.info().then((next) => {
+      markStart('info');
       document.documentElement.dataset['platform'] = next.platform;
       setInfo(next);
     });

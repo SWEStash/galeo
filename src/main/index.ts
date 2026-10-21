@@ -87,6 +87,7 @@ const PRESSURE_THRESHOLD_BYTES = 1536 * MIB;
 
 // Node's uptime starts with the process, before any of this module runs.
 perfMark('process-start', Date.now() - process.uptime() * 1000);
+perfMark('main-loaded');
 
 const runtime = { isPackaged: app.isPackaged, env: process.env };
 // Fixed at process start: a forwarded launch or page content can't change it (ADR-008).
@@ -531,6 +532,7 @@ function start(initialMode: StartupMode): void {
       throw error;
     }
     reportSettingsNotices(profile.settings.notices);
+    perfMark('profile-started');
     // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
     void profile.recent.load().catch((error: unknown) => console.warn('galeo: recent files not loaded', error));
     return profile;
@@ -540,6 +542,7 @@ function start(initialMode: StartupMode): void {
   const startProfile = async (id: string): Promise<BrowserWindow | null> => {
     const profile = await startRuntime(id);
     const { session, notice } = await profile.sessions.load();
+    perfMark('session-loaded');
     if (notice) reportSessionNotice(notice);
     profile.sessionNotice = notice;
     let front: BrowserWindow | null = null;
@@ -752,6 +755,7 @@ function start(initialMode: StartupMode): void {
     const menu = applicationMenu(process.platform);
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     await appState.load();
+    perfMark('state-loaded');
     pressure.start();
     hardenWebContents();
     if (lockdown.guard) {

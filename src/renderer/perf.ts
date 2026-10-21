@@ -9,6 +9,12 @@ export function markFirstPaint(): void {
   requestAnimationFrame(() => setTimeout(() => performance.mark('galeo:first-paint')));
 }
 
+/** Marks a step of the page's start (`galeo:<name>`) for the performance harness. */
+export function markStart(name: 'modules-loaded' | 'info'): void {
+  if (!__GALEO_PERF__) return;
+  performance.mark(`galeo:${name}`);
+}
+
 let documentPainted = false;
 
 /** Marks the frame after the first document content was inserted (`galeo:document-paint`). */

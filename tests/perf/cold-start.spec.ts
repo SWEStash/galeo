@@ -67,6 +67,13 @@ async function coldStartOnce(cache: string, files: string[] = []): Promise<Repor
 
 const since = (report: Report, mark: string) => report.marks[mark]! - report.marks['process-start']!;
 
+/** The start's steps in the order they happen; each is timed from the process start. */
+const STEPS = ['main-loaded', 'app-ready', 'state-loaded', 'profile-started', 'session-loaded', 'window-created', 'page-start', 'page-request', 'page-response', 'dom-interactive', 'modules-loaded', 'info', 'first-paint'];
+
+/** The median time of each step a run recorded, from the process start. */
+const steps = (runs: Report[]) =>
+  Object.fromEntries(STEPS.filter((step) => runs.every((run) => step in run.marks)).map((step) => [step, Math.round(summarize(runs.map((run) => since(run, step))).median)]));
+
 /** A typical launch: galeo not running, its caches from earlier launches still there. */
 async function typicalLaunches(files: string[] = []): Promise<Report[]> {
   const cache = mkdtempSync(path.join(tmpdir(), 'galeo-perf-cache-'));
@@ -94,6 +101,7 @@ test('cold start to first paint of the blank window', async () => {
     firstPaintMs: firstPaint,
     appReadyMs: summarize(runs.map((r) => since(r, 'app-ready'))),
     windowCreatedMs: summarize(runs.map((r) => since(r, 'window-created'))),
+    stepsMs: steps(runs),
     memoryMB: summarize(runs.map((r) => r.memoryKB / 1024)),
   };
   const dir = path.join(import.meta.dirname, 'results');
@@ -105,6 +113,7 @@ test('cold start to first paint of the blank window', async () => {
       `${result.windowCreatedMs.median.toFixed(0)} ms; ` +
       `memory median ${result.memoryMB.median.toFixed(0)} MB`,
   );
+  console.log(`steps (median ms from process start): ${JSON.stringify(result.stepsMs)}`);
 
   const verdict = checkBudget(firstPaint, budgets.coldStartToFirstPaintMs, factor);
   expect(firstPaint.median, `median over the ${verdict.limit} ms limit`).toBeLessThanOrEqual(verdict.limit);
@@ -123,6 +132,7 @@ test('cold start to first paint of the 50 KB reference document', async () => {
     budgetFactor: factor,
     documentPaintMs: documentPaint,
     firstPaintMs: summarize(runs.map((r) => since(r, 'first-paint'))),
+    stepsMs: steps(runs),
     memoryMB: summarize(runs.map((r) => r.memoryKB / 1024)),
   };
   const dir = path.join(import.meta.dirname, 'results');
