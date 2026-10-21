@@ -50,6 +50,7 @@ Record the date, the build and the result of each row.
 | Split and editor basics by keyboard (v0.2) | Ctrl+\; Tab to the divider, ←/→ move it, Home resets it. Ctrl+H, type, Enter replaces one, Replace all, Ctrl+Z undoes it all. Ctrl+D twice, Shift+Alt+↓, then type at every cursor; Esc leaves one | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: editing (v0.2) | Ctrl+E then Ctrl+Tab away and back: the tab reads "…, edit mode", and once typed in "…, unsaved changes". Ctrl+S: "Saved". A refused save reads its reason. The changed-on-disk bar reads "File changed on disk"; the unsaved question reads "Save changes to <name>?" and each button | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: diff, split and replace (v0.2) | Show diff reads "Changes: mine \| theirs", then "Mine (unsaved)" and "Theirs (on disk)" as read-only text. The divider reads "Resize source and preview" with its value as it moves. Replace all reads "Replaced N" once (not twice with the editor's own message). Several cursors: typing reads as usual | Pass (2026-10-15, `.deb` 0.2.0) |
+| Orca: search tabs and filling quick open (v0.4) | Close two tabs, Ctrl+Shift+A: Orca says "Search tabs", the count ("4 tabs") and each row's name and folder under "Open tabs" and "Recently closed"; Enter on a closed one brings it back where it was. Ctrl+P, arrow to a result: Orca reads its name and folder, then "Tab fills in its path"; Tab: "Filled ~/…". Home/End move the caret in both fields | Not run (2026-10-21): for the 0.4.0 run |
 | Data views by keyboard, then Orca (v0.3) | In a CSV table the arrows move cell to cell and Orca reads each cell; in a JSON tree the arrows expand and collapse items and Orca reads each one | Pass (2026-10-20, `.deb` 0.3.0) |
 
 ## Performance
@@ -117,6 +118,9 @@ gave the 750 ms above; cold starts in the regular test runs since v0.2 began mea
   Reader width (v0.3), checked on 2026-10-18: Alt++ / Alt+=, Alt+- and Alt+0 are bound nowhere in
   those schemas (the magnifier's zoom keys are Super+Alt+= and Super+Alt+-), nor in CodeMirror's edit
   keys; the palette spec lists them with the keyboard map.
+  Search tabs (v0.4), checked on 2026-10-21: Ctrl+Shift+A is bound nowhere in GNOME's schemas nor
+  by IBus (its emoji keys are Super+. and Super+;); only the Ptyxis terminal uses it, inside its
+  own window.
 
 ## Desktop and Wayland (manual)
 
