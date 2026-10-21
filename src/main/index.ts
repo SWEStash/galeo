@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, Menu, webContents } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, Menu, nativeTheme, webContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
@@ -16,6 +16,7 @@ import { AppState } from '../core/profiles/app-state';
 import { DEFAULT_PROFILE, ProfileCatalog } from '../core/profiles/catalog';
 import { profileIdFor } from '../core/profiles/names';
 import { appImageLauncher, installLauncher } from '../core/desktop/launcher';
+import { ThemeGate } from '../core/desktop/theme-gate';
 import { openFiles } from '../core/routing/open-files';
 import { editToggle } from '../core/documents/edit-toggle';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
@@ -84,6 +85,13 @@ const UNSAVED_ACK_MS = 5000;
  * from the measured baseline plus headroom (ADR-002): it should catch runaway documents only.
  */
 const PRESSURE_THRESHOLD_BYTES = 1536 * MIB;
+/**
+ * On Linux, Chromium sends a native theme update soon after the app is ready, then two together when
+ * the desktop's theme settings arrive over D-Bus, about 140 ms later. A launch's first window waits
+ * for the second update, at most this long from ready (ThemeGate).
+ */
+const THEME_UPDATES = 2;
+const THEME_CAP_MS = 400;
 
 // Node's uptime starts with the process, before any of this module runs.
 perfMark('process-start', Date.now() - process.uptime() * 1000);
@@ -194,6 +202,8 @@ function start(initialMode: StartupMode): void {
   // Window ids, the last focused first, across all profiles.
   let focusOrder: number[] = [];
   let quitting = false;
+  // Open once the desktop's theme settings have arrived (set when the app is ready).
+  let themeSettled: Promise<void> = Promise.resolve();
   const profileOf = (windowId: number) => [...running.values()].find((runtime) => runtime.has(windowId));
   const idsOf = (runtime: ProfileRuntime) => runtime.windows.map((window) => window.webContents.id);
   const settingsState = (profile: ProfileRuntime): SettingsState => ({
@@ -543,6 +553,7 @@ function start(initialMode: StartupMode): void {
     const profile = await startRuntime(id);
     const { session, notice } = await profile.sessions.load();
     perfMark('session-loaded');
+    await themeSettled;
     if (notice) reportSessionNotice(notice);
     profile.sessionNotice = notice;
     let front: BrowserWindow | null = null;
@@ -643,6 +654,7 @@ function start(initialMode: StartupMode): void {
     const profile = running.get(decision.profile)!;
     if (typeof decision.window === 'number') window = profile.windows.find((each) => each.webContents.id === decision.window)!;
     else if (decision.window === 'new' || !window) {
+      await themeSettled;
       window = openMainWindow(profile);
       fresh = true;
     }
@@ -752,6 +764,10 @@ function start(initialMode: StartupMode): void {
 
   void app.whenReady().then(async () => {
     perfMark('app-ready');
+    const themeGate = new ThemeGate({ clock: systemClock, updates: process.platform === 'linux' ? THEME_UPDATES : 0, capMs: THEME_CAP_MS });
+    const onThemeUpdated = () => themeGate.updated();
+    nativeTheme.on('updated', onThemeUpdated);
+    themeSettled = themeGate.opened().then(() => void nativeTheme.off('updated', onThemeUpdated));
     const menu = applicationMenu(process.platform);
     Menu.setApplicationMenu(menu && Menu.buildFromTemplate(menu));
     await appState.load();

@@ -351,7 +351,10 @@ the reader scrolls leads, and a pane whose content just changed follows without 
 
 The Launcher starts the app. Main takes the single-instance lock, sets up the Network Guard
 **before any window exists**, loads app-state and the target profile's session, and creates
-its windows. Each renderer loads Chrome UI (heavy features lazily), receives its Tab Records, and
+its windows. On Linux the first window waits for the desktop's theme settings, at most 400 ms after
+the app is ready: Chromium reads them over D-Bus and re-themes every open window when they arrive,
+which holds main's thread for some 300 ms while a window exists, and the page's own files are served
+on that thread. Each renderer loads Chrome UI (heavy features lazily), receives its Tab Records, and
 renders only its active tab. Budget: first document painted within 500 ms.
 
 ### 5.7 Moving a tab to another window (ADR-019, ADR-022)
