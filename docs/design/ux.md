@@ -50,6 +50,9 @@ ADR-002…007).
 | **Document area** | Rendered or source view of the active tab | Always visible |
 | **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; (v0.3) a table's options (separator and header, a menu); the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width") | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
+| **Search tabs** (v0.4) | The window's open tabs and recently closed tabs by name and folder (F16) | Ctrl+Shift+A / Esc |
+| **Tab overview** (v0.4) | Every tab of the window as a grid of cards; activate, close, reorder (F17) | Ctrl+Shift+E, the palette / Esc |
+| **Side tab panel** (v0.4) | The tabs as a vertical list on the left, when the profile's setting puts them there (F18) | Setting; Ctrl+Shift+B hides and shows it |
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side | Ctrl+Shift+O (toggle) |
@@ -105,6 +108,8 @@ profile. Multiple selected files open as tabs in selection order.
 
 - New tabs open after the active tab (Chrome order). Middle-click or Ctrl+W closes;
   Ctrl+Shift+T reopens closed tabs, and after a closed window, the whole window.
+- (v0.4) Search tabs finds an open or recently closed tab by name (F16); the tab overview shows
+  them all at once (F17); a profile can put its tabs in a list on the left (F18).
 - Hibernation is invisible except that a hibernated tab's label is slightly dimmed. Waking must
   land at the saved scroll position before first paint (no jump).
 - Tabs with duplicate file names show the shortest distinguishing parent (`acme/plan.md`,
@@ -295,6 +300,50 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 - **Keyboard**: the palette's *Move tab to new window* and *Move tab to window…* (a list of the
   other windows, named by profile and active tab) do the same, and focus the window the tab went to.
 
+### F16 — Search tabs (v0.4)
+
+- Ctrl+Shift+A (also in the palette) opens a list over the document, like quick open: a search
+  field, then a section **Open tabs** and a section **Recently closed** (this window's last 25
+  closed tabs, newest first). Each row shows the file name and its folder; an empty query lists
+  everything.
+- Typing matches the name and the full path, fuzzy, as quick open does. ↑/↓ select, Enter on an
+  open tab shows it, Enter on a closed tab reopens it where it was, with its history, zoom and
+  reader width. Esc closes the list and returns focus to the document.
+- Unlike quick open (F8), it never lists files that aren't tabs: it answers "where is that tab",
+  not "open a file". Closed windows stay with Ctrl+Shift+T.
+- The list holds only tabs of this window, so of one profile.
+
+### F17 — Tab overview (v0.4)
+
+- Ctrl+Shift+E (also in the palette and from a button at the tab bar's end) shows the window's
+  tabs as a grid of cards, in tab order, over the document.
+- A card shows the file name, its folder, an icon for the kind of file and the tab's indicators
+  (F4, with their text); the active tab's card is marked. Cards show no document content, so
+  hibernated tabs cost nothing.
+- Keys: arrows move between cards, Home/End to the first and last; Enter (or a click) shows that
+  tab and closes the overview; Delete closes the tab (the unsaved-changes guard applies);
+  Ctrl+Shift+PgUp/PgDn move the card, and so the tab, one place. Esc closes the overview and
+  returns focus to the document.
+- Dragging a card moves the tab within the window; the tab bar shows the new order when the
+  overview closes. Moving a tab to another window stays a tab-bar drag (F15).
+- A screen reader hears each card's name, indicators and position ("plan.md, unsaved, 3 of 9").
+
+### F18 — Tabs on the left (v0.4)
+
+- A per-profile setting, *Tabs on the left*, moves the tabs from the tab bar into a side panel on
+  the window's left: one tab per line, with the name and, below it, a shortened folder; the
+  tooltip has the full path. The panel scrolls when the tabs don't fit.
+- What the title bar keeps (the profile chip, the new-tab button, a place to drag the window and
+  the window controls) is decided in the window layout ADR.
+- A divider between the panel and the document sets the panel's width (mouse, or arrow keys when
+  focused; double-click resets it); the width is kept for the profile. Ctrl+Shift+B hides and
+  shows the panel in this window until the window closes.
+- Everything F3, F4 and F15 describe works in the list: the insertion caret is horizontal,
+  between rows; dropping files, reordering, dragging a tab to another window and dropping it
+  outside every window work as in the tab bar. Ctrl+Tab, Ctrl+1…9 and the move keys are unchanged;
+  ↑/↓ move between tabs when the list has focus.
+- With the setting off, the tab bar is the same as in v0.3.
+
 ## 4. States
 
 ### Window-level
@@ -370,6 +419,9 @@ the native menu on the active tab.
 | Move tab to new window / to window… (v0.3) | palette | F15 |
 | Expand all nodes / Collapse all nodes / Copy JSON path (v0.3) | palette | JSON tree, F14 |
 | Table separator: … / First row is a header / Reset table options / Show as table (v0.3) | palette; also the status bar's Table options | Tables, F14, ADR-021 |
+| Search tabs (v0.4) | Ctrl+Shift+A | F16; Chrome's key |
+| Tab overview (v0.4) | Ctrl+Shift+E | F17 |
+| Hide / show the side tab panel (v0.4) | Ctrl+Shift+B | F18; only with tabs on the left |
 | Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply
@@ -460,3 +512,11 @@ Each is decided when the feature that needs it is built.
       has Ctrl; Full width from the palette only (owner, 2026-10-17).
 - [x] Limits for the JSON tree and the CSV table, and how `.jsonl` opens; no outline for source code
       in v0.3 ([ADR-018](../decisions/ADR-018-rich-views-and-the-format-descriptor.md), owner, 2026-10-15).
+- [x] Search tabs and the tab overview are two surfaces: a list for finding (it reads well with a
+      screen reader), a grid for seeing and rearranging (owner, 2026-10-21).
+- [x] Tab overview cards show the name, folder, kind of file and indicators, with no excerpts and
+      no pictures of the page (owner, 2026-10-21).
+- [x] Tabs on the left is a per-profile setting, like the theme, and so is the panel's width;
+      hiding the panel lasts for the window (owner, 2026-10-21).
+- [ ] Find in all tabs: whether v0.4 builds it, and its key (Ctrl+Shift+F is free) — decided
+      after a feasibility check.

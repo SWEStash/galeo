@@ -57,9 +57,9 @@ must not obstruct (plain files only, no sidecar metadata).
 - No accounts, sync, telemetry, cloud features, AI features, or automatic update checks.
 - The app itself makes **no network requests** (external links open in the system browser).
 - Not a replacement for `astro dev`: MDX components are shown as placeholders, not executed.
-- macOS/Windows are not *officially* supported in v0.1–v0.2. The code is portable by design;
+- macOS/Windows are not *officially* supported in v0.1–v0.4. The code is portable by design;
   CI on macOS/Windows and unsigned **preview** builds are deferred until a stable Linux package
-  (ADR-011).
+  (ADR-011); support for both is planned for v0.5 (owner, 2026-10-21).
 - No sidecar files next to user documents; galeo never writes into user folders except when
   the user explicitly saves an edit (v0.2).
 
@@ -177,7 +177,7 @@ must not obstruct (plain files only, no sidecar metadata).
 ### Won't Have (v0.1)
 
 - Editing (v0.2); JSON/YAML/TOML/CSV/source-code rich views (v0.3); Graphviz, D2, PlantUML
-  (v0.4); anything in Non-Goals.
+  (a later release); anything in Non-Goals.
 
 ## User Stories — v0.2 "editor"
 
@@ -208,7 +208,8 @@ must not obstruct (plain files only, no sidecar metadata).
 ### Won't Have (v0.2)
 
 - WYSIWYG, toolbars, running Astro components, publishing from galeo.
-- Optional Vim keybindings (moved to v0.3, owner 2026-10-08; then to v0.4, owner 2026-10-15).
+- Optional Vim keybindings (moved to v0.3, owner 2026-10-08; then to v0.4, owner 2026-10-15; then
+  to a later release, owner 2026-10-21).
 
 ## User Stories — v0.3 "formats"
 
@@ -268,9 +269,66 @@ must not obstruct (plain files only, no sidecar metadata).
 
 - Optional Vim keybindings, spell check in edit mode (it would need bundled dictionaries: zero
   network), Graphviz/D2/PlantUML diagram engines, and cold-start profiling toward the 500 ms
-  target: all moved to v0.4 (owner, 2026-10-15).
+  target: all moved to v0.4 (owner, 2026-10-15). Only cold-start profiling stayed in v0.4; the
+  others moved again (see "Won't Have (v0.4)").
 - Parsed views for YAML and TOML (they stay highlighted source: no parser dependency), editing
   inside the tree or the table (edits happen in the source), and schema validation.
+
+## User Stories — v0.4 "tabs"
+
+### Must Have
+
+1. **Search tabs.** As the owner, I want to find a tab by its name or folder among the window's open
+   tabs and the tabs I closed recently, so that I can get back to a document without scanning a
+   crowded tab bar.
+   - AC: Given a window with open and recently closed tabs, when I press Ctrl+Shift+A and type, then
+     a list shows the matching open tabs, then the matching closed ones, each with its name and
+     folder; an empty query lists them all.
+   - AC: Enter on an open tab shows it; Enter on a closed tab reopens it where it was, with its
+     history, zoom and reader width. Esc closes the list and returns focus to the document.
+   - AC: The list works with the keyboard alone and reads correctly with a screen reader.
+2. **Overview of a window's tabs.** As the owner, I want to see every tab of a window at once as a
+   grid of cards, so that I can find and rearrange tabs when there are too many to read in the bar.
+   - AC: Each card shows the file name, its folder, the kind of file and the tab's indicators
+     (unsaved, edit mode, following a log, missing file); the active tab is marked. Cards show no
+     content, so a hibernated tab costs nothing to show.
+   - AC: Arrow keys move between cards; Enter shows that tab and closes the overview; Delete closes
+     the tab; Ctrl+Shift+PgUp/PgDn and dragging a card move it, and the tab bar follows.
+   - AC: A screen reader announces each card's name and position ("3 of 9"); Esc returns focus to
+     the document.
+3. **Tabs on the left.** As the owner, I want to put a profile's tabs in a list on the left of the
+   window, so that long file names and many tabs stay readable.
+   - AC: Given the setting is on for the profile, the tabs show one per line in a side panel; a
+     divider sets the panel's width, kept for the profile; a shortcut hides and shows the panel
+     in the window.
+   - AC: Everything the tab bar does works in the list: reordering, dropping files, moving a tab
+     to another window by drag and dropping it outside to open a new window; the window keeps its
+     profile chip, its new-tab button, a place to drag the window and its window controls.
+   - AC: With the setting off, the tab bar is the same as in v0.3.
+
+### Should Have
+
+- **Faster start.** Cold start is measured and profiled, and the slow parts found are fixed or
+  recorded; the start budgets are tightened to what the profiled build achieves, and no new
+  feature adds work before the first window paints. The 500 ms target stays the goal.
+- **Remove the command-line launcher.** Settings can remove what "Install command-line launcher"
+  added for the AppImage (the `galeo`/`gal` commands, the menu entry and the file types), so that
+  deleting the AppImage leaves nothing behind.
+
+### Could Have
+
+- **Find in all tabs.** Search the text of every tab in a window at once, then go to a match. Built
+  in v0.4 only if it can stay fast for large files and simple (it would search the files' text, not
+  the rendered view); otherwise it moves to a later release.
+
+### Won't Have (v0.4)
+
+- Official macOS and Windows support: planned for v0.5 (owner, 2026-10-21).
+- Optional Vim keybindings, spell check in edit mode, ticking task-list checkboxes in the rendered
+  view, and colour in the JSON tree and in logs: a later release (owner, 2026-10-21).
+- More diagram engines (Vega-Lite, Graphviz, D2, PlantUML): a later release (owner, 2026-10-21).
+- Drag between windows checked on X11: the owner's desktop has no X11 session; Wayland stays the
+  checked platform.
 
 ## User Experience
 
