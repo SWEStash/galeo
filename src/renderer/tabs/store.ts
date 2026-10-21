@@ -59,6 +59,7 @@ export type TabsApi = Pick<
   | 'close'
   | 'move'
   | 'reopenClosed'
+  | 'reopenClosedTab'
   | 'position'
   | 'zoom'
   | 'width'
@@ -87,6 +88,8 @@ export interface TabStore {
   /** Main owns the order: the new order shows once its snapshot arrives. */
   move(id: string, position: number): void;
   reopenClosed(): void;
+  /** Reopens one closed tab by the id tab search gave it (UX F16). */
+  reopenClosedTab(id: string): void;
   /** The reader scrolled a tab: kept here for its next wake, and reported to main for history and sessions. */
   moved(id: string, position: ScrollAnchor): void;
   positionOf(id: string): ScrollAnchor | null;
@@ -138,6 +141,12 @@ export function createTabStore(api: TabsApi): TabStore {
   let unsubscribe: (() => void)[] = [];
   /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
   let wanted: string | null = null;
+  /** Shows a tab main brought back: now, or once main's snapshot has it. */
+  const show = (id: string | null) => {
+    if (!id) return;
+    if (view.tabs.some((tab) => tab.id === id)) store.activate(id);
+    else wanted = id;
+  };
   // This window's latest tab drag, kept past its end: the drop back here comes after it (ADR-022).
   let ownDrag: { id: string; token: string } | null = null;
   /** Activations reported to main that it hasn't answered yet; until then its snapshots may predate them. */
@@ -325,18 +334,13 @@ export function createTabStore(api: TabsApi): TabStore {
     },
     // Main names the tab it handed over (ADR-022); its snapshot may come first.
     adopt(token, position) {
-      void api.adopt(token, position).then((id) => {
-        if (!id) return;
-        if (view.tabs.some((tab) => tab.id === id)) store.activate(id);
-        else wanted = id;
-      });
+      void api.adopt(token, position).then(show);
     },
     reopenClosed() {
-      void api.reopenClosed().then((id) => {
-        if (!id) return;
-        if (view.tabs.some((tab) => tab.id === id)) store.activate(id);
-        else wanted = id;
-      });
+      void api.reopenClosed().then(show);
+    },
+    reopenClosedTab(id) {
+      void api.reopenClosedTab(id).then(show);
     },
   };
   return store;

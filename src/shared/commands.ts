@@ -33,6 +33,7 @@ export const COMMANDS = {
   closeTab: { label: 'Close tab', group: 'Tabs', runs: 'page' },
   closeWindow: { label: 'Close window', group: 'Window', runs: 'main' },
   reopenClosed: { label: 'Reopen closed tab or window', group: 'Tabs', runs: 'page' },
+  searchTabs: { label: 'Search tabs', group: 'Tabs', runs: 'page' },
   nextTab: { label: 'Next tab', group: 'Tabs', runs: 'page' },
   previousTab: { label: 'Previous tab', group: 'Tabs', runs: 'page' },
   goToTab: { label: 'Go to tab', group: 'Tabs', runs: 'page' },

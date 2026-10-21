@@ -183,7 +183,9 @@ the file into the window in front of you) when you want it here.
 ## Tabs, windows and sessions
 
 Tabs and windows work like a browser's: Ctrl+Tab to cycle, Ctrl+W to close, Ctrl+Shift+T to
-reopen what you closed last, Ctrl+N for a new window. Closing a profile's last window, or quitting
+reopen what you closed last, Ctrl+N for a new window. Ctrl+Shift+A searches the window's open tabs
+and its last 25 closed ones by name or folder: Enter shows an open tab, or brings a closed one back
+where it was. Closing a profile's last window, or quitting
 (Ctrl+Shift+Q), keeps its session: next time its windows and tabs come back where you left them.
 "Restore previous session" (palette or profile menu) goes back to one of the last three.
 

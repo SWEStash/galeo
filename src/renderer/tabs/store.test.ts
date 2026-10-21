@@ -27,6 +27,7 @@ function setup(initial: TabSnapshot) {
     close: vi.fn().mockResolvedValue(undefined),
     move: vi.fn().mockResolvedValue(undefined),
     reopenClosed: vi.fn().mockResolvedValue(undefined),
+    reopenClosedTab: vi.fn().mockResolvedValue(null),
     position: vi.fn().mockResolvedValue(undefined),
     zoom: vi.fn().mockResolvedValue(undefined),
     width: vi.fn().mockResolvedValue(undefined),
@@ -183,6 +184,22 @@ describe('createTabStore', () => {
     store.reopenClosed();
     await vi.waitFor(() => expect(store.getSnapshot().active).toBe('c'));
     expect(api.activated).toHaveBeenLastCalledWith('c');
+  });
+
+  it('reopens a closed tab tab search chose, by its id, and activates it once main has it', async () => {
+    const { store, api, push } = setup(snapshot(1, ['a'], 'a'));
+    await store.start();
+    api.reopenClosedTab.mockResolvedValueOnce('b');
+    store.reopenClosedTab('old-b');
+    expect(api.reopenClosedTab).toHaveBeenCalledWith('old-b');
+    await Promise.resolve();
+    await Promise.resolve();
+    push(snapshot(2, ['b', 'a'], 'a'));
+    await vi.waitFor(() => expect(store.getSnapshot().active).toBe('b'));
+    api.reopenClosedTab.mockResolvedValueOnce(null);
+    store.reopenClosedTab('gone');
+    await vi.waitFor(() => expect(api.reopenClosedTab).toHaveBeenCalledWith('gone'));
+    expect(store.getSnapshot().active).toBe('b');
   });
 
   it('renders a tab once it is shown, and keeps it rendered until main hibernates it', async () => {

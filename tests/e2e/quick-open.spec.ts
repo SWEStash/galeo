@@ -158,6 +158,25 @@ test('Tab fills the field with the highlighted path and Enter opens it; the fill
   });
 });
 
+test('Enter right after the arrows opens the result they highlighted', async () => {
+  await withRepository(async (root, home) => {
+    const { window, close } = await launchApp(['--', path.join(root, 'README.md'), path.join(root, 'docs', 'notes.md')], { home });
+    try {
+      await expect(window.getByRole('tab')).toHaveCount(2);
+      await window.keyboard.press('ControlOrMeta+1');
+      await window.keyboard.press('ControlOrMeta+P');
+      await expect(quickOpen(window).getByRole('group', { name: /Open tabs/ }).getByRole('option')).toHaveCount(2);
+      await window.keyboard.press('ArrowDown');
+      await window.keyboard.press('ArrowDown');
+      await window.keyboard.press('Enter');
+      await expect(quickOpen(window)).toHaveCount(0);
+      await expect(window.getByRole('tab', { selected: true })).toContainText('notes.md');
+    } finally {
+      await close();
+    }
+  });
+});
+
 test('Ctrl+Enter opens the file in a new window of the profile', async () => {
   await withRepository(async (root, home) => {
     const { app, window, close } = await launchApp(['--', path.join(root, 'README.md')], { home });

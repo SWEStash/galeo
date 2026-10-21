@@ -311,9 +311,10 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   field, then a section **Open tabs** and a section **Recently closed** (this window's last 25
   closed tabs, newest first). Each row shows the file name and its folder; an empty query lists
   everything.
-- Typing matches the name and the full path, fuzzy, as quick open does. ↑/↓ select, Enter on an
-  open tab shows it, Enter on a closed tab reopens it where it was, with its history, zoom and
-  reader width. Esc closes the list and returns focus to the document.
+- Typing matches the name and the full path, fuzzy, as quick open does. ↑/↓ select, Home/End move
+  the caret in the field, Enter on an open tab shows it, Enter on a closed tab reopens it where it
+  was, with its history, zoom and reader width. Esc closes the list and returns focus to the
+  document.
 - Unlike quick open (F8), it never lists files that aren't tabs: it answers "where is that tab",
   not "open a file". Closed windows stay with Ctrl+Shift+T.
 - The list holds only tabs of this window, so of one profile.

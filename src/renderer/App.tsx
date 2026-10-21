@@ -36,6 +36,7 @@ import { useTabs } from './tabs/useTabs';
 import { UnsavedPrompt, useConfirmUnsaved } from './edit/UnsavedPrompt';
 import { wheelZoom } from './tabs/wheel-zoom';
 import { QuickOpen } from './quick-open/QuickOpen';
+import { TabSearch } from './tabs/TabSearch';
 import { DropArea } from './tabs/DropArea';
 import { useFileDrops } from './tabs/useFileDrops';
 import { createRenderClient, type RenderClient } from './worker/client';
@@ -128,8 +129,8 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     return () => client.dispose();
   }, []);
 
-  // One overlay at a time: quick open, the palette, About or the windows a tab can move to.
-  const [overlay, setOverlay] = useState<'quickOpen' | 'palette' | 'about' | 'moveTab' | null>(null);
+  // One overlay at a time: quick open, tab search, the palette, About or the windows a tab can move to.
+  const [overlay, setOverlay] = useState<'quickOpen' | 'tabSearch' | 'palette' | 'about' | 'moveTab' | null>(null);
   const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
   // Where focus goes when the overlay closes, if not the document: About from the profile menu, whose item is gone.
   const returnFocus = useRef<string | null>(null);
@@ -144,6 +145,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   useUnsavedGuards(store);
   useCommands({
     commandPalette: () => setOverlay('palette'),
+    searchTabs: () => setOverlay('tabSearch'),
     moveTabToWindow: () => {
       const shown = movableTab(store, setMessage);
       if (shown) setOverlay('moveTab');
@@ -247,6 +249,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       </Tabs>
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
       {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} say={setMessage} />}
+      {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} />}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}
       {overlay === 'about' && <AboutDialog version={version} onClose={closeOverlay} />}
       {overlay === 'moveTab' && <MoveTabDialog onChoose={moveToChosenWindow} onClose={closeOverlay} />}
