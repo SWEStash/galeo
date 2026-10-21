@@ -50,6 +50,7 @@ Record the date, the build and the result of each row.
 | Split and editor basics by keyboard (v0.2) | Ctrl+\; Tab to the divider, ←/→ move it, Home resets it. Ctrl+H, type, Enter replaces one, Replace all, Ctrl+Z undoes it all. Ctrl+D twice, Shift+Alt+↓, then type at every cursor; Esc leaves one | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: editing (v0.2) | Ctrl+E then Ctrl+Tab away and back: the tab reads "…, edit mode", and once typed in "…, unsaved changes". Ctrl+S: "Saved". A refused save reads its reason. The changed-on-disk bar reads "File changed on disk"; the unsaved question reads "Save changes to <name>?" and each button | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: diff, split and replace (v0.2) | Show diff reads "Changes: mine \| theirs", then "Mine (unsaved)" and "Theirs (on disk)" as read-only text. The divider reads "Resize source and preview" with its value as it moves. Replace all reads "Replaced N" once (not twice with the editor's own message). Several cursors: typing reads as usual | Pass (2026-10-15, `.deb` 0.2.0) |
+| Data views by keyboard, then Orca (v0.3) | In a CSV table the arrows move cell to cell and Orca reads each cell; in a JSON tree the arrows expand and collapse items and Orca reads each one | Pass (2026-10-20, `.deb` 0.3.0) |
 
 ## Performance
 
@@ -60,23 +61,24 @@ a typical launch: galeo not running, its caches from earlier launches kept.
 Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performance profile.
 0.1.0 was recorded on 2026-10-07 (Electron 44.7.0, Mermaid 12.1.0); the 0.2.0 candidate on
 2026-10-11 (Electron 44.7.0, Mermaid 12.1.0, headless); 0.2.0 on 2026-10-14 (Electron 44.7.2,
-Mermaid 12.1.0, headless), with a new 50 KB reference document of the same size and structure.
+Mermaid 12.1.0, headless), with a new 50 KB reference document of the same size and structure;
+0.3.0 on 2026-10-20 (Electron 44.9.2, Mermaid 12.2.0, headless, load average 0.1 before the run).
 The memory baseline (1377 MB) was set by the owner on 2026-10-06, on Electron 44.5.1, after the
 Electron and Mermaid updates (1257 → 1377 MB).
 
-| Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 |
-|---|---|---|---|---|
-| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) |
-| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) |
-| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) |
-| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) |
-| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
-| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB | 1426 MB |
-| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) | 275 ms (p95 319) |
-| Open a 10 MB / 200,000-node JSON as a tree: launch → first row painted (v0.3) | 3000 ms (starting value) | — | — | — |
-| Open a 99 MB CSV as a table: launch → first row painted (v0.3) | 5000 ms (ADR-020) | — | — | — |
-| Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — |
-| Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — |
+| Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 | 0.3.0 |
+|---|---|---|---|---|---|
+| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) | 811 ms (p95 841) |
+| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) | 1264 ms (p95 1306) |
+| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) | 16.3 ms (p95 17.7) |
+| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) | 54 ms (p95 84) |
+| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
+| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB | 1426 MB | 1435 MB (+4.2 %) |
+| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) | 275 ms (p95 319) | 265 ms (p95 300) |
+| Open a 10 MB / 200,000-node JSON as a tree: launch → first row painted (v0.3) | 3000 ms (starting value) | — | — | — | 1462 ms |
+| Open a 99 MB CSV as a table: launch → first row painted (v0.3) | 5000 ms (ADR-020) | — | — | — | 2722 ms |
+| Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — | 16.7 ms (p95 16.7) both |
+| Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB |
 
 The v0.3 rows were first measured on 2026-10-16 during development (headless, Electron 44.8.0, the
 machine under a load average of 2–3, so not release figures): the JSON tree opened in 1550–1986 ms and
@@ -127,11 +129,15 @@ these.
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
-| Reader width (v0.3): Alt+= / Alt+- / Alt+0 on a long Markdown file and a `.txt`, Full width from the palette; the width comes back after a restart; Settings' measure presets move the tabs left at the setting | |
-| Font pickers (v0.3): the installed families are listed (monospace ones only for code), each in its face; a chosen one is the documents' font; a typed name not installed falls back | |
-| About galeo (v0.3) from the profile menu and from Settings shows the version | |
-| Moving tabs (v0.3, real drags on Wayland): a tab dragged onto another window's tab bar, onto its empty part, and into a window with no tabs moves there on the first try, also back into the window it was torn off from, shown, with no "galeo is ready" notice; into another profile's window it stays there after a restart | Pass (2026-10-20) |
-| Tear-off (v0.3): a tab dragged out to the desktop, or onto another application's window, from a window of two or more gets its own window, the old one stays; a window's only tab dragged out stays; Esc outside the window tears off too; a drag starts from anywhere on a tab, also after holding the press a moment | Pass (2026-10-20) |
+| Reader width (v0.3): Alt+= / Alt+- / Alt+0 on a long Markdown file and a `.txt`, Full width from the palette; the width comes back after a restart; Settings' measure presets move the tabs left at the setting | Pass (2026-10-20, `.deb` 0.3.0) |
+| Font pickers (v0.3): the installed families are listed (monospace ones only for code), each in its face; a chosen one is the documents' font; a typed name not installed falls back | Pass (2026-10-20, `.deb` 0.3.0) |
+| About galeo (v0.3) from the profile menu and from Settings shows the version | Pass (2026-10-20, `.deb` 0.3.0) |
+| `.mdx` in Files (v0.3): `xdg-mime query filetype` says `text/mdx`; *Open With* offers galeo; set as the default, a double-click opens it | Pass (2026-10-20, `.deb` 0.3.0) |
+| Data and code from Files (v0.3): a `.json`, `.csv`, `.yaml` and `.ts` each offer galeo; a double-click opens JSON as a tree, CSV as a table, YAML highlighted with its key outline, TypeScript highlighted | Pass (2026-10-20, `.deb` 0.3.0) |
+| A CSV with 3,000 columns (v0.3): opens at once; the wheel and touchpad scroll sideways and draw the columns; End on a cell goes to the last column, Home back; nothing freezes | Pass (2026-10-20, `.deb` 0.3.0) |
+| Moving tabs (v0.3, real drags on Wayland): a tab dragged onto another window's tab bar, onto its empty part, and into a window with no tabs moves there on the first try, also back into the window it was torn off from, shown, with no "galeo is ready" notice; into another profile's window it stays there after a restart | Pass (2026-10-20; again on the 0.3.0 `.deb`) |
+| Reordering tabs (v0.3): a tab dragged to another place in its own tab bar moves there | Pass (2026-10-20, `.deb` 0.3.0) |
+| Tear-off (v0.3): a tab dragged out to the desktop, or onto another application's window, from a window of two or more gets its own window, the old one stays; a window's only tab dragged out stays; Esc outside the window tears off too; a drag starts from anywhere on a tab, also after holding the press a moment | Pass (2026-10-20; again on the 0.3.0 `.deb`) |
 | A tab with unsaved changes dragged to another window keeps its text, `●` and edit mode; saving there writes the file | Pass (2026-10-19) |
 | Moving tabs under X11 (unverified in development: the spike ran on Wayland only) | Not run (2026-10-19): the owner's desktop has no X11 session |
 | Installed `.deb` (Trusted Types enforced): a document with Mermaid diagrams and math draws in full, with no Trusted Types errors | Pass (2026-10-06) |
