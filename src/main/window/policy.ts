@@ -1,4 +1,6 @@
 import { mainCommandFor, type Command, type Platform } from '../../shared/keymap';
+import type { StartInfo } from '../../shared/contracts';
+import { startInfoArg } from '../../shared/start-info';
 /** Every permission is denied except sanitized clipboard writes, used by copy buttons (SR-01). */
 export function isPermissionAllowed(permission: string): boolean {
   return permission === 'clipboard-sanitized-write';
@@ -29,7 +31,7 @@ export function appIcon({ platform, isPackaged, resourcesPath, appPath }: { plat
 }
 
 /** The only `webPreferences` any galeo window gets (SR-01). */
-export function hardenedWebPreferences({ preload, isPackaged }: { preload: string; isPackaged: boolean }) {
+export function hardenedWebPreferences({ preload, isPackaged, startInfo }: { preload: string; isPackaged: boolean; startInfo: StartInfo }) {
   return {
     preload,
     sandbox: true,
@@ -43,6 +45,8 @@ export function hardenedWebPreferences({ preload, isPackaged }: { preload: strin
     // A reader has nothing to spell-check.
     spellcheck: false,
     devTools: !isPackaged,
+    // What the page needs to paint, without waiting on main (start-info.ts).
+    additionalArguments: [startInfoArg(startInfo)],
   };
 }
 

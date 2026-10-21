@@ -93,6 +93,9 @@ export interface AppInfo {
   crashLoop: boolean;
 }
 
+/** What a page knows from its window's creation, before it can ask main anything: all but the crash loop. */
+export type StartInfo = Omit<AppInfo, 'crashLoop'>;
+
 /** Renderer → main request/response channels, named `<group>.<method>`. */
 export const CHANNELS = [
   'app.info',
@@ -410,4 +413,4 @@ export type GaleoApi = {
       listener: (payload: Events[E]) => void,
     ) => () => void;
   };
-};
+} & { app: { readonly startInfo: StartInfo | null } };

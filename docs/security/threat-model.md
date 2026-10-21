@@ -297,7 +297,10 @@ sender is the **main frame** of a galeo window with origin `galeo://app` (there 
 subframes), and argument types, sizes and schemas are checked. Schemas run **in main only**; the
 preload and renderer carry types and channel names, not validation code. Events from main (tab
 snapshots, settings) reach the page through fixed `on…` methods that pass the payload only, never
-Electron's event object.
+Electron's event object. The one value besides methods is `app.startInfo` (name, version, platform, sandbox
+state, AppImage): main puts it on the window's renderer command line when it creates the window, so
+the page paints without a round trip; it holds nothing secret, as any same-user process can read a
+command line.
 *AC*: each IPC handler has validation tests for malformed input and foreign senders.
 
 **SR-12 — Capability-scoped file access.** Main reads files only when the request follows a user

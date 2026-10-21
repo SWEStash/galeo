@@ -24,6 +24,15 @@ describe('buildApi', () => {
     expect(unsubscribe).toHaveBeenCalledOnce();
   });
 
+  it("carries the window's start info as a value, not a channel", () => {
+    const info = { name: 'galeo', version: '0.4.0', platform: 'linux', sandboxed: true, sandboxUnavailable: null, appImage: false } as const;
+    const invoke = vi.fn();
+    const api = buildApi(invoke, noSubscribe, info);
+
+    expect(api.app.startInfo).toEqual(info);
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   it('exposes no generic invoke, subscription or channel access', () => {
     const api = buildApi(vi.fn(), noSubscribe);
 
@@ -32,7 +41,7 @@ describe('buildApi', () => {
     // Registered by the preload only: the page never gets a way to name dropped paths (SR-12).
     expect(Object.keys(api.drops)).toEqual(['open', 'onReceived']);
     expect(Object.keys(api.quickOpen)).toEqual(['start', 'query', 'open', 'close', 'onResults']);
-    expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable', 'installLauncher']);
+    expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable', 'installLauncher', 'startInfo']);
     expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'pathMenu', 'contextMenu', 'save', 'dirty', 'leaveEdit', 'closeAnswer', 'keep', 'recover', 'onEditMode', 'onConfirmClose']);
     expect(Object.keys(api.tabs)).toEqual([
       'snapshot',

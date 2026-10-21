@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import type { ReaderWidth } from '../shared/tabs';
@@ -42,7 +42,15 @@ import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
 
 export function App() {
+  // What the window's creation told the page, so a new window paints without waiting on main;
+  // `app.info` follows with the crash loop, which only main knows. Main brings a crashed window back
+  // by reloading it, and that page waits for `app.info`, so a crash loop never shows its tabs.
+  const start = reloaded() ? null : window.galeo.app.startInfo;
   const [info, setInfo] = useState<AppInfo | null>(null);
+
+  useLayoutEffect(() => {
+    if (start) document.documentElement.dataset['platform'] = start.platform;
+  }, [start]);
 
   useEffect(() => {
     void window.galeo.app.info().then((next) => {
@@ -56,18 +64,24 @@ export function App() {
     void window.galeo.app.resolveSandboxUnavailable(choice);
   }, []);
 
-  if (!info) return null;
-  if (info.sandboxUnavailable) return <SandboxUnavailable cause={info.sandboxUnavailable} onChoose={choose} />;
-  if (info.crashLoop) return <CrashLoop onRetry={() => void window.galeo.window.retryAfterCrashes()} onClose={() => void window.galeo.window.command('closeWindow')} />;
+  const shown: AppInfo | null = info ?? (start && { ...start, crashLoop: false });
+  if (!shown) return null;
+  if (shown.sandboxUnavailable) return <SandboxUnavailable cause={shown.sandboxUnavailable} onChoose={choose} />;
+  if (shown.crashLoop) return <CrashLoop onRetry={() => void window.galeo.window.retryAfterCrashes()} onClose={() => void window.galeo.window.command('closeWindow')} />;
   return (
-    <CommandsProvider platform={info.platform}>
+    <CommandsProvider platform={shown.platform}>
       <OutlineProvider>
         <UnsavedPrompt>
-          <MainView sandboxed={info.sandboxed} platform={info.platform} appImage={info.appImage} version={info.version} />
+          <MainView sandboxed={shown.sandboxed} platform={shown.platform} appImage={shown.appImage} version={shown.version} />
         </UnsavedPrompt>
       </OutlineProvider>
     </CommandsProvider>
   );
+}
+
+function reloaded(): boolean {
+  const [navigation] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+  return navigation?.type === 'reload';
 }
 
 /** Status-bar messages go away on their own. */

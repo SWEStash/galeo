@@ -2,13 +2,14 @@
 // channel and event of the shared contract, and never exposes `ipcRenderer` or a generic invoke (SR-11).
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { buildApi } from '../shared/contracts';
+import { startInfoFrom } from '../shared/start-info';
 import type { PreloadChannel } from '../shared/contracts';
 import { listenForDrops } from './drops';
 import { subscriber } from './events';
 
 contextBridge.exposeInMainWorld(
   'galeo',
-  buildApi((channel, args) => ipcRenderer.invoke(channel, ...args), subscriber(ipcRenderer)),
+  buildApi((channel, args) => ipcRenderer.invoke(channel, ...args), subscriber(ipcRenderer), startInfoFrom(process.argv)),
 );
 
 // Dropped files reach main from here only; the page hears of them as a token (SR-12).

@@ -29,7 +29,7 @@ import { WarmTabs } from '../core/tabs/lifecycle';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
 import type { OpenRequest, OsShell } from '../core/ports';
-import type { EventName, Events, OtherWindow, ProfileResult, ProfilesState, SettingsResult, SettingsState } from '../shared/contracts';
+import type { EventName, Events, OtherWindow, ProfileResult, ProfilesState, SettingsResult, SettingsState, StartInfo } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
@@ -202,6 +202,15 @@ function start(initialMode: StartupMode): void {
   // Window ids, the last focused first, across all profiles.
   let focusOrder: number[] = [];
   let quitting = false;
+  /** What a window's page needs to paint, handed over when the window is created (and in `app.info`). */
+  const startInfo = (): StartInfo => ({
+    name: app.getName(),
+    version: app.getVersion(),
+    platform: keymapPlatform(process.platform),
+    sandboxed,
+    sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
+    appImage: appImagePath() !== null,
+  });
   // Open once the desktop's theme settings have arrived (set when the app is ready).
   let themeSettled: Promise<void> = Promise.resolve();
   const profileOf = (windowId: number) => [...running.values()].find((runtime) => runtime.has(windowId));
@@ -368,6 +377,7 @@ function start(initialMode: StartupMode): void {
       ...(size ? { size } : {}),
       title: [null, profile.name],
       themeMode: () => profile.settings.current.themeMode,
+      startInfo: startInfo(),
     });
     const windowId = window.webContents.id;
     profile.windows.push(window);
@@ -787,15 +797,7 @@ function start(initialMode: StartupMode): void {
     const fonts = process.platform === 'linux' ? new FcListFontCatalog() : new EmptyFontCatalog();
     registerIpc(
       {
-        'app.info': (_args, event) => ({
-          name: app.getName(),
-          version: app.getVersion(),
-          platform: keymapPlatform(process.platform),
-          sandboxed,
-          sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
-          appImage: appImagePath() !== null,
-          crashLoop: crashes.gaveUp(event.sender.id),
-        }),
+        'app.info': (_args, event) => ({ ...startInfo(), crashLoop: crashes.gaveUp(event.sender.id) }),
         // Changes beyond the page (a launcher, a profile) only on the reader's input (T6).
         'app.installLauncher': async (_args, event) => {
           if (!input.spend(event.sender.id)) throw new Error('no input');
@@ -994,7 +996,7 @@ function start(initialMode: StartupMode): void {
       trustedOrigins(runtime),
     );
     if (mode.kind === 'sandbox-unavailable') {
-      choiceWindow = createAppWindow({ url: rendererUrl(runtime), sandboxed, dialog: true });
+      choiceWindow = createAppWindow({ url: rendererUrl(runtime), sandboxed, dialog: true, startInfo: startInfo() });
     } else {
       acceptOpenRequests();
     }

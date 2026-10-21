@@ -1,4 +1,5 @@
 import { app, BrowserWindow, nativeTheme, screen } from 'electron';
+import type { StartInfo } from '../../shared/contracts';
 import path from 'node:path';
 import { visibleBounds } from '../../core/session/bounds';
 import type { WindowBounds } from '../../core/session/model';
@@ -21,6 +22,8 @@ export interface WindowOptions {
   size?: { width: number; height: number };
   /** The window's profile's theme mode, which colours its title-bar controls (see `followScheme`). */
   themeMode?: () => ThemeMode;
+  /** What its page needs to paint before it can ask main anything. */
+  startInfo: StartInfo;
 }
 
 /** How each window recolours its title-bar controls, which sit on the tab bar, from its own scheme. */
@@ -32,7 +35,7 @@ export function followScheme(window: BrowserWindow): void {
 }
 
 /** The only place that constructs a `BrowserWindow`. Main owns the title (never the page). */
-export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bounds, size, title: parts = [], themeMode }: WindowOptions): BrowserWindow {
+export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bounds, size, title: parts = [], themeMode, startInfo }: WindowOptions): BrowserWindow {
   const title = windowTitle(parts, { sandboxed });
   const scheme = () => schemeFor(themeMode?.() ?? 'system', nativeTheme.shouldUseDarkColors);
   // A place on a display that's gone isn't restored; the size is.
@@ -54,6 +57,7 @@ export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bou
     webPreferences: hardenedWebPreferences({
       preload: path.join(import.meta.dirname, '../preload/index.cjs'),
       isPackaged: app.isPackaged,
+      startInfo,
     }),
   });
   window.on('page-title-updated', (event) => event.preventDefault());

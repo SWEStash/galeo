@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { appIcon, hardenedWebPreferences, isPermissionAllowed, mainKey, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
+import { startInfoArg, startInfoFrom } from '../../shared/start-info';
 
 describe('isPermissionAllowed', () => {
   it('allows only sanitized clipboard writes (copy buttons)', () => {
@@ -40,8 +41,10 @@ describe('ownArgs', () => {
 });
 
 describe('hardenedWebPreferences', () => {
+  const startInfo = { name: 'galeo', version: '0.4.0', platform: 'linux', sandboxed: true, sandboxUnavailable: null, appImage: false } as const;
+
   it('isolates and sandboxes every renderer (SR-01)', () => {
-    expect(hardenedWebPreferences({ preload: '/app/preload.cjs', isPackaged: true })).toEqual({
+    expect(hardenedWebPreferences({ preload: '/app/preload.cjs', isPackaged: true, startInfo })).toEqual({
       preload: '/app/preload.cjs',
       sandbox: true,
       contextIsolation: true,
@@ -53,11 +56,16 @@ describe('hardenedWebPreferences', () => {
       webviewTag: false,
       spellcheck: false,
       devTools: false,
+      additionalArguments: [startInfoArg(startInfo)],
     });
   });
 
+  it('hands the page its start info on the renderer command line', () => {
+    expect(startInfoFrom(hardenedWebPreferences({ preload: '/p', isPackaged: true, startInfo }).additionalArguments)).toEqual(startInfo);
+  });
+
   it('allows DevTools only in unpackaged builds', () => {
-    expect(hardenedWebPreferences({ preload: '/p', isPackaged: false }).devTools).toBe(true);
+    expect(hardenedWebPreferences({ preload: '/p', isPackaged: false, startInfo }).devTools).toBe(true);
   });
 });
 

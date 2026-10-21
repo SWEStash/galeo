@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { AppInfo, GaleoApi, DocumentContent, DocumentRecord, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
+import type { AppInfo, GaleoApi, StartInfo, DocumentContent, DocumentRecord, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
 import type { Settings } from '../shared/settings';
 import type { FormatId } from '../shared/formats';
 
@@ -73,9 +73,10 @@ const events: {
   profiles?: (state: ProfilesState) => void;
 } = {};
 
-function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: DocumentRecord[]; content?: DocumentContent } = {}) {
+function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: DocumentRecord[]; content?: DocumentContent } = {}, startInfo: StartInfo | null = null) {
   const api = {
     app: {
+      startInfo,
       info: vi.fn().mockResolvedValue({ ...baseInfo, ...info }),
       resolveSandboxUnavailable: vi.fn().mockResolvedValue(undefined),
       installLauncher: vi.fn().mockResolvedValue({ ok: false, reason: 'not an AppImage' }),
@@ -1164,6 +1165,41 @@ describe('App', () => {
     expect(api.window.retryAfterCrashes).toHaveBeenCalledOnce();
     await act(async () => button('Close window').click());
     expect(api.window.command).toHaveBeenCalledWith('closeWindow');
+  });
+
+  describe("painting from the window's start info", () => {
+    const { crashLoop: _, ...start } = baseInfo;
+
+    it('paints the window while main has not answered app.info', async () => {
+      const api = stubBridge({}, {}, start);
+      api.app.info.mockReturnValue(new Promise(() => {}));
+      const container = await renderApp();
+      expect(container.querySelector('[data-testid="app-root"]')).not.toBeNull();
+      expect(document.documentElement.dataset['platform']).toBe('linux');
+    });
+
+    it('shows only the sandbox choice from the start info alone', async () => {
+      const api = stubBridge({}, {}, { ...start, sandboxed: false, sandboxUnavailable: 'suid-helper' });
+      api.app.info.mockReturnValue(new Promise(() => {}));
+      const container = await renderApp();
+      expect(container.querySelector('[data-testid="app-root"]')).toBeNull();
+      expect([...container.querySelectorAll('button')].some((b) => b.textContent === 'Quit')).toBe(true);
+    });
+
+    it('waits for app.info after a reload, which is how main brings back a crashed window', async () => {
+      const api = stubBridge({}, {}, start);
+      api.app.info.mockReturnValue(new Promise(() => {}));
+      vi.spyOn(performance, 'getEntriesByType').mockReturnValue([{ type: 'reload' } as unknown as PerformanceEntry]);
+      const container = await renderApp();
+      expect(container.querySelector('[data-testid="app-root"]')).toBeNull();
+    });
+
+    it('still shows the crash-loop message once main reports one', async () => {
+      stubBridge({ crashLoop: true }, {}, start);
+      const container = await renderApp();
+      await vi.waitFor(() => expect(container.querySelector('h1')?.textContent).toBe("This window's viewer kept crashing"));
+      expect(container.querySelector('[data-testid="app-root"]')).toBeNull();
+    });
   });
 });
 
