@@ -119,6 +119,8 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       activated: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
       reopenClosed: vi.fn().mockResolvedValue(undefined),
+      reopenClosedTab: vi.fn().mockResolvedValue(null),
+      search: vi.fn(async (query: string) => ({ query, open: [], closed: [] })),
       move: vi.fn().mockResolvedValue(undefined),
       rendering: vi.fn().mockResolvedValue(undefined),
       rendered: vi.fn().mockResolvedValue(undefined),

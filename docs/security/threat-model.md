@@ -333,11 +333,16 @@ the mouse press that started it, while its button is still down, or an input cre
 window takes a tab only by claiming that live drag, once (until half a second after it ended), so a page can't
 pull a tab out of another window. The palette's moves spend a credit too, and go only to
 another galeo window. A torn-off tab's new window is main's, of the tab's profile.
+Tab search (v0.4, UX F16) answers only with the sender's own tabs: its open ones and the ones it
+closed, by name and folder. Reopening one goes by the id main listed it under in that window's
+closed list (never another window's, never a closed window) and spends an input credit; the
+file is one the window already had open.
 *AC*: tests showing a renderer-originated `write` to a non-edit-enabled path is rejected, and
 that reads of paths never surfaced to the user are rejected; that Ctrl+E on a missing file is
 refused by main, and that a tab the page makes active just before Ctrl+E is asked about, not
 enabled (`edit.spec`); that a window can't take a tab no drag offered, or start a drag or a
-palette move without input (`tab-handlers.test`).
+palette move without input, or reopen a closed tab by id without input or from another window
+(`tab-handlers.test`).
 
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as
 absolute paths. The `.desktop` entry uses `%F`. Main parses argv with a strict schema and never

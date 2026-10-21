@@ -5,7 +5,7 @@ import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, Imag
 import type { Platform, WindowCommand } from '../keymap';
 import type { SystemFont } from '../fonts';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
-import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabViewState } from '../tabs';
+import type { ReaderWidth, ScrollAnchor, TabSearchResults, TabSnapshot, TabViewState } from '../tabs';
 import type { QuickOpenResults, QuickOpenStart } from '../quick-open';
 
 export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
@@ -126,6 +126,8 @@ export const CHANNELS = [
   'tabs.viewState',
   'tabs.close',
   'tabs.reopenClosed',
+  'tabs.search',
+  'tabs.reopenClosedTab',
   'tabs.move',
   'tabs.dragStart',
   'tabs.dragEnd',
@@ -238,6 +240,10 @@ export interface Requests {
   'tabs.close': [id: string];
   /** Brings back the window's most recently closed tab. */
   'tabs.reopenClosed': [];
+  /** Tab search (UX F16): the window's open tabs and its recently closed ones that match `query`. */
+  'tabs.search': [query: string];
+  /** Brings back one closed tab of the window, by the id tab search gave it (never a window). Spends real input. */
+  'tabs.reopenClosedTab': [id: string];
   /** Moves a tab to `position` in the window's order. */
   'tabs.move': [id: string, position: number];
   /** The reader started dragging the tab: another window may take it, once (ADR-019). Spends real input. */
@@ -329,6 +335,9 @@ export interface Responses {
   'tabs.close': void;
   /** The reopened tab's id, or null when none was closed. */
   'tabs.reopenClosed': string | null;
+  'tabs.search': TabSearchResults;
+  /** The reopened tab's id; null when main refused: no such closed tab here, or no real input. */
+  'tabs.reopenClosedTab': string | null;
   'tabs.move': void;
   /** False when main refused: a tab the window doesn't have, the settings tab, or no real input. */
   'tabs.dragStart': boolean;

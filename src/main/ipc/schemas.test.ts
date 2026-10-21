@@ -118,6 +118,14 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('tab search takes a bounded query; reopening a closed tab takes one id (UX F16)', () => {
+    expect(accepts('tabs.search', [''])).toBe(true);
+    expect(accepts('tabs.search', ['x'.repeat(1024)])).toBe(true);
+    for (const bad of [[], ['x'.repeat(1025)], [1], ['a', 'b']]) expect(accepts('tabs.search', bad)).toBe(false);
+    expect(accepts('tabs.reopenClosedTab', [ID])).toBe(true);
+    for (const bad of [[], [''], [1], ['x'.repeat(65)], [ID, ID]]) expect(accepts('tabs.reopenClosedTab', bad)).toBe(false);
+  });
+
   it('tabs.rendered takes an id and a whole, bounded weight', () => {
     expect(accepts('tabs.rendered', [ID, 0])).toBe(true);
     expect(accepts('tabs.rendered', [ID, 2 ** 31])).toBe(true);

@@ -4,6 +4,7 @@ import type { CrashRecovery } from '../../core/tabs/crashes';
 import { SETTLE_MS, type TabDrags } from '../../core/tabs/drags';
 import type { WarmTabs } from '../../core/tabs/lifecycle';
 import type { TabRegistry } from '../../core/tabs/registry';
+import { searchTabs } from '../../core/tabs/search';
 import type { OtherWindow } from '../../shared/contracts/ipc';
 import type { Handlers } from '../ipc/register';
 
@@ -19,6 +20,8 @@ type TabChannels =
   | 'tabs.viewState'
   | 'tabs.close'
   | 'tabs.reopenClosed'
+  | 'tabs.search'
+  | 'tabs.reopenClosedTab'
   | 'tabs.move'
   | 'tabs.dragStart'
   | 'tabs.dragEnd'
@@ -62,6 +65,8 @@ export interface TabHandlerDeps {
   tellDragging: (window: number) => void;
   /** Runs `run` once `ms` have passed. */
   after: (ms: number, run: () => void) => void;
+  /** The home folder: tab search shows folders under it as `~/…`. */
+  home: string;
 }
 
 /**
@@ -138,6 +143,17 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
         return null;
       }
       return tabs.reopenClosed(window)?.id ?? null;
+    },
+    // Only the sender's own tabs: open ones (not the settings tab) and those it closed (UX F16).
+    'tabs.search': ([query], event) => {
+      const window = event.sender.id;
+      const open = tabs.list(window).filter((tab) => tab.kind !== 'settings');
+      return searchTabs(query, open, tabs.closedList(window), deps.home);
+    },
+    'tabs.reopenClosedTab': ([id], event) => {
+      const window = event.sender.id;
+      if (!tabs.closedList(window).some((tab) => tab.id === id) || !input.spend(window)) return null;
+      return tabs.reopenClosedById(window, id)?.id ?? null;
     },
     'tabs.move': ([id, position], event) => {
       if (!tabs.move(id, event.sender.id, position)) resync(event.sender.id);

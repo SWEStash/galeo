@@ -958,6 +958,7 @@ function start(initialMode: StartupMode): void {
             if (contents) sendEvent(contents, 'tabs.dragging', true);
           },
           after: (ms, run) => void setTimeout(run, ms),
+          home: app.getPath('home'),
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, input, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
         ...dropHandlers({

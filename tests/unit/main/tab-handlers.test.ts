@@ -57,6 +57,7 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
     dragging: (on) => dragging.push(on),
     tellDragging: (window) => told.push(window),
     after: (ms, run) => void timers.push({ at: now + ms, run }),
+    home: '/d',
   });
   const a = tabs.open('/d/a.md', 1).id;
   const b = tabs.open('/d/b.md', 1).id;
@@ -115,6 +116,50 @@ describe('tabHandlers', () => {
     const { handlers } = setup(closedWindows);
     expect(handlers['tabs.reopenClosed']([], from(1))).toBeNull();
     expect(closedWindows.reopened).toEqual([1]);
+  });
+
+  describe('tab search (UX F16)', () => {
+    it("finds the window's own open tabs, not the settings tab, and its closed ones", async () => {
+      const { handlers, tabs, a, b } = setup();
+      tabs.open('/d/x.md', 2);
+      tabs.openSettings(1);
+      const c = tabs.open('/d/c.md', 1).id;
+      handlers['tabs.close']([c], from(1));
+      expect(await handlers['tabs.search']([''], from(1))).toEqual({
+        query: '',
+        open: [
+          { id: a, name: 'a.md', detail: '~' },
+          { id: b, name: 'b.md', detail: '~' },
+        ],
+        closed: [{ id: c, name: 'c.md', detail: '~' }],
+      });
+      expect((await handlers['tabs.search'](['b.md'], from(1))).open.map((hit) => hit.id)).toEqual([b]);
+      expect(await handlers['tabs.search']([''], from(3))).toEqual({ query: '', open: [], closed: [] });
+    });
+
+    it('reopens a closed tab of the window by its id, on real input only', async () => {
+      const { handlers, tabs, input, a } = setup();
+      handlers['tabs.close']([a], from(1));
+      expect(await handlers['tabs.reopenClosedTab']([a], from(1))).toBeNull();
+      input.received(1);
+      const reopened = await handlers['tabs.reopenClosedTab']([a], from(1));
+      expect(reopened).toBeTruthy();
+      expect(tabs.get(reopened!, 1)?.path).toBe('/d/a.md');
+      expect(tabs.closedList(1)).toEqual([]);
+    });
+
+    it("never reopens another window's closed tab, nor a closed window", async () => {
+      const closedWindows = { at: 99, reopened: [] as number[] };
+      const { handlers, tabs, input, a } = setup(closedWindows);
+      const x = tabs.open('/d/x.md', 2).id;
+      handlers['tabs.close']([x], from(2));
+      input.received(1);
+      expect(await handlers['tabs.reopenClosedTab']([x], from(1))).toBeNull();
+      input.received(1);
+      expect(await handlers['tabs.reopenClosedTab']([a], from(1))).toBeNull();
+      expect(closedWindows.reopened).toEqual([]);
+      expect(tabs.closedList(2)).toEqual([{ id: x, path: '/d/x.md' }]);
+    });
   });
 
   it('lets go of what main kept for a closed tab', () => {

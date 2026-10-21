@@ -95,6 +95,8 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'tabs.viewState': z.tuple([documentId, tabViewState]),
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),
+  'tabs.search': z.tuple([z.string().max(1024)]),
+  'tabs.reopenClosedTab': z.tuple([documentId]),
   'tabs.move': z.tuple([documentId, z.int().min(0).max(9999)]),
   'tabs.dragStart': z.tuple([documentId, dragToken]),
   'tabs.dragEnd': z.tuple([documentId, z.boolean()]),

@@ -55,6 +55,8 @@ describe('buildApi', () => {
       'viewState',
       'close',
       'reopenClosed',
+      'search',
+      'reopenClosedTab',
       'move',
       'dragStart',
       'dragEnd',
