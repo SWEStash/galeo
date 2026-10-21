@@ -405,7 +405,7 @@ The pre-release security audits check these layers against the code:
 
 | PRD target | Mechanism |
 |---|---|
-| Cold start < 500 ms | Network Guard before windows; only the active tab renders; Mermaid, KaTeX (worker and styles), Shiki, CodeMirror and each CodeMirror grammar load with the first document that needs them, which `npm run check:bundle` enforces; the Settings tab loads when first shown |
+| Cold start < 500 ms | Network Guard before windows; on Linux the first window opens after the desktop's theme settings (§5.6); a new window's page paints from the start info it was created with, not waiting on main; only the active tab renders; Mermaid, KaTeX (worker and styles), Shiki, CodeMirror and each CodeMirror grammar load with the first document that needs them, which `npm run check:bundle` enforces; the Settings tab loads when first shown |
 | New tab < 100 ms | Worker parse; grammars only as needed; no process start (one renderer per window) |
 | Warm switch within the next frame | Warm DOM kept (LRU budget); switching toggles visibility only |
 | Hibernated wake < 150 ms | Re-read and re-parse in the worker, hidden insert, anchor, reveal |

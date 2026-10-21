@@ -68,8 +68,8 @@ Electron and Mermaid updates (1257 → 1377 MB).
 
 | Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 | 0.3.0 |
 |---|---|---|---|---|---|
-| Cold start → window painted | 850 ms (v0.1; PRD target 500 ms, v0.1.x) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) | 811 ms (p95 841) |
-| Cold start → 50 KB document painted | 1300 ms (v0.1; PRD target 500 ms, v0.1.x) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) | 1264 ms (p95 1306) |
+| Cold start → window painted | 650 ms (2026-10-21; 850 ms until then; PRD target 500 ms) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) | 811 ms (p95 841) |
+| Cold start → 50 KB document painted | 1250 ms (2026-10-21; 1300 ms until then; PRD target 500 ms) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) | 1264 ms (p95 1306) |
 | Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) | 16.3 ms (p95 17.7) |
 | Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) | 54 ms (p95 84) |
 | Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
@@ -87,6 +87,14 @@ was 1013–1215 MB: runs land near one end or the other (when garbage is collect
 its baseline (`largeDataMemoryMB` in `tests/perf/memory-baseline.json`).
 Building the commit before the tree and table and the one after, and timing their cold starts in turn
 under the same load, gave the same figures: the views' code adds nothing measurable to a cold start.
+
+Cold start during v0.4 (2026-10-21, before the 0.4.0 column exists): the window waited ~310 ms for
+the page's own files, because Chromium's D-Bus theme settings arrived while the window existed and
+re-theming it held main's thread; then ~100 ms for `app.info`. The first window now opens after the
+theme settings, and the page paints from the start info its window was created with. Strict
+headless medians: window 853 → 571 and 577 ms, 50 KB document 1249 → 1119 and 1106 ms (two runs
+each). On the owner's Wayland desktop (direct launches, two interleaved pairs of 10 against the
+build before): window 941 and 940 → 668 and 656 ms. The budgets became 650 ms and 1250 ms.
 
 The first strict run of the 0.2.0 candidate measured 913 ms for a blank window: its first
 launches after a fresh build, with the operating system's file cache cold. A run straight after

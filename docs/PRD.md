@@ -346,7 +346,7 @@ live in the [UX specification](design/ux.md).
 
   | Metric | Target |
   |---|---|
-  | Cold start → first document painted | < 500 ms (v0.1: < 1300 ms, window < 850 ms; see below) |
+  | Cold start → first document painted | < 500 ms (v0.4: < 1250 ms, window < 650 ms; see below) |
   | Open new tab (≈50 KB Markdown, no diagrams) → first paint | < 100 ms |
   | Switch to a warm tab | next frame, no visible re-render |
   | Wake a hibernated tab → painted at saved scroll position | < 150 ms |
@@ -359,7 +359,8 @@ live in the [UX specification](design/ux.md).
   cold start (galeo not running, its caches from earlier launches kept) paints the window in
   about 750 ms and the 50 KB document in about 1170 ms, so v0.1 holds 850 ms and 1300 ms; the
   500 ms target needs cold-start profiling, planned for v0.4 (owner, 2026-10-15), and until then no
-  release may make cold start slower. Diagrams draw ahead in idle time; frames dropped while reading
+  release may make cold start slower. The v0.4 profiling brought them to about 575 ms and 1110 ms,
+  and the budgets to 650 ms and 1250 ms (owner, 2026-10-21). Diagrams draw ahead in idle time; frames dropped while reading
   past them are recorded, not gated. Numbers: `docs/VALIDATION.md`.
 
 - **Large and odd files**: Markdown above a size threshold (initially 5 MB), or too slow to render
