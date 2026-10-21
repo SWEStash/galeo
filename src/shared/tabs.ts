@@ -53,3 +53,17 @@ export interface ScrollAnchor {
   heading: string | null;
   fraction: number;
 }
+
+/** A tab tab search found: the id to show or reopen it by, its file name and its folder (`~/…`). */
+export interface TabHit {
+  id: string;
+  name: string;
+  detail: string;
+}
+
+/** Tab search's answer to `query` (UX F16): the window's open tabs, then its recently closed ones. */
+export interface TabSearchResults {
+  query: string;
+  open: TabHit[];
+  closed: TabHit[];
+}

@@ -128,6 +128,48 @@ describe('TabRegistry', () => {
     expect(tabs.reopenClosed(2)).toBeNull();
   });
 
+  it("lists a window's closed tabs newest first, by their last id and the file they showed", () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1).id;
+    const b = tabs.open('/d/b.md', 1).id;
+    tabs.open('/d/x.md', 2);
+    tabs.navigate(b, 1, { path: '/d/b2.md', anchor: null });
+    tabs.close(a, 1);
+    tabs.close(b, 1);
+    expect(tabs.closedList(1)).toEqual([
+      { id: b, path: '/d/b2.md' },
+      { id: a, path: '/d/a.md' },
+    ]);
+    expect(tabs.closedList(2)).toEqual([]);
+  });
+
+  it('reopens one closed tab by its id, at its old place with its history and look; the rest stay', () => {
+    const tabs = new TabRegistry(counterIds());
+    const a = tabs.open('/d/a.md', 1).id;
+    const b = tabs.open('/d/b.md', 1).id;
+    const c = tabs.open('/d/c.md', 1).id;
+    tabs.open('/d/d.md', 1);
+    tabs.navigate(b, 1, { path: '/d/b2.md', anchor: null });
+    tabs.setZoom(b, 1, 1.5);
+    tabs.setWidth(b, 1, 90);
+    tabs.close(a, 1);
+    tabs.close(b, 1);
+    tabs.close(c, 1);
+    const lastClosed = tabs.closedAt(1);
+    expect(tabs.reopenClosedById(2, b)).toBeNull();
+    expect(tabs.reopenClosedById(1, 'id-99')).toBeNull();
+    const reopened = tabs.reopenClosedById(1, b)!;
+    expect(reopened.path).toBe('/d/b2.md');
+    expect(reopened.id).not.toBe(b);
+    expect(tabs.list(1).map((tab) => tab.path)).toEqual(['/d/b2.md', '/d/d.md']);
+    expect(tabs.snapshot(1).tabs[0]).toMatchObject({ zoom: 1.5, width: 90 });
+    expect(tabs.back(reopened.id, 1)).toEqual({ path: '/d/b.md', anchor: null });
+    expect(tabs.closedList(1).map((tab) => tab.id)).toEqual([c, a]);
+    expect(tabs.closedAt(1)).toBe(lastClosed);
+    expect(tabs.reopenClosedById(1, b)).toBeNull();
+    expect(tabs.reopenClosed(1)?.path).toBe('/d/c.md');
+  });
+
   it('keeps the 25 most recently closed tabs per window', () => {
     const tabs = new TabRegistry(counterIds());
     const ids = Array.from({ length: 30 }, (_, n) => tabs.open(`/d/${n}.md`, 1).id);
@@ -478,6 +520,7 @@ describe('TabRegistry', () => {
       expect(tabs.find('', 1)).toBeUndefined();
       tabs.close(settings.id, 1);
       expect(tabs.closedAt(1)).toBeNull();
+      expect(tabs.closedList(1)).toEqual([]);
       expect(tabs.reopenClosed(1)).toBeNull();
     });
   });
@@ -548,6 +591,7 @@ describe('TabRegistry', () => {
       const b = tabs.open('/d/b.md', 1).id;
       tabs.transfer(b, 1, 2, 0);
       expect(tabs.closedAt(1)).toBeNull();
+      expect(tabs.closedList(1)).toEqual([]);
       expect(tabs.reopenClosed(1)).toBeNull();
     });
 

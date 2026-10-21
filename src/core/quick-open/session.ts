@@ -1,5 +1,5 @@
 import type { QuickOpenEntry, QuickOpenResults, QuickOpenSection, QuickOpenStart } from '../../shared/quick-open';
-import { fileName, folderOf, joinPath } from '../../shared/paths';
+import { fileName, folderOf, joinPath, shownPath } from '../../shared/paths';
 import type { SelectionGrants } from '../documents/selections';
 import { FsError, type Clock, type FileSystem } from '../ports';
 import { findGitRoot } from './git-root';
@@ -172,10 +172,8 @@ export class QuickOpen {
     return { name: fileName(path), detail: this.shown(folderOf(path)), fill: this.shown(path), path };
   }
 
-  /** `~/…` under the home folder; other paths as they are. */
   private shown(path: string): string {
-    const { home } = this.deps;
-    return path === home ? '~' : path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path;
+    return shownPath(path, this.deps.home);
   }
 
 

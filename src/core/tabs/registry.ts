@@ -55,6 +55,8 @@ export interface WindowState {
 }
 
 interface Closed {
+  /** The id it had while open: tab search reopens it by this id. */
+  id: string;
   entries: HistoryEntry[];
   index: number;
   position: number;
@@ -224,6 +226,7 @@ export class TabRegistry {
     }
     const closed = this.closed.get(window) ?? [];
     closed.push({
+      id,
       entries: record.entries,
       index: record.index,
       position,
@@ -249,10 +252,25 @@ export class TabRegistry {
     return this.closed.get(window)?.at(-1)?.at ?? null;
   }
 
+  /** The window's closed tabs it can still reopen, newest first: the id each had and the file it showed. */
+  closedList(window: number): { id: string; path: string }[] {
+    return (this.closed.get(window) ?? []).map((tab) => ({ id: tab.id, path: tab.entries[tab.index]!.path })).reverse();
+  }
+
   /** Brings back the window's most recently closed tab, where it was, under a new id. */
   reopenClosed(window: number): DocumentRecord | null {
     const tab = this.closed.get(window)?.pop();
-    if (!tab) return null;
+    return tab ? this.bringBack(window, tab) : null;
+  }
+
+  /** Brings back one of the window's closed tabs (by the id it had), where it was, under a new id. */
+  reopenClosedById(window: number, id: string): DocumentRecord | null {
+    const closed = this.closed.get(window) ?? [];
+    const at = closed.findIndex((tab) => tab.id === id);
+    return at === -1 ? null : this.bringBack(window, closed.splice(at, 1)[0]!);
+  }
+
+  private bringBack(window: number, tab: Closed): DocumentRecord {
     const record = this.insert(window, tab.entries, tab.index, tab.position);
     this.keepLook(record.id, tab);
     return record;
