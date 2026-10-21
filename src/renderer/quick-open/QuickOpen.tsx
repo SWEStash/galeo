@@ -16,6 +16,7 @@ import {
 } from 'react-aria-components';
 import type { Platform } from '../../shared/keymap';
 import type { QuickOpenEntry, QuickOpenResults } from '../../shared/quick-open';
+import { keepCaretKeys } from '../overlay-keys';
 
 /**
  * Quick open (UX F8): a field over main's results, open tabs and recent files first, then the
@@ -77,7 +78,7 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
   // A stable list: the collection rebuilds whenever its items change identity.
   const sections = useMemo(() => (results?.sections ?? []).filter((section) => section.entries.length > 0), [results]);
   const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter') return;
+    if (keepCaretKeys(event) || event.key !== 'Enter') return;
     // Read by the choice Enter makes a moment later: Ctrl+Enter (⌘ on macOS) opens a new window.
     newWindow.current = platform === 'darwin' ? event.metaKey : event.ctrlKey;
     // The list still answers an earlier query (the reader typed faster than main answered).

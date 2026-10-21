@@ -98,6 +98,25 @@ describe('QuickOpen', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it('leaves Home and End to the field: the highlighted result stays and the caret may move', async () => {
+    stub();
+    const container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<QuickOpen platform="linux" onClose={() => {}} say={() => {}} />));
+    await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('README.md'));
+    const input = document.querySelector('input')!;
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })));
+    const highlighted = input.getAttribute('aria-activedescendant');
+    expect(highlighted).toBeTruthy();
+    for (const key of ['Home', 'End']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      await act(async () => input.dispatchEvent(event));
+      expect(event.defaultPrevented).toBe(false);
+      expect(input.getAttribute('aria-activedescendant')).toBe(highlighted);
+    }
+  });
+
   it('says so when main refuses to open the chosen file', async () => {
     const api = stub();
     api.open.mockRejectedValue(new Error("Error invoking remote method 'quickOpen.open': Error: not offered"));

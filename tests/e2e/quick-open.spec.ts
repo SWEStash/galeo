@@ -96,6 +96,31 @@ test('a file already open is shown, not opened again', async () => {
   });
 });
 
+test('Home and End move the caret in the field; the arrows still choose the result', async () => {
+  await withRepository(async (root, home) => {
+    const { window, close } = await launchApp(['--', path.join(root, 'README.md'), path.join(root, 'docs', 'notes.md')], { home });
+    try {
+      await expect(window.getByRole('tab')).toHaveCount(2);
+      await window.keyboard.press('ControlOrMeta+P');
+      await field(window).fill('notes');
+      await expect(option(window, /notes\.md/)).toBeVisible();
+      await window.keyboard.press('ArrowDown');
+      await expect(field(window)).toHaveAttribute('aria-activedescendant', /.+/);
+      const highlighted = await field(window).getAttribute('aria-activedescendant');
+      const caret = () => field(window).evaluate((input: HTMLInputElement) => input.selectionStart);
+      await window.keyboard.press('Home');
+      expect(await caret()).toBe(0);
+      await window.keyboard.press('End');
+      expect(await caret()).toBe('notes'.length);
+      await expect(field(window)).toHaveAttribute('aria-activedescendant', highlighted!);
+      await window.keyboard.press('Enter');
+      await expect(window.getByRole('tab', { selected: true })).toContainText('notes.md');
+    } finally {
+      await close();
+    }
+  });
+});
+
 test('Ctrl+Enter opens the file in a new window of the profile', async () => {
   await withRepository(async (root, home) => {
     const { app, window, close } = await launchApp(['--', path.join(root, 'README.md')], { home });

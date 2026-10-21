@@ -180,8 +180,8 @@ placement is not restorable on Wayland).
   `build`, `out`, `target`, `coverage`, `.venv`, `venv`, `__pycache__`, `.next` or `.cache`,
   wherever they are; the setting adds names (no ignore file, no globs in v0.1). Symlinked folders
   are not entered. The walk stops at 50 000 files, 32 levels or 3 s, and the section says so.
-- ↑/↓ select, Enter opens (focuses if already open), Ctrl+Enter opens in a new window, Esc closes
-  and returns focus to the document.
+- ↑/↓ select, Home/End move the caret in the field, Enter opens (focuses if already open),
+  Ctrl+Enter opens in a new window, Esc closes and returns focus to the document.
 - Empty query shows open tabs and recent files; "no matches" shows the scope and a hint to type
   a path (`~/…` or `/…`, or a drive such as `C:\…` on Windows, jumps to arbitrary paths).
 - The tab bar's `+` button opens it too ("Open file… (Ctrl+P)").
