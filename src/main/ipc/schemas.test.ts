@@ -216,6 +216,8 @@ describe('settings, profile and app channel arguments (SR-11)', () => {
     expect(accepts('settings.set', ['global', { tableSeparator: ';', tableHeader: false }])).toBe(true);
     expect(accepts('settings.set', ['global', { tableSeparator: 'semicolon' }])).toBe(false);
     expect(accepts('settings.set', ['global', { themeMode: 'dark', quickOpenExclude: ['dist'] }])).toBe(true);
+    expect(accepts('settings.set', ['profile', { tabsPosition: 'left', tabPanelWidth: 260 }])).toBe(true);
+    expect(accepts('settings.set', ['profile', { tabPanelWidth: 1000 }])).toBe(false);
     for (const bad of [
       ['profile', { fontSize: 9 }],
       ['profile', { fontSize: 41 }],

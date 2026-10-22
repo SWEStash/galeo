@@ -6,6 +6,8 @@ describe('resolveSettings', () => {
     expect(resolveSettings({}, {})).toEqual(DEFAULT_SETTINGS);
     // Tables (ADR-021): the separator found, and a header row.
     expect(DEFAULT_SETTINGS).toMatchObject({ tableSeparator: 'auto', tableHeader: true });
+    // ADR-023: the tab bar on top; a 220 px panel once a profile puts its tabs on the left.
+    expect(DEFAULT_SETTINGS).toMatchObject({ tabsPosition: 'top', tabPanelWidth: 220 });
   });
 
   it('lets the global file override the defaults, and the profile override both', () => {

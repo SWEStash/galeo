@@ -1,6 +1,6 @@
 import { z, type ZodType } from 'zod';
 import { WINDOW_COMMANDS } from '../keymap';
-import type { SettingsOverrides } from '../settings';
+import { TAB_PANEL_MAX, TAB_PANEL_MIN, type SettingsOverrides } from '../settings';
 import { CHOSEN_ENCODINGS, type AnyChannel, type Requests } from './ipc';
 import { READ_MAX_BYTES } from '../documents';
 import { SPLIT_MAX_RATIO, SPLIT_MIN_RATIO } from '../formats';
@@ -47,6 +47,8 @@ export const settingsOverrides = z.strictObject({
   warmMegabytes: z.int().min(1).max(1024),
   tableSeparator: separatorChoice,
   tableHeader: z.boolean(),
+  tabsPosition: z.enum(['top', 'left']),
+  tabPanelWidth: z.int().min(TAB_PANEL_MIN).max(TAB_PANEL_MAX),
 }).partial();
 
 /** A tab's zoom, 50 % to 300 %. */

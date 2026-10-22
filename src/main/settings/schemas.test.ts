@@ -23,6 +23,10 @@ describe('parseGlobalSettings', () => {
     expect(parseGlobalSettings({ schemaVersion: 1, measure: 'full' })).toEqual({ ok: true, value: { measure: 'full' } });
   });
 
+  it('takes tabs on the left and a whole-pixel panel width (ADR-023)', () => {
+    expect(parseGlobalSettings({ schemaVersion: 1, tabsPosition: 'left', tabPanelWidth: 300 })).toEqual({ ok: true, value: { tabsPosition: 'left', tabPanelWidth: 300 } });
+  });
+
   it('accepts a file that sets nothing', () => {
     expect(parseGlobalSettings({ schemaVersion: 1 })).toEqual({ ok: true, value: {} });
   });
@@ -36,6 +40,10 @@ describe('parseGlobalSettings', () => {
     ['a measure out of range', { measure: 30 }],
     ['a measure named otherwise', { measure: 'wide' }],
     ['an empty font name', { proseFont: '' }],
+    ['tabs on the right', { tabsPosition: 'right' }],
+    ['a tab panel narrower than 140 px', { tabPanelWidth: 139 }],
+    ['a tab panel wider than 480 px', { tabPanelWidth: 481 }],
+    ['a fractional tab panel width', { tabPanelWidth: 220.5 }],
     ['a huge exclusion list', { quickOpenExclude: Array.from({ length: 1001 }, (_, n) => `d${n}`) }],
   ])('refuses %s, naming it', (_name, settings) => {
     expect(parseGlobalSettings({ schemaVersion: 1, ...settings })).toEqual({ ok: false, detail: expect.stringMatching(/\S/) });

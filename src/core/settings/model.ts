@@ -1,4 +1,4 @@
-import type { SettingSource, Settings, SettingsOverrides } from '../../shared/settings';
+import { TAB_PANEL_DEFAULT, type SettingSource, type Settings, type SettingsOverrides } from '../../shared/settings';
 
 export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   themeMode: 'system',
@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   warmMegabytes: 20,
   tableSeparator: 'auto',
   tableHeader: true,
+  tabsPosition: 'top',
+  tabPanelWidth: TAB_PANEL_DEFAULT,
 });
 
 /** Built-in defaults, then the global file, then the profile's overrides (ADR-005). */

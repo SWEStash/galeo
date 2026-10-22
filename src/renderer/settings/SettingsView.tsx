@@ -24,7 +24,7 @@ import {
 import { ACCENTS, accentOf } from '../../shared/accents';
 import type { ProfileView, SettingsResult, SettingsScope, SettingsState } from '../../shared/contracts';
 import type { SeparatorChoice } from '../../shared/csv';
-import type { Settings, SettingsOverrides, ThemeMode } from '../../shared/settings';
+import { TAB_PANEL_MAX, TAB_PANEL_MIN, type Settings, type SettingsOverrides, type TabsPosition, type ThemeMode } from '../../shared/settings';
 import type { SystemFont } from '../../shared/fonts';
 import type { ReaderWidth } from '../../shared/tabs';
 import { fontStack } from './tokens';
@@ -170,6 +170,32 @@ export function SettingsView({
             Status bar
           </SwitchButton>
         </SwitchField>,
+      )}
+      {setting(
+        'tabsPosition',
+        <RadioGroup className="field" value={values.tabsPosition} onChange={(value) => set({ tabsPosition: value as TabsPosition })} orientation="horizontal">
+          <Label>Tabs</Label>
+          <RadioField value="top">
+            <RadioButton>Top</RadioButton>
+          </RadioField>
+          <RadioField value="left">
+            <RadioButton>Left</RadioButton>
+          </RadioField>
+        </RadioGroup>,
+      )}
+      {setting(
+        'tabPanelWidth',
+        <NumberField
+          className="field"
+          value={values.tabPanelWidth}
+          minValue={TAB_PANEL_MIN}
+          maxValue={TAB_PANEL_MAX}
+          step={1}
+          onChange={(tabPanelWidth) => !Number.isNaN(tabPanelWidth) && tabPanelWidth !== values.tabPanelWidth && set({ tabPanelWidth })}
+        >
+          <Label>Tab panel width</Label>
+          <Input />
+        </NumberField>,
       )}
 
       <h2>Tables</h2>

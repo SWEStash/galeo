@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS: Settings = {
   warmMegabytes: 20,
   tableSeparator: 'auto',
   tableHeader: true,
+  tabsPosition: 'top',
+  tabPanelWidth: 220,
 };
 
 const SOURCES = Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, 'default'])) as SettingsState['sources'];

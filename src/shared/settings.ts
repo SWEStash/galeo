@@ -3,6 +3,9 @@ import type { ReaderWidth } from './tabs';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+/** Where a window shows its tabs: the tab bar on top, or a side panel on the left (ADR-023). */
+export type TabsPosition = 'top' | 'left';
+
 /** The side tab panel's width in pixels (ADR-023): its range and its default. */
 export const TAB_PANEL_MIN = 140;
 export const TAB_PANEL_MAX = 480;
@@ -27,6 +30,9 @@ export interface Settings {
   /** Tables (ADR-021): the separator a tab without its own choice reads with, and whether row 1 is a header. */
   tableSeparator: SeparatorChoice;
   tableHeader: boolean;
+  /** Where the tabs go, and the side panel's width in pixels (ADR-023). */
+  tabsPosition: TabsPosition;
+  tabPanelWidth: number;
 }
 
 /** What a settings file sets; anything it leaves out comes from the level below. */

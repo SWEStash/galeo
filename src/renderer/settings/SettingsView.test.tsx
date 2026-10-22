@@ -18,6 +18,8 @@ const DEFAULTS: Settings = {
   warmMegabytes: 20,
   tableSeparator: 'auto',
   tableHeader: true,
+  tabsPosition: 'top',
+  tabPanelWidth: 220,
 };
 
 const STATE: SettingsState = {
@@ -35,6 +37,8 @@ const STATE: SettingsState = {
     warmMegabytes: 'default',
     tableSeparator: 'default',
     tableHeader: 'default',
+    tabsPosition: 'default',
+    tabPanelWidth: 'default',
   },
   notices: [],
   session: null,
@@ -153,6 +157,20 @@ describe('SettingsView (UX §6)', () => {
     expect(custom().value).toBe('90');
     await commit(custom(), '96');
     expect(settings.set).toHaveBeenLastCalledWith('profile', { measure: 96 });
+  });
+
+  it("puts this profile's tabs on the left or on top, and sets the side panel's width (ADR-023)", async () => {
+    const { settings } = stubBridge();
+    const container = await render();
+    const tabs = row(container, 'Tabs');
+    const choice = (name: string) => [...tabs.querySelectorAll('label')].find((each) => each.textContent === name)!;
+    expect(choice('Top').querySelector<HTMLInputElement>('input[type=radio]')!.checked).toBe(true);
+    await act(async () => choice('Left').click());
+    expect(settings.set).toHaveBeenLastCalledWith('profile', { tabsPosition: 'left' });
+    const width = row(container, 'Tab panel width').querySelector('input')!;
+    expect(width.value).toBe('220');
+    await commit(width, '300');
+    expect(settings.set).toHaveBeenLastCalledWith('profile', { tabPanelWidth: 300 });
   });
 
   it('lets Custom start from a preset without changing the width', async () => {
