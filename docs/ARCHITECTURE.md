@@ -25,7 +25,8 @@
   [020](decisions/ADR-020-table-budget-and-show-as-table.md) ·
   [021](decisions/ADR-021-table-options.md) ·
   [022](decisions/ADR-022-drag-tokens.md) ·
-  [023](decisions/ADR-023-window-layout-with-tabs-on-the-left.md)
+  [023](decisions/ADR-023-window-layout-with-tabs-on-the-left.md) ·
+  [024](decisions/ADR-024-find-in-all-tabs.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
