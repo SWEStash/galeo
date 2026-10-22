@@ -187,7 +187,17 @@ reopen what you closed last, Ctrl+N for a new window. Ctrl+Shift+A searches the 
 and its last 25 closed ones by name or folder: Enter shows an open tab, or brings a closed one back
 where it was. Ctrl+Shift+E (or ▦ at the end of the tab bar) shows the window's tabs as a grid of
 cards, each with its folder, format and marks: the arrows move between them, Enter shows one, Delete
-closes it, and Ctrl+Shift+PgUp/PgDn or a drag moves it. Closing a profile's last window, or quitting
+closes it, and Ctrl+Shift+PgUp/PgDn or a drag moves it.
+
+A profile can put its tabs on the left instead (Settings → **Tabs** → Left, or *Put tabs on the left*
+in the palette): one row per tab, with its folder underneath, and the shown tab's name in the title
+bar. Drag the divider to set the panel's width (140 to 480 px, kept for the profile; a double-click
+resets it). ◧ in the title bar, or Ctrl+Shift+B, collapses the panel to a strip of letters that still
+switches tabs, and expands it again; so does dragging the divider to the edge and back. Everything
+the tab bar does works in the list: ↑/↓ between tabs, dragging to reorder, dropping files between
+rows, and dragging a tab to another window or out to a new one.
+
+Closing a profile's last window, or quitting
 (Ctrl+Shift+Q), keeps its session: next time its windows and tabs come back where you left them.
 "Restore previous session" (palette or profile menu) goes back to one of the last three.
 

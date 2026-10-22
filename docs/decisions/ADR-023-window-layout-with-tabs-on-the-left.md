@@ -94,8 +94,8 @@ claimed the drag". Moves and adopts are by index. So the answers are all in the 
    - The shown tab's marker is filled, not only coloured.
    - A marker shows one mark, in this order: crashed or missing file, then unsaved, then following the end.
      Its tooltip and its accessible name keep the full name, folder and every indicator, as in a row.
-   - The tooltip shows on hover and on keyboard focus (react-aria `Tooltip`). Keyboard users can then see
-     which tab a marker is before showing it.
+   - The tooltip shows on hover and on keyboard focus. Keyboard users can then see which tab a marker
+     is before showing it.
    - Collapsing and expanding keep focus where it was. A focused row becomes its marker. Collapsing is not
      animated.
    - Ctrl+Shift+B puts "Tab panel collapsed" or "Tab panel expanded" in the status line. A screen reader
@@ -123,8 +123,7 @@ claimed the drag". Moves and adopts are by index. So the answers are all in the 
   position calculation takes an axis.
 - `Settings` gains two keys (schema, defaults, IPC zod, Settings tab). `settings.set` accepts them like any
   other key, so this adds no new channel. The palette command writes through the same `settings.set`.
-- The collapsed markers use react-aria's `Tooltip`, part of the already adopted react-aria-components; no new
-  dependency.
+- The collapsed markers' tooltip is the page's own: no new dependency.
 - New Wayland and Orca validation rows for the vertical list: reorder, a drag between a left and a top
   window, tear-off, the title bar drag, and the list's orientation and names.
 

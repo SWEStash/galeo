@@ -51,6 +51,7 @@ Record the date, the build and the result of each row.
 | Orca: editing (v0.2) | Ctrl+E then Ctrl+Tab away and back: the tab reads "…, edit mode", and once typed in "…, unsaved changes". Ctrl+S: "Saved". A refused save reads its reason. The changed-on-disk bar reads "File changed on disk"; the unsaved question reads "Save changes to <name>?" and each button | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: diff, split and replace (v0.2) | Show diff reads "Changes: mine \| theirs", then "Mine (unsaved)" and "Theirs (on disk)" as read-only text. The divider reads "Resize source and preview" with its value as it moves. Replace all reads "Replaced N" once (not twice with the editor's own message). Several cursors: typing reads as usual | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: search tabs and filling quick open (v0.4) | Close two tabs, Ctrl+Shift+A: Orca says "Search tabs", the count ("4 tabs") and each row's name and folder under "Open tabs" and "Recently closed"; Enter on a closed one brings it back where it was. Ctrl+P, arrow to a result: Orca reads its name and folder, then "Tab fills in its path"; Tab: "Filled ~/…". Home/End move the caret in both fields | Not run (2026-10-21): for the 0.4.0 run |
+| Orca: tabs on the left (v0.4) | With *Tabs: Left*: Orca reads the list as vertical tabs ("Open documents") and each row's name, folder and marks; ↑/↓ move between rows. Ctrl+Shift+B: Orca hears "Tab panel collapsed", and the markers still read the full name and folder. The panel button says "Collapse tab panel" / "Expand tab panel" and whether it is expanded; the divider says "Resize tab panel, 220 pixels" and its arrows change the number | Not run (2026-10-22): for the 0.4.0 run |
 | Orca: tab overview (v0.4) | Ctrl+Shift+E: Orca says "Tab overview" and the shown tab's card: its name, folder, marks ("unsaved changes"), format, "shown now" and its position ("2 of 5"); the arrows read each card; Delete on an edited card asks first and Cancel goes back to the card; Esc returns to the document | Not run (2026-10-21): for the 0.4.0 run |
 | Data views by keyboard, then Orca (v0.3) | In a CSV table the arrows move cell to cell and Orca reads each cell; in a JSON tree the arrows expand and collapse items and Orca reads each one | Pass (2026-10-20, `.deb` 0.3.0) |
 
@@ -125,6 +126,9 @@ gave the 750 ms above; cold starts in the regular test runs since v0.2 began mea
   Tab overview (v0.4), checked on 2026-10-21: Ctrl+Shift+E is bound nowhere in those GNOME schemas
   nor by IBus (emoji Super+. and Super+;, Unicode Ctrl+Shift+U); the Ghostty terminal uses it for a
   split, inside its own window, which shows no desktop-wide binding takes it first.
+  Tabs on the left (v0.4), checked on 2026-10-22: Ctrl+Shift+B is bound nowhere in those GNOME
+  schemas (wm, media keys, shell, mutter) nor by IBus (emoji Super+. and Super+;, Unicode
+  Ctrl+Shift+U, input switch Super+Space).
 
 ## Desktop and Wayland (manual)
 
@@ -153,6 +157,7 @@ these.
 | A CSV with 3,000 columns (v0.3): opens at once; the wheel and touchpad scroll sideways and draw the columns; End on a cell goes to the last column, Home back; nothing freezes | Pass (2026-10-20, `.deb` 0.3.0) |
 | Moving tabs (v0.3, real drags on Wayland): a tab dragged onto another window's tab bar, onto its empty part, and into a window with no tabs moves there on the first try, also back into the window it was torn off from, shown, with no "galeo is ready" notice; into another profile's window it stays there after a restart | Pass (2026-10-20; again on the 0.3.0 `.deb`) |
 | Reordering tabs (v0.3): a tab dragged to another place in its own tab bar moves there | Pass (2026-10-20, `.deb` 0.3.0) |
+| Tabs on the left, drags (v0.4, real drags on Wayland): a row dragged up or down the list moves there; files dropped between two rows open there; a row dragged to another profile's tab bar (tabs on top) moves there, and back into the panel; a row dropped outside every window opens a window of its own; a row dragged out over the title bar and back is not torn off; the title bar's name and empty space drag the window; the divider drags, and under 100 px collapses the panel | Not run (2026-10-22): for the 0.4.0 run |
 | Tab overview drags (v0.4, real drags on Wayland): a card dragged before or after another moves its tab there, and the tab bar shows the new order; a card dragged over another galeo window offers nothing there (no "Open 1 file here") | Not run (2026-10-21): for the 0.4.0 run |
 | Tear-off (v0.3): a tab dragged out to the desktop, or onto another application's window, from a window of two or more gets its own window, the old one stays; a window's only tab dragged out stays; Esc outside the window tears off too; a drag starts from anywhere on a tab, also after holding the press a moment | Pass (2026-10-20; again on the 0.3.0 `.deb`) |
 | A tab with unsaved changes dragged to another window keeps its text, `●` and edit mode; saving there writes the file | Pass (2026-10-19) |

@@ -368,7 +368,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   - The tooltip, shown on hover and on keyboard focus, has the name, folder and indicators.
   - Collapsed, the tabs are still clicked, reached with ↑/↓ and dropped between.
   - Dragging the strip's edge out expands the panel again.
-  - Ctrl+Shift+B says "Tab panel collapsed" or "expanded" in the status line.
+  - Ctrl+Shift+B says "Tab panel collapsed" or "expanded" in the status line; with the tabs on
+    top it says it works only with tabs on the left.
   - The panel stays collapsed in this window until the window closes.
 - Everything F3, F4 and F15 describe works in the list, with the insertion caret horizontal,
   between rows:
@@ -493,7 +494,8 @@ this map only.
   font fields into pickers (the bundled fonts first, then the installed families, monospace only
   for code, each with a preview line; any name can still be typed), gives the measure presets
   (Narrow 60, Normal 72, Wide 100, Full width) besides a custom value, and adds an "About galeo"
-  row showing the version. A switch at the
+  row showing the version. v0.4 adds, under Window, where the tabs go (Top / Left) and the side
+  panel's width (F18). A switch at the
   top says where changes go: this profile, or all profiles. Each setting shows whether its value
   is the default, all profiles' or this profile's own, with "reset to global" for the last. A
   change to a file left invalid by a hand edit is refused and names the file. The AppImage adds
