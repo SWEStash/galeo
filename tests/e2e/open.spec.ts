@@ -1,6 +1,7 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { watchRefusals } from '../helpers/csp';
 import { launchApp } from '../helpers/launch';
 
 const fixture = (...parts: string[]) => path.resolve(import.meta.dirname, '../fixtures', ...parts);
@@ -62,16 +63,13 @@ const payloads = readdirSync(fixture('payloads')).filter((file) => file.endsWith
 for (const file of payloads) {
   test(`payload file ${file} renders inert`, async () => {
     const { window, close } = await launchApp(['--', fixture('payloads', file)]);
-    const refusals: string[] = [];
-    window.on('console', (message) => {
-      if (/Refused to|violates the following Content Security Policy/.test(message.text())) refusals.push(message.text());
-    });
+    const refusals = await watchRefusals(window);
     try {
       await expect(window.getByTestId('document').locator('article')).not.toBeEmpty();
       // Let pending loads, error events and animations run before checking.
       await window.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       expect(await window.evaluate(() => (window as { __galeoPwned?: unknown }).__galeoPwned)).toBeUndefined();
-      expect(refusals).toEqual([]);
+      expect(await refusals()).toEqual([]);
     } finally {
       await close();
     }

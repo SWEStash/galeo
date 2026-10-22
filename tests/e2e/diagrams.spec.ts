@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import { watchRefusals } from '../helpers/csp';
 import { launchApp } from '../helpers/launch';
 import { windowControlsOverlap } from '../helpers/window-controls';
 
@@ -234,7 +235,7 @@ test('a document without diagrams never loads Mermaid', async () => {
 
 test('hostile diagrams draw inert: no script, link, foreign content or outside URL, and no navigation', async () => {
   const { window, close } = await launchApp(['--', path.join(fixtures, 'payloads', 'mermaid.payloads.md')]);
-  const refused = refusals(window);
+  const refused = await watchRefusals(window);
   try {
     await expect(diagrams(window).first()).toBeAttached();
     const url = window.url();
@@ -271,7 +272,7 @@ test('hostile diagrams draw inert: no script, link, foreign content or outside U
       expect.stringContaining('Edge limit exceeded'),
     ]);
     expect(window.url()).toBe(url);
-    expect(refused).toEqual([]);
+    expect(await refused()).toEqual([]);
   } finally {
     await close();
   }
