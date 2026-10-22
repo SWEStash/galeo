@@ -26,6 +26,7 @@ import { openConfigFile } from '../core/settings/open-config';
 import { CrashRecovery } from '../core/tabs/crashes';
 import { TabDrags } from '../core/tabs/drags';
 import { WarmTabs } from '../core/tabs/lifecycle';
+import { forPage } from '../core/tabs/page';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
 import type { OpenRequest, OsShell } from '../core/ports';
@@ -138,7 +139,7 @@ function start(initialMode: StartupMode): void {
   // Every change to a window's tabs goes to its page as a fresh snapshot (ADR-002).
   const pushSnapshot = (windowId: number) => {
     const contents = webContents.fromId(windowId);
-    if (contents) sendEvent(contents, 'tabs.changed', documents.snapshot(windowId));
+    if (contents) sendEvent(contents, 'tabs.changed', forPage(documents.snapshot(windowId), app.getPath('home')));
   };
   const documents = new TabRegistry(randomUUID, (windowId) => {
     pushSnapshot(windowId);

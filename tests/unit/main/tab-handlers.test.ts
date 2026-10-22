@@ -79,6 +79,15 @@ describe('tabHandlers', () => {
     expect(await handlers['tabs.snapshot']([], from(3))).toEqual({ revision: 0, active: null, tabs: [] });
   });
 
+  it("gives the page each file tab's format and shown folder", async () => {
+    const { handlers } = setup();
+    const { tabs } = await handlers['tabs.snapshot']([], from(1));
+    expect(tabs.map(({ format, folder }) => ({ format, folder }))).toEqual([
+      { format: 'markdown', folder: '~' },
+      { format: 'markdown', folder: '~' },
+    ]);
+  });
+
   it('records activation, closes, reopens and moves tabs of the sending window', async () => {
     const { handlers, tabs, a, b } = setup();
     await handlers['tabs.activated']([b], from(1));

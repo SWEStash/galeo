@@ -1,6 +1,6 @@
 import type { SeparatorChoice } from './csv';
 import type { DocumentRecord } from './documents';
-import type { ViewMode } from './formats';
+import type { FormatId, ViewMode } from './formats';
 
 /** How the reader left a tab's document: the view they chose, and whether a log follows its end. */
 export interface TabViewState {
@@ -33,6 +33,9 @@ export interface TabView extends DocumentRecord, TabViewState {
   position?: ScrollAnchor;
   /** It was rendering when the window's renderer crashed: shown only when the reader asks (ADR-002). */
   crashed?: true;
+  /** File tabs, as sent to the page: the file's format and its folder as the reader sees it (`~/…`). */
+  format?: FormatId;
+  folder?: string;
 }
 
 /** A window's tabs as main knows them, in order. A newer `revision` replaces an older snapshot (ADR-002). */

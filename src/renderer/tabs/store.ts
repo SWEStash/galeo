@@ -4,7 +4,7 @@ import type { DocumentContent, DocumentRecord, TextEncoding } from '../../shared
 import type { FormatId, ViewMode } from '../../shared/formats';
 import { widthStep } from '../document/width';
 import { zoomStep } from '../document/zoom';
-import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabViewState } from '../../shared/tabs';
+import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabView, TabViewState } from '../../shared/tabs';
 import { ignoreFailure } from './closed-tab';
 
 /** What the tab bar and status bar show about a tab, as its document reports it. */
@@ -29,7 +29,8 @@ export interface TabStatus {
 
 export interface TabsView {
   revision: number;
-  tabs: DocumentRecord[];
+  /** In main's order, with the format and folder main adds for the page. */
+  tabs: TabView[];
   /** The tab this window shows; the window decides it and tells main (ADR-002). */
   active: string | null;
   /** Tabs with rendered content: the active one and the warm ones. The rest are hibernated. */

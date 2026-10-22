@@ -3,6 +3,7 @@ import type { InputCredits } from '../../core/documents/input-credits';
 import type { CrashRecovery } from '../../core/tabs/crashes';
 import { SETTLE_MS, type TabDrags } from '../../core/tabs/drags';
 import type { WarmTabs } from '../../core/tabs/lifecycle';
+import { forPage } from '../../core/tabs/page';
 import type { TabRegistry } from '../../core/tabs/registry';
 import { searchTabs } from '../../core/tabs/search';
 import type { OtherWindow } from '../../shared/contracts/ipc';
@@ -65,7 +66,7 @@ export interface TabHandlerDeps {
   tellDragging: (window: number) => void;
   /** Runs `run` once `ms` have passed. */
   after: (ms: number, run: () => void) => void;
-  /** The home folder: tab search shows folders under it as `~/…`. */
+  /** The home folder: tab search and the tab overview show folders under it as `~/…`. */
   home: string;
 }
 
@@ -89,7 +90,7 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     // A page asks for its tabs first thing, listening already: one that opened during a drag hears of it too.
     'tabs.snapshot': (_args, event) => {
       if (drags.dragging(now())) deps.tellDragging(event.sender.id);
-      return tabs.snapshot(event.sender.id);
+      return forPage(tabs.snapshot(event.sender.id), deps.home);
     },
     'tabs.activated': async ([id], event) => {
       const window = event.sender.id;
