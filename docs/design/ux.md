@@ -52,7 +52,7 @@ ADR-002…007).
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
 | **Search tabs** (v0.4) | The window's open tabs and recently closed tabs by name and folder (F16) | Ctrl+Shift+A / Esc |
 | **Tab overview** (v0.4) | Every tab of the window as a grid of cards; activate, close, reorder (F17) | Ctrl+Shift+E, the palette / Esc |
-| **Side tab panel** (v0.4) | The tabs as a vertical list on the left, when the profile's setting puts them there (F18) | Setting; Ctrl+Shift+B hides and shows it |
+| **Side tab panel** (v0.4) | The tabs as a vertical list on the left, when the profile's setting puts them there (F18) | Setting; the panel button or Ctrl+Shift+B collapses and expands it |
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side | Ctrl+Shift+O (toggle) |
@@ -339,18 +339,46 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 
 ### F18 — Tabs on the left (v0.4)
 
-- A per-profile setting, *Tabs on the left*, moves the tabs from the tab bar into a side panel on
-  the window's left: one tab per line, with the name and, below it, a shortened folder; the
-  tooltip has the full path. The panel scrolls when the tabs don't fit.
-- What the title bar keeps (the profile chip, the new-tab button, a place to drag the window and
-  the window controls) is decided in the window layout ADR.
-- A divider between the panel and the document sets the panel's width (mouse, or arrow keys when
-  focused; double-click resets it); the width is kept for the profile. Ctrl+Shift+B hides and
-  shows the panel in this window until the window closes.
-- Everything F3, F4 and F15 describe works in the list: the insertion caret is horizontal,
-  between rows; dropping files, reordering, dragging a tab to another window and dropping it
-  outside every window work as in the tab bar. Ctrl+Tab, Ctrl+1…9 and the move keys are unchanged;
-  ↑/↓ move between tabs when the list has focus.
+- A per-profile setting, *Tabs on the left* (also *Put tabs on the left* / *Put tabs on top* in
+  the palette), moves the tabs from the tab bar into a side panel on the window's left.
+  - Each tab is a row of two lines: the file name with its indicators, then a shortened folder
+    below it.
+  - The tooltip has the full path.
+  - The Settings tab is one line, "Settings".
+  - The panel scrolls when the tabs don't fit, and keeps the shown tab in view.
+- The title bar keeps:
+  - a panel button;
+  - the profile chip;
+  - the new-tab button;
+  - the overview button;
+  - the shown tab's name and folder, dimmed, on the area that drags the window;
+  - the window controls.
+
+  See [ADR-023](../decisions/ADR-023-window-layout-with-tabs-on-the-left.md).
+- A divider between the panel and the document sets the panel's width, from 140 to 480 px. The
+  width is kept for the profile.
+  - Mouse: drag the divider; a double-click resets the width.
+  - Keys, when the divider has focus: ←/→ change the width by 16 px, Home resets it, and Enter
+    collapses or expands the panel.
+  - Dragging the divider under 100 px collapses the panel.
+- The panel button, Ctrl+Shift+B or Enter on the divider collapse the panel to a 32 px strip of
+  markers, one per tab, and expand it again.
+  - A marker shows the name's first letter and one mark.
+  - The shown tab's marker is filled.
+  - The tooltip, shown on hover and on keyboard focus, has the name, folder and indicators.
+  - Collapsed, the tabs are still clicked, reached with ↑/↓ and dropped between.
+  - Dragging the strip's edge out expands the panel again.
+  - Ctrl+Shift+B says "Tab panel collapsed" or "expanded" in the status line.
+  - The panel stays collapsed in this window until the window closes.
+- Everything F3, F4 and F15 describe works in the list, with the insertion caret horizontal,
+  between rows:
+  - dropping files;
+  - reordering;
+  - dragging a tab to another window;
+  - dropping a tab outside every window.
+
+  Ctrl+Tab, Ctrl+1…9 and the move keys are unchanged. ↑/↓ and Home/End move between tabs when
+  the list has focus.
 - With the setting off, the tab bar is the same as in v0.3.
 
 ## 4. States
@@ -431,7 +459,7 @@ the native menu on the active tab.
 | Table separator: … / First row is a header / Reset table options / Show as table (v0.3) | palette; also the status bar's Table options | Tables, F14, ADR-021 |
 | Search tabs (v0.4) | Ctrl+Shift+A | F16; Chrome's key |
 | Tab overview (v0.4) | Ctrl+Shift+E | F17 |
-| Hide / show the side tab panel (v0.4) | Ctrl+Shift+B | F18; only with tabs on the left |
+| Collapse / expand the side tab panel (v0.4) | Ctrl+Shift+B | F18; only with tabs on the left |
 | Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply

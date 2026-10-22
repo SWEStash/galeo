@@ -299,8 +299,8 @@ must not obstruct (plain files only, no sidecar metadata).
 3. **Tabs on the left.** As the owner, I want to put a profile's tabs in a list on the left of the
    window, so that long file names and many tabs stay readable.
    - AC: Given the setting is on for the profile, the tabs show one per line in a side panel; a
-     divider sets the panel's width, kept for the profile; a shortcut hides and shows the panel
-     in the window.
+     divider sets the panel's width, kept for the profile; a button and a shortcut collapse it
+     to a narrow strip that still switches tabs, in the window.
    - AC: Everything the tab bar does works in the list: reordering, dropping files, moving a tab
      to another window by drag and dropping it outside to open a new window; the window keeps its
      profile chip, its new-tab button, a place to drag the window and its window controls.
