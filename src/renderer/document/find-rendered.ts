@@ -1,12 +1,9 @@
 // Find in the rendered view (ADR-003): text nodes walked with a TreeWalker, matches highlighted
 // with the CSS Custom Highlight API, so neither the document nor the app UI is modified.
+import { escapeRegExp } from '../../shared/find';
 
 /** Text a reader never sees, which find must not land on. */
 const HIDDEN = '.sr-only, .katex-mathml, [hidden]';
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
 
 /** Every match of `query` under `root`, in document order, as ranges that may span elements. */
 export function findRanges(root: Node, query: string, { caseSensitive }: { caseSensitive: boolean }): Range[] {
