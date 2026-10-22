@@ -465,6 +465,7 @@ tests/
   e2e/        Playwright for Electron: CLI open, tabs, DnD, reload, profiles, a11y (axe)
   security/   payload corpus, no-network harness, fuse check
   perf/       harness for PRD targets
+  warm-up/    one app start before CI's e2e suite (a fresh machine's first start is slow)
 ```
 
 Import rules, enforced in CI: `core` and `shared` import no `electron`, `node:*` or DOM code;

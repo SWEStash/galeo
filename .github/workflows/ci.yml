@@ -41,6 +41,10 @@ jobs:
       # so it runs sandboxed, as the .deb does. Never --no-sandbox.
       - name: Allow the Chromium sandbox
         run: sudo scripts/dev-sandbox-setup.sh
+      # A fresh runner's first app start is several seconds slower than the rest (Electron 45's GPU
+      # process); one start here keeps it out of the suite's per-test limits.
+      - name: Warm up the app
+        run: npm run headless -- npx playwright test --project=warm-up
       - name: End-to-end tests
         run: npm run headless -- npm run test:e2e
       # Socket-level zero-network proof (SR-07): every connect() of the app's process tree is
