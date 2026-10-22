@@ -455,6 +455,48 @@ body,
 .quick-open-name {
   white-space: nowrap;
 }
+/* Find in all tabs (ADR-024): the field with its Match case toggle; each tab's header keeps its name's case. */
+.find-all-field {
+  display: flex;
+  align-items: center;
+}
+.find-all-field .quick-open-field {
+  flex: 1;
+}
+.find-all-case {
+  margin: 0 8px;
+  padding: 2px 6px;
+  border: 1px solid var(--galeo-color-control-border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--galeo-color-fg);
+  font: 13px var(--galeo-font-ui);
+}
+.find-all-case[aria-pressed='true'] {
+  border-color: var(--galeo-color-focus);
+  background: color-mix(in srgb, var(--galeo-color-focus) 15%, var(--galeo-color-bg));
+}
+.find-all .quick-open-header {
+  text-transform: none;
+  letter-spacing: normal;
+}
+.find-all-line {
+  min-width: 3em;
+  color: var(--galeo-color-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.find-all-text {
+  overflow: hidden;
+  font-family: var(--galeo-font-mono, monospace);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+.find-all-text mark {
+  background: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
+  color: inherit;
+}
 /* The fill icon (Tab's mouse shortcut) shows on the row under the pointer and the highlighted one. */
 .quick-open-fill {
   visibility: hidden;

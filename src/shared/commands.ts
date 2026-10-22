@@ -21,6 +21,7 @@ export const COMMANDS = {
   findNext: { label: 'Find next', group: 'Find', runs: 'page' },
   findPrevious: { label: 'Find previous', group: 'Find', runs: 'page' },
   findReplace: { label: 'Find and replace', group: 'Find', runs: 'page' },
+  findAll: { label: 'Find in all tabs', group: 'Find', runs: 'page' },
   toggleSource: { label: 'Toggle source view', group: 'View', runs: 'page' },
   toggleSplit: { label: 'Toggle split view', group: 'View', runs: 'page' },
   toggleWrap: { label: 'Toggle wrap', group: 'View', runs: 'page' },

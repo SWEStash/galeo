@@ -9,6 +9,8 @@ const BASE = {
   findPrevious: ['Shift+F3'],
   /** Edit mode only (UX §5). */
   findReplace: ['CmdOrCtrl+H'],
+  /** Find in all tabs (ADR-024). */
+  findAll: ['CmdOrCtrl+Shift+F'],
   toggleSource: ['CmdOrCtrl+U'],
   /** Source and rendered side by side (ADR-014). */
   toggleSplit: ['CmdOrCtrl+\\'],

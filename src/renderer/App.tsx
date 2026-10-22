@@ -26,6 +26,7 @@ import { CrashLoop, SandboxUnavailable, UnsandboxedBadge } from './StartupScreen
 const SettingsView = lazy(() => import('./settings/SettingsView').then((module) => ({ default: module.SettingsView })));
 // Opened on demand: the grid and its drag and drop stay out of the start-up bundle.
 const TabOverview = lazy(() => import('./tabs/TabOverview').then((module) => ({ default: module.TabOverview })));
+const FindAll = lazy(() => import('./tabs/FindAll').then((module) => ({ default: module.FindAll })));
 import { hasReadingColumn, readerWidthStyle } from './document/width';
 import { tabAction } from './tabs/commands';
 import type { TabStore } from './tabs/store';
@@ -41,6 +42,7 @@ import { UnsavedPrompt, useConfirmUnsaved } from './edit/UnsavedPrompt';
 import { wheelZoom } from './tabs/wheel-zoom';
 import { QuickOpen } from './quick-open/QuickOpen';
 import { TabSearch } from './tabs/TabSearch';
+import type { FindAllChoice } from './tabs/FindAll';
 import { DropArea } from './tabs/DropArea';
 import { useFileDrops } from './tabs/useFileDrops';
 import { createRenderClient, type RenderClient } from './worker/client';
@@ -133,8 +135,8 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     return () => client.dispose();
   }, []);
 
-  // One overlay at a time: quick open, tab search, the tab overview, the palette, About or the windows a tab can move to.
-  const [overlay, setOverlay] = useState<'quickOpen' | 'tabSearch' | 'tabOverview' | 'palette' | 'about' | 'moveTab' | null>(null);
+  // One overlay at a time: quick open, tab search, the tab overview, find in all tabs, the palette, About or the windows a tab can move to.
+  const [overlay, setOverlay] = useState<'quickOpen' | 'tabSearch' | 'tabOverview' | 'findAll' | 'palette' | 'about' | 'moveTab' | null>(null);
   const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
   const openOverview = useCallback(() => setOverlay('tabOverview'), []);
   // Where focus goes when the overlay closes, if not the document: About from the profile menu, whose item is gone.
@@ -154,12 +156,26 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     commandPalette: () => setOverlay('palette'),
     searchTabs: () => setOverlay('tabSearch'),
     tabOverview: openOverview,
+    findAll: () => setOverlay('findAll'),
     moveTabToWindow: () => {
       const shown = movableTab(store, setMessage);
       if (shown) setOverlay('moveTab');
       return shown !== undefined;
     },
   });
+  // Find in all tabs (ADR-024): a chosen match shows its tab with the find bar open on it, and focus
+  // goes to the find bar.
+  const [findRequest, setFindRequest] = useState<{ id: string; query: string; caseSensitive: boolean; line: number; token: number } | null>(null);
+  const findRequests = useRef(0);
+  const showMatch = useCallback(
+    (id: string, choice: FindAllChoice) => {
+      store.activate(id);
+      if (!choice) return;
+      returnFocus.current = '[data-testid="tab-panel"][data-active="true"] .find-bar input';
+      setFindRequest({ id, ...choice, token: ++findRequests.current });
+    },
+    [store],
+  );
   const moveToChosenWindow = useCallback(
     (target: number) => {
       const id = store.getSnapshot().active;
@@ -254,6 +270,8 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
                         scheme={scheme}
                         onMessage={setMessage}
                         tableDefaults={tableDefaults}
+                        findRequest={findRequest?.id === tab.id ? findRequest : null}
+                        onFindShown={() => setFindRequest(null)}
                       />
                     )}
                   </TabPanel>
@@ -277,6 +295,11 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       {overlay === 'tabOverview' && (
         <Suspense fallback={null}>
           <TabOverview store={store} onClose={closeOverlay} />
+        </Suspense>
+      )}
+      {overlay === 'findAll' && (
+        <Suspense fallback={null}>
+          <FindAll tabs={view.tabs} onChoose={showMatch} onClose={closeOverlay} />
         </Suspense>
       )}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}
