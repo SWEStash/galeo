@@ -327,12 +327,15 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   (F4, with their text); the active tab's card is marked. Cards show no document content, so
   hibernated tabs cost nothing.
 - Keys: arrows move between cards, Home/End to the first and last; Enter (or a click) shows that
-  tab and closes the overview; Delete closes the tab (the unsaved-changes guard applies);
-  Ctrl+Shift+PgUp/PgDn move the card, and so the tab, one place. Esc closes the overview and
-  returns focus to the document.
+  tab and closes the overview; Delete or Ctrl+W closes the focused card's tab (the unsaved-changes
+  guard applies, and Cancel leaves the focus on the card); Ctrl+Shift+PgUp/PgDn move the card, and
+  so the tab, one place. Esc or Ctrl+Shift+E closes the overview and returns focus to the document.
+- A card's ✕, shown on hover and on the focused card, closes its tab with the mouse; it is not in
+  the Tab order, as Delete does the same.
 - Dragging a card moves the tab within the window; the tab bar shows the new order when the
   overview closes. Moving a tab to another window stays a tab-bar drag (F15).
-- A screen reader hears each card's name, indicators and position ("plan.md, unsaved, 3 of 9").
+- A screen reader hears each card's name, folder, indicators, format and position ("plan.md ~/docs,
+  unsaved changes, Markdown, 3 of 9"); the shown tab's card adds "shown now".
 
 ### F18 — Tabs on the left (v0.4)
 
