@@ -32,7 +32,7 @@ jobs:
       - name: Use electron ${{ matrix.electron }}
         run: npm install --no-save --ignore-scripts electron@${{ matrix.electron }}
       - run: npm run setup
-      - run: npx electron --version
+      - run: node -p "require('electron/package.json').version"
       - run: npm run build
       - name: Allow the Chromium sandbox
         run: sudo scripts/dev-sandbox-setup.sh
