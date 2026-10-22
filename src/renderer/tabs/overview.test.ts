@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TabView } from '../../shared/tabs';
-import { overviewCards } from './overview';
+import { droppedAt, overviewCards } from './overview';
 import type { TabStatus } from './store';
 
 const status = (change: Partial<TabStatus>): TabStatus => ({
@@ -58,5 +58,23 @@ describe('overviewCards', () => {
   it('names a tab whose format main has not told yet as a plain file', () => {
     const [card] = overviewCards(view({ tabs: [{ id: 'x', path: '/x/notes' }], active: 'x' }));
     expect(card).toMatchObject({ label: 'notes', folder: '', badge: 'TXT', format: 'plain text', position: '1 of 1' });
+  });
+});
+
+describe('droppedAt', () => {
+  const ids = ['a', 'b', 'c', 'd'];
+  it("gives the place in the new order of a card dropped before or after another", () => {
+    expect(droppedAt(ids, 'a', 'c', 'after')).toBe(2);
+    expect(droppedAt(ids, 'a', 'c', 'before')).toBe(1);
+    expect(droppedAt(ids, 'd', 'a', 'before')).toBe(0);
+    expect(droppedAt(ids, 'd', 'b', 'after')).toBe(2);
+    expect(droppedAt(ids, 'b', 'd', 'after')).toBe(3);
+  });
+
+  it('is null where nothing moves or a card is unknown', () => {
+    expect(droppedAt(ids, 'b', 'a', 'after')).toBeNull();
+    expect(droppedAt(ids, 'b', 'c', 'before')).toBeNull();
+    expect(droppedAt(ids, 'x', 'a', 'before')).toBeNull();
+    expect(droppedAt(ids, 'a', 'x', 'before')).toBeNull();
   });
 });

@@ -25,6 +25,8 @@ const BASE = {
   reopenClosed: ['CmdOrCtrl+Shift+T'],
   /** Tab search (UX F16). */
   searchTabs: ['CmdOrCtrl+Shift+A'],
+  /** The tab overview (UX F17). */
+  tabOverview: ['CmdOrCtrl+Shift+E'],
   nextTab: ['Ctrl+Tab', 'CmdOrCtrl+PageDown'],
   previousTab: ['Ctrl+Shift+Tab', 'CmdOrCtrl+PageUp'],
   /** Tab N is the Nth accelerator. */

@@ -52,3 +52,16 @@ export function overviewCards(view: Pick<TabsView, 'tabs' | 'active' | 'statuses
     };
   });
 }
+
+/**
+ * Where a card dropped before or after another lands in the new order, as `store.move` takes it;
+ * null when the drop leaves it where it was.
+ */
+export function droppedAt(ids: readonly string[], id: string, target: string, where: 'before' | 'after'): number | null {
+  const from = ids.indexOf(id);
+  const at = ids.indexOf(target);
+  if (from < 0 || at < 0) return null;
+  const insertion = where === 'before' ? at : at + 1;
+  const to = insertion > from ? insertion - 1 : insertion;
+  return to === from ? null : to;
+}

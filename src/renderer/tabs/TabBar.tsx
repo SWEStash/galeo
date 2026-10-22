@@ -4,12 +4,10 @@ import type { DocumentRecord } from '../../shared/documents';
 import { tabLabels } from '../../shared/tab-labels';
 import { editors } from '../edit/editors';
 import { watchDragExit } from './drag-exit';
+import { fromGaleo, TAB_TYPE } from './drag-types';
 import { indicators } from './indicators';
 import type { TabStatus, TabStore, TabsView } from './store';
 import { insertion, overflowEdges, wheelScroll } from './strip';
-
-/** A tab being dragged: the tab bars of every galeo window take it, nothing else does (ADR-019). */
-const TAB_TYPE = 'application/x-galeo-tab';
 
 /**
  * The window's tabs (UX §2): an ARIA tablist in the title bar. Its empty space, and a grip at its
@@ -23,12 +21,15 @@ export function TabBar({
   store,
   start,
   onOpenFile,
+  onOverview,
   onFilesDropped,
 }: {
   view: TabsView;
   store: TabStore;
   start?: ReactNode;
   onOpenFile?: () => void;
+  /** Shows the tab overview (UX F17). */
+  onOverview?: () => void;
   /** Files from the file manager were dropped at the caret: they go after this tab (null: first). */
   onFilesDropped?: (after: string | null) => void;
 }) {
@@ -88,7 +89,7 @@ export function TabBar({
   const { dropProps } = useDrop({
     ref: listRef,
     // Tabs move; files from the file manager open at the caret (their paths reach main from the preload only).
-    getDropOperation: (types) => (types.has(TAB_TYPE) ? 'move' : onFilesDropped ? 'copy' : 'cancel'),
+    getDropOperation: (types) => (types.has(TAB_TYPE) ? 'move' : onFilesDropped && !fromGaleo(types) ? 'copy' : 'cancel'),
     onDropMove: (event) => setCaret(insertionAt(event.x)),
     onDropExit: () => setCaret(null),
     onDrop: async (event) => {
@@ -163,6 +164,11 @@ export function TabBar({
       {onOpenFile && (
         <button type="button" className="tab-new" data-testid="tab-new" aria-label="Open file… (Ctrl+P)" title="Open file… (Ctrl+P)" onClick={onOpenFile}>
           +
+        </button>
+      )}
+      {onOverview && (
+        <button type="button" className="tab-overview-button" data-testid="tab-overview-button" aria-label="Tab overview (Ctrl+Shift+E)" title="Tab overview (Ctrl+Shift+E)" onClick={onOverview}>
+          <span aria-hidden="true">▦</span>
         </button>
       )}
       {/* Tabs never cover this: the window can always be dragged, however many are open. */}

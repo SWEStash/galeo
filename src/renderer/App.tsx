@@ -23,6 +23,8 @@ import { CrashLoop, SandboxUnavailable, UnsandboxedBadge } from './StartupScreen
 
 // The Settings tab loads when first shown: its pickers are nothing a window needs to start.
 const SettingsView = lazy(() => import('./settings/SettingsView').then((module) => ({ default: module.SettingsView })));
+// Opened on demand: the grid and its drag and drop stay out of the start-up bundle.
+const TabOverview = lazy(() => import('./tabs/TabOverview').then((module) => ({ default: module.TabOverview })));
 import { hasReadingColumn, readerWidthStyle } from './document/width';
 import { tabAction } from './tabs/commands';
 import type { TabStore } from './tabs/store';
@@ -130,9 +132,10 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     return () => client.dispose();
   }, []);
 
-  // One overlay at a time: quick open, tab search, the palette, About or the windows a tab can move to.
-  const [overlay, setOverlay] = useState<'quickOpen' | 'tabSearch' | 'palette' | 'about' | 'moveTab' | null>(null);
+  // One overlay at a time: quick open, tab search, the tab overview, the palette, About or the windows a tab can move to.
+  const [overlay, setOverlay] = useState<'quickOpen' | 'tabSearch' | 'tabOverview' | 'palette' | 'about' | 'moveTab' | null>(null);
   const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
+  const openOverview = useCallback(() => setOverlay('tabOverview'), []);
   // Where focus goes when the overlay closes, if not the document: About from the profile menu, whose item is gone.
   const returnFocus = useRef<string | null>(null);
   const closeOverlay = useCallback(() => {
@@ -148,6 +151,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   useCommands({
     commandPalette: () => setOverlay('palette'),
     searchTabs: () => setOverlay('tabSearch'),
+    tabOverview: openOverview,
     moveTabToWindow: () => {
       const shown = movableTab(store, setMessage);
       if (shown) setOverlay('moveTab');
@@ -193,7 +197,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
         onSelectionChange={(key) => store.activate(String(key))}
         keyboardActivation="manual"
       >
-        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} onAbout={() => openAbout('[data-testid="profile-chip"]')} />} onOpenFile={openQuickOpen} onFilesDropped={(after) => landed({ after })} />
+        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} onAbout={() => openAbout('[data-testid="profile-chip"]')} />} onOpenFile={openQuickOpen} onOverview={openOverview} onFilesDropped={(after) => landed({ after })} />
         <ProfileCreatedNotice />
         {settings && <SettingsNotice notices={settings.notices} />}
         {settings && <SessionNotice notice={settings.session} />}
@@ -252,6 +256,11 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
       {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} say={setMessage} />}
       {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} />}
+      {overlay === 'tabOverview' && (
+        <Suspense fallback={null}>
+          <TabOverview store={store} onClose={closeOverlay} />
+        </Suspense>
+      )}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}
       {overlay === 'about' && <AboutDialog version={version} onClose={closeOverlay} />}
       {overlay === 'moveTab' && <MoveTabDialog onChoose={moveToChosenWindow} onClose={closeOverlay} />}

@@ -31,6 +31,7 @@ const KEYBOARD_MAP: [label: string, keys: string[], macKeys: string[]][] = [
   ['Close window', ['Ctrl+Shift+W'], ['⇧⌘W']],
   ['Reopen closed tab or window', ['Ctrl+Shift+T'], ['⇧⌘T']],
   ['Search tabs', ['Ctrl+Shift+A'], ['⇧⌘A']],
+  ['Tab overview', ['Ctrl+Shift+E'], ['⇧⌘E']],
   ['Next tab', ['Ctrl+Tab', 'Ctrl+PgDn'], ['⌃Tab', '⌘PgDn']],
   ['Previous tab', ['Ctrl+Shift+Tab', 'Ctrl+PgUp'], ['⌃⇧Tab', '⌘PgUp']],
   ...[1, 2, 3, 4, 5, 6, 7, 8].map((n): [string, string[], string[]] => [`Go to tab ${n}`, [`Ctrl+${n}`], [`⌘${n}`]]),

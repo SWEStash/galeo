@@ -1,8 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { useDrop } from 'react-aria-components';
-
-/** A tab dragged within the tab bar isn't a file drop. */
-const TAB_TYPE = 'application/x-galeo-tab';
+import { fromGaleo } from './drag-types';
 
 /**
  * The document area as a drop target for files from the file manager: an overlay says how many
@@ -13,7 +11,8 @@ export function DropArea({ onDrop, children }: { onDrop: () => void; children: R
   const [count, setCount] = useState(0);
   const { dropProps, isDropTarget } = useDrop({
     ref,
-    getDropOperation: (types) => (types.has(TAB_TYPE) ? 'cancel' : 'copy'),
+    // A tab or a card being dragged isn't a file drop.
+    getDropOperation: (types) => (fromGaleo(types) ? 'cancel' : 'copy'),
     onDrop: () => onDrop(),
   });
   return (

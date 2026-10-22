@@ -362,7 +362,8 @@ body,
   opacity: 0.5;
 }
 
-.tab-new {
+.tab-new,
+.tab-overview-button {
   flex: none;
   align-self: center;
   width: 26px;
@@ -376,11 +377,13 @@ body,
   line-height: 1;
   -webkit-app-region: no-drag;
 }
-.tab-new:hover {
+.tab-new:hover,
+.tab-overview-button:hover {
   background: var(--galeo-color-code-bg);
   color: var(--galeo-color-fg);
 }
-.tab-new:focus-visible {
+.tab-new:focus-visible,
+.tab-overview-button:focus-visible {
   outline: 2px solid var(--galeo-color-focus);
   outline-offset: 1px;
 }
@@ -492,6 +495,103 @@ body,
   margin: 0;
   padding: 12px;
   color: var(--galeo-color-muted);
+}
+
+/* The tab overview (UX F17): cards wrap in rows; ↑/↓ move by row from where the cards are. */
+.modal.tab-overview {
+  width: min(960px, calc(100vw - 32px));
+}
+.tab-overview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  padding: 12px;
+  outline: none;
+}
+.tab-overview-card {
+  position: relative;
+  display: grid;
+  grid-template: 'badge label marks' auto 'badge folder folder' auto / auto 1fr auto;
+  column-gap: 8px;
+  align-items: center;
+  box-sizing: border-box;
+  width: 214px;
+  padding: 8px 24px 8px 8px;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  cursor: default;
+  outline: none;
+}
+.tab-overview-card[data-hovered] {
+  background: var(--galeo-color-code-bg);
+}
+.tab-overview-card[data-active] {
+  box-shadow: inset 0 -2px 0 var(--galeo-color-accent);
+}
+.tab-overview-card[data-focus-visible] {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 1px;
+}
+.tab-overview-card[data-dragging] {
+  opacity: 0.5;
+}
+.tab-overview-badge {
+  grid-area: badge;
+  min-width: 34px;
+  padding: 2px 4px;
+  border: 1px solid var(--galeo-color-control-border);
+  border-radius: 3px;
+  color: var(--galeo-color-muted);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+}
+.tab-overview-label {
+  grid-area: label;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tab-overview-indicators {
+  display: flex;
+  grid-area: marks;
+  gap: 4px;
+}
+.tab-overview-folder {
+  grid-area: folder;
+  overflow: hidden;
+  color: var(--galeo-color-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tab-overview-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  visibility: hidden;
+  padding: 0 4px;
+  border-radius: 3px;
+  color: var(--galeo-color-muted);
+  font-size: 11px;
+}
+.tab-overview-card[data-hovered] .tab-overview-close,
+.tab-overview-card[data-focused] .tab-overview-close {
+  visibility: visible;
+}
+.tab-overview-close:hover {
+  background: var(--galeo-color-control-border);
+  color: var(--galeo-color-fg);
+}
+/* Where a dragged card would go: a line between two cards. */
+.tab-overview-grid .react-aria-DropIndicator {
+  width: 0;
+  margin: 0 -4px;
+}
+.tab-overview-grid .react-aria-DropIndicator[data-drop-target] {
+  outline: 1px solid var(--galeo-color-accent);
 }
 
 .tab-caret {
