@@ -3,6 +3,11 @@ import type { ReaderWidth } from './tabs';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+/** The side tab panel's width in pixels (ADR-023): its range and its default. */
+export const TAB_PANEL_MIN = 140;
+export const TAB_PANEL_MAX = 480;
+export const TAB_PANEL_DEFAULT = 220;
+
 /** Every v0.1 setting (UX §6), as resolved for one profile. */
 export interface Settings {
   themeMode: ThemeMode;
