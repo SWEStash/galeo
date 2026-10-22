@@ -1,97 +1,25 @@
 name: CI
 
+# Throwaway diagnosis (never merged): the first Electron start on a fresh runner, 44.9.2 vs 45.0.0.
 on:
   pull_request:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   HUSKY: '0'
 
 jobs:
-  linux:
-    name: Linux (full)
+  first-start:
+    name: first start (electron ${{ matrix.electron }}, sample ${{ matrix.sample }})
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run setup
-      - name: Audit dependencies (fails on high severity)
-        run: npm audit --audit-level=high
-      - run: npm run typecheck
-      - run: npm run boundaries
-      - run: npm test
-      - run: npm run build
-      - run: npm run check:bundle
-      # Ubuntu 24.04 restricts unprivileged user namespaces; allow them for the Electron binary
-      # so it runs sandboxed, as the .deb does. Never --no-sandbox.
-      - name: Allow the Chromium sandbox
-        run: sudo scripts/dev-sandbox-setup.sh
-      - name: End-to-end tests
-        run: npm run headless -- npm run test:e2e
-      # Socket-level zero-network proof (SR-07): every connect() of the app's process tree is
-      # recorded; the suite also shows it goes red with the network lockdown switched off.
-      - name: Install strace
-        run: command -v strace || (sudo apt-get update && sudo apt-get install -y strace)
-      - name: No-network harness
-        run: npm run headless -- npm run test:no-network
-      # Startup timings from a build with perf marks; reported, and failing only on a
-      # catastrophic regression until the release check enforces the PRD budgets.
-      - name: Performance smoke
-        run: GALEO_PERF=1 npm run build && npm run headless -- npm run test:perf
-      - if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: perf-results-linux
-          path: tests/perf/results/
-          if-no-files-found: ignore
-          retention-days: 30
-      # Packages build, the fuses read back from the binary as configured (SR-08), and the
-      # packaged app starts through the launcher wrapper (ADR-009).
-      - name: Package
-        run: npm run package
-      - name: Verify the package
-        run: npm run headless -- npm run verify:package
-      - if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: playwright-report-linux
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
-
-  # Off until a stable Linux package (ADR-011); the job is kept to switch back on.
-  previews:
-    if: false
-    name: ${{ matrix.name }} (preview)
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: macOS
-            os: macos-15
-          - name: Windows
-            os: windows-2025
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    # Releases are Linux-only for now: a preview failure shows on its job but leaves the run green.
-    # It is still fixed in the next commit, so the previews don't drift.
-    continue-on-error: true
+        electron: ['44.9.2', '45.0.0']
+        sample: [1, 2]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -101,20 +29,25 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Use electron ${{ matrix.electron }}
+        run: npm install --no-save --ignore-scripts electron@${{ matrix.electron }}
       - run: npm run setup
-      - run: npm test
+      - run: npx electron --version
       - run: npm run build
-      - name: Smoke end-to-end test
-        run: npm run test:e2e
-      - name: Package
-        run: npm run package
-      - name: Verify the package
-        run: npm run verify:package
-      - if: failure()
+      - name: Allow the Chromium sandbox
+        run: sudo scripts/dev-sandbox-setup.sh
+      - name: First test, cold
+        env:
+          DEBUG: pw:browser*,pw:api
+          ELECTRON_ENABLE_LOGGING: '1'
+        run: npm run headless -- npx playwright test tests/e2e/accessibility.spec.ts:29 --project=e2e --workers=1 --reporter=list --trace=on || true
+      - name: First test, warm
+        env:
+          DEBUG: pw:browser*,pw:api
+          ELECTRON_ENABLE_LOGGING: '1'
+        run: npm run headless -- npx playwright test tests/e2e/accessibility.spec.ts:29 --project=e2e --workers=1 --reporter=list || true
+      - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report-${{ matrix.os }}
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
+          name: first-start-${{ matrix.electron }}-${{ matrix.sample }}
+          path: test-results/
