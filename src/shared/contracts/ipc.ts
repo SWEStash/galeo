@@ -2,6 +2,7 @@
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS` and `EVENTS`, one fixed method per channel or event.
 import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, SaveResult } from '../documents';
+import type { FindAllResult } from '../find';
 import type { Platform, WindowCommand } from '../keymap';
 import type { SystemFont } from '../fonts';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
@@ -115,6 +116,7 @@ export const CHANNELS = [
   'documents.closeAnswer',
   'documents.keep',
   'documents.recover',
+  'documents.findAll',
   'tabs.snapshot',
   'tabs.activated',
   'tabs.rendering',
@@ -220,6 +222,8 @@ export interface Requests {
   'documents.keep': [id: string, text: string, base: string | null];
   /** A tab shown anew (after a crash, or moved in): whether it is in edit mode, and its unsaved text. */
   'documents.recover': [id: string];
+  /** Searches the source text of the sender's tabs (ADR-024); a newer or empty query stops the last one. */
+  'documents.findAll': [query: string, options: { caseSensitive: boolean }];
   /** The sender's tabs, as main knows them. */
   'tabs.snapshot': [];
   /** The window already shows this tab; main records it (the window activates tabs itself, ADR-002). */
@@ -323,6 +327,7 @@ export interface Responses {
   'documents.closeAnswer': void;
   'documents.keep': void;
   'documents.recover': Recovered;
+  'documents.findAll': FindAllResult;
   'tabs.snapshot': TabSnapshot;
   'tabs.activated': void;
   'tabs.rendering': void;

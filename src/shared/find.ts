@@ -17,6 +17,14 @@ export interface FindInTextResult {
   hits: FindHit[];
 }
 
+/** Why a tab wasn't searched: its file's state (UX §4), or its search overran the budget. */
+export type FindAllSkip = 'missing' | 'no-permission' | 'not-a-file' | 'unreadable' | 'too-large' | 'binary' | 'too-slow';
+
+export type FindAllTab = { id: string; found: FindInTextResult } | { id: string; skipped: FindAllSkip };
+
+/** A window's search of its tabs (ADR-024): tabs with matches and tabs not searched, in tab order. */
+export type FindAllResult = { kind: 'done'; tabs: FindAllTab[] } | { kind: 'superseded' };
+
 /** The find bar's cap too: past it the count reads "10000+". */
 export const FIND_ALL_CAP = 10_000;
 export const FIND_ALL_HITS = 20;
@@ -85,4 +93,11 @@ function wholeEnd(text: string, index: number): number {
 
 function collapse(text: string): string {
   return text.replace(/\s+/g, ' ');
+}
+
+/** `findInText` as main's task worker runs it (ADR-024). */
+export function findInTextTask(input: unknown): FindInTextResult {
+  const { text, query, caseSensitive } = (input ?? {}) as { text?: unknown; query?: unknown; caseSensitive?: unknown };
+  if (typeof text !== 'string' || typeof query !== 'string' || typeof caseSensitive !== 'boolean') throw new Error('findInText: bad input');
+  return findInText(text, query, { caseSensitive });
 }

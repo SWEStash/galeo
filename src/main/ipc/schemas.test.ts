@@ -22,6 +22,14 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('documents.findAll takes a query up to 1024 characters (empty too) and a case flag', () => {
+    expect(accepts('documents.findAll', ['', { caseSensitive: false }])).toBe(true);
+    expect(accepts('documents.findAll', ['x'.repeat(1024), { caseSensitive: true }])).toBe(true);
+    for (const bad of [['x'.repeat(1025), { caseSensitive: false }], ['x'], ['x', {}], ['x', { caseSensitive: 1 }], ['x', { caseSensitive: false, regex: true }], [1, { caseSensitive: false }]]) {
+      expect(accepts('documents.findAll', bad)).toBe(false);
+    }
+  });
+
   it('documents.keep takes an id, text up to the read cap and a version (or null)', () => {
     expect(accepts('documents.keep', [ID, '', 'v'])).toBe(true);
     expect(accepts('documents.keep', [ID, '', null])).toBe(true);

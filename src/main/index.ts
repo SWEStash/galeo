@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
 import { EditGrants } from '../core/documents/edit-grants';
+import { TabSearches } from '../core/documents/find-all';
 import { UnsavedChanges } from '../core/documents/unsaved';
 import { InputCredits } from '../core/documents/input-credits';
 import { ImageGrants } from '../core/documents/images';
@@ -173,12 +174,15 @@ function start(initialMode: StartupMode): void {
   });
   // Real input per window: what lets a request reach beyond the window's own grants (T6).
   const input = new InputCredits(Date.now);
+  // One worker for main's parsing and searches; it starts on the first task, not at launch.
+  const tasks = new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js'));
+  const searches = new TabSearches({ records: documents, grants, fs, decode: decodeWithPlatform, tasks });
   const links = new DocumentLinks({
     records: documents,
     input,
     fs,
     images,
-    tasks: new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js')),
+    tasks,
     shell,
     limiter: new ExternalOpenLimiter(systemClock),
     confirmBurst,
@@ -447,6 +451,7 @@ function start(initialMode: StartupMode): void {
       crashes.closeWindow(windowId);
       input.closeWindow(windowId);
       grants.closeWindow(windowId);
+      searches.closeWindow(windowId);
       unsaved.closeWindow(windowId);
       agreedToClose.delete(windowId);
       emptiedByMove.delete(windowId);
@@ -927,6 +932,7 @@ function start(initialMode: StartupMode): void {
           unsaved,
           opened: (file, windowId) =>
             void profileOf(windowId)?.recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
+          searches,
         }),
         ...tabHandlers({
           tabs: documents,

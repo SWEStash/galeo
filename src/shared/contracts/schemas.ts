@@ -86,6 +86,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'documents.closeAnswer': z.tuple([z.enum(['asking', 'proceed', 'cancel'])]),
   'documents.keep': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version.nullable()]),
   'documents.recover': z.tuple([documentId]),
+  'documents.findAll': z.tuple([z.string().max(1024), z.strictObject({ caseSensitive: z.boolean() })]),
   'tabs.snapshot': z.tuple([]),
   'tabs.activated': z.tuple([documentId]),
   'tabs.rendering': z.tuple([documentId]),

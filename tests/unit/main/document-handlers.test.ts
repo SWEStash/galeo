@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EditGrants } from '../../../src/core/documents/edit-grants';
+import { TabSearches } from '../../../src/core/documents/find-all';
 import { ImageGrants } from '../../../src/core/documents/images';
 import { DocumentLinks } from '../../../src/core/documents/links';
 import { ReadIdentities } from '../../../src/core/documents/identities';
@@ -9,6 +10,7 @@ import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
 import type { Decode } from '../../../src/core/text/decode';
 import { documentHandlers } from '../../../src/main/documents/handlers';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
+import { findInTextTask } from '../../../src/shared/find';
 import { referencesTask } from '../../../src/shared/markdown/references';
 import { FakeClock, FakeFileSystem, FakeOsShell, FakeTaskRunner } from '../../helpers/fakes';
 
@@ -67,11 +69,19 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
     input,
     unsaved: { answer: (window, answer) => void answers.push(`${window}:${answer}`) },
     opened: (path, window) => opened.push(`${window}:${path}`),
+    searches: new TabSearches({ records, grants, fs, decode, tasks: new FakeTaskRunner({ findInText: findInTextTask }) }),
   });
   return { fs, records, handlers, opened, grants, input, reads, answers, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
 describe('documentHandlers', () => {
+  it("searches only the sender window's tabs", async () => {
+    const { records, handlers } = setup({ '/d/a.md': 'a needle', '/d/b.md': 'b needle' });
+    records.open('/d/b.md', 2);
+    const result = await handlers['documents.findAll'](['needle', { caseSensitive: false }], event);
+    expect(result.kind === 'done' && result.tabs.map((tab) => tab.id)).toEqual(['id-1']);
+  });
+
   it('refuses to read the settings tab as a file', async () => {
     const { records, handlers } = setup({ '/d/a.md': '# a' });
     const settings = records.openSettings(1);

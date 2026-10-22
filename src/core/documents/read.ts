@@ -9,7 +9,8 @@ export type Hash = (bytes: Uint8Array) => string;
 
 export { READ_MAX_BYTES };
 
-const STATE_BY_CODE = {
+/** What the reader is told when a file can't be read, by the file system's reason. */
+export const STATE_BY_CODE = {
   ENOENT: 'missing',
   ENOTDIR: 'missing',
   EACCES: 'no-permission',

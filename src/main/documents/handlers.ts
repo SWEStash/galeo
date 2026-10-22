@@ -1,4 +1,5 @@
 import type { EditGrants } from '../../core/documents/edit-grants';
+import type { TabSearches } from '../../core/documents/find-all';
 import type { CloseAnswer } from '../../core/documents/unsaved';
 import type { ReadIdentities } from '../../core/documents/identities';
 import type { DocumentLinks } from '../../core/documents/links';
@@ -25,7 +26,8 @@ type DocumentChannels =
   | 'documents.leaveEdit'
   | 'documents.closeAnswer'
   | 'documents.keep'
-  | 'documents.recover';
+  | 'documents.recover'
+  | 'documents.findAll';
 
 /**
  * The document channels. Every request names a document by id and is scoped to the sending
@@ -46,8 +48,10 @@ export function documentHandlers(deps: {
   unsaved: { answer(window: number, answer: CloseAnswer): void };
   /** A file was read (the profile's recent files keep it). */
   opened: (path: string, window: number) => void;
+  /** Find in all tabs (ADR-024). */
+  searches: TabSearches;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened } = deps;
+  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened, searches } = deps;
   // The file each tab last counted as opened: re-reads of it (a wake, a changed file) aren't opens.
   const counted = new Map<string, string>();
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
@@ -112,5 +116,6 @@ export function documentHandlers(deps: {
     'documents.closeAnswer': ([answer], event) => unsaved.answer(event.sender.id, answer),
     'documents.keep': ([id, text, base], event) => grants.keep(id, event.sender.id, text, base),
     'documents.recover': ([id], event) => ({ edit: grants.granted(id, event.sender.id), kept: grants.kept(id, event.sender.id) }),
+    'documents.findAll': ([query, options], event) => searches.search(event.sender.id, query, options),
   };
 }

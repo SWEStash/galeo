@@ -98,6 +98,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       closeAnswer: vi.fn().mockResolvedValue(undefined),
       keep: vi.fn().mockResolvedValue(undefined),
       recover: vi.fn().mockResolvedValue({ edit: false, kept: null }),
+      findAll: vi.fn().mockResolvedValue({ kind: 'done', tabs: [] }),
       onConfirmClose: vi.fn((listener: (ids: string[]) => void) => {
         events.confirmClose = listener;
         return () => {};

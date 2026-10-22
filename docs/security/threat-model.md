@@ -337,6 +337,9 @@ Tab search (v0.4, UX F16) answers only with the sender's own tabs: its open ones
 closed, by name and folder. Reopening one goes by the id main listed it under in that window's
 closed list (never another window's, never a closed window) and spends an input credit; the
 file is one the window already had open.
+Find in all tabs (v0.4, ADR-024) searches only the sender's own open tabs: their files, which the
+window already shows, or the unsaved text main keeps for them. It answers with counts and short
+snippets by tab id. It reads nothing the page couldn't already read, so it spends no credit.
 *AC*: tests showing a renderer-originated `write` to a non-edit-enabled path is rejected, and
 that reads of paths never surfaced to the user are rejected; that Ctrl+E on a missing file is
 refused by main, and that a tab the page makes active just before Ctrl+E is asked about, not
@@ -381,6 +384,10 @@ font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens
   and caps its rate.
 - `fc-list` (the font pickers' list) gets 5 s and 4 MB of output; past either it is stopped and the
   pickers offer the bundled fonts only. A list is kept for the app's life, so it runs once.
+- Find in all tabs (ADR-024) runs each tab's search in main's task worker under a 5 s budget,
+  enforced the same way; a tab past it is listed as not searched. Counts stop at 10,000 per tab,
+  with 20 snippets of at most 40 characters either side of a match. A newer query from the window
+  stops the older search before its next tab.
 - The quick-open walker is bounded (file count, depth, time), does not follow symlinks out of the
   root, and detects loops.
 - Before inserting a document, the renderer sends main a "rendering tab X" breadcrumb. If a
