@@ -302,9 +302,10 @@ test('a tab dropped on another window still moves there when that window asks fo
     await expect(other.getByRole('tab')).toHaveCount(1);
     const token = await startDragging(window, basic);
     await expect(other.getByTestId('tab-bar')).toHaveAttribute('data-tab-drag', 'true');
+    // Where it lands is measured first: main keeps an ended drag claimable for half a second only.
+    const tab = (await other.getByRole('tab').first().boundingBox())!;
     // The source hears the drag ended before the window it was dropped on asks for the tab.
     await endDragOutside(window, 'basic.md', 'none');
-    const tab = (await other.getByRole('tab').first().boundingBox())!;
     await dropTab(other, token, { x: tab.x + tab.width * 0.75, y: tab.y + tab.height / 2 });
     await window.mouse.up();
 
