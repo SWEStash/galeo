@@ -6,6 +6,8 @@ export interface FindBarProps {
   /** Changing it moves focus back into the field and selects it (Ctrl+F while open). */
   focusToken: number;
   onQuery: (query: string, caseSensitive: boolean) => void;
+  /** What the bar opens with (a match chosen in find in all tabs); it opens empty otherwise. */
+  initial?: { query: string; caseSensitive: boolean } | undefined;
   onStep: (direction: 1 | -1) => void;
   onClose: () => void;
   /** Edit mode's replace row (Ctrl+H); `replaced` is what Replace all last did, until find moves on. */
@@ -21,10 +23,10 @@ function describe({ current, total, capped }: FindResult): string {
  * Find in the document (UX F9). Not a dialog: the document stays usable and the bar holds no
  * focus trap; Esc closes it and the app returns focus to the document.
  */
-export function FindBar({ result, focusToken, onQuery, onStep, onClose, replace }: FindBarProps) {
+export function FindBar({ result, focusToken, onQuery, onStep, onClose, replace, initial }: FindBarProps) {
   const input = useRef<HTMLInputElement>(null);
-  const [query, setQuery] = useState('');
-  const [caseSensitive, setCaseSensitive] = useState(false);
+  const [query, setQuery] = useState(initial?.query ?? '');
+  const [caseSensitive, setCaseSensitive] = useState(initial?.caseSensitive ?? false);
   const [replacement, setReplacement] = useState('');
 
   useLayoutEffect(() => {

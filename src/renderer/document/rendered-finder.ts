@@ -1,8 +1,9 @@
+import { blockAtOrBefore } from './anchor';
 import { findRanges, nextIndex } from './find-rendered';
-import type { FindResult } from './source-view';
+import type { FindOptions, FindResult } from './source-view';
 
 export interface Finder {
-  find(query: string, options: { caseSensitive: boolean }): FindResult;
+  find(query: string, options: FindOptions): FindResult;
   step(direction: 1 | -1): FindResult;
   clear(): void;
 }
@@ -45,12 +46,12 @@ export function createRenderedFinder(article: HTMLElement, scrollerOf: () => HTM
   };
 
   return {
-    find(query, { caseSensitive }) {
+    find(query, { caseSensitive, line }) {
       ranges = findRanges(article, query, { caseSensitive });
-      // Start from the reading position: the first match not above the view.
-      const top = scrollerOf().getBoundingClientRect().top;
-      const visible = ranges.findIndex((range) => range.getBoundingClientRect().bottom >= top);
-      current = ranges.length === 0 ? -1 : Math.max(visible, 0);
+      // Start from the block holding the given source line, else from the reading position: the
+      // first match not above the view.
+      const first = line === undefined ? firstInView(ranges, scrollerOf()) : firstFromLine(article, ranges, line);
+      current = ranges.length === 0 ? -1 : Math.max(first, 0);
       paint();
       return result();
     },
@@ -66,4 +67,17 @@ export function createRenderedFinder(article: HTMLElement, scrollerOf: () => HTM
       registry()?.delete(CURRENT);
     },
   };
+}
+
+function firstInView(ranges: readonly Range[], scroller: HTMLElement): number {
+  const top = scroller.getBoundingClientRect().top;
+  return ranges.findIndex((range) => range.getBoundingClientRect().bottom >= top);
+}
+
+/** The first match in or after the rendered block that holds source `line`. */
+function firstFromLine(article: HTMLElement, ranges: readonly Range[], line: number): number {
+  const lineOf = (node: Node) => Number((node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>('[data-src-line]')?.dataset['srcLine'] ?? 0);
+  const lines = [...article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => Number(element.dataset['srcLine']));
+  const block = lines[blockAtOrBefore(lines, line)] ?? 0;
+  return ranges.findIndex((range) => lineOf(range.startContainer) >= block);
 }

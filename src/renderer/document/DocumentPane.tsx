@@ -64,6 +64,10 @@ export interface DocumentPaneProps {
   active: boolean;
   /** An anchor to scroll to once the document is shown; `onAnchorShown` confirms it. */
   pendingAnchor: { anchor: string; token: number } | null;
+  /** A match chosen in find in all tabs, to open the find bar on; a new token opens it again. */
+  findRequest?: { query: string; caseSensitive: boolean; line: number; token: number } | null | undefined;
+  /** `findRequest` was taken. */
+  onFindShown?: (() => void) | undefined;
   onAnchorShown: () => void;
   onLink: (href: string, options: { background: boolean }) => void;
   onResolveImage: (src: string) => Promise<ImageResult>;
@@ -155,6 +159,8 @@ export function DocumentPane({
   scheme,
   active,
   pendingAnchor,
+  findRequest = null,
+  onFindShown,
   onAnchorShown,
   onLink,
   onResolveImage,
@@ -496,17 +502,27 @@ export function DocumentPane({
     if (!back) return;
     return settleFocus(back);
   }, [viewer]);
-  const [find, setFind] = useState({ open: false, replace: false, token: 0, query: '', caseSensitive: false });
+  // `line`: where a match chosen in find in all tabs is, until the reader types or steps.
+  const [find, setFind] = useState<{ open: boolean; replace: boolean; token: number; query: string; caseSensitive: boolean; line?: number | undefined }>({
+    open: false,
+    replace: false,
+    token: 0,
+    query: '',
+    caseSensitive: false,
+  });
+  // The match chosen in find in all tabs, which the find bar opens with.
+  const [findSeed, setFindSeed] = useState<NonNullable<DocumentPaneProps['findRequest']> | null>(null);
   const [findResult, setFindResult] = useState<FindResult>(NO_MATCHES);
   // What Replace all last did, shown until find moves on.
   const [replaced, setReplaced] = useState<number | null>(null);
-  const runFind = useCallback((query: string, caseSensitive: boolean) => {
-    setFind((current) => ({ ...current, query, caseSensitive }));
+  const runFind = useCallback((query: string, caseSensitive: boolean, line?: number) => {
+    setFind((current) => ({ ...current, query, caseSensitive, line }));
     setReplaced(null);
-    setFindResult(documentHandle.current?.find(query, { caseSensitive }) ?? NO_MATCHES);
+    setFindResult(documentHandle.current?.find(query, { caseSensitive, line }) ?? NO_MATCHES);
   }, []);
   const stepFind = useCallback((direction: 1 | -1) => {
     setReplaced(null);
+    setFind((current) => (current.line === undefined ? current : { ...current, line: undefined }));
     if (documentHandle.current) setFindResult(documentHandle.current.step(direction));
   }, []);
   const replaceMatch = useCallback((text: string) => {
@@ -519,7 +535,8 @@ export function DocumentPane({
   const closeFind = useCallback(() => {
     documentHandle.current?.clear();
     setReplaced(null);
-    setFind((current) => ({ ...current, open: false, replace: false, query: '' }));
+    setFind((current) => ({ ...current, open: false, replace: false, query: '', line: undefined }));
+    setFindSeed(null);
     // Esc keeps the scroll position at the current match; focus goes back to the document.
     documentHandle.current?.focus();
   }, []);
@@ -695,9 +712,20 @@ export function DocumentPane({
   // Switching views, the rendered HTML arriving, or replace moving find to the source repeats the
   // search in what is now showing.
   useEffect(() => {
-    if (find.open && find.query) runFind(find.query, find.caseSensitive);
+    if (find.open && find.query) runFind(find.query, find.caseSensitive, find.line);
     // Only a change of view, content or target repeats the search, not typing (that already ran it).
   }, [view, rendered, find.replace]);
+
+  // A match chosen in find in all tabs (ADR-024): the find bar opens with its query, on it. The tree
+  // and the table have no find, so their source shows.
+  useEffect(() => {
+    if (!findRequest || !ready) return;
+    if ((json || tabular) && view === 'rendered') setChosenView('source');
+    setReplaced(null);
+    setFind((current) => ({ ...current, open: true, token: current.token + 1, query: findRequest.query, caseSensitive: findRequest.caseSensitive, line: findRequest.line }));
+    setFindSeed(findRequest);
+    onFindShown?.();
+  }, [findRequest, ready !== null]);
 
   // An anchor waits until the rendered view has content to scroll to.
   useEffect(() => {
@@ -798,6 +826,8 @@ export function DocumentPane({
       {loading && <DocumentLoading {...(cancellable ? { onCancel: cancelRender } : {})} />}
       {find.open && (
         <FindBar
+          key={findSeed?.token ?? 0}
+          initial={findSeed ?? undefined}
           result={findResult}
           focusToken={find.token}
           onQuery={runFind}
@@ -814,6 +844,8 @@ export function DocumentPane({
           editable={editing}
           onEdit={edited}
           replacing={find.open && find.replace}
+          pendingFind={findSeed}
+          onPendingFind={setFindResult}
           sourceCursor={sourceCursor}
           view={view}
           splitRatio={ratio}

@@ -47,6 +47,14 @@ describe('FindBar', () => {
     expect(document.activeElement).toBe(input);
   });
 
+  it('opens with a query and case already set, for a match found from another tab', async () => {
+    const { container, input } = await render({ initial: { query: 'plan', caseSensitive: true } });
+    expect(input.value).toBe('plan');
+    expect(container.querySelector('[aria-label="Match case"]')?.getAttribute('aria-pressed')).toBe('true');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(4);
+  });
+
   it('searches as the user types', async () => {
     const { input, props } = await render();
     await type(input, 'plan');

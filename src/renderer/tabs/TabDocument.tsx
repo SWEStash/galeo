@@ -4,7 +4,7 @@ import type { ChosenEncoding, FollowResult, HistoryResult } from '../../shared/c
 import type { ImageResult, RefusalReason, SaveResult } from '../../shared/documents';
 import type { Platform } from '../../shared/keymap';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
-import { DocumentPane } from '../document/DocumentPane';
+import { DocumentPane, type DocumentPaneProps } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
 import { useDocument } from '../document/useDocument';
 import { editors, type Editor } from '../edit/editors';
@@ -43,6 +43,9 @@ export interface TabDocumentProps {
   onMessage: (message: string) => void;
   /** How tables read without a choice of their own: the settings (ADR-021). */
   tableDefaults: { separator: SeparatorChoice; header: boolean };
+  /** A match chosen in find in all tabs, for the find bar to open on (ADR-024). */
+  findRequest?: DocumentPaneProps['findRequest'];
+  onFindShown?: (() => void) | undefined;
 }
 
 /** One tab's content. A hibernated tab has none; it's read and rendered again when shown. */
@@ -77,7 +80,7 @@ interface Arrival {
   position: ScrollAnchor | null;
 }
 
-function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, scheme, onMessage, tableDefaults }: TabDocumentProps) {
+function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, scheme, onMessage, tableDefaults, findRequest, onFindShown }: TabDocumentProps) {
   // A tab not shown has no layout to keep its place in: it takes a changed file when shown again.
   const [appliedReads, setAppliedReads] = useState(staleReads);
   useEffect(() => {
@@ -213,6 +216,8 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
       active={active}
       pendingAnchor={pendingAnchor?.navigation === document.navigation ? pendingAnchor : null}
       onAnchorShown={() => setPendingAnchor(null)}
+      findRequest={findRequest}
+      onFindShown={onFindShown}
       onLink={followLink}
       onResolveImage={resolveImage}
       onHistory={history}

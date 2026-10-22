@@ -207,6 +207,26 @@ describe('DocumentView in split', () => {
     focus.mockRestore();
   });
 
+  it('runs a find from another tab once the source editor is there, from the given line', async () => {
+    const onPendingFind = vi.fn();
+    const pendingFind = { query: 'plan', caseSensitive: false, line: 3, token: 1 };
+    await render(<DocumentView source={{ text: 'plan\nno\nplan\n', language: null }} view="source" wrap={false} rendered={null} scheme="light" pendingFind={pendingFind} onPendingFind={onPendingFind} />);
+    await vi.waitFor(() => expect(onPendingFind).toHaveBeenCalledWith({ current: 2, total: 2, capped: false }), { timeout: 5_000 });
+    expect(onPendingFind).toHaveBeenCalledTimes(1);
+  });
+
+  it('runs a find from another tab in the rendered view once it has content, from the block of the given line', async () => {
+    const onPendingFind = vi.fn();
+    const pendingFind = { query: 'plan', caseSensitive: false, line: 3, token: 1 };
+    const element = (rendered: { html: string } | null) => (
+      <DocumentView {...props} rendered={rendered} scheme="light" pendingFind={pendingFind} onPendingFind={onPendingFind} />
+    );
+    await render(element(null));
+    expect(onPendingFind).not.toHaveBeenCalled();
+    await act(async () => root!.render(element({ html: '<p data-src-line="1">plan</p><p data-src-line="3">plan</p>' })));
+    await vi.waitFor(() => expect(onPendingFind).toHaveBeenCalledWith({ current: 2, total: 2, capped: false }));
+  });
+
   it('in the source view, hands up the YAML outline, names the entry being read and scrolls to a chosen line', async () => {
     const onSourceOutline = vi.fn();
     const onHeading = vi.fn();

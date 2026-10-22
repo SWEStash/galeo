@@ -71,6 +71,10 @@ export interface DocumentViewProps {
   onSplitRatio?: ((ratio: number) => void) | undefined;
   /** The document area became too narrow for a split, or wide enough again. */
   onNarrow?: ((narrow: boolean) => void) | undefined;
+  /** A find to run once the view showing can search (a match chosen in find in all tabs); a new token runs it again. */
+  pendingFind?: { query: string; caseSensitive: boolean; line: number; token: number } | null;
+  /** Where `pendingFind` landed. */
+  onPendingFind?: ((result: FindResult) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
   ref?: Ref<DocumentHandle>;
 }
@@ -183,6 +187,8 @@ export function DocumentView({
   splitRatio = 0.5,
   onSplitRatio,
   onNarrow,
+  pendingFind = null,
+  onPendingFind,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -203,16 +209,18 @@ export function DocumentView({
   const host = () => mountDocumentHost(container.current!);
   const sync = useRef<{ controller: ScrollSync; rendered: SyncPane } | null>(null);
 
+  const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, () => host().renderedScroller));
+  /** The finder for the view showing. */
+  const active = (): Finder => {
+    const sourceView = host().source;
+    // A tree or a table draws only the rows in view: the source holds all its text.
+    if ((view === 'source' || (view === 'split' && (replacing || turnedTo.current === 'source' || host().placed))) && sourceView) {
+      return { find: sourceView.find, step: sourceView.findStep, clear: sourceView.clearFind };
+    }
+    return inRendered();
+  };
+
   useImperativeHandle(ref, () => {
-    const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, () => host().renderedScroller));
-    const active = (): Finder => {
-      const sourceView = host().source;
-      // A tree or a table draws only the rows in view: the source holds all its text.
-      if ((view === 'source' || (view === 'split' && (replacing || turnedTo.current === 'source' || host().placed))) && sourceView) {
-        return { find: sourceView.find, step: sourceView.findStep, clear: sourceView.clearFind };
-      }
-      return inRendered();
-    };
     return {
       find: (query, options) => active().find(query, options),
       step: (direction) => active().step(direction),
@@ -586,6 +594,15 @@ export function DocumentView({
     sourceView.scrollToEnd();
     return sourceView.onScrollUp(() => onFollowEnded?.());
   }, [follow, view, source.text, onFollowEnded, sourceReady]);
+
+  // After the effects that fill the views: the source editor loads lazily, rendered content arrives late.
+  const foundFor = useRef<number | null>(null);
+  useEffect(() => {
+    if (!pendingFind || foundFor.current === pendingFind.token) return;
+    if (showsSource(view) ? !(sourceReady && host().source) : !rendered) return;
+    foundFor.current = pendingFind.token;
+    onPendingFind?.(active().find(pendingFind.query, { caseSensitive: pendingFind.caseSensitive, line: pendingFind.line }));
+  }, [pendingFind, view, sourceReady, rendered]);
 
   useLayoutEffect(() => {
     host().setScheme(scheme);

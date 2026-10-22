@@ -159,6 +159,15 @@ describe('createSourceView', () => {
     source.destroy();
   });
 
+  it('starts at a given line, for a match found from another tab', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'plan\nno\nthe plan\nplan\n', language: null, wrap: false });
+    expect(source.find('plan', { caseSensitive: false, line: 3 })).toEqual({ current: 2, total: 3, capped: false });
+    expect(source.view.state.doc.lineAt(source.view.state.selection.main.from).number).toBe(3);
+    expect(source.find('plan', { caseSensitive: false, line: 99 })).toEqual({ current: 1, total: 3, capped: false });
+    source.destroy();
+  });
+
   it('matches case when asked, treats the query as text, and reports no matches', () => {
     const { root, parent } = shadowContainer();
     const source = createSourceView({ root, parent, text: 'Plan plan a.b', language: null, wrap: false });

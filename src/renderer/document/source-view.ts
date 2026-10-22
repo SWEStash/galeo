@@ -26,6 +26,12 @@ import { sourceOutline } from './source-outline';
 /** `markdown` and `log` are built in; any other name is a grammar from `@codemirror/language-data`. */
 export type SourceLanguage = 'markdown' | 'log' | (string & {}) | null;
 
+export interface FindOptions {
+  caseSensitive: boolean;
+  /** Start at this 1-based source line instead of the reading position (a match from find in all tabs). */
+  line?: number | undefined;
+}
+
 /** Where find is: the 1-based current match (0 without one) of `total`, which stops at a cap. */
 export interface FindResult {
   current: number;
@@ -59,7 +65,7 @@ export interface SourceView {
   scrollToPosition(position: number): void;
   scrollToEnd(): void;
   /** Highlights `query` and selects the first match from the reading position on. */
-  find(query: string, options: { caseSensitive: boolean }): FindResult;
+  find(query: string, options: FindOptions): FindResult;
   findStep(direction: 1 | -1): FindResult;
   clearFind(): void;
   /** Edit mode: replaces the current match with `text` (as typed) and selects the next one. */
@@ -298,7 +304,7 @@ export function createSourceView(options: {
   return {
     view,
     grammar: addGrammar([view], options.language, () => open, [foldGutter(), keymap.of(foldingKeys)]),
-    find(text, { caseSensitive }) {
+    find(text, { caseSensitive, line }) {
       active = new SearchQuery({ search: text, caseSensitive, literal: true });
       if (!searchPanelOpen(view.state)) openSearchPanel(view);
       view.dispatch({ effects: setSearchQuery.of(active) });
@@ -307,7 +313,8 @@ export function createSourceView(options: {
         return where();
       }
       recount();
-      const start = view.state.doc.line(topLine()).from;
+      // From the given line, else from the reading position.
+      const start = view.state.doc.line(line === undefined ? topLine() : Math.min(Math.max(line, 1), view.state.doc.lines)).from;
       const first = active.getCursor(view.state, start).next();
       const match = first.done ? active.getCursor(view.state).next() : first;
       if (!match.done) reveal(match.value.from, match.value.to);
