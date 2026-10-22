@@ -27,6 +27,10 @@ const BASE = {
   searchTabs: ['CmdOrCtrl+Shift+A'],
   /** The tab overview (UX F17). */
   tabOverview: ['CmdOrCtrl+Shift+E'],
+  /** Tabs on the left (ADR-023): collapse or expand the side panel; the palette also moves the tabs. */
+  toggleTabPanel: ['CmdOrCtrl+Shift+B'],
+  tabsOnLeft: [],
+  tabsOnTop: [],
   nextTab: ['Ctrl+Tab', 'CmdOrCtrl+PageDown'],
   previousTab: ['Ctrl+Shift+Tab', 'CmdOrCtrl+PageUp'],
   /** Tab N is the Nth accelerator. */

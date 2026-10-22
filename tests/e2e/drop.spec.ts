@@ -2,22 +2,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { dropFiles } from '../helpers/tab-drag';
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const tabNames = async (window: Page) => (await window.getByRole('tab').allTextContents()).map((text) => text.replace('✕', '').replace(/,.*$/, ''));
-
-/**
- * Drops files the way a file manager does: a trusted drag sequence carrying real file paths,
- * through the DevTools protocol (page script can only make untrusted events).
- */
-async function dropFiles(window: Page, files: string[], at: { x: number; y: number }) {
-  const session = await window.context().newCDPSession(window);
-  const data = { items: [], files, dragOperationsMask: 1 };
-  for (const type of ['dragEnter', 'dragOver', 'drop'] as const) {
-    await session.send('Input.dispatchDragEvent', { type, x: at.x, y: at.y, data });
-  }
-  await session.detach();
-}
 
 async function centreOf(window: Page, selector: string) {
   const box = (await window.locator(selector).first().boundingBox())!;

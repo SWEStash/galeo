@@ -1,20 +1,23 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
-import { isTextDropItem, Tab, TabList, useDrag, useDrop } from 'react-aria-components';
-import type { DocumentRecord } from '../../shared/documents';
-import { tabLabels } from '../../shared/tab-labels';
-import { editors } from '../edit/editors';
-import { watchDragExit } from './drag-exit';
-import { fromGaleo, TAB_TYPE } from './drag-types';
-import { indicators } from './indicators';
-import type { TabStatus, TabStore, TabsView } from './store';
-import { insertion, overflowEdges, spanOf, wheelScroll } from './strip';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { setMarkerTip, StripHost, type PanelProps } from './SidePanel';
+import { titleText } from './side-panel';
+import type { TabStore, TabsView } from './store';
+import { overflowEdges, wheelScroll } from './strip';
+import { TabStrip } from './TabStrip';
+
+export const SIDE_PANEL_ID = 'side-tab-panel';
 
 /**
- * The window's tabs (UX §2): an ARIA tablist in the title bar. Its empty space, and a grip at its
- * end that tabs never fill, drag the window; while a tab is dragged, only the grip does.
- * ←/→ move between tabs, Enter or Space shows one, Delete closes it; a tab closes on middle-click
- * or its ✕ too, and drags to a new place, to another window's tab bar, or out to a window of its
- * own (UX F15).
+ * The title bar and the window's tabs (UX §2). With the tabs on top it is the tab bar: an ARIA tablist
+ * whose empty space, and a grip at its end that tabs never fill, drag the window; while a tab is
+ * dragged, only the grip does. ←/→ move between tabs, Enter or Space shows one, Delete closes it; a tab
+ * closes on middle-click or its ✕ too, and drags to a new place, to another window's tabs, or out to a
+ * window of its own (UX F15).
+ *
+ * With the tabs on the left (ADR-023) the same list sits in the side panel under the bar, and the bar
+ * shows the panel button and the shown tab's name. The list is drawn in the same place either way:
+ * React Aria names a list when it mounts, and the documents' panels keep the name they were first
+ * given, so the list must never mount again.
  */
 export function TabBar({
   view,
@@ -23,6 +26,7 @@ export function TabBar({
   onOpenFile,
   onOverview,
   onFilesDropped,
+  panel,
 }: {
   view: TabsView;
   store: TabStore;
@@ -32,14 +36,16 @@ export function TabBar({
   onOverview?: () => void;
   /** Files from the file manager were dropped at the caret: they go after this tab (null: first). */
   onFilesDropped?: (after: string | null) => void;
+  /** The side panel, when the profile puts its tabs on the left. */
+  panel?: PanelProps | null;
 }) {
+  const left = Boolean(panel);
   const listRef = useRef<HTMLDivElement>(null);
-  const labels = tabLabels(view.tabs.map((tab) => tab.path));
-  const [caret, setCaret] = useState<{ index: number; offset: number } | null>(null);
   const [edges, setEdges] = useState({ overflows: false, canLeft: false, canRight: false });
 
-  // ‹ › show while the tabs overflow; the wheel scrolls the strip sideways and never switches tabs.
+  // ‹ › show while the tabs overflow the bar; the wheel scrolls the strip sideways and never switches tabs.
   useEffect(() => {
+    if (left) return setEdges({ overflows: false, canLeft: false, canRight: false });
     const strip = listRef.current!;
     const measure = () =>
       setEdges((now) => {
@@ -65,7 +71,7 @@ export function TabBar({
       strip.removeEventListener('scroll', measure);
       strip.removeEventListener('wheel', onWheel);
     };
-  }, [view.tabs]);
+  }, [view.tabs, left]);
 
   const scrollBy = (direction: -1 | 1) => {
     const strip = listRef.current!;
@@ -78,88 +84,37 @@ export function TabBar({
     if (!view.active) return;
     const active = listRef.current?.querySelector(`[data-tab-id="${CSS.escape(view.active)}"]`);
     active?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-  }, [view.active, view.tabs]);
+  }, [view.active, view.tabs, panel?.collapsed]);
 
-  const insertionAt = (x: number) => {
-    const list = listRef.current!;
-    const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')].map((tab) => spanOf(tab.getBoundingClientRect(), 'x'));
-    return insertion(x, { start: list.getBoundingClientRect().left, scroll: list.scrollLeft }, tabs);
-  };
-
-  const { dropProps } = useDrop({
-    ref: listRef,
-    // Tabs move; files from the file manager open at the caret (their paths reach main from the preload only).
-    getDropOperation: (types) => (types.has(TAB_TYPE) ? 'move' : onFilesDropped && !fromGaleo(types) ? 'copy' : 'cancel'),
-    onDropMove: (event) => setCaret(insertionAt(event.x)),
-    onDropExit: () => setCaret(null),
-    onDrop: async (event) => {
-      setCaret(null);
-      const item = event.items.filter(isTextDropItem).find((each) => each.types.has(TAB_TYPE));
-      if (!item) {
-        const at = insertionAt(event.x).index;
-        onFilesDropped?.(at === 0 ? null : view.tabs[at - 1]!.id);
-        return;
-      }
-      const token = await item.getText(TAB_TYPE);
-      const own = store.draggedHere(token);
-      const from = own === null ? -1 : view.tabs.findIndex((tab) => tab.id === own);
-      let to = insertionAt(event.x).index;
-      // Another window's tab: main hands it over if that window's drag still has this token (ADR-022).
-      if (from < 0) return store.adopt(token, to);
-      const id = view.tabs[from]!.id;
-      if (to > from) to -= 1;
-      if (to !== from) store.move(id, to);
-    },
-  });
-
-  // Where the pointer is while one of this window's tabs is dragged: a drag that ends out of the window,
-  // over another application or none, gives the tab a window of its own unless a galeo window takes it.
-  const exit = useRef<ReturnType<typeof watchDragExit> | null>(null);
-  useEffect(() => () => exit.current?.stop(), []);
-  const dragStarted = (id: string, token: string) => {
-    exit.current?.stop();
-    exit.current = watchDragExit(document);
-    // Main moves the tab's unsaved text: it must have the latest before another window takes it.
-    editors.get(id)?.keepNow();
-    store.dragStarted(id, token);
-  };
-  const dragEnded = (id: string) => {
-    const outside = exit.current?.outside() ?? false;
-    exit.current?.stop();
-    exit.current = null;
-    store.dragEnded(id, outside);
-  };
-
-  const onKeyDown = (event: KeyboardEvent) => {
-    const tab = (event.target as HTMLElement).closest<HTMLElement>('[data-tab-id]');
-    if (event.key === 'Delete' && tab) {
-      event.preventDefault();
-      store.close(tab.dataset['tabId']!);
-    }
-  };
-
+  const toggleName = panel?.collapsed ? 'Expand tab panel' : 'Collapse tab panel';
   return (
-    <div className="tab-bar" data-testid="tab-bar" data-tab-drag={view.dragging || undefined}>
+    <div className={left ? 'tab-bar title-bar' : 'tab-bar'} data-testid={left ? 'title-bar' : 'tab-bar'} data-tab-drag={view.dragging || undefined}>
+      {panel && (
+        <button
+          type="button"
+          className="panel-toggle"
+          data-testid="panel-toggle"
+          aria-expanded={!panel.collapsed}
+          aria-controls={SIDE_PANEL_ID}
+          aria-label={toggleName}
+          title={`${toggleName} (Ctrl+Shift+B)`}
+          onClick={() => panel.onCollapsed(!panel.collapsed)}
+        >
+          <span aria-hidden="true">◧</span>
+        </button>
+      )}
       {start}
       {edges.overflows && <ScrollButton direction={-1} disabled={!edges.canLeft} onScroll={scrollBy} />}
-      <div className="tab-strip" ref={listRef} {...dropProps} onKeyDown={onKeyDown}>
-        <TabList aria-label="Open documents" className="tab-list" items={view.tabs.map((tab, index) => ({ ...tab, label: tab.kind === 'settings' ? 'Settings' : labels[index]! }))}>
-          {(tab) => (
-            <TabItem
-              tab={tab}
-              label={tab.label}
-              status={view.statuses.get(tab.id)}
-              hibernated={!view.rendered.has(tab.id)}
-              reloaded={view.reloaded.has(tab.id)}
-              crashed={view.crashed.has(tab.id)}
-              onClose={() => store.close(tab.id)}
-              onDragStart={dragStarted}
-              onDragEnd={dragEnded}
-            />
-          )}
-        </TabList>
-        {caret && <div className="tab-caret" data-testid="tab-caret" style={{ left: caret.offset }} />}
-      </div>
+      <StripHost panel={panel ?? null} id={SIDE_PANEL_ID}>
+        <TabStrip
+          view={view}
+          store={store}
+          layout={!panel ? 'bar' : panel.collapsed ? 'markers' : 'rows'}
+          stripRef={listRef}
+          onMarkerTip={setMarkerTip}
+          {...(onFilesDropped ? { onFilesDropped } : {})}
+        />
+      </StripHost>
       {edges.overflows && <ScrollButton direction={1} disabled={!edges.canRight} onScroll={scrollBy} />}
       {onOpenFile && (
         <button type="button" className="tab-new" data-testid="tab-new" aria-label="Open file… (Ctrl+P)" title="Open file… (Ctrl+P)" onClick={onOpenFile}>
@@ -170,6 +125,12 @@ export function TabBar({
         <button type="button" className="tab-overview-button" data-testid="tab-overview-button" aria-label="Tab overview (Ctrl+Shift+E)" title="Tab overview (Ctrl+Shift+E)" onClick={onOverview}>
           <span aria-hidden="true">▦</span>
         </button>
+      )}
+      {/* The window title says it already: this is for the eye, and drags the window like the rest. */}
+      {left && (
+        <span className="title-bar-text" data-testid="title-bar-text" aria-hidden="true">
+          {titleText(view.tabs, view.active)}
+        </span>
       )}
       {/* Tabs never cover this: the window can always be dragged, however many are open. */}
       <div className="window-grip" data-testid="window-grip" />
@@ -187,82 +148,5 @@ function ScrollButton({ direction, disabled, onScroll }: { direction: -1 | 1; di
     <button type="button" className="tab-scroll" tabIndex={-1} aria-label={name} title={name} disabled={disabled} onClick={() => onScroll(direction)}>
       <span aria-hidden="true">{direction < 0 ? '‹' : '›'}</span>
     </button>
-  );
-}
-
-function TabItem({
-  tab,
-  label,
-  status,
-  hibernated,
-  reloaded,
-  crashed,
-  onClose,
-  onDragStart,
-  onDragEnd,
-}: {
-  tab: DocumentRecord;
-  label: string;
-  status: TabStatus | undefined;
-  hibernated: boolean;
-  reloaded: boolean;
-  crashed: boolean;
-  onClose: () => void;
-  onDragStart: (id: string, token: string) => void;
-  onDragEnd: (id: string) => void;
-}) {
-  // Each drag's single-use token: the drag carries it, not the tab id (ADR-022). React Aria asks for
-  // the items after it reports the start.
-  const token = useRef('');
-  const { dragProps, isDragging } = useDrag({
-    // The custom type only: no other application takes a tab (ADR-019).
-    getItems: () => [{ [TAB_TYPE]: token.current }],
-    onDragStart: () => {
-      token.current = crypto.randomUUID();
-      onDragStart(tab.id, token.current);
-    },
-    onDragEnd: () => onDragEnd(tab.id),
-    // Keyboard users reorder with Ctrl+Shift+PgUp/PgDn; Enter on a tab still shows it.
-    hasDragButton: true,
-  });
-  const onAuxClick = (event: MouseEvent) => {
-    if (event.button === 1) onClose();
-  };
-  return (
-    <Tab
-      id={tab.id}
-      className="tab"
-      data-tab-id={tab.id}
-      data-dragging={isDragging || undefined}
-      data-hibernated={hibernated || undefined}
-      data-missing={status?.state === 'missing' || undefined}
-    >
-      {/* All of the tab but its ✕ starts a drag, edge to edge. */}
-      <span className="tab-grab" {...dragProps} onAuxClick={onAuxClick}>
-        <span className="tab-label" title={tab.path}>
-          {label}
-        </span>
-        {indicators(status, reloaded, crashed).map(({ glyph, words }) => (
-          <span key={glyph} className="tab-indicator" data-indicator={words} title={words}>
-            <span aria-hidden="true">{glyph}</span>
-            <span className="visually-hidden">, {words}</span>
-          </span>
-        ))}
-      </span>
-      {/* Pointer only: a tab can't hold another control, and Delete closes it from the keyboard. */}
-      <span
-        className="tab-close"
-        aria-hidden="true"
-        title="Close (Ctrl+W)"
-        onPointerDown={(event) => event.stopPropagation()}
-        onClick={(event) => {
-          event.stopPropagation();
-          onClose();
-        }}
-        onAuxClick={onAuxClick}
-      >
-        ✕
-      </span>
-    </Tab>
   );
 }

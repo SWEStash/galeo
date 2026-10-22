@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
+import { TAB_PANEL_DEFAULT, type TabsPosition } from '../shared/settings';
 import type { ReaderWidth } from '../shared/tabs';
 import { AboutDialog } from './about/AboutDialog';
 import type { Command, Platform } from '../shared/keymap';
@@ -146,6 +147,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     // restore lands a frame or more later, on the tab shown before (hidden if another is shown now).
     settleFocus(() => document.querySelector<HTMLElement>(to)?.focus());
   }, []);
+  const { tabsLeft, panelWidth, collapsed, setCollapsed, keepPanelWidth } = useTabsPosition(settings?.settings.tabsPosition, settings?.settings.tabPanelWidth, setMessage);
   useTabShortcuts(store, openQuickOpen, settings?.settings.measure ?? 72, setMessage);
   useUnsavedGuards(store);
   useCommands({
@@ -192,58 +194,74 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     <>
       <Tabs
         className="window"
+        // The side panel lists the tabs top to bottom: ↑/↓ move between them (ADR-023).
+        orientation={tabsLeft ? 'vertical' : 'horizontal'}
         // Null only while the window has no tabs; no tab has the empty key.
         selectedKey={view.active ?? ''}
         onSelectionChange={(key) => store.activate(String(key))}
         keyboardActivation="manual"
       >
-        <TabBar view={view} store={store} start={profiles && <ProfileChip state={profiles} onAbout={() => openAbout('[data-testid="profile-chip"]')} />} onOpenFile={openQuickOpen} onOverview={openOverview} onFilesDropped={(after) => landed({ after })} />
-        <ProfileCreatedNotice />
-        {settings && <SettingsNotice notices={settings.notices} />}
-        {settings && <SessionNotice notice={settings.session} />}
-        <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
-          <DropArea onDrop={() => landed({})}>
-            {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow key={recentRevision} platform={platform} />}
-            {view.tabs.map((tab) => (
-              // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
-              // The tab's own reader width overrides the profile's measure for everything it shows.
-              <TabPanel
-                key={tab.id}
-                id={tab.id}
-                shouldForceMount
-                className="tab-panel"
-                data-testid="tab-panel"
-                data-active={tab.id === view.active}
-                style={readerWidthStyle(view.widths.get(tab.id))}
-              >
-                {tab.kind === 'settings' ? (
-                  settings &&
-                  profile && (
-                    <Suspense fallback={null}>
-                      <SettingsView state={settings} profile={profile} appImage={appImage} version={version} onAbout={() => openAbout()} />
-                    </Suspense>
-                  )
-                ) : (
-                  <TabDocument
+        <TabBar
+          view={view}
+          store={store}
+          start={profiles && <ProfileChip state={profiles} onAbout={() => openAbout('[data-testid="profile-chip"]')} />}
+          onOpenFile={openQuickOpen}
+          onOverview={openOverview}
+          onFilesDropped={(after) => landed({ after })}
+          panel={tabsLeft ? { width: panelWidth, collapsed, onCollapsed: setCollapsed, onWidth: keepPanelWidth } : null}
+        />
+        <div className="window-body">
+          {/* The side panel's room: the panel itself is drawn from the title bar, where the tab list always is. */}
+          {tabsLeft && <div className="side-panel-space" aria-hidden="true" />}
+          <div className="document-column">
+            <ProfileCreatedNotice />
+            {settings && <SettingsNotice notices={settings.notices} />}
+            {settings && <SessionNotice notice={settings.session} />}
+            <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
+              <DropArea onDrop={() => landed({})}>
+                {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow key={recentRevision} platform={platform} />}
+                {view.tabs.map((tab) => (
+                  // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
+                  // The tab's own reader width overrides the profile's measure for everything it shows.
+                  <TabPanel
+                    key={tab.id}
                     id={tab.id}
-                    active={tab.id === view.active}
-                    rendered={view.rendered.has(tab.id)}
-                    crashed={view.crashed.has(tab.id)}
-                    path={tab.path}
-                    staleReads={view.reads.get(tab.id) ?? 0}
-                    zoom={view.zooms.get(tab.id) ?? 1}
-                    store={store}
-                    client={client}
-                    platform={platform}
-                    scheme={scheme}
-                    onMessage={setMessage}
-                    tableDefaults={tableDefaults}
-                  />
-                )}
-              </TabPanel>
-            ))}
-          </DropArea>
-        </main>
+                    shouldForceMount
+                    className="tab-panel"
+                    data-testid="tab-panel"
+                    data-active={tab.id === view.active}
+                    style={readerWidthStyle(view.widths.get(tab.id))}
+                  >
+                    {tab.kind === 'settings' ? (
+                      settings &&
+                      profile && (
+                        <Suspense fallback={null}>
+                          <SettingsView state={settings} profile={profile} appImage={appImage} version={version} onAbout={() => openAbout()} />
+                        </Suspense>
+                      )
+                    ) : (
+                      <TabDocument
+                        id={tab.id}
+                        active={tab.id === view.active}
+                        rendered={view.rendered.has(tab.id)}
+                        crashed={view.crashed.has(tab.id)}
+                        path={tab.path}
+                        staleReads={view.reads.get(tab.id) ?? 0}
+                        zoom={view.zooms.get(tab.id) ?? 1}
+                        store={store}
+                        client={client}
+                        platform={platform}
+                        scheme={scheme}
+                        onMessage={setMessage}
+                        tableDefaults={tableDefaults}
+                      />
+                    )}
+                  </TabPanel>
+                ))}
+              </DropArea>
+            </main>
+          </div>
+        </div>
         {settings?.settings.statusBar !== false && (
           <StatusBar view={view} store={store} say={setMessage}>
             <span className="status-message" data-testid="status-message" role="status">
@@ -266,6 +284,41 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       {overlay === 'moveTab' && <MoveTabDialog onChoose={moveToChosenWindow} onClose={closeOverlay} />}
     </>
   );
+}
+
+/**
+ * Where this window shows its tabs (ADR-023): the profile's setting, and whether the side panel is
+ * collapsed here, which lasts until the window closes. The palette moves the tabs, Ctrl+Shift+B
+ * collapses and expands the panel.
+ */
+function useTabsPosition(position: TabsPosition | undefined, width: number | undefined, say: (message: string) => void) {
+  const tabsLeft = position === 'left';
+  const [collapsed, setCollapsed] = useState(false);
+  // Back to the tab bar and to the left again: the panel shows expanded.
+  useEffect(() => {
+    if (!tabsLeft) setCollapsed(false);
+  }, [tabsLeft]);
+  const keep = useCallback(
+    (change: { tabsPosition: TabsPosition } | { tabPanelWidth: number }) =>
+      void window.galeo.settings.set('profile', change).then((result) => {
+        if (!result.ok) say("Not kept: this profile's profile.json has an error from a hand edit");
+      }),
+    [say],
+  );
+  useCommands({
+    toggleTabPanel: () => {
+      if (!tabsLeft) say('The tab panel shows only with tabs on the left');
+      else {
+        setCollapsed(!collapsed);
+        say(collapsed ? 'Tab panel expanded' : 'Tab panel collapsed');
+      }
+      return true;
+    },
+    tabsOnLeft: () => (keep({ tabsPosition: 'left' }), true),
+    tabsOnTop: () => (keep({ tabsPosition: 'top' }), true),
+  });
+  const keepPanelWidth = useCallback((tabPanelWidth: number) => keep({ tabPanelWidth }), [keep]);
+  return { tabsLeft, panelWidth: width ?? TAB_PANEL_DEFAULT, collapsed, setCollapsed, keepPanelWidth };
 }
 
 /**

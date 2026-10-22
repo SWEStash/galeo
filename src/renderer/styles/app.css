@@ -11,6 +11,10 @@ body,
   margin: 0;
 }
 
+:root {
+  --galeo-status-bar-height: 24px;
+}
+
 #root,
 .window {
   display: flex;
@@ -604,6 +608,221 @@ body,
   pointer-events: none;
 }
 
+/* Between rows of the side panel, the caret lies across. */
+.tab-strip[data-axis='y'] > .tab-caret {
+  top: auto;
+  right: 4px;
+  bottom: auto;
+  left: 4px;
+  width: auto;
+  height: 2px;
+  margin: -1px 0 0;
+}
+
+/* Under the title bar: the side panel, when the tabs are on the left, then the document (ADR-023). */
+.window-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.document-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The shown tab's name, dimmed, on the space that drags the window. */
+.title-bar-text {
+  flex: 1;
+  min-width: 0;
+  align-self: center;
+  overflow: hidden;
+  color: var(--galeo-color-muted);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-toggle {
+  flex: none;
+  align-self: center;
+  width: 26px;
+  height: 26px;
+  margin: 0 2px 0 4px;
+  border: none;
+  border-radius: var(--galeo-radius);
+  background: transparent;
+  color: var(--galeo-color-muted);
+  font-size: 16px;
+  line-height: 1;
+  -webkit-app-region: no-drag;
+}
+.panel-toggle:hover {
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+}
+.panel-toggle:focus-visible {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 1px;
+}
+
+/* With the tabs on top, the strip's host adds nothing to the tab bar's layout. */
+.tab-strip-host {
+  display: contents;
+}
+
+/* With the tabs on the left, the same host is the side panel: drawn from the title bar, where the
+   tab list always is (ADR-023), over the room the window body keeps for it. */
+.side-panel {
+  position: fixed;
+  top: calc(env(titlebar-area-height, 36px) + 1px);
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  display: flex;
+  border-right: 1px solid var(--galeo-color-border);
+  background: var(--galeo-color-code-bg);
+  -webkit-app-region: no-drag;
+}
+.window:has(> .status-bar) .side-panel {
+  bottom: calc(var(--galeo-status-bar-height) + 1px);
+}
+
+.side-panel-space {
+  flex: none;
+  width: var(--galeo-side-panel-width, 0px);
+}
+
+/* The whole panel takes drops, below the last row too (ADR-019 point 9); it scrolls when the tabs don't fit. */
+.side-panel .tab-strip {
+  flex-direction: column;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.side-panel .tab-list {
+  flex: none;
+  flex-direction: column;
+}
+
+.side-panel .tab {
+  flex: none;
+  min-width: 0;
+  padding: 5px 6px 5px 0;
+  border-right: none;
+  border-bottom: 1px solid var(--galeo-color-border);
+}
+
+.side-panel .tab[data-selected] {
+  box-shadow: inset 3px 0 0 var(--galeo-color-accent);
+}
+
+.side-panel .tab-grab {
+  flex-direction: column;
+  gap: 2px;
+  align-items: stretch;
+  padding-left: 10px;
+}
+
+.tab-line {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+/* A long folder loses its start, not the end that tells tabs apart: the ellipsis goes first. */
+.tab-folder {
+  overflow: hidden;
+  color: var(--galeo-color-muted);
+  font-size: 11px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+}
+.tab-folder > bdi {
+  direction: ltr;
+}
+
+/* Collapsed: a marker per tab, at least 24 px, the shown one filled (not colour alone). */
+.side-panel[data-collapsed] .tab {
+  justify-content: center;
+  padding: 3px 0;
+  border-bottom: none;
+}
+.side-panel[data-collapsed] .tab[data-selected] {
+  box-shadow: none;
+}
+.side-panel[data-collapsed] .tab-grab {
+  align-items: center;
+  padding: 0;
+}
+.side-panel[data-collapsed] .tab-marker-marks {
+  display: none;
+}
+
+.tab-marker {
+  position: relative;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  font-weight: 600;
+}
+.tab[data-selected] .tab-marker {
+  border: 2px solid var(--galeo-color-accent);
+  background: var(--galeo-color-bg);
+}
+
+.tab-marker-mark {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.marker-tip {
+  position: fixed;
+  z-index: 10;
+  max-width: 320px;
+  padding: 4px 8px;
+  overflow: hidden;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-bg);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+/* The divider: a 7 px handle along the panel's edge, inside it (the document is drawn over anything
+   past the edge), a line once pointed at or focused. */
+.panel-divider {
+  position: absolute;
+  top: 0;
+  right: -1px;
+  bottom: 0;
+  z-index: 1;
+  width: 7px;
+  cursor: col-resize;
+  outline: none;
+  touch-action: none;
+}
+.panel-divider:hover,
+.panel-divider:focus-visible {
+  background: linear-gradient(to right, transparent 4px, var(--galeo-color-focus) 4px);
+}
+
 main {
   position: relative;
   display: flex;
@@ -887,7 +1106,7 @@ button:focus-visible {
   gap: 16px;
   align-items: center;
   min-width: 0;
-  height: 24px;
+  height: var(--galeo-status-bar-height);
   padding: 0 12px;
   border-top: 1px solid var(--galeo-color-border);
   background: var(--galeo-color-code-bg);

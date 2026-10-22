@@ -444,6 +444,78 @@ describe('App', () => {
     expect(api.tabs.width).toHaveBeenLastCalledWith('doc-1', null);
   });
 
+  describe('tabs on the left (ADR-023)', () => {
+    const left = (change: Partial<Settings> = {}) => ({ settings: { ...DEFAULT_SETTINGS, tabsPosition: 'left' as const, ...change }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
+    const twoTabs = () => stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', '# a') });
+    const message = (container: HTMLElement) => container.querySelector('[data-testid="status-message"]')?.textContent;
+    const panel = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-testid="side-panel"]');
+
+    it("shows the profile's tabs in a side panel under a title bar, and the tab bar again when they go back on top, keeping the documents", async () => {
+      const api = twoTabs();
+      api.settings.get.mockResolvedValue(left({ tabPanelWidth: 260 }));
+      const container = await renderApp();
+      await vi.waitFor(() => expect(panel(container)).not.toBeNull());
+      const document1 = await documentShadow(container);
+      expect(panel(container)!.style.width).toBe('260px');
+      expect(container.querySelector('[data-testid="title-bar"]')).not.toBeNull();
+      expect(container.querySelector('[data-testid="tab-bar"]:not([data-testid="title-bar"])')).toBeNull();
+      expect(container.querySelector('[role="tablist"]')?.getAttribute('aria-orientation')).toBe('vertical');
+
+      await act(async () => events.settings?.(left({ tabsPosition: 'top' })));
+      expect(panel(container)).toBeNull();
+      expect(container.querySelector('[data-testid="tab-bar"]')).not.toBeNull();
+      expect(container.querySelector('[role="tablist"]')?.getAttribute('aria-orientation')).toBe('horizontal');
+      // The documents stayed mounted: moving the tabs never reloads what is being read.
+      expect(container.querySelector('[data-testid="document"]')?.shadowRoot).toBe(document1);
+    });
+
+    it('collapses and expands the panel with Ctrl+Shift+B, saying so, and with the panel button', async () => {
+      const api = twoTabs();
+      api.settings.get.mockResolvedValue(left());
+      const container = await renderApp();
+      await vi.waitFor(() => expect(panel(container)).not.toBeNull());
+      await press({ key: 'B', ctrlKey: true, shiftKey: true });
+      expect(panel(container)!.dataset['collapsed']).toBe('true');
+      expect(message(container)).toBe('Tab panel collapsed');
+      // Still the tablist: its tabs are still there to switch to.
+      expect(container.querySelectorAll('[data-testid="side-panel"] [role="tab"]')).toHaveLength(2);
+      await act(async () => container.querySelector<HTMLButtonElement>('[data-testid="panel-toggle"]')!.click());
+      expect(panel(container)!.dataset['collapsed']).toBeUndefined();
+      await press({ key: 'B', ctrlKey: true, shiftKey: true });
+      await press({ key: 'B', ctrlKey: true, shiftKey: true });
+      expect(message(container)).toBe('Tab panel expanded');
+    });
+
+    it('says Ctrl+Shift+B needs the tabs on the left while they are on top', async () => {
+      twoTabs();
+      const container = await renderApp();
+      await documentShadow(container);
+      await press({ key: 'B', ctrlKey: true, shiftKey: true });
+      expect(message(container)).toBe('The tab panel shows only with tabs on the left');
+      expect(panel(container)).toBeNull();
+    });
+
+    it("moves the profile's tabs from the palette, and keeps a width the divider ends on", async () => {
+      const api = twoTabs();
+      const container = await renderApp();
+      await documentShadow(container);
+      await press({ key: 'P', ctrlKey: true, shiftKey: true });
+      const entry = await vi.waitFor(() => {
+        const found = [...document.querySelectorAll<HTMLElement>('[data-testid="palette-list"] [role="option"]')].find((option) => option.textContent?.startsWith('Put tabs on the left'));
+        if (!found) throw new Error('no entry yet');
+        return found;
+      });
+      await act(async () => entry.click());
+      await vi.waitFor(() => expect(api.settings.set).toHaveBeenCalledWith('profile', { tabsPosition: 'left' }));
+
+      await act(async () => events.settings?.(left()));
+      const divider = container.querySelector<HTMLElement>('[data-testid="panel-divider"]')!;
+      await act(async () => divider.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })));
+      await act(async () => divider.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true, cancelable: true })));
+      expect(api.settings.set).toHaveBeenLastCalledWith('profile', { tabPanelWidth: 236 });
+    });
+  });
+
   describe('moving the shown tab to another window from the palette (UX F15)', () => {
     const twoTabs = () =>
       stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', '# a') });

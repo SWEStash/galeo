@@ -2,6 +2,9 @@
 
 import { TAB_PANEL_DEFAULT, TAB_PANEL_MAX, TAB_PANEL_MIN } from '../../shared/settings';
 
+/** The collapsed panel's width: room for a marker per tab. */
+export const TAB_PANEL_COLLAPSED = 32;
+
 const KEY_STEP = 16;
 /** Dragged narrower than this, the panel collapses. */
 const COLLAPSE_UNDER = 100;

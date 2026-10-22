@@ -5,10 +5,10 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { pressInMain } from '../helpers/keys';
 import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
 import { saveFile } from '../helpers/save';
+import { crossEdge, dropTab, endDrag, endDragOutside, startDragging } from '../helpers/tab-drag';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const [basic, gfm, math] = ['basic.md', 'gfm.md', 'math.md'].map((name) => path.join(docs, name)) as [string, string, string];
-const TAB_TYPE = 'application/x-galeo-tab';
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const indicator = (window: Page, words: string) => window.locator(`.tab-indicator[data-indicator="${words}"]`);
@@ -43,76 +43,6 @@ function homeWith(theme: 'light' | 'dark') {
   mkdirSync(path.dirname(settings), { recursive: true });
   saveFile(settings, `{"schemaVersion":1,"themeMode":"${theme}"}`);
   return home;
-}
-
-/** Drops a tab on the window the way another galeo window's drag does: a trusted drop carrying `data`, the drag's token (ADR-022). */
-async function dropTab(window: Page, data: string, at: { x: number; y: number }) {
-  const session = await window.context().newCDPSession(window);
-  const drag = { items: [{ mimeType: TAB_TYPE, data }], dragOperationsMask: 16 };
-  for (const type of ['dragEnter', 'dragOver', 'drop'] as const) await session.send('Input.dispatchDragEvent', { type, x: at.x, y: at.y, data: drag });
-  await session.detach();
-}
-
-/**
- * Starts dragging the tab with the mouse from near its top edge, away from its name, and holds it.
- * Resolves with the token the drag carries, read from its own dragstart.
- */
-async function startDragging(window: Page, file: string): Promise<string> {
-  // What the page writes into the drag, as it writes it: once the drag has started, its data can't be read.
-  await window.evaluate((type) => {
-    const seen = globalThis as { __galeoDragToken?: string; __galeoDragWatch?: boolean };
-    delete seen.__galeoDragToken;
-    if (seen.__galeoDragWatch) return;
-    seen.__galeoDragWatch = true;
-    const setData = DataTransfer.prototype.setData;
-    DataTransfer.prototype.setData = function (format, data) {
-      if (format === type) seen.__galeoDragToken = data;
-      return setData.call(this, format, data);
-    };
-    const add = DataTransferItemList.prototype.add as (data: string, type: string) => DataTransferItem | null;
-    DataTransferItemList.prototype.add = function (this: DataTransferItemList, data: string | File, format?: string) {
-      if (typeof data === 'string' && format === type) seen.__galeoDragToken = data;
-      return (add as (...args: unknown[]) => DataTransferItem | null).call(this, data, format);
-    } as typeof DataTransferItemList.prototype.add;
-  }, TAB_TYPE);
-  const tab = window.getByRole('tab', { name: new RegExp(path.basename(file)) });
-  const box = (await tab.boundingBox())!;
-  await window.mouse.move(box.x + 6, box.y + 3);
-  await window.mouse.down();
-  await window.mouse.move(box.x + 46, box.y + 8, { steps: 5 });
-  const token = () => window.evaluate(() => (globalThis as { __galeoDragToken?: string }).__galeoDragToken ?? '');
-  await expect.poll(token).toMatch(/^[0-9a-f-]{36}$/);
-  return token();
-}
-
-/** Ends the window's drag of the tab named `name` as a drop elsewhere does: the pointer left the window, and something may have taken it. */
-/** The pointer crosses the window's edge over `selector`: a drop target there keeps the event to itself. */
-async function crossEdge(window: Page, type: 'dragleave' | 'dragenter', selector: string) {
-  await window.evaluate(
-    ({ type, selector }) => {
-      const edge = new DragEvent(type, { bubbles: true });
-      Object.defineProperty(edge, 'relatedTarget', { value: null });
-      document.querySelector(selector)!.dispatchEvent(edge);
-    },
-    { type, selector },
-  );
-}
-
-async function endDrag(window: Page, name: string, dropEffect: 'none' | 'copy' | 'move') {
-  await window.evaluate(
-    ({ name, dropEffect }) => {
-      const dataTransfer = new DataTransfer();
-      dataTransfer.dropEffect = dropEffect;
-      const label = [...document.querySelectorAll('.tab-label')].find((each) => each.textContent === name)!;
-      label.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer }));
-    },
-    { name, dropEffect },
-  );
-}
-
-async function endDragOutside(window: Page, name: string, dropEffect: 'none' | 'copy', across = '.drop-area') {
-  await crossEdge(window, 'dragleave', across);
-  await endDrag(window, name, dropEffect);
 }
 
 for (const theme of ['light', 'dark'] as const) {
