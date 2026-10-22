@@ -55,6 +55,7 @@ test('typing narrows the list; Enter shows an open tab', async () => {
     await expect(tabSearch(window)).toHaveCount(0);
     await expect(selected(window)).toContainText('frontmatter.md');
     await expect(window.getByRole('tab')).toHaveCount(4);
+    await expect(shownDocument(window)).toBeFocused();
   });
 });
 

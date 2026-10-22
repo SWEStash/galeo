@@ -8,6 +8,7 @@ import { CommandsProvider, useCommands, useDispatcher } from './commands/useComm
 import type { PaletteEntry } from './palette/entries';
 import { Palette } from './palette/Palette';
 import { OutlineProvider } from './outline/useOutline';
+import { settleFocus } from './document/settle-focus';
 import { useColorScheme } from './document/theme';
 import { markFirstPaint, markStart } from './perf';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
@@ -138,8 +139,9 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     setOverlay(null);
     const to = returnFocus.current ?? '[data-testid="tab-panel"][data-active="true"] [data-testid="document"]';
     returnFocus.current = null;
-    // Focus goes back to the document being read (UX F8), once the dialog has let it go.
-    requestAnimationFrame(() => document.querySelector<HTMLElement>(to)?.focus());
+    // Focus goes back to the document being read (UX F8), once the dialog has let it go: its own
+    // restore lands a frame or more later, on the tab shown before (hidden if another is shown now).
+    settleFocus(() => document.querySelector<HTMLElement>(to)?.focus());
   }, []);
   useTabShortcuts(store, openQuickOpen, settings?.settings.measure ?? 72, setMessage);
   useUnsavedGuards(store);
