@@ -7,7 +7,7 @@ import { watchDragExit } from './drag-exit';
 import { fromGaleo, TAB_TYPE } from './drag-types';
 import { indicators } from './indicators';
 import type { TabStatus, TabStore, TabsView } from './store';
-import { insertion, overflowEdges, wheelScroll } from './strip';
+import { insertion, overflowEdges, spanOf, wheelScroll } from './strip';
 
 /**
  * The window's tabs (UX §2): an ARIA tablist in the title bar. Its empty space, and a grip at its
@@ -35,7 +35,7 @@ export function TabBar({
 }) {
   const listRef = useRef<HTMLDivElement>(null);
   const labels = tabLabels(view.tabs.map((tab) => tab.path));
-  const [caret, setCaret] = useState<{ index: number; left: number } | null>(null);
+  const [caret, setCaret] = useState<{ index: number; offset: number } | null>(null);
   const [edges, setEdges] = useState({ overflows: false, canLeft: false, canRight: false });
 
   // ‹ › show while the tabs overflow; the wheel scrolls the strip sideways and never switches tabs.
@@ -82,8 +82,8 @@ export function TabBar({
 
   const insertionAt = (x: number) => {
     const list = listRef.current!;
-    const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')].map((tab) => tab.getBoundingClientRect());
-    return insertion(x, { left: list.getBoundingClientRect().left, scrollLeft: list.scrollLeft }, tabs);
+    const tabs = [...list.querySelectorAll<HTMLElement>('[role="tab"]')].map((tab) => spanOf(tab.getBoundingClientRect(), 'x'));
+    return insertion(x, { start: list.getBoundingClientRect().left, scroll: list.scrollLeft }, tabs);
   };
 
   const { dropProps } = useDrop({
@@ -158,7 +158,7 @@ export function TabBar({
             />
           )}
         </TabList>
-        {caret && <div className="tab-caret" data-testid="tab-caret" style={{ left: caret.left }} />}
+        {caret && <div className="tab-caret" data-testid="tab-caret" style={{ left: caret.offset }} />}
       </div>
       {edges.overflows && <ScrollButton direction={1} disabled={!edges.canRight} onScroll={scrollBy} />}
       {onOpenFile && (

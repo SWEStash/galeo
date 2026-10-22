@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { insertion, overflowEdges, wheelScroll } from './strip';
+import { insertion, overflowEdges, spanOf, wheelScroll } from './strip';
 
 describe('overflowEdges', () => {
   it('has nothing to scroll while the tabs fit', () => {
@@ -40,22 +40,38 @@ describe('wheelScroll', () => {
 });
 
 describe('insertion', () => {
-  // Three 100 px tabs from x = 10 (the strip's left edge) in the viewport.
-  const tabs = [10, 110, 210].map((left) => ({ left, right: left + 100, width: 100 }));
+  // Three 100 px tabs from 10 (the strip's start edge) in the viewport, along either axis.
+  const tabs = [10, 110, 210].map((start) => ({ start, end: start + 100, size: 100 }));
 
   it('puts the caret before the tab whose middle is past the pointer, or after the last', () => {
-    expect(insertion(30, { left: 10, scrollLeft: 0 }, tabs)).toEqual({ index: 0, left: 0 });
-    expect(insertion(70, { left: 10, scrollLeft: 0 }, tabs)).toEqual({ index: 1, left: 100 });
-    expect(insertion(290, { left: 10, scrollLeft: 0 }, tabs)).toEqual({ index: 3, left: 300 });
+    expect(insertion(30, { start: 10, scroll: 0 }, tabs)).toEqual({ index: 0, offset: 0 });
+    expect(insertion(70, { start: 10, scroll: 0 }, tabs)).toEqual({ index: 1, offset: 100 });
+    expect(insertion(290, { start: 10, scroll: 0 }, tabs)).toEqual({ index: 3, offset: 300 });
   });
 
   it('places the caret in the scrolled content, not the visible box, when the strip is scrolled', () => {
-    // Scrolled by 150: the tabs' viewport positions moved left by 150, the caret's offset adds it back.
-    const scrolled = tabs.map(({ left, right, width }) => ({ left: left - 150, right: right - 150, width }));
-    expect(insertion(70, { left: 10, scrollLeft: 150 }, scrolled)).toEqual({ index: 2, left: 200 });
+    // Scrolled by 150: the tabs' viewport positions moved back by 150, the caret's offset adds it back.
+    const scrolled = tabs.map(({ start, end, size }) => ({ start: start - 150, end: end - 150, size }));
+    expect(insertion(70, { start: 10, scroll: 150 }, scrolled)).toEqual({ index: 2, offset: 200 });
   });
 
   it('is the start with no tabs', () => {
-    expect(insertion(50, { left: 10, scrollLeft: 0 }, [])).toEqual({ index: 0, left: 0 });
+    expect(insertion(50, { start: 10, scroll: 0 }, [])).toEqual({ index: 0, offset: 0 });
+  });
+});
+
+describe('spanOf', () => {
+  const rect = { left: 10, right: 210, width: 200, top: 40, bottom: 88, height: 48 };
+
+  it('reads a box along the tab bar (x) or the side panel (y)', () => {
+    expect(spanOf(rect, 'x')).toEqual({ start: 10, end: 210, size: 200 });
+    expect(spanOf(rect, 'y')).toEqual({ start: 40, end: 88, size: 48 });
+  });
+
+  it('places the caret between rows of a scrolled side panel', () => {
+    // Rows 48 px tall from the panel's top at 36, scrolled down by 96: the third row is at the top.
+    const rows = [0, 1, 2, 3].map((n) => spanOf({ left: 0, right: 220, width: 220, top: 36 + n * 48 - 96, bottom: 36 + (n + 1) * 48 - 96, height: 48 }, 'y'));
+    expect(insertion(30, { start: 36, scroll: 96 }, rows)).toEqual({ index: 3, offset: 144 });
+    expect(insertion(10, { start: 36, scroll: 96 }, rows)).toEqual({ index: 2, offset: 96 });
   });
 });

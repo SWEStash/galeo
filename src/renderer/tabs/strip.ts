@@ -20,13 +20,27 @@ export function wheelScroll({ deltaX, deltaY, deltaMode }: { deltaX: number; del
   return delta * (deltaMode === 1 ? LINE : deltaMode === 2 ? page : 1);
 }
 
+/** Which way the tabs run: along the tab bar (x) or down the side panel (y). */
+export type Axis = 'x' | 'y';
+
+/** A box's extent along the tabs' axis. */
+export interface Span {
+  start: number;
+  end: number;
+  size: number;
+}
+
+export function spanOf(rect: { left: number; right: number; width: number; top: number; bottom: number; height: number }, axis: Axis): Span {
+  return axis === 'x' ? { start: rect.left, end: rect.right, size: rect.width } : { start: rect.top, end: rect.bottom, size: rect.height };
+}
+
 /**
- * Where a drop at `x` (from the strip's left edge) lands: before the first tab whose middle is past
- * it. `left` places the caret inside the strip's scrolled content, so it adds the scroll offset.
+ * Where a drop `at` pixels from the strip's start edge lands: before the first tab whose middle is past
+ * it. `offset` places the caret inside the strip's scrolled content, so it adds the scroll offset.
  */
-export function insertion(x: number, strip: { left: number; scrollLeft: number }, tabs: readonly { left: number; right: number; width: number }[]) {
-  const found = tabs.findIndex((tab) => strip.left + x < tab.left + tab.width / 2);
+export function insertion(at: number, strip: { start: number; scroll: number }, tabs: readonly Span[]) {
+  const found = tabs.findIndex((tab) => strip.start + at < tab.start + tab.size / 2);
   const index = found < 0 ? tabs.length : found;
-  const edge = index < tabs.length ? tabs[index]!.left : (tabs.at(-1)?.right ?? strip.left);
-  return { index, left: edge - strip.left + strip.scrollLeft };
+  const edge = index < tabs.length ? tabs[index]!.start : (tabs.at(-1)?.end ?? strip.start);
+  return { index, offset: edge - strip.start + strip.scroll };
 }
