@@ -1,6 +1,6 @@
 # Developing galeo
 
-galeo is a desktop reader and editor for Markdown/text/log files: Electron 44, all TypeScript, React 19
+galeo is a desktop reader and editor for Markdown/text/log files: Electron 45, all TypeScript, React 19
 chrome, unified rendering pipeline in a worker, zero network. Linux is official; macOS and Windows
 are previews.
 
