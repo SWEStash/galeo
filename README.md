@@ -1,12 +1,17 @@
-# <img src="packaging/icons/galeo.svg" alt="" width="40" align="top"> galeo
+<div align="center">
+  <img src="packaging/icons/galeo.svg" alt="" width="200">
+  <h1>galeo</h1>
+  <p>A fast, private desktop viewer and editor.</p>
 
 [![CI](https://github.com/SWEStash/galeo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SWEStash/galeo/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/SWEStash/galeo)](https://github.com/SWEStash/galeo/releases/latest)
 [![Licence: MIT](https://img.shields.io/github/license/SWEStash/galeo)](LICENSE)
+![Platform: Linux](https://img.shields.io/badge/platform-Linux-lightgrey)
 
-A fast, private desktop app for reading and editing Markdown, text and logs, JSON, CSV, YAML and
-source code: the plans, notes, logs and data that coding-agent work produces. It never connects to
-the network.
+</div>
+
+Read and edit Markdown, text, logs, JSON, CSV, YAML and a few other formats: the plans, notes
+and data that coding-agent work produces. galeo **never connects to the network**.
 
 ## Quick start
 
