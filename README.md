@@ -1,4 +1,8 @@
-# galeo
+# <img src="packaging/icons/galeo.svg" alt="" width="40" align="top"> galeo
+
+[![CI](https://github.com/SWEStash/galeo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SWEStash/galeo/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/SWEStash/galeo)](https://github.com/SWEStash/galeo/releases/latest)
+[![Licence: MIT](https://img.shields.io/github/license/SWEStash/galeo)](LICENSE)
 
 A fast, private desktop app for reading and editing Markdown, text and logs, JSON, CSV, YAML and
 source code: the plans, notes, logs and data that coding-agent work produces. It never connects to
