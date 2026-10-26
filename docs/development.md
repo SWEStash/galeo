@@ -18,10 +18,10 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm test` | All vitest projects (`test:unit` for Node-side code and scripts, `test:renderer` for happy-dom) |
 | `npm run test:e2e` | Playwright end-to-end tests against the built app (`npm run build` first) |
 | `npm run test:no-network` | Zero-network proof on Linux: the built app runs under `strace` and must make no network `connect()` (needs `strace`) |
-| `npm run test:perf` | Cold-start timings (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the PRD budgets |
+| `npm run test:perf` | Timings for cold start, tabs, diagrams, data views, typing in split view, and memory (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the budgets, see [performance runs](#performance-runs) |
 | `npm run package` | Build, then package for the current OS into `release/` (Linux: `.deb` and AppImage) |
 | `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon, the licence notices |
-| `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop |
+| `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop: wrap the Playwright commands and `verify:package` in it |
 | `npm run boundaries` | Check the import rules below (`scripts/check-boundaries.mjs`) |
 | `npm run check:bundle` | After `npm run build`: what the window and the render worker load up front, failing if KaTeX, Shiki, CodeMirror, Mermaid, DOMPurify or the MDX parser is among it (they load with the first document that needs them) |
 | `npm run check:docs` | Check the docs' relative links and `#anchors`, ADR and SR ids, and repository paths in code spans (`scripts/check-docs.mjs`; web links are never fetched) |
@@ -33,13 +33,24 @@ On Ubuntu 24.04+, unprivileged user namespaces are restricted, so the developmen
 can't start its sandbox. Run `sudo scripts/dev-sandbox-setup.sh` once per checkout: it installs an
 AppArmor profile for `node_modules/electron/dist/electron`, like the one the `.deb` installs.
 
-On Linux, wrap the Playwright commands and `verify:package` in `npm run headless --` to run them on
-a virtual display (needs the `xvfb` package), so no windows open on your desktop.
-
 To try the `.deb` on your desktop, install it with `sudo apt install ./release/galeo_*.deb` and
 remove it with `sudo apt remove galeo`. apt may print "Download is performed unsandboxed as
 root": its `_apt` user can't read your home folder, so apt reads the file as root. The notice is
 harmless. Copy the `.deb` to `/tmp` first to avoid it.
+
+## Performance runs
+
+The budgets in `tests/perf/budgets.json` only mean something on a quiet machine (load average under
+1.5) with nothing else running: a long test run beforehand heats a laptop and slows it. Then:
+
+```sh
+GALEO_PERF=1 npm run build
+GALEO_PERF_ENFORCE=1 npm run headless -- npm run test:perf
+npm run build   # back to the normal build
+```
+
+Timings are medians: of 10 runs for cold start, tabs and typing, of 3 for the data views and
+memory, and per frame while scrolling for diagrams. The release records them in [VALIDATION](VALIDATION.md#performance).
 
 ## Before pushing
 
@@ -62,20 +73,10 @@ these differences have broken tests before:
 
 ## Architecture
 
-Read [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) first. The *why* is in `docs/decisions/`
-(ADR-001…009), the security requirements are in
-[`docs/security/threat-model.md`](security/threat-model.md), and the UX spec is in
+Read [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) first; its [source layout](ARCHITECTURE.md#9-source-layout-adr-007)
+shows what each folder of `src/` holds. The *why* is in [`docs/decisions/`](decisions/), the security
+requirements are in [`docs/security/threat-model.md`](security/threat-model.md), and the UX spec is in
 [`docs/design/ux.md`](design/ux.md).
-
-Source layout (ADR-007). Dependencies point inward:
-
-```
-src/shared/    IPC contracts + domain types. No Node/Electron/DOM.
-src/core/      Pure domain logic behind ports. Imports only shared/.
-src/main/      Electron + Node adapters, windows, protocol, network guard, IPC handlers.
-src/preload/   The only bridge: typed window.galeo API from a plain channel table.
-src/renderer/  React chrome, Document Host, render worker. Talks only to window.galeo.
-```
 
 ## Conventions (non-negotiable)
 
@@ -84,7 +85,7 @@ src/renderer/  React chrome, Document Host, render worker. Talks only to window.
 - **Dependencies** must be well adopted, stable, maintained **and** substantially used.
   Otherwise write a small own module with tests. Every addition is vetted and recorded in
   [`docs/dependencies.md`](dependencies.md) before it's installed. Pin exact versions.
-- **Security requirements SR-01…SR-17** (threat model) are acceptance criteria, not suggestions.
+- **Security requirements** (the threat model's SR-xx) are acceptance criteria, not suggestions.
   The sandbox is on by default. Only the user can opt out, per launch, and the app then warns in
   every window (ADR-008). The one exception: after a real sandbox failure, the Linux launcher
   wrapper relaunches unsandboxed only to show the "sandbox unavailable" choice (ADR-009). Zero network is enforced and

@@ -31,13 +31,13 @@ first, so every check below runs on the exact commit that gets tagged:
    `package.json` and `package-lock.json`) and commit `chore(release): <version>`. Nothing else goes
    in this commit.
 2. **Green on this commit**: `npm run preflight` ends with "all green"; push, and CI is green.
-3. **Performance**: `GALEO_PERF=1 npm run build`, then `GALEO_PERF_ENFORCE=1 npm run headless -- npm run
-   test:perf` on its own on the reference machine; the budgets hold and memory is within 10 % of
-   the baseline.
+3. **Performance**: a [performance run](development.md#performance-runs) on the reference machine;
+   the budgets hold and memory is within 10 % of the baseline.
 4. **Manual checks** on the reference platform, installed from the `.deb` built from this commit
    (`npm run package`, then `sudo apt install ./release/galeo_*.deb`): the keyboard-only and Orca
    passes and the desktop checks in [VALIDATION](VALIDATION.md).
-5. **Security review** against SR-01…SR-17 for anything that changed since the last release.
+5. **Security review** against the threat model's SR requirements for anything that changed since
+   the last release.
 6. **Dry run** (optional, recommended after a workflow change): run the release workflow by hand
    from the Actions tab (*Run workflow* on `main`). It builds and attests, and drafts nothing.
 

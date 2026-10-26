@@ -3,8 +3,8 @@
 - **Author**: project owner
 - **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15)
 - **Status**: Approved (2026-09-26)
-- **Target release**: v0.1 "reader", then v0.2 "editor", then v0.3 "formats"
-- **Related**: ADR-001…ADR-008 (all Accepted), UX specification, threat model, architecture —
+- **Target release**: v0.1 "reader", then v0.2 "editor", v0.3 "formats" and v0.4 "tabs"
+- **Related**: the decision records, UX specification, threat model, architecture —
   see [References](#references)
 
 ## Problem
@@ -429,6 +429,6 @@ live in the [UX specification](design/ux.md).
   [ADR-007 — Platform seam](decisions/ADR-007-platform-seam.md) ·
   [ADR-008 — Packaging & distribution](decisions/ADR-008-packaging-and-distribution.md) ·
   [Architecture](ARCHITECTURE.md) · [Dependencies](dependencies.md)
-- [UX specification](design/ux.md) · [Threat model](security/threat-model.md) (security
-  requirements SR-01…SR-17 are part of this PRD's constraints)
+- [UX specification](design/ux.md) · [Threat model](security/threat-model.md) (its security
+  requirements are part of this PRD's constraints)
 - The target site's rendering setup (Astro MDX, Shiki `github-light`/`github-dark`, remark-math + KaTeX)

@@ -10,7 +10,7 @@
 
 This document defines *what the user sees and does*: surfaces, flows, states, the keyboard map,
 theming and accessibility. It does not choose libraries or internal structure (those belong to
-ADR-002…007).
+the [decision records](../decisions/)).
 
 ## 1. Design principles
 

@@ -463,6 +463,6 @@ Revisit this model when any of these arrive:
 - an npm distribution channel (generic Electron binary: SR-08 does not hold for it);
 - a change of shell (ADR-001 revisit triggers).
 
-Before each release, a security audit verifies SR-01…SR-17 against the code, and the release
+Before each release, a security audit verifies every SR requirement against the code, and the release
 checklist records the result. Published audits: [v0.1](audits/2026-10-07-v0.1.md), [v0.2](audits/2026-10-10-v0.2.md)
 and [v0.3](audits/2026-10-20-v0.3.md).

@@ -20,21 +20,16 @@ it and for checking a download.
 
 ## Features
 
-- **Reading**: GitHub-style Markdown with code highlighting, math and Mermaid diagrams; plain text;
-  logs in a source view that can follow a growing log. Files reload when they change on disk.
-- **Editing**: raw-text editing with a live split preview, find and replace and several cursors.
-  Saving keeps the file's encoding, line endings and permissions.
-- **MDX articles**: rendered like Markdown, with components shown as labelled boxes; nothing in
-  them runs.
-- **Data and code**: JSON as a collapsible tree, CSV and TSV as a table (up to a million rows;
-  comma, semicolon, tab or pipe), YAML, TOML and source code highlighted, with an outline of YAML
-  and TOML keys. Ctrl+U shows the source.
-- **Reading comfort**: widen, narrow or go full width per tab; pick prose and code fonts from those
-  installed.
-- **Tabs, windows and profiles**: browser-like tabs and windows, sessions that come back after a
-  restart, and separate profiles, for example one per project. Drag a tab to another window or out
-  of every window, with its unsaved edits.
-- **Keyboard first**: quick open (Ctrl+P), a command palette (Ctrl+Shift+P), an outline and find.
+- **Reading**: GitHub-style Markdown with code, math and Mermaid diagrams, and logs that can follow
+  a growing file. Files reload when they change on disk.
+- **Editing**: raw text with a live split preview. Saving keeps the file's encoding, line endings
+  and permissions.
+- **Data and code**: JSON as a tree, CSV and TSV as a table, YAML, TOML and source code
+  highlighted, MDX rendered with nothing in it running.
+- **Tabs, windows and profiles**: browser-like tabs, on top or on the left, that move between
+  windows; sessions that come back after a restart; a profile per project.
+- **Keyboard first**: quick open (Ctrl+P), a command palette (Ctrl+Shift+P), search tabs
+  (Ctrl+Shift+A), a tab overview (Ctrl+Shift+E) and find in all tabs (Ctrl+Shift+F).
 - **Private**: no network connections, documents can't run scripts, and Chromium's sandbox is on.
 
 The [usage guide](docs/USAGE.md) covers all of it.

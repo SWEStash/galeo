@@ -58,9 +58,8 @@ Record the date, the build and the result of each row.
 
 ## Performance
 
-`GALEO_PERF=1 npm run build`, then `GALEO_PERF_ENFORCE=1 npm run headless -- npm run test:perf`, on its
-own (a long test run beforehand heats the laptop and slows it). Medians of 10 runs; a cold start is
-a typical launch: galeo not running, its caches from earlier launches kept.
+Measured with a [performance run](development.md#performance-runs): medians of 10 runs; a cold start
+is a typical launch: galeo not running, its caches from earlier launches kept.
 
 Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performance profile.
 0.1.0 was recorded on 2026-10-07 (Electron 44.7.0, Mermaid 12.1.0); the 0.2.0 candidate on
