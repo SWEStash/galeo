@@ -76,8 +76,10 @@ A measurement with 10 tabs of 10 MB each, on a loaded machine, gave:
    - Enter or a click activates that tab. The tab is one of the page's own, so main isn't asked.
    - Then the page opens the tab's find bar with the query and its case option already filled in:
      - **Source view**, or edit mode: on the chosen hit's line.
-     - **Reader view**: the view is kept, and the find bar lands on the first rendered match. Counts can
-       differ from the source count.
+     - **Reader view**: the view is kept, and the find bar lands on the first rendered match in or
+       after the block that holds the hit's line (its `data-src-line`), so the one nearest the hit.
+       Counts can differ from the source count. (Wording made precise on 2026-10-26, owner; the
+       decision is unchanged.)
      - **JSON tree or CSV table**: the tab switches to its source first, since those views have no find.
 6. **Trust.**
    - The new channel follows SR-11: the sender must be a galeo main frame, and the query is a string of at
