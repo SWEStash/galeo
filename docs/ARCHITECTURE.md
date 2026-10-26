@@ -452,12 +452,14 @@ src/
   core/       routing, profiles, registry, lifecycle, sessions, settings, capabilities, links,
               formats, desktop (the AppImage's launcher files), watch/ (coalescing),
               quick-open/ (git root, walker, matcher, session), documents/ (reads, identities,
-              grants, watches)
+              grants, watches), text/ (decode and encode), fonts/ (fc-list parsing), ports/
   main/       adapters, IPC handlers, network guard, window factory, profile runtimes, app entry,
               tasks/ (the worker thread for the parsing main's checks need, and find in all tabs)
   preload/    window.galeo bridge
   renderer/   document/ (host, rendered/source/text/log views, diagrams, find, states) · tabs/
-              (tab bar, store, status bar, empty window, drops) · commands/ (dispatcher) ·
+              (tab bar, side panel, store, status bar, empty window, drops, tab search, tab
+              overview, find in all tabs) · edit/ (editors, unsaved prompt, diff) · about/ ·
+              security/ (Trusted Types, WebRTC off) · commands/ (dispatcher) ·
               quick-open/ · palette/ · outline/ · profiles/ (chip, menu, dialogs) · settings/
               (Settings tab, notices, tokens) · styles/ (tokens, fonts) · worker/ (render pipeline)
 tests/
