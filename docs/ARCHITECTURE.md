@@ -70,7 +70,7 @@ flowchart LR
 
   user --> term & files & app
   term -- "galeo [--profile p] file…" --> app
-  term -. agents write .md/.log .-> fs
+  term -. agents write Markdown and logs .-> fs
   files -- "open %F / drag-and-drop" --> app
   app -- "read (write in edit mode)" --> fs
   app -- "http/https/mailto links from the document only" --> os
@@ -260,8 +260,8 @@ sequenceDiagram
   P2->>M: single-instance message {argv, cwd}
   P2-->>T: exit 0 (immediately)
   M->>M: Argv parser → Router: target = last-focused window
-  M->>M: Tab Registry: new Tab Record; read grant for /abs/plan.md
-  M->>R: event tabs.changed (snapshot, next revision); the window is not raised (ADR-005)
+  M->>M: Tab Registry: new Tab Record, read grant for /abs/plan.md
+  M->>R: event tabs.changed (snapshot, next revision), the window is not raised (ADR-005)
   R->>M: readDocument(tabId)
   M->>M: Capability check (grant) → FileSystem.read (size cap) → FileWatcher.watch
   M-->>R: text + file identity + format id
@@ -306,7 +306,7 @@ sequenceDiagram
   M->>M: Link extractor: is href in the link set of tab's document (as read by Main)?
   alt relative link to a supported file, present in the document
     M->>M: resolve against document path → read grant → navigate the tab (history push)
-    M-->>R: navigated (+ tabs.changed snapshot); the renderer reads the document again
+    M-->>R: navigated (+ tabs.changed snapshot), the renderer reads the document again
   else http/https/mailto, present in the document
     M->>OS: openExternal(normalized URL)
   else not present, or other scheme
@@ -366,10 +366,10 @@ sequenceDiagram
   participant A as Window A page
   participant M as Main
   participant B as Window B page
-  A->>M: tabs.dragStart(id, token) · spends an input credit; the drag carries the token
+  A->>M: tabs.dragStart(id, token) · spends an input credit, the drag carries the token
   M-->>A: tabs.dragging(true) · and every other window
   Note over B: the whole tab bar takes drops
-  B->>M: tabs.adopt(token, position) · claims the drag, once; main answers the tab's id
+  B->>M: tabs.adopt(token, position) · claims the drag, once, main answers the tab's id
   M->>M: grant + kept text → B · record → B (same id) · warm set · breadcrumb
   M-->>A: tabs.changed (without the tab)
   M-->>B: tabs.changed (with it, shown)
