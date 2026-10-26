@@ -113,3 +113,35 @@ test('an image larger than an icon opens in the viewer, by a click or its Expand
     await close();
   }
 });
+
+test('an SVG with only a viewBox shows in the page and in the viewer, its Expand button on its corner', async () => {
+  const doc = path.resolve(import.meta.dirname, '../fixtures/docs/images/viewbox.md');
+  const { window, close } = await launchApp(['--', doc]);
+  try {
+    const document = window.getByTestId('document');
+    const drawing = document.getByRole('img', { name: 'A green box' });
+    const chart = document.getByRole('img', { name: 'A bar chart' });
+    await expect(document.getByRole('button', { name: 'Expand image' })).toHaveCount(2);
+    // With no size of its own it fills the column, as a browser shows it; the chart keeps its 480 px.
+    await expect.poll(async () => (await drawing.boundingBox())?.width ?? 0).toBeGreaterThan(480);
+    expect((await chart.boundingBox())?.width).toBe(480);
+
+    // Each Expand button sits on its own image's top-right corner.
+    for (const [image, index] of [[drawing, 0], [chart, 1]] as const) {
+      await image.hover();
+      const box = (await image.boundingBox())!;
+      const button = (await document.getByRole('button', { name: 'Expand image' }).nth(index).boundingBox())!;
+      expect(button.x + button.width).toBeCloseTo(box.x + box.width - 4, 0);
+      expect(button.y).toBeCloseTo(box.y + 4, 0);
+    }
+
+    await drawing.click();
+    const viewer = window.getByRole('dialog', { name: 'A green box' });
+    await expect(viewer.getByTestId('zoom-stage').locator('img')).toBeVisible();
+    const shown = (await viewer.getByTestId('zoom-stage').locator('img').boundingBox())!;
+    expect(shown.width / shown.height).toBeCloseTo(2, 1);
+  } finally {
+    await close();
+  }
+});
+

@@ -389,14 +389,16 @@ div.galeo-block-error {
   /* Centred when it fits; a wider one starts at the left edge, where its block's scroll starts. */
   justify-content: safe center;
 }
-/* A document image that can open in the viewer: by its Expand button, or a click when it isn't a link. */
+/* A document image that can open in the viewer: by its Expand button, or a click when it isn't a link.
+   The frame stays inline so the image sizes as if unframed: a shrink-to-fit frame collapses an image
+   with no size of its own (an SVG with only a viewBox) to nothing. The button is anchored to the image. */
 .galeo-image {
   position: relative;
-  display: inline-block;
-  max-width: 100%;
+  anchor-scope: --galeo-image;
 }
 .galeo-image > img {
   cursor: zoom-in;
+  anchor-name: --galeo-image;
 }
 a .galeo-image > img {
   cursor: pointer;
@@ -418,6 +420,11 @@ a .galeo-image > img {
   font: 16px/1 var(--galeo-font-ui);
   cursor: pointer;
   opacity: 0;
+}
+.galeo-image-expand {
+  position-anchor: --galeo-image;
+  top: calc(anchor(top) + 4px);
+  right: calc(anchor(right) + 4px);
 }
 .galeo-diagram:hover .galeo-diagram-expand,
 .galeo-diagram-expand:focus-visible,

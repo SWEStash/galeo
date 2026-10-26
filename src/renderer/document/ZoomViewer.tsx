@@ -45,6 +45,10 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
       image.draggable = false;
       image.addEventListener('load', () => {
         natural.current = { width: image.naturalWidth, height: image.naturalHeight };
+        // Sized explicitly, as the stage shrinks to its content: an image with no size of its own
+        // (an SVG with only a viewBox) would otherwise take none.
+        image.width = image.naturalWidth;
+        image.height = image.naturalHeight;
         fitted();
       });
       image.src = content.url;
