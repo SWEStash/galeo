@@ -67,17 +67,15 @@ the [decision records](../decisions/)).
 
 ### F1 — Open from the terminal
 
-```
-$ galeo [--profile P] [--new-window] [--no-sandbox] file…
-        │
-        ├─ galeo not running ─→ start → profile P (or last-used, else default)
-        │                            → restore P's session (hibernated) → open files as new tabs, the first one shown
-        │
-        └─ galeo running ──────→ forward args to running instance, command exits immediately
-                                     ├─ --new-window        → new window in target profile
-                                     ├─ --profile P running → last-focused window of P
-                                     ├─ --profile P stopped → start P (restore) → its last-focused window
-                                     └─ no profile          → last-focused galeo window (any profile)
+```mermaid
+flowchart TD
+  cmd["$ galeo [--profile P] [--new-window] [--no-sandbox] file…"] --> running{galeo running?}
+  running -- no --> start[start in profile P, else the last used, else the default<br/>→ restore P's session, hibernated<br/>→ open the files as new tabs, the first one shown]
+  running -- yes --> forward[forward the arguments to the running instance;<br/>the command exits at once]
+  forward -- "--new-window" --> newwin[a new window in the target profile]
+  forward -- "--profile P, running" --> plast[P's last-focused window]
+  forward -- "--profile P, stopped" --> pstart[start P, restoring it → its last-focused window]
+  forward -- no profile --> anylast[the last-focused galeo window, any profile]
 ```
 
 - Flags may come before or after file names. After `--` everything is a file

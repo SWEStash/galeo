@@ -420,17 +420,17 @@ The performance harness (`tests/perf/`) measures each row on the owner's machine
 
 ## 8. Build, packaging and deployment (ADR-008, ADR-017)
 
-```
-source (src/shared · core · main · preload · renderer)
-  └─ Vite 8 builds (main + preload as library builds, renderer, worker) · scripts/dev.mjs in development
-      └─ electron-builder (fuses set) ─┬─ galeo_<v>_amd64.deb              (official)
-                                       ├─ galeo-<v>.AppImage               (secondary; on Ubuntu 24.04+ unsandboxed, by opt-in)
-                                       ├─ galeo-<v>-{x64,arm64}.dmg/.zip   (macOS preview, deferred: ADR-011)
-                                       └─ galeo-Setup-<v>.exe              (Windows preview, deferred: ADR-011)
-          CI (Linux; macOS/Windows deferred, ADR-011): tests · package + fuse read-back · no-network
-              harness and performance
-              └─ tag v<version> → release workflow: build, verify, SHA256SUMS, attestations →
-                 draft GitHub Release (docs/RELEASING.md, ADR-017)
+```mermaid
+flowchart TD
+  src[source · src/shared, core, main, preload, renderer] --> vite[Vite 8 builds: main and preload as library builds, renderer, worker<br/>scripts/dev.mjs in development]
+  vite --> eb[electron-builder · fuses set]
+  eb --> deb[galeo_#lt;v#gt;_amd64.deb · official]
+  eb --> appimage[galeo-#lt;v#gt;.AppImage · secondary; on Ubuntu 24.04+ unsandboxed, by opt-in]
+  eb -. deferred, ADR-011 .-> mac[galeo-#lt;v#gt;-x64 and -arm64 .dmg / .zip · macOS preview]
+  eb -. deferred, ADR-011 .-> win[Windows NSIS installer · preview]
+  eb --> ci["CI on Linux (macOS and Windows deferred, ADR-011)<br/>tests · package and fuse read-back · no-network harness · performance"]
+  ci -- "tag v#lt;version#gt;" --> release[release workflow: build, verify, SHA256SUMS, attestations]
+  release --> draft[draft GitHub Release · docs/RELEASING.md, ADR-017]
 ```
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`

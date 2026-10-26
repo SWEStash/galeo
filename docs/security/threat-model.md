@@ -24,24 +24,38 @@ client documents).
 
 ### Components and data flows
 
-```
-                      ┌───────────────────────── same user, same machine ──────────────────────────┐
-  Terminal ──argv──▶ [gal launcher] ──argv──▶ ║B1║                                                   │
-  Files app ─open──▶ (.desktop %F) ─────────▶ ║  ║  ┌──────────────── Main process (Node, full user privileges) ─┐
-  Files app ─drag──────────────────────────────────▶│ single-instance lock · argv routing · profiles/sessions    │
-                                              ║B2║  │ file read/write · watcher · quick-open walker · settings  │
-  Same-user process ──second-instance msg──▶  ║  ║  │ galeo:// protocol · shell.openExternal / openPath            │
-                                                    └───────┬──────────────────────────────▲─────────────────────┘
-                                                        IPC ║B3║ (preload bridge)        ║B4║ disk (user files,
-                                                            ▼                              ║  ║ ~/.config, ~/.local/state)
-                                         ┌───────── Renderer per window (Chromium, sandboxed) ─────────┐
-  Untrusted file content ═══║B5║═══════▶ │ app UI · Markdown pipeline · Shiki · KaTeX · Mermaid ·      │
-  (md/mdx/txt/log, images, raw HTML)     │ CodeMirror · user custom CSS                                │
-                                         └──────────────────────┬──────────────────────────────────────┘
-                                                                ║B6║ network (must be closed)
-                                                                ▼
-                                                      Internet / LAN / OS URL handlers (║B7║)
-  Build & release: npm registry ═║B8║═▶ CI (GitHub Actions) ═▶ .deb / AppImage ═▶ user install
+```mermaid
+flowchart TB
+  subgraph machine[Same user, same machine]
+    term[Terminal] -- argv --> launcher[gal / galeo launcher]
+    filesapp[Files app]
+    other[Any same-user process]
+    subgraph mainp[Main process · Node, full user privileges]
+      main[single-instance lock · argv routing · profiles and sessions<br/>file read and write · watcher · quick-open walker · settings<br/>galeo:// protocol · shell.openExternal / openPath]
+    end
+    subgraph rend[Renderer per window · Chromium, sandboxed]
+      renderer[app UI · Markdown pipeline · Shiki · KaTeX · Mermaid<br/>CodeMirror · user custom CSS]
+    end
+    disk[(User files, ~/.config,<br/>~/.local/state)]
+    os[OS URL and file handlers]
+  end
+  content[/Untrusted file content<br/>md, mdx, txt, log, images, raw HTML/]
+  net((Internet / LAN))
+
+  launcher -- "B1 · argv" --> main
+  filesapp -- "B1 · open, .desktop %F" --> main
+  filesapp -- "B1 · drag and drop, granted in the preload" --> renderer
+  other -- "B2 · second-instance message" --> main
+  renderer -- "B3 · IPC through the preload bridge" --> main
+  main -- "B4 · read and write" --> disk
+  content == B5 ==> renderer
+  renderer -. B6 · must stay closed .-x net
+  main -. B6 .-x net
+  main -- "B7 · openExternal / openPath" --> os
+
+  subgraph build[Build and release]
+    registry[(npm registry)] == B8 ==> ci[CI · GitHub Actions] ==> pkg[.deb / AppImage] ==> install[user install]
+  end
 ```
 
 ### Trust boundaries

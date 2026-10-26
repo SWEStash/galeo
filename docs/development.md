@@ -96,6 +96,8 @@ requirements are in [`docs/security/threat-model.md`](security/threat-model.md),
   and renderer must not reach it through any value import, so they use `import type` for schema
   modules. `npm run boundaries` enforces all of this.
 - **Decisions**: never edit an accepted ADR's decision. Record a new ADR that supersedes it.
+- **Diagrams** in the docs are Mermaid, so GitHub and galeo both draw them. UI mock-ups and
+  directory trees stay as text, which Mermaid can't lay out.
 - **Docs placement**: PRD, ADRs and official docs go in `docs/`. Working notes stay out of the
   repo, and commit messages and code never reference private task IDs.
 - **Commits**: Conventional Commits (enforced by commitlint).
