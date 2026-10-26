@@ -319,7 +319,16 @@ must not obstruct (plain files only, no sidecar metadata).
 
 - **Find in all tabs.** Search the text of every tab in a window at once, then go to a match. Built
   in v0.4 only if it can stay fast for large files and simple (it would search the files' text, not
-  the rendered view); otherwise it moves to a later release.
+  the rendered view); otherwise it moves to a later release. A check found it both, so v0.4 builds
+  it ([ADR-024](decisions/ADR-024-find-in-all-tabs.md)).
+  - AC: Given a window with several tabs, when I press Ctrl+Shift+F and type, then each tab with
+    matches in its source text is listed with its count and its first matches, each with its line;
+    unsaved tabs are searched as they are on screen, and tabs whose file can't be read are listed
+    with the reason.
+  - AC: Enter on a match shows that tab with its find bar open on the match; a JSON tree or a
+    table shows its source first. Esc closes the list and returns focus to the document.
+  - AC: The search runs off the main thread, a newer query stops the older one, and it never
+    reaches another window's tabs.
 
 ### Won't Have (v0.4)
 

@@ -52,6 +52,7 @@ ADR-002…007).
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
 | **Search tabs** (v0.4) | The window's open tabs and recently closed tabs by name and folder (F16) | Ctrl+Shift+A / Esc |
 | **Tab overview** (v0.4) | Every tab of the window as a grid of cards; activate, close, reorder (F17) | Ctrl+Shift+E, the palette / Esc |
+| **Find in all tabs** (v0.4) | Matches in the source text of the window's tabs, by tab, each with its line (F19) | Ctrl+Shift+F, the palette / Esc |
 | **Side tab panel** (v0.4) | The tabs as a vertical list on the left, when the profile's setting puts them there (F18) | Setting; the panel button or Ctrl+Shift+B collapses and expands it |
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
@@ -109,7 +110,8 @@ profile. Multiple selected files open as tabs in selection order.
 - New tabs open after the active tab (Chrome order). Middle-click or Ctrl+W closes;
   Ctrl+Shift+T reopens closed tabs, and after a closed window, the whole window.
 - (v0.4) Search tabs finds an open or recently closed tab by name (F16); the tab overview shows
-  them all at once (F17); a profile can put its tabs in a list on the left (F18).
+  them all at once (F17); a profile can put its tabs in a list on the left (F18); find in all tabs
+  searches their text (F19).
 - Hibernation is invisible except that a hibernated tab's label is slightly dimmed. Waking must
   land at the saved scroll position before first paint (no jump).
 - Tabs with duplicate file names show the shortest distinguishing parent (`acme/plan.md`,
@@ -382,6 +384,26 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   the list has focus.
 - With the setting off, the tab bar is the same as in v0.3.
 
+### F19 — Find in all tabs (v0.4)
+
+- Ctrl+Shift+F (also in the palette) opens a list over the document, like search tabs (F16): a
+  search field with a **Match case** toggle (Aa), then one group per tab with matches, headed by
+  its name, folder and count ("plan.md — ~/docs · 3 matches"), listing its first 20 matches, each
+  with its line number and the text around it on that line. Tabs whose file couldn't be read come
+  last under **Not searched**, with the reason.
+- It searches the **source text**, literally, from 2 characters; unsaved tabs as they are on
+  screen. A count stops at 10,000 ("10000+"). Typing pauses 150 ms before searching; the status
+  says "Searching…", then "6 matches in 3 tabs" or "No matches".
+- ↑/↓ select, Home/End move the caret in the field. Enter on a match shows its tab with the find
+  bar (F9) open on it, the query filled in and the focus in the field: in the source view on the
+  match's line, in the reader on the match nearest that line. A JSON tree or a table shows its
+  source first. Enter with nothing selected takes the first match. Esc closes the list and
+  returns focus to the document.
+- The rendered view can count differently from the source (Markdown marks, link targets, front
+  matter), so the field's placeholder says "source text".
+- Only this window's tabs, so one profile's. See
+  [ADR-024](../decisions/ADR-024-find-in-all-tabs.md).
+
 ## 4. States
 
 ### Window-level
@@ -461,6 +483,7 @@ the native menu on the active tab.
 | Search tabs (v0.4) | Ctrl+Shift+A | F16; Chrome's key |
 | Tab overview (v0.4) | Ctrl+Shift+E | F17 |
 | Collapse / expand the side tab panel (v0.4) | Ctrl+Shift+B | F18; only with tabs on the left |
+| Find in all tabs (v0.4) | Ctrl+Shift+F | F19 |
 | Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply
@@ -558,5 +581,5 @@ Each is decided when the feature that needs it is built.
       no pictures of the page (owner, 2026-10-21).
 - [x] Tabs on the left is a per-profile setting, like the theme, and so is the panel's width;
       hiding the panel lasts for the window (owner, 2026-10-21).
-- [ ] Find in all tabs: whether v0.4 builds it, and its key (Ctrl+Shift+F is free) — decided
-      after a feasibility check.
+- [x] Find in all tabs: v0.4 builds it, on Ctrl+Shift+F, searching the source text in main
+      (owner, 2026-10-22; [ADR-024](../decisions/ADR-024-find-in-all-tabs.md)).

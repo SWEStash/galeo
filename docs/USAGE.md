@@ -187,7 +187,10 @@ reopen what you closed last, Ctrl+N for a new window. Ctrl+Shift+A searches the 
 and its last 25 closed ones by name or folder: Enter shows an open tab, or brings a closed one back
 where it was. Ctrl+Shift+E (or ▦ at the end of the tab bar) shows the window's tabs as a grid of
 cards, each with its folder, format and marks: the arrows move between them, Enter shows one, Delete
-closes it, and Ctrl+Shift+PgUp/PgDn or a drag moves it.
+closes it, and Ctrl+Shift+PgUp/PgDn or a drag moves it. Ctrl+Shift+F finds text in all the
+window's tabs, unsaved ones as they are on screen: each tab with matches lists its first ones with
+their line, and Enter shows that tab with its find bar on the match. It searches the files' source
+text, so a rendered page can count differently.
 
 A profile can put its tabs on the left instead (Settings → **Tabs** → Left, or *Put tabs on the left*
 in the palette): one row per tab, with its folder underneath, and the shown tab's name in the title

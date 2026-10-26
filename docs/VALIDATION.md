@@ -53,6 +53,7 @@ Record the date, the build and the result of each row.
 | Orca: search tabs and filling quick open (v0.4) | Close two tabs, Ctrl+Shift+A: Orca says "Search tabs", the count ("4 tabs") and each row's name and folder under "Open tabs" and "Recently closed"; Enter on a closed one brings it back where it was. Ctrl+P, arrow to a result: Orca reads its name and folder, then "Tab fills in its path"; Tab: "Filled ~/…". Home/End move the caret in both fields | Not run (2026-10-21): for the 0.4.0 run |
 | Orca: tabs on the left (v0.4) | With *Tabs: Left*: Orca reads the list as vertical tabs ("Open documents") and each row's name, folder and marks; ↑/↓ move between rows. Ctrl+Shift+B: Orca hears "Tab panel collapsed", and the markers still read the full name and folder. The panel button says "Collapse tab panel" / "Expand tab panel" and whether it is expanded; the divider says "Resize tab panel, 220 pixels" and its arrows change the number | Not run (2026-10-22): for the 0.4.0 run |
 | Orca: tab overview (v0.4) | Ctrl+Shift+E: Orca says "Tab overview" and the shown tab's card: its name, folder, marks ("unsaved changes"), format, "shown now" and its position ("2 of 5"); the arrows read each card; Delete on an edited card asks first and Cancel goes back to the card; Esc returns to the document | Not run (2026-10-21): for the 0.4.0 run |
+| Orca: find in all tabs (v0.4) | Ctrl+Shift+F, type a word in three tabs: Orca says "Find in all tabs", then "Searching…" and the total ("6 matches in 3 tabs"); ↓ reads each match with its line and the tab group's name and count; Match case reads as a toggle; Enter shows the tab and Orca reads the find bar with the word and "2 of 3"; Esc returns to the document | Not run (2026-10-26): for the 0.4.0 run |
 | Data views by keyboard, then Orca (v0.3) | In a CSV table the arrows move cell to cell and Orca reads each cell; in a JSON tree the arrows expand and collapse items and Orca reads each one | Pass (2026-10-20, `.deb` 0.3.0) |
 
 ## Performance
@@ -123,6 +124,8 @@ gave the 750 ms above; cold starts in the regular test runs since v0.2 began mea
   Search tabs (v0.4), checked on 2026-10-21: Ctrl+Shift+A is bound nowhere in GNOME's schemas nor
   by IBus (its emoji keys are Super+. and Super+;); only the Ptyxis terminal uses it, inside its
   own window.
+  Find in all tabs (v0.4), checked on 2026-10-26: Ctrl+Shift+F is bound nowhere in those GNOME
+  schemas nor by IBus (emoji Super+. and Super+;, Unicode Ctrl+Shift+U).
   Tab overview (v0.4), checked on 2026-10-21: Ctrl+Shift+E is bound nowhere in those GNOME schemas
   nor by IBus (emoji Super+. and Super+;, Unicode Ctrl+Shift+U); the Ghostty terminal uses it for a
   split, inside its own window, which shows no desktop-wide binding takes it first.

@@ -454,7 +454,7 @@ src/
               quick-open/ (git root, walker, matcher, session), documents/ (reads, identities,
               grants, watches)
   main/       adapters, IPC handlers, network guard, window factory, profile runtimes, app entry,
-              tasks/ (the worker thread for parsing main's checks need)
+              tasks/ (the worker thread for the parsing main's checks need, and find in all tabs)
   preload/    window.galeo bridge
   renderer/   document/ (host, rendered/source/text/log views, diagrams, find, states) · tabs/
               (tab bar, store, status bar, empty window, drops) · commands/ (dispatcher) ·
