@@ -22,6 +22,9 @@ npm run typecheck
 step 'import boundaries'
 npm run boundaries
 
+step 'docs references'
+npm run check:docs
+
 step 'unit and renderer tests'
 npm test
 

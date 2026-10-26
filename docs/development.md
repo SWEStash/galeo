@@ -24,7 +24,8 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop |
 | `npm run boundaries` | Check the import rules below (`scripts/check-boundaries.mjs`) |
 | `npm run check:bundle` | After `npm run build`: what the window and the render worker load up front, failing if KaTeX, Shiki, CodeMirror, Mermaid, DOMPurify or the MDX parser is among it (they load with the first document that needs them) |
-| `npm run check` | Typecheck, boundaries and tests: run it before every commit |
+| `npm run check:docs` | Check the docs' relative links and `#anchors`, ADR and SR ids, and repository paths in code spans (`scripts/check-docs.mjs`; web links are never fetched) |
+| `npm run check` | Typecheck, boundaries, the docs check and tests: run it before every commit |
 | `npm run preflight` | CI's Linux job on this machine (audit, check, build and bundle check, e2e, no-network, perf, package, verify), then the e2e specs changed since the last push, 5 times each: run it before every push |
 | `sh scripts/render-icons.sh` | Render the app icon PNGs from `packaging/icons/*.svg` after changing them (needs `rsvg-convert`: `librsvg2-bin`) |
 
@@ -102,7 +103,7 @@ src/renderer/  React chrome, Document Host, render worker. Talks only to window.
 
 ## Change checklist
 
-- [ ] `npm run check` is green (typecheck, import boundaries, tests)
+- [ ] `npm run check` is green (typecheck, import boundaries, docs references, tests)
 - [ ] New behaviour has tests, including the failure branches
 - [ ] No new dependency without a `docs/dependencies.md` entry
 - [ ] Relevant SR-xx requirements still hold. Nothing loosens `webPreferences`, the CSP or the
