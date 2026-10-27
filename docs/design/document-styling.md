@@ -37,19 +37,19 @@ Defined on `:root`; the dark values apply when the root element has `data-scheme
 | `--galeo-radius` | `6px` | Code block corners |
 | `--galeo-color-bg` | `#ffffff` / `#0d1117` | Page background |
 | `--galeo-color-fg` | `#1f2328` / `#e6edf3` | Text |
-| `--galeo-color-muted` | `#59636e` / `#9198a1` | Quotes, captions, placeholders |
+| `--galeo-color-muted` | `#59636e` / `#9198a1` | Quotes, captions, placeholders; log timestamps and debug lines; the JSON tree's `{3 keys}` / `[2 items]` previews |
 | `--galeo-color-border` | `#d1d9e0` / `#3d444d` | Rules, table borders |
 | `--galeo-color-link` | `#0969da` / `#4493f8` | Links |
 | `--galeo-color-code-bg` | `#f6f8fa` / `#161b22` | Code block and inline code background |
 | `--galeo-color-focus` | `#0969da` / `#4493f8` | Focus ring |
 | `--galeo-color-mark` | yellow, 45% | Find matches |
 | `--galeo-color-mark-current` | orange | The current find match |
-| `--galeo-color-log-error` | `#d1242f` / `#f85149` | Log error badges and line tint |
-| `--galeo-color-log-warn` | `#9a6700` / `#d29922` | Log warning badges and line tint |
-| `--galeo-color-log-info` | `#0969da` / `#4493f8` | Log info badges |
+| `--galeo-color-log-error` | `#d1242f` / `#f85149` | Log error badges, level words and line tint (9 %) |
+| `--galeo-color-log-warn` | `#9a6700` / `#d29922` | Log warning badges, level words and line tint (6 %) |
+| `--galeo-color-log-info` | `#0969da` / `#4493f8` | Log info badges and level words |
 | `--galeo-syntax-keyword` | `#cf222e` / `#ff7b72` | Source highlighting: keywords |
-| `--galeo-syntax-string` | `#0a3069` / `#a5d6ff` | Strings |
-| `--galeo-syntax-constant` | `#0550ae` / `#79c0ff` | Numbers, booleans, null, property names (JSON keys) |
+| `--galeo-syntax-string` | `#0a3069` / `#a5d6ff` | Strings, also in the JSON tree |
+| `--galeo-syntax-constant` | `#0550ae` / `#79c0ff` | Numbers, booleans, null, property names (JSON keys), also in the JSON tree; the keys of `key=value` pairs and JSON lines in logs |
 | `--galeo-syntax-comment` | `#59636e` / `#9198a1` | Comments |
 | `--galeo-syntax-function` | `#6639ba` / `#d2a8ff` | Function names |
 | `--galeo-syntax-type` | `#116329` / `#7ee787` | Types, classes, tags, keys being defined (YAML keys) |
