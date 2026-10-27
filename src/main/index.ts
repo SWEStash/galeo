@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, Menu, nativeTheme, webContents } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, Menu, nativeTheme, webContents, type MessageBoxOptions } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
@@ -77,9 +77,8 @@ import { testHooks } from './test-hooks';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { windowHandlers } from './window/handlers';
 import { applicationMenu } from './window/menu';
-import { keymapPlatform } from './window/policy';
 import { showNativeMenu } from './window/native-menu';
-import { ownArgs, windowTitle } from './window/policy';
+import { keymapPlatform, ownArgs, windowTitle } from './window/policy';
 
 const MIB = 1024 * 1024;
 /** How often each window's renderer memory is sampled for pressure demotion. */
@@ -205,7 +204,6 @@ function start(initialMode: StartupMode): void {
   const appState = new AppState({ fs, utf8, path: path.join(paths.stateDir, 'app-state.json'), parse: parseAppState });
   // Running profiles by id: a profile runs while it has a window (ADR-005).
   const running = new Map<string, ProfileRuntime>();
-  // Saves of profiles whose last window just closed; a quit waits for them.
   // Saves of profiles whose last window just closed, by id: a quit, a restart and a delete wait for them.
   const stopping = new Map<string, Promise<void>>();
   // Window ids, the last focused first, across all profiles.
@@ -251,8 +249,7 @@ function start(initialMode: StartupMode): void {
   const unsaved = new UnsavedChanges({
     dirty: (windowId) => grants.dirty(windowId),
     ask: (windowId, ids) => {
-      const contents = webContents.fromId(windowId);
-      if (contents) BrowserWindow.fromWebContents(contents)?.focus();
+      windowOf(windowId)?.focus();
       sendTo(windowId, 'documents.confirmClose', ids);
     },
     force: (windowId) => confirmCloseUnsaved(windowId),
@@ -307,13 +304,16 @@ function start(initialMode: StartupMode): void {
   registerSchemes();
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
 
+  /** The name of the window's shown tab: its file's, or Settings. */
+  const shownFile = (windowId: number) => {
+    const { tabs, active } = documents.snapshot(windowId);
+    const shown = tabs.find((tab) => tab.id === active);
+    return !shown ? null : shown.kind === 'settings' ? 'Settings' : path.basename(shown.path);
+  };
   /** `<file> — <profile> — galeo`, from the window's shown tab (UX). */
   const updateTitle = (profile: ProfileRuntime, windowId: number) => {
     const window = profile.window(windowId);
-    const { tabs, active } = documents.snapshot(windowId);
-    const shown = tabs.find((tab) => tab.id === active);
-    const file = !shown ? null : shown.kind === 'settings' ? 'Settings' : path.basename(shown.path);
-    window?.setTitle(windowTitle([file, profile.name], { sandboxed }));
+    window?.setTitle(windowTitle([shownFile(windowId), profile.name], { sandboxed }));
   };
 
   /** Keys main takes before the page (ADR-004 capabilities; window keys work even when the page is busy). */
@@ -580,10 +580,6 @@ function start(initialMode: StartupMode): void {
     return front;
   };
 
-  const windowOf = (windowId: number) => {
-    const contents = webContents.fromId(windowId);
-    return contents ? BrowserWindow.fromWebContents(contents) : null;
-  };
   /** Every window hears a tab drag start and end: the whole tab bar takes drops meanwhile (ADR-019). */
   const broadcastDragging = (on: boolean) => {
     for (const profile of running.values()) for (const window of profile.windows) sendEvent(window.webContents, 'tabs.dragging', on);
@@ -616,10 +612,7 @@ function start(initialMode: StartupMode): void {
       .flatMap((id) => {
         const profile = profileOf(id);
         if (!profile) return [];
-        const { tabs, active } = documents.snapshot(id);
-        const shown = tabs.find((tab) => tab.id === active);
-        const shows = !shown ? null : shown.kind === 'settings' ? 'Settings' : path.basename(shown.path);
-        return [{ window: id, profile: profile.name, accent: accents.get(profile.id) ?? null, shows }];
+        return [{ window: id, profile: profile.name, accent: accents.get(profile.id) ?? null, shows: shownFile(id) }];
       });
   };
 
@@ -708,7 +701,6 @@ function start(initialMode: StartupMode): void {
    * `files` go where they would have gone without it, first: closing the app's last window would quit it.
    */
   const removeProfile = async (id: string, files: readonly string[]) => {
-    // Files a launch handed over, going where they would have gone without the profile.
     await openRouted({ profile: null, newWindow: false }, files, { without: id, chosen: true });
     const profile = running.get(id);
     if (profile) {
@@ -889,10 +881,7 @@ function start(initialMode: StartupMode): void {
           windows: otherWindows,
           focus: (windowId) => windowOf(windowId)?.focus(),
           dragging: broadcastDragging,
-          tellDragging: (window) => {
-            const contents = webContents.fromId(window);
-            if (contents) sendEvent(contents, 'tabs.dragging', true);
-          },
+          tellDragging: (window) => sendTo(window, 'tabs.dragging', true),
           after: (ms, run) => void setTimeout(run, ms),
           home: app.getPath('home'),
         }),
@@ -1001,20 +990,30 @@ function recordCapabilityKey(command: Command): void {
   if (!app.isPackaged) (testHooks.__galeoCapabilityKeys ??= []).push(command);
 }
 
+/** The window with this page id, if it is still open. */
+function windowOf(windowId: number): BrowserWindow | null {
+  const contents = webContents.fromId(windowId);
+  return contents ? BrowserWindow.fromWebContents(contents) : null;
+}
+
+/** A native message box over the window, or on its own once the window is gone; the button pressed. */
+async function ask(windowId: number, options: MessageBoxOptions): Promise<number> {
+  const owner = windowOf(windowId);
+  const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
+  return response;
+}
+
 /** Asks, in a native dialog the page can't answer for itself, whether a burst of opens may go on. */
 async function confirmBurst(windowId: number): Promise<boolean> {
   const answer = !app.isPackaged ? process.env['GALEO_TEST_BURST_ANSWER'] : undefined;
   if (answer) return answer === 'allow';
-  const contents = webContents.fromId(windowId);
-  const owner = contents && BrowserWindow.fromWebContents(contents);
-  const options = {
-    type: 'question' as const,
+  const response = await ask(windowId, {
+    type: 'question',
     message: 'This document is opening many links. Allow?',
     buttons: ['Allow', 'Block for this tab'],
     defaultId: 1,
     cancelId: 1,
-  };
-  const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
+  });
   return response === 0;
 }
 
@@ -1029,17 +1028,14 @@ async function confirmEdit(windowId: number, file: string): Promise<boolean> {
     (testHooks.__galeoEditAsked ??= []).push(file);
     return answer === 'edit';
   }
-  const contents = webContents.fromId(windowId);
-  const owner = contents && BrowserWindow.fromWebContents(contents);
-  const options = {
-    type: 'question' as const,
+  const response = await ask(windowId, {
+    type: 'question',
     message: `Edit "${path.basename(file)}"?`,
     detail: `${file}\n\nThis file was opened from a link, a drop, quick open or recent files. galeo asks once before editing a file you didn't open from the desktop or the command line.`,
     buttons: ['Edit', 'Cancel'],
     defaultId: 1,
     cancelId: 1,
-  };
-  const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
+  });
   return response === 0;
 }
 
@@ -1051,17 +1047,14 @@ async function confirmEdit(windowId: number, file: string): Promise<boolean> {
 async function confirmCloseUnsaved(windowId: number): Promise<boolean> {
   const answer = !app.isPackaged ? process.env['GALEO_TEST_CLOSE_UNSAVED_ANSWER'] : undefined;
   if (answer) return answer === 'close';
-  const contents = webContents.fromId(windowId);
-  const owner = contents && BrowserWindow.fromWebContents(contents);
-  const options = {
-    type: 'warning' as const,
+  const response = await ask(windowId, {
+    type: 'warning',
     message: 'This window is still asking about unsaved changes.',
     detail: 'Close it without saving? Its unsaved changes will be lost.',
     buttons: ['Keep waiting', 'Close without saving'],
     defaultId: 0,
     cancelId: 0,
-  };
-  const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
+  });
   return response === 1;
 }
 
