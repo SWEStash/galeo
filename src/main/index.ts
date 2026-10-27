@@ -61,6 +61,7 @@ import { recentHandlers } from './session/recent-handlers';
 import { quickOpenHandlers } from './quick-open/handlers';
 import { dropHandlers } from './drops/handlers';
 import { profileHandlers } from './profiles/handlers';
+import { RunningProfiles } from './profiles/lifecycle';
 import { ProfileRuntime } from './profiles/runtime';
 import { parseAppState } from './session/schemas';
 import { sessionHandlers } from './session/session-handlers';
@@ -203,10 +204,7 @@ function start(initialMode: StartupMode): void {
   });
   const catalog = new ProfileCatalog({ fs, utf8, configDir: paths.configDir, stateDir: paths.stateDir, parse: parseProfileFile });
   const appState = new AppState({ fs, utf8, path: path.join(paths.stateDir, 'app-state.json'), parse: parseAppState });
-  // Running profiles by id: a profile runs while it has a window (ADR-005).
-  const running = new Map<string, ProfileRuntime>();
-  // Saves of profiles whose last window just closed, by id: a quit, a restart and a delete wait for them.
-  const stopping = new Map<string, Promise<void>>();
+  const running = new RunningProfiles<ProfileRuntime>({ create: (id) => createRuntime(id), changed: () => void broadcastProfiles() });
   // Window ids, the last focused first, across all profiles.
   let focusOrder: number[] = [];
   let quitting = false;
@@ -222,7 +220,7 @@ function start(initialMode: StartupMode): void {
   });
   // Open once the desktop's theme settings have arrived (set when the app is ready).
   let themeSettled: Promise<void> = Promise.resolve();
-  const profileOf = (windowId: number) => [...running.values()].find((runtime) => runtime.has(windowId));
+  const profileOf = (windowId: number) => running.of(windowId);
   const idsOf = (runtime: ProfileRuntime) => runtime.windows.map((window) => window.webContents.id);
   const broadcastSettings = (profile: ProfileRuntime) => {
     for (const window of profile.windows) sendEvent(window.webContents, 'settings.changed', settingsState(profile));
@@ -463,7 +461,7 @@ function start(initialMode: StartupMode): void {
       // A quit saves every running profile itself, before its windows close.
       if (quitting) return;
       if (profile.windows.length > 0) profile.keeper.changed();
-      else stopProfile(profile);
+      else running.stop(profile);
     });
     perfMark('window-created');
     // Asked once the page has loaded: a launch's files are in the window by then.
@@ -496,12 +494,10 @@ function start(initialMode: StartupMode): void {
   /** The profile last worked in, where launches go when no window is open (ADR-005). */
   const rememberProfile = (id: string) => void appState.setLastProfile(id).catch((error: unknown) => console.warn('galeo: app state not saved', error));
 
-  const startRuntime = async (id: string): Promise<ProfileRuntime> => {
-    // A profile starting again reads its session only once its last save has landed.
-    await stopping.get(id);
+  /** A profile's runtime, with its settings' listeners. */
+  const createRuntime = async (id: string): Promise<ProfileRuntime> => {
     const name = (await catalog.list()).find((each) => each.id === id)?.name ?? id;
     const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder });
-    running.set(id, profile);
     profile.settings.onChange((current) => {
       for (const window of profile.windows) followScheme(window);
       for (const [windowId, ids] of warm.setLimits(warmLimits(current), idsOf(profile))) demote(windowId, ids);
@@ -518,13 +514,12 @@ function start(initialMode: StartupMode): void {
       for (const windowId of idsOf(profile)) updateTitle(profile, windowId);
       void broadcastProfiles();
     });
-    try {
-      await profile.settings.start();
-    } catch (error) {
-      running.delete(id);
-      profile.settings.stop();
-      throw error;
-    }
+    return profile;
+  };
+
+  const startRuntime = async (id: string): Promise<ProfileRuntime> => {
+    // A profile starting again reads its session only once its last save has landed.
+    const profile = await running.start(id);
     reportSettingsNotices(profile.settings.notices);
     perfMark('profile-started');
     // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
@@ -585,16 +580,6 @@ function start(initialMode: StartupMode): void {
         if (!profile) return [];
         return [{ window: id, profile: profile.name, accent: accents.get(profile.id) ?? null, shows: shownFile(id) }];
       });
-  };
-
-  const stopProfile = (profile: ProfileRuntime) => {
-    running.delete(profile.id);
-    const stop = profile
-      .stop()
-      .catch((error: unknown) => console.warn(`galeo: profile ${profile.id} not saved`, error))
-      .finally(() => stopping.get(profile.id) === stop && stopping.delete(profile.id));
-    void broadcastProfiles();
-    stopping.set(profile.id, stop);
   };
 
   /** What routing sees; `without` leaves a profile out (an undone creation). */
@@ -684,7 +669,7 @@ function start(initialMode: StartupMode): void {
           }),
       );
       await Promise.all(closing);
-      await stopping.get(id);
+      await running.stopped(id);
     }
     await catalog.delete(id);
     await broadcastProfiles();
@@ -724,8 +709,7 @@ function start(initialMode: StartupMode): void {
     }
     quitting = true;
     // `stop` saves each running profile, and leaves one being deleted unsaved.
-    const saves = [...running.values()].map((profile) => profile.stop());
-    void Promise.allSettled([...saves, ...stopping.values()]).finally(() => {
+    void running.quit().finally(() => {
       savedOnQuit = true;
       app.quit();
     });
