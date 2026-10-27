@@ -74,6 +74,7 @@ import { appResponseHeaders, hostResolverRules, networkLockdown } from './securi
 import { tabHandlers } from './tabs/handlers';
 import { tabMover } from './tabs/transfer';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
+import { windowHandlers } from './window/handlers';
 import { applicationMenu } from './window/menu';
 import { keymapPlatform } from './window/policy';
 import { showNativeMenu } from './window/native-menu';
@@ -307,7 +308,7 @@ function start(initialMode: StartupMode): void {
 
   /** `<file> — <profile> — galeo`, from the window's shown tab (UX). */
   const updateTitle = (profile: ProfileRuntime, windowId: number) => {
-    const window = profile.windows.find((each) => each.webContents.id === windowId);
+    const window = profile.window(windowId);
     const { tabs, active } = documents.snapshot(windowId);
     const shown = tabs.find((tab) => tab.id === active);
     const file = !shown ? null : shown.kind === 'settings' ? 'Settings' : path.basename(shown.path);
@@ -656,7 +657,7 @@ function start(initialMode: StartupMode): void {
     let window = decision.start ? await startProfile(decision.profile) : null;
     let fresh = decision.start;
     const profile = running.get(decision.profile)!;
-    if (typeof decision.window === 'number') window = profile.windows.find((each) => each.webContents.id === decision.window)!;
+    if (typeof decision.window === 'number') window = profile.window(decision.window)!;
     else if (decision.window === 'new' || !window) {
       await themeSettled;
       window = openMainWindow(profile);
@@ -816,16 +817,6 @@ function start(initialMode: StartupMode): void {
           },
         }),
         'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
-        'window.command': ([command], event) => {
-          const profile = profileOf(event.sender.id);
-          const window = profile?.windows.find((each) => each.webContents.id === event.sender.id);
-          if (profile && window) mainKey(command, profile, window);
-        },
-        'window.retryAfterCrashes': (_args, event) => {
-          const window = profileOf(event.sender.id)?.windows.find((each) => each.webContents.id === event.sender.id);
-          if (!window || !crashes.retry(event.sender.id)) throw new Error('not showing the crash loop');
-          reloadWithTabs(window, { activate: true });
-        },
         'documents.pathMenu': ([id], event) => {
           if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
           return menus.path(id, event.sender.id);
@@ -853,6 +844,16 @@ function start(initialMode: StartupMode): void {
           ready: () => mode.kind === 'normal',
           tabs: documents,
           openWindow: (profile, window) => openMainWindow(profile, window),
+        }),
+        ...windowHandlers({
+          windowOf: (windowId) => {
+            const profile = profileOf(windowId);
+            const window = profile?.window(windowId);
+            return profile && window ? { profile, window } : undefined;
+          },
+          command: (command, { profile, window }) => mainKey(command, profile, window),
+          crashes,
+          reload: ({ window }) => reloadWithTabs(window, { activate: true }),
         }),
         ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8 } }),
         ...documentHandlers({

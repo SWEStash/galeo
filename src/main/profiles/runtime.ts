@@ -80,7 +80,12 @@ export class ProfileRuntime {
   }
 
   has(windowId: number): boolean {
-    return this.windows.some((window) => window.webContents.id === windowId);
+    return this.window(windowId) !== undefined;
+  }
+
+  /** Its window with this page id. */
+  window(windowId: number): BrowserWindow | undefined {
+    return this.windows.find((window) => window.webContents.id === windowId);
   }
 
   /** Saves what the profile holds (unless discarded), stops watching its files, and waits for its writes. */
