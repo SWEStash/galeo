@@ -816,15 +816,6 @@ function start(initialMode: StartupMode): void {
             refreshMime: (database) => runFile('update-mime-database', [database], { timeout: 30_000, maxBuffer: 1024 * 1024 }).then(() => undefined),
           },
         }),
-        'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
-        'documents.pathMenu': ([id], event) => {
-          if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
-          return menus.path(id, event.sender.id);
-        },
-        'documents.contextMenu': ([id], event) => {
-          if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
-          return menus.document(id, event.sender.id);
-        },
         ...profileHandlers({
           profileOf,
           state: profilesState,
@@ -869,6 +860,7 @@ function start(initialMode: StartupMode): void {
           opened: (file, windowId) =>
             void profileOf(windowId)?.recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
           searches,
+          menus,
         }),
         ...tabHandlers({
           tabs: documents,

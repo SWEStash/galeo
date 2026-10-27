@@ -58,6 +58,7 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
     parseUrl: () => null,
   });
   const opened: string[] = [];
+  const menus: string[] = [];
   const handlers = documentHandlers({
     records,
     links,
@@ -70,8 +71,12 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
     unsaved: { answer: (window, answer) => void answers.push(`${window}:${answer}`) },
     opened: (path, window) => opened.push(`${window}:${path}`),
     searches: new TabSearches({ records, grants, fs, decode, tasks: new FakeTaskRunner({ findInText: findInTextTask }) }),
+    menus: {
+      path: async (id, window) => void menus.push(`path ${id} ${window}`),
+      document: async (id, window) => void menus.push(`document ${id} ${window}`),
+    },
   });
-  return { fs, records, handlers, opened, grants, input, reads, answers, id: records.open(Object.keys(files)[0]!, 1).id };
+  return { fs, records, handlers, opened, grants, input, reads, answers, menus, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
 describe('documentHandlers', () => {
@@ -86,6 +91,16 @@ describe('documentHandlers', () => {
     const { records, handlers } = setup({ '/d/a.md': '# a' });
     const settings = records.openSettings(1);
     expect(() => handlers['documents.read']([settings.id], event)).toThrow(/not a document/);
+  });
+
+  it("shows a document's menus, never the settings tab's", async () => {
+    const { records, handlers, menus, id } = setup({ '/d/a.md': '# a' });
+    await handlers['documents.pathMenu']([id], event);
+    await handlers['documents.contextMenu']([id], event);
+    const settings = records.openSettings(1);
+    expect(() => handlers['documents.pathMenu']([settings.id], event)).toThrow(/not a document/);
+    expect(() => handlers['documents.contextMenu']([settings.id], event)).toThrow(/not a document/);
+    expect(menus).toEqual([`path ${id} 1`, `document ${id} 1`]);
   });
 
   it('keeps the links of the document it read, not of one read earlier that finished later', async () => {

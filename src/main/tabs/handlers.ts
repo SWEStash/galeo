@@ -28,7 +28,8 @@ type TabChannels =
   | 'tabs.dragEnd'
   | 'tabs.adopt'
   | 'tabs.moveTo'
-  | 'tabs.windows';
+  | 'tabs.windows'
+  | 'tabs.openSettings';
 
 interface TabHandlerDeps {
   tabs: TabRegistry;
@@ -198,5 +199,6 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
       return true;
     },
     'tabs.windows': (_args, event) => deps.windows(event.sender.id),
+    'tabs.openSettings': (_args, event) => tabs.openSettings(event.sender.id).id,
   };
 }

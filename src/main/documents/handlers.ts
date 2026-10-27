@@ -3,6 +3,7 @@ import type { TabSearches } from '../../core/documents/find-all';
 import type { CloseAnswer } from '../../core/documents/unsaved';
 import type { ReadIdentities } from '../../core/documents/identities';
 import type { DocumentLinks } from '../../core/documents/links';
+import type { DocumentMenus } from '../../core/documents/menus';
 import { FORMATS } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
 import { saveDocument } from '../../core/documents/save';
@@ -27,7 +28,9 @@ type DocumentChannels =
   | 'documents.closeAnswer'
   | 'documents.keep'
   | 'documents.recover'
-  | 'documents.findAll';
+  | 'documents.findAll'
+  | 'documents.pathMenu'
+  | 'documents.contextMenu';
 
 /**
  * The document channels. Every request names a document by id and is scoped to the sending
@@ -50,8 +53,14 @@ export function documentHandlers(deps: {
   opened: (path: string, window: number) => void;
   /** Find in all tabs (ADR-024). */
   searches: TabSearches;
+  /** A document's native menus, built and shown by main (ADR-004). */
+  menus: Pick<DocumentMenus, 'path' | 'document'>;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened, searches } = deps;
+  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened, searches, menus } = deps;
+  /** The id names a document of the sender's, not its Settings tab. */
+  const assertDocument = (id: string, window: number) => {
+    if (records.get(id, window)?.kind === 'settings') throw new Error('not a document');
+  };
   // The file each tab last counted as opened: re-reads of it (a wake, a changed file) aren't opens.
   const counted = new Map<string, string>();
   // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
@@ -117,5 +126,13 @@ export function documentHandlers(deps: {
     'documents.keep': ([id, text, base], event) => grants.keep(id, event.sender.id, text, base),
     'documents.recover': ([id], event) => ({ edit: grants.granted(id, event.sender.id), kept: grants.kept(id, event.sender.id) }),
     'documents.findAll': ([query, options], event) => searches.search(event.sender.id, query, options),
+    'documents.pathMenu': ([id], event) => {
+      assertDocument(id, event.sender.id);
+      return menus.path(id, event.sender.id);
+    },
+    'documents.contextMenu': ([id], event) => {
+      assertDocument(id, event.sender.id);
+      return menus.document(id, event.sender.id);
+    },
   };
 }

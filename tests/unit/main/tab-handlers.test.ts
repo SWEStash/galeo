@@ -79,6 +79,13 @@ describe('tabHandlers', () => {
     expect(await handlers['tabs.snapshot']([], from(3))).toEqual({ revision: 0, active: null, tabs: [] });
   });
 
+  it('opens the Settings tab in the sender window', async () => {
+    const { handlers, tabs } = setup();
+    const id = await handlers['tabs.openSettings']([], from(1));
+    expect(tabs.get(id, 1)?.kind).toBe('settings');
+    expect(tabs.get(id, 2)).toBeUndefined();
+  });
+
   it("gives the page each file tab's format and shown folder", async () => {
     const { handlers } = setup();
     const { tabs } = await handlers['tabs.snapshot']([], from(1));
