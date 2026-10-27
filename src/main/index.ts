@@ -75,6 +75,7 @@ import { appResponseHeaders, hostResolverRules, networkLockdown } from './securi
 import { tabHandlers } from './tabs/handlers';
 import { tabMover } from './tabs/transfer';
 import { testHooks } from './test-hooks';
+import { WindowCleanups } from './window/cleanups';
 import { windowCrashes } from './window/crash';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { windowHandlers } from './window/handlers';
@@ -142,6 +143,8 @@ if (!parsed.ok) {
 function start(initialMode: StartupMode): void {
   let mode = initialMode;
   let choiceWindow: BrowserWindow | undefined;
+  // What a closed window's state is let go from, registered where each is created (ADR-026).
+  const cleanups = new WindowCleanups();
   // Every change to a window's tabs goes to its page as a fresh snapshot (ADR-002).
   const pushSnapshot = (windowId: number) => {
     const contents = webContents.fromId(windowId);
@@ -159,6 +162,7 @@ function start(initialMode: StartupMode): void {
   });
   const fs = new NodeFileSystem();
   const grants = new EditGrants();
+  cleanups.add((windowId) => grants.closeWindow(windowId));
   const watcher = new CoalescingWatcher({ inner: new NodeFileWatcher(), clock: systemClock, fs });
   // A tab whose file changed since the page read it reads it again (live reload, UX F7).
   const documentWatches = new DocumentWatches({
@@ -169,6 +173,7 @@ function start(initialMode: StartupMode): void {
     },
   });
   const images = new ImageGrants(randomUUID);
+  cleanups.add((windowId) => images.closeWindow(windowId));
   const shell = externalShell();
   const menus = new DocumentMenus({
     tabs: documents,
@@ -179,9 +184,11 @@ function start(initialMode: StartupMode): void {
   });
   // Real input per window: what lets a request reach beyond the window's own grants (T6).
   const input = new InputCredits(Date.now);
+  cleanups.add((windowId) => input.closeWindow(windowId));
   // One worker for main's parsing and searches; it starts on the first task, not at launch.
   const tasks = new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js'));
   const searches = new TabSearches({ records: documents, grants, fs, decode: decodeWithPlatform, tasks });
+  cleanups.add((windowId) => searches.closeWindow(windowId));
   const links = new DocumentLinks({
     records: documents,
     input,
@@ -238,12 +245,24 @@ function start(initialMode: StartupMode): void {
   };
   const warmLimits = (current: Settings) => ({ count: current.warmTabs, bytes: current.warmMegabytes * MIB });
   const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
+  cleanups.add((windowId) => warm.closeWindow(windowId));
   const reads = new ReadIdentities(fs);
+  // The window's tabs: links and reads forget each before the registry lets the window go.
+  cleanups.add((windowId) => {
+    for (const tab of documents.list(windowId)) {
+      links.forget(tab.id);
+      reads.forget(tab.id);
+    }
+    documents.closeWindow(windowId);
+  });
   const crashes = new CrashRecovery(Date.now);
+  cleanups.add((windowId) => crashes.closeWindow(windowId));
   // The tab the reader is dragging, which another window may take once (ADR-019).
   const drags = new TabDrags();
+  cleanups.add((windowId) => drags.end(windowId) && broadcastDragging(false));
   /** Windows closing because their last tab moved away: their profile's session keeps no empty window. */
   const emptiedByMove = new Set<number>();
+  cleanups.add((windowId) => emptiedByMove.delete(windowId));
   // Closing, quitting or deleting a profile with unsaved changes asks the reader first (ADR-013).
   const unsaved = new UnsavedChanges({
     dirty: (windowId) => grants.dirty(windowId),
@@ -255,8 +274,10 @@ function start(initialMode: StartupMode): void {
     clock: systemClock,
     ackMs: UNSAVED_ACK_MS,
   });
+  cleanups.add((windowId) => unsaved.closeWindow(windowId));
   /** Windows whose reader already agreed to close them with unsaved changes. */
   const agreedToClose = new Set<number>();
+  cleanups.add((windowId) => agreedToClose.delete(windowId));
   let agreedToQuit = false;
 
   const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
@@ -276,6 +297,7 @@ function start(initialMode: StartupMode): void {
     },
   });
   const selections = new SelectionGrants(randomUUID);
+  cleanups.add((windowId) => selections.closeWindow(windowId));
   const quickOpen = new QuickOpen({
     fs,
     clock: systemClock,
@@ -283,9 +305,12 @@ function start(initialMode: StartupMode): void {
     home: app.getPath('home'),
     onUpdate: (windowId, results) => sendTo(windowId, 'quickOpen.results', results),
   });
+  cleanups.add((windowId) => quickOpen.close(windowId));
   const drops = new DropGrants(randomUUID);
+  cleanups.add((windowId) => drops.closeWindow(windowId));
   /** A folder dropped on the window, which its next quick open searches. */
   const droppedFolders = new Map<number, string>();
+  cleanups.add((windowId) => droppedFolders.delete(windowId));
   /** Shows files in the window: their tabs if it has them, else new ones after the shown one (or `after`). */
   const openInWindow = (windowId: number, files: readonly string[], after?: string | null, chosen = false) => {
     openFiles(documents, windowId, files, after, { chosen });
@@ -298,6 +323,9 @@ function start(initialMode: StartupMode): void {
   };
   // Profiles `--profile` created, by the token their window's notice carries, until Undo or the window goes.
   const undoable = new Map<string, { profile: string; name: string; files: readonly string[]; window: number }>();
+  cleanups.add((windowId) => {
+    for (const [token, created] of undoable) if (created.window === windowId) undoable.delete(token);
+  });
 
   const lockdown = networkLockdown(runtime);
   registerSchemes();
@@ -438,26 +466,8 @@ function start(initialMode: StartupMode): void {
     window.on('closed', () => {
       profile.windows.splice(profile.windows.indexOf(window), 1);
       focusOrder = focusOrder.filter((id) => id !== windowId);
-      for (const tab of documents.list(windowId)) {
-        links.forget(tab.id);
-        reads.forget(tab.id);
-      }
-      documents.closeWindow(windowId);
-      warm.closeWindow(windowId);
-      crashes.closeWindow(windowId);
-      input.closeWindow(windowId);
-      grants.closeWindow(windowId);
-      searches.closeWindow(windowId);
-      unsaved.closeWindow(windowId);
-      agreedToClose.delete(windowId);
-      emptiedByMove.delete(windowId);
-      if (drags.end(windowId)) broadcastDragging(false);
-      images.closeWindow(windowId);
-      quickOpen.close(windowId);
-      drops.closeWindow(windowId);
-      droppedFolders.delete(windowId);
-      selections.closeWindow(windowId);
-      for (const [token, created] of undoable) if (created.window === windowId) undoable.delete(token);
+      // Out of its profile first: the registry's change on letting the window go looks its profile up.
+      cleanups.run(windowId);
       // A quit saves every running profile itself, before its windows close.
       if (quitting) return;
       if (profile.windows.length > 0) profile.keeper.changed();
