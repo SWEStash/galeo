@@ -146,6 +146,17 @@ describe('createSourceView', () => {
     source.destroy();
   });
 
+  it("colours a log line's timestamp, level word and keys, keeping its text", () => {
+    const { root, parent } = shadowContainer();
+    const text = '2026-10-26T12:00:01Z ERROR worker failed code=7\n';
+    const source = createSourceView({ root, parent, text, language: 'log', wrap: false });
+    const line = parent.querySelector('.cm-line')!;
+    const parts = [...line.querySelectorAll('span[class^="galeo-log-"]')].map((span) => `${span.className}=${span.textContent}`);
+    expect(parts).toEqual(['galeo-log-time=2026-10-26T12:00:01Z', 'galeo-log-word-error=ERROR', 'galeo-log-key=code']);
+    expect(line.textContent).toBe('2026-10-26T12:00:01Z ERROR worker failed code=7');
+    source.destroy();
+  });
+
   it('finds matches, steps through them with wrap-around and reports n of m', () => {
     const { root, parent } = shadowContainer();
     const source = createSourceView({ root, parent, text: 'Plan\nthe plan\nno\nPLAN\n', language: null, wrap: false });

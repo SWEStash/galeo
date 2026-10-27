@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { logLevel } from './log-level';
+import { findLevel, logLevel } from './log-level';
 
 describe('logLevel', () => {
   it.each([
@@ -47,5 +47,29 @@ describe('logLevel', () => {
 
   it('only looks at the start of very long lines', () => {
     expect(logLevel(`${'x '.repeat(200)}ERROR late`)).toBeNull();
+  });
+});
+
+describe('findLevel', () => {
+  /** The line with the level's text in brackets. */
+  const marked = (line: string) => {
+    const found = findLevel(line);
+    return found && `${found.level}: ${line.slice(0, found.from)}[${line.slice(found.from, found.to)}]${line.slice(found.to)}`;
+  };
+
+  it.each([
+    ['2026-09-27T12:00:00Z ERROR request failed', 'error: 2026-09-27T12:00:00Z [ERROR] request failed'],
+    ['2026-09-27 12:00:00 [WARN] slow response', 'warn: 2026-09-27 12:00:00 [[WARN]] slow response'],
+    ['time=12:00 level=error msg="boom"', 'error: time=12:00 level=[error] msg="boom"'],
+    ['{"time":"12:00","level":"info","msg":"ok"}', 'info: {"time":"12:00","level":"[info]","msg":"ok"}'],
+    ['[E] parse failed', 'error: [[E]] parse failed'],
+    ['E/ActivityManager: ANR', 'error: [E]/ActivityManager: ANR'],
+    ['<3>Sep 27 12:00:00 host daemon: error', 'error: [<3>]Sep 27 12:00:00 host daemon: error'],
+  ])('finds the level in %s', (line, expected) => {
+    expect(marked(line)).toBe(expected);
+  });
+
+  it('finds nothing where logLevel finds nothing', () => {
+    expect(findLevel('Everything is fine.')).toBeNull();
   });
 });

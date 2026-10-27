@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import githubDark from 'shiki/themes/github-dark.mjs';
 import githubLight from 'shiki/themes/github-light.mjs';
+import { LINE_TINT } from '../../../src/renderer/document/log-view';
 import { DARK_PIE } from '../../../src/renderer/document/mermaid-engine';
 import { CODE_COLOR_REPLACEMENTS } from '../../../src/renderer/worker/pipeline/highlighter';
 import { ACCENTS } from '../../../src/shared/accents';
@@ -58,6 +59,23 @@ describe('code highlighting (ADR-003 themes, WCAG 2.1 AA)', () => {
   });
 });
 
+
+/** `color-mix(in srgb, colour percent%, transparent)` drawn over `surface`. */
+function tint(colour: string, percent: number, surface: string): string {
+  const channel = (hex: string, at: number) => parseInt(hex.slice(at, at + 2), 16);
+  const mixed = [1, 3, 5].map((at) => Math.round((channel(colour, at) * percent + channel(surface, at) * (100 - percent)) / 100));
+  return `#${mixed.map((value) => value.toString(16).padStart(2, '0')).join('')}`;
+}
+
+describe.each(Object.entries(SCHEMES))('log lines in the %s theme (WCAG 2.1 AA)', (_scheme, tokens) => {
+  it.each(Object.keys(LINE_TINT) as (keyof typeof LINE_TINT)[])('every colour reads at 4.5:1 on a tinted %s line', (level) => {
+    const line = tint(tokens[`log-${level}`]!, LINE_TINT[level], tokens['bg']!);
+    // The text, its timestamp, its keys and its own level word.
+    for (const token of ['fg', 'muted', 'syntax-constant', `log-${level}`]) {
+      expect(contrast(tokens[token]!, line), `${token} on ${line}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+});
 
 describe('the JSON tree (UX F14): colours from the checked tokens, as the JSON source view', () => {
   const documentCss = readFileSync(path.resolve(import.meta.dirname, '../../../src/renderer/document/document.css'), 'utf8');
