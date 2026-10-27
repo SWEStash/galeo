@@ -1,3 +1,5 @@
+import { clamp } from '../../shared/math';
+
 /** The diagram viewer's pan and zoom: where the diagram's top-left corner sits, and its scale. */
 export interface View {
   scale: number;
@@ -15,7 +17,7 @@ export const MAX_SCALE = 8;
 /** Space left around a fitted diagram. */
 const MARGIN = 24;
 
-const clamp = (scale: number) => Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+const clampScale = (scale: number) => clamp(scale, MIN_SCALE, MAX_SCALE);
 
 const centred = (scale: number, content: Size, viewport: Size): View => ({
   scale,
@@ -25,7 +27,7 @@ const centred = (scale: number, content: Size, viewport: Size): View => ({
 
 /** The whole diagram in view, as large as fits, centred. */
 export function fit(content: Size, viewport: Size): View {
-  const scale = clamp(Math.min((viewport.width - 2 * MARGIN) / content.width, (viewport.height - 2 * MARGIN) / content.height));
+  const scale = clampScale(Math.min((viewport.width - 2 * MARGIN) / content.width, (viewport.height - 2 * MARGIN) / content.height));
   return centred(scale, content, viewport);
 }
 
@@ -36,7 +38,7 @@ export function actualSize(content: Size, viewport: Size): View {
 
 /** Zooms by `factor`, keeping the diagram point under `point` (viewport coordinates) where it is. */
 export function zoomAt(view: View, factor: number, point: { x: number; y: number }): View {
-  const scale = clamp(view.scale * factor);
+  const scale = clampScale(view.scale * factor);
   const ratio = scale / view.scale;
   return { scale, x: point.x - (point.x - view.x) * ratio, y: point.y - (point.y - view.y) * ratio };
 }

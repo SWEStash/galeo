@@ -1,6 +1,7 @@
 import { blockAtOrBefore } from './anchor';
 import { findRanges, nextIndex } from './find-rendered';
-import type { FindOptions, FindResult } from './source-view';
+import type { FindOptions } from './source-view';
+import type { FindResult } from '../../shared/find';
 
 export interface Finder {
   find(query: string, options: FindOptions): FindResult;

@@ -1,3 +1,13 @@
+/** Where find is: the 1-based current match (0 without one) of `total`, which stops at a cap. */
+export interface FindResult {
+  current: number;
+  total: number;
+  capped: boolean;
+}
+
+/** Find before a search, or with nothing to find. */
+export const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
+
 export interface FindHit {
   /** 1-based, counting `\r\n`, `\r` and `\n` as line breaks, as the source view does. */
   line: number;

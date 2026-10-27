@@ -3,6 +3,7 @@
 // like the rest of the document (ADR-006). Keys follow the ARIA tree pattern; one row is in the tab
 // order and the focused row is always drawn, wherever the view scrolls.
 import type { TreeModel } from './json-tree-model';
+import { clamp } from '../../shared/math';
 
 /** Every row is this tall (px), so a row's place is its index times this. */
 export const ROW_HEIGHT = 24;
@@ -164,7 +165,7 @@ export function createJsonTreeView({ parent, scroller, label }: { parent: HTMLEl
     const rows = tree.rows();
     const index = indexOf(rows, focused);
     const page = Math.max(1, Math.floor(scroller().clientHeight / ROW_HEIGHT) - 1);
-    const to = (next: number) => focusNode(rows[Math.min(rows.length - 1, Math.max(0, next))]!);
+    const to = (next: number) => focusNode(rows[clamp(next, 0, rows.length - 1)]!);
     switch (event.key) {
       case 'ArrowDown':
         to(index + 1);

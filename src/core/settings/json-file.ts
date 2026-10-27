@@ -1,6 +1,6 @@
 import type { SettingsNotice } from '../../shared/settings';
 import { folderOf } from '../../shared/paths';
-import { FsError, type EntryKind, type FileSystem } from '../ports';
+import { FsError, isMissing, type EntryKind, type FileSystem } from '../ports';
 import { migrate, type Migration } from './model';
 
 type Parsed<T> = { ok: true; value: T } | { ok: false; detail: string };
@@ -38,7 +38,7 @@ export async function readJsonFile<T>(spec: JsonFileSpec<T>, path: string): Prom
   try {
     bytes = await spec.fs.readFile(path, { maxBytes: spec.maxBytes });
   } catch (error) {
-    if (error instanceof FsError && error.code === 'ENOENT') return { kind: 'missing' };
+    if (isMissing(error)) return { kind: 'missing' };
     if (error instanceof FsError && error.code === 'ETOOBIG') return failed('too-large', `larger than ${spec.maxBytes} bytes`);
     return failed('unreadable', error instanceof FsError ? error.code : null);
   }
@@ -67,7 +67,7 @@ export async function moveIfPresent(fs: FileSystem, from: string, to: string): P
   try {
     await fs.rename(from, to);
   } catch (error) {
-    if (!(error instanceof FsError && error.code === 'ENOENT')) throw error;
+    if (!isMissing(error)) throw error;
   }
 }
 
@@ -76,7 +76,7 @@ export async function kindOf(fs: FileSystem, path: string): Promise<EntryKind | 
   try {
     return (await fs.stat(path)).kind;
   } catch (error) {
-    if (error instanceof FsError && error.code === 'ENOENT') return null;
+    if (isMissing(error)) return null;
     throw error;
   }
 }

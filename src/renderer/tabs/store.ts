@@ -6,6 +6,7 @@ import { widthStep } from '../document/width';
 import { zoomStep } from '../document/zoom';
 import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabView, TabViewState } from '../../shared/tabs';
 import { ignoreFailure } from './closed-tab';
+import { clamp } from '../../shared/math';
 
 /** What the tab bar and status bar show about a tab, as its document reports it. */
 export interface TabStatus {
@@ -235,7 +236,7 @@ export function createTabStore(api: TabsApi): TabStore {
     } else {
       // The active tab went away: take the one now in its place, or the last.
       const at = view.active ? view.tabs.findIndex((tab) => tab.id === view.active) : 0;
-      const next = snapshot.tabs[Math.min(Math.max(at, 0), snapshot.tabs.length - 1)]?.id ?? null;
+      const next = snapshot.tabs[clamp(at, 0, snapshot.tabs.length - 1)]?.id ?? null;
       activateLocally(next, snapshot.tabs, snapshot.revision);
     }
   };

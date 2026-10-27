@@ -14,8 +14,9 @@ import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBlock, type SyncPane } from './scroll-sync';
-import type { FindResult, SourceLanguage } from './source-view';
+import type { SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
+import { NO_MATCHES, type FindResult } from '../../shared/find';
 
 /** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`), or a JSON tree or a CSV table (of `source`) named `label`. */
 export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string } | { table: CsvTable; source: string; label: string; header: boolean };
@@ -79,7 +80,6 @@ export interface DocumentViewProps {
   ref?: Ref<DocumentHandle>;
 }
 
-const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
 
 /** Scrolling has settled once it pauses this long; only then is the position reported. */
 const POSITION_SETTLE_MS = 300;

@@ -1,5 +1,5 @@
 import { folderOf, joinPath } from '../../shared/paths';
-import { FsError, type FileSystem } from '../ports';
+import { isMissing, type FileSystem } from '../ports';
 import { kindOf, type Utf8 } from '../settings/json-file';
 
 /** The line every installed launcher carries, so galeo only ever replaces its own. */
@@ -143,7 +143,7 @@ async function iconFree(fs: FileSystem, path: string, icon: Uint8Array): Promise
     const existing = await fs.readFile(path, { maxBytes: icon.length });
     return existing.length === icon.length && existing.every((byte, at) => byte === icon[at]);
   } catch (error) {
-    return error instanceof FsError && error.code === 'ENOENT';
+    return isMissing(error);
   }
 }
 
@@ -152,6 +152,6 @@ async function ownedOrAbsent(deps: { fs: FileSystem; utf8: Utf8 }, path: string,
   try {
     return deps.utf8.decode(await deps.fs.readFile(path, { maxBytes: 64 * 1024 })).includes(mark);
   } catch (error) {
-    return error instanceof FsError && error.code === 'ENOENT';
+    return isMissing(error);
   }
 }

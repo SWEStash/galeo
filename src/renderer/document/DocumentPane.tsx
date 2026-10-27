@@ -20,7 +20,6 @@ import { DocumentView, type DocumentHandle, type RenderedContent } from './Docum
 import { FindBar } from './FindBar';
 import type { ColorScheme } from './host';
 import { FORMAT_NAMES, sourceLanguage } from './formats';
-import type { FindResult } from './source-view';
 import { useDelayed } from './useDelayed';
 import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
@@ -32,6 +31,7 @@ import { useCsvTable } from './useCsvTable';
 import { useJsonTree } from './useJsonTree';
 import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
+import { NO_MATCHES, type FindResult } from '../../shared/find';
 
 const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed', cancelled: 'preview-failed' } as const;
 
@@ -52,7 +52,6 @@ const OWN_VIEWS: ReadonlySet<string> = new Set(['markdown', 'mdx', 'json', 'csv'
 /** Row counts as the notice writes them: "Showing 1,000,000 of 1,250,000 rows". */
 const ROWS = new Intl.NumberFormat('en-US');
 
-const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
 
 export interface DocumentPaneProps {
   content: DocumentContent;

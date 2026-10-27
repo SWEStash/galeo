@@ -3,6 +3,7 @@
 // document's shadow root (ADR-006), like the JSON tree. The first row is the header and stays in
 // view; one cell is in the tab order, and the focused one is always drawn, wherever the view scrolls.
 import { cell, type CsvTable } from '../../shared/csv';
+import { clamp, clamp01 } from '../../shared/math';
 
 /** Every row is this tall (px), so a row's place is its index times this. */
 export const TABLE_ROW_HEIGHT = 24;
@@ -267,8 +268,8 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   /** Moves focus to a cell, scrolling just enough to show its row under the header. */
   function focusCell(index: number, column: number) {
     if (!table || bodyCount === 0) return;
-    focusRow = Math.min(bodyCount - 1, Math.max(0, index));
-    focusColumn = Math.min(table.columns - 1, Math.max(0, column));
+    focusRow = clamp(index, 0, bodyCount - 1);
+    focusColumn = clamp(column, 0, table.columns - 1);
     const pane = scroller();
     const top = gridTop() + focusRow * TABLE_ROW_HEIGHT;
     // The header covers the first row's height at the top of the view.
@@ -396,9 +397,9 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     },
     scrollToPosition(line) {
       if (!table || table.rows === 0) return;
-      const row = Math.min(table.rows - 1, Math.max(0, countAtMost(table.rowLines, line) - 1));
+      const row = clamp(countAtMost(table.rowLines, line) - 1, 0, table.rows - 1);
       const span = lineOf(row + 1) - lineOf(row);
-      const at = row + (span > 0 ? Math.min(1, Math.max(0, (line - lineOf(row)) / span)) : 0);
+      const at = row + (span > 0 ? clamp01((line - lineOf(row)) / span) : 0);
       scroller().scrollTop = gridTop() + Math.max(0, at - first) * TABLE_ROW_HEIGHT;
       draw();
     },

@@ -15,13 +15,15 @@ import {
   selectSelectionMatches,
   setSearchQuery,
 } from '@codemirror/search';
-import { Annotation, Compartment, EditorSelection, EditorState, Transaction, type Extension } from '@codemirror/state';
+import { Annotation, Compartment, EditorSelection, EditorState, Transaction, type Extension, type Text } from '@codemirror/state';
 import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers, rectangularSelection, type KeyBinding } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import { takenByDesktop } from '../../shared/desktop-keys';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import { logLevels } from './log-view';
 import { sourceOutline } from './source-outline';
+import { clamp, clamp01 } from '../../shared/math';
+import type { FindResult } from '../../shared/find';
 
 /** `markdown` and `log` are built in; any other name is a grammar from `@codemirror/language-data`. */
 export type SourceLanguage = 'markdown' | 'log' | (string & {}) | null;
@@ -30,13 +32,6 @@ export interface FindOptions {
   caseSensitive: boolean;
   /** Start at this 1-based source line instead of the reading position (a match from find in all tabs). */
   line?: number | undefined;
-}
-
-/** Where find is: the 1-based current match (0 without one) of `total`, which stops at a cap. */
-export interface FindResult {
-  current: number;
-  total: number;
-  capped: boolean;
 }
 
 /** How close to the end still counts as at the end. */
@@ -126,6 +121,9 @@ const theme = EditorView.theme({
 
 /** Marks the file's own text arriving (`setText`), which isn't an edit and can't be undone. */
 const fromFile = Annotation.define<boolean>();
+
+/** A line number within the document's lines. */
+const lineIn = (doc: Text, line: number) => clamp(line, 1, doc.lines);
 
 /**
  * Read-only, or editing: undo history and the editing keys, before the reading keys. The window's
@@ -314,7 +312,7 @@ export function createSourceView(options: {
       }
       recount();
       // From the given line, else from the reading position.
-      const start = view.state.doc.line(line === undefined ? topLine() : Math.min(Math.max(line, 1), view.state.doc.lines)).from;
+      const start = view.state.doc.line(line === undefined ? topLine() : lineIn(view.state.doc, line)).from;
       const first = active.getCursor(view.state, start).next();
       const match = first.done ? active.getCursor(view.state).next() : first;
       if (!match.done) reveal(match.value.from, match.value.to);
@@ -382,12 +380,12 @@ export function createSourceView(options: {
     topPosition() {
       const height = viewportTop();
       const block = view.lineBlockAtHeight(height);
-      const into = block.height > 0 ? Math.min(1, Math.max(0, (height - block.top) / block.height)) : 0;
+      const into = block.height > 0 ? clamp01((height - block.top) / block.height) : 0;
       return view.state.doc.lineAt(block.from).number + into;
     },
     scrollToPosition(position) {
       const { doc } = view.state;
-      const number = Math.min(Math.max(Math.floor(position), 1), doc.lines);
+      const number = lineIn(doc, Math.floor(position));
       const block = view.lineBlockAt(doc.line(number).from);
       const into = number === Math.floor(position) ? position - number : 0;
       // The document starts this far down the scrolled content (the editor's top padding).
@@ -395,11 +393,11 @@ export function createSourceView(options: {
       view.scrollDOM.scrollTop = start + block.top + into * block.height;
     },
     scrollToLine(line) {
-      const target = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines));
+      const target = view.state.doc.line(lineIn(view.state.doc, line));
       view.dispatch({ effects: EditorView.scrollIntoView(target.from, { y: 'start', yMargin: 0 }) });
     },
     select(line, column) {
-      const target = view.state.doc.line(Math.min(Math.max(line, 1), view.state.doc.lines));
+      const target = view.state.doc.line(lineIn(view.state.doc, line));
       const at = Math.min(target.from + Math.max(column, 1) - 1, target.to);
       view.dispatch({ selection: { anchor: at }, effects: EditorView.scrollIntoView(at, { y: 'center' }) });
     },

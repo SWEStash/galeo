@@ -1,3 +1,5 @@
+import { errorMessage } from './errors';
+
 // The JSON reader behind the tree view (ADR-018). `JSON.parse` decides whether the text is JSON;
 // an own scanner then indexes it, since `JSON.parse` gives no positions: per node, typed arrays of
 // spans into the text, never objects built from its keys (so `__proto__` is only ever data). When
@@ -278,7 +280,7 @@ export function indexJson(text: string, limits: JsonLimits = JSON_LIMITS): JsonP
   try {
     JSON.parse(text);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     const found = scan(text, limits, false);
     // Should the two ever disagree, V8's position (when it names one) or the end of the text.
     const at = found.state === 'error' ? found.at : Number(/at position (\d+)/.exec(message)?.[1] ?? text.length);

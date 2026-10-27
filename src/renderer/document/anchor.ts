@@ -1,6 +1,7 @@
 // Mapping reading positions between the rendered view and the source view through the
 // `data-src-line` of rendered blocks (ADR-003), and keeping a tab's place across re-renders (ADR-002).
 import type { ScrollAnchor } from '../../shared/tabs';
+import { clamp01 } from '../../shared/math';
 
 interface BlockBox {
   line: number;
@@ -47,7 +48,7 @@ export function anchorAt(blocks: readonly PlacedBlock[], scroll: ScrollState): S
     line: block?.line ?? 1,
     offset: block ? scroll.top - block.top : 0,
     heading,
-    fraction: range > 0 ? Math.min(1, Math.max(0, scroll.top / range)) : 0,
+    fraction: range > 0 ? clamp01(scroll.top / range) : 0,
   };
 }
 

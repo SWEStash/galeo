@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Autocomplete, Dialog, Input, Label, ListBox, ListBoxItem, Modal, ModalOverlay, TextField, useFilter, type Key } from 'react-aria-components';
 import type { Platform } from '../../shared/keymap';
 import { paletteEntries, type PaletteEntry } from './entries';
+import { plural } from '../../shared/words';
 
 /**
  * The command palette (Ctrl+Shift+P, UX §5): every command by name, with its keys. Enter runs the
@@ -70,7 +71,7 @@ export function Palette({ platform, onChoose, onClose }: { platform: Platform; o
               </ListBox>
             </Autocomplete>
             <span className="visually-hidden" role="status" data-testid="palette-count">
-              {`${shown.length} ${shown.length === 1 ? 'command' : 'commands'}`}
+              {plural(shown.length, 'command', 'commands')}
             </span>
           </div>
         </Dialog>

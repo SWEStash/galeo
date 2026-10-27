@@ -12,6 +12,11 @@ export class FsError extends Error {
   }
 }
 
+/** The path isn't there. */
+export function isMissing(error: unknown): error is FsError {
+  return error instanceof FsError && error.code === 'ENOENT';
+}
+
 export type EntryKind = 'file' | 'directory' | 'symlink' | 'other';
 
 export interface FileStat {

@@ -19,6 +19,7 @@ import { tabLabels } from '../../shared/tab-labels';
 import type { TabView } from '../../shared/tabs';
 import { editors } from '../edit/editors';
 import { keepCaretKeys } from '../overlay-keys';
+import { plural } from '../../shared/words';
 
 /** Typing pauses this long before the window's tabs are searched. */
 const DEBOUNCE_MS = 150;
@@ -44,7 +45,6 @@ interface Search {
   result: Extract<FindAllResult, { kind: 'done' }>;
 }
 
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 /**
  * Find in all tabs (ADR-024): a field over the source text of this window's tabs, as main searched

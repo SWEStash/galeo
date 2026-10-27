@@ -25,6 +25,7 @@ import {
 import { ACCENTS, accentOf } from '../../shared/accents';
 import type { PreviousSession, ProfileRefusal, ProfileResult, ProfilesState } from '../../shared/contracts';
 import { useCommands } from '../commands/useCommands';
+import { plural } from '../../shared/words';
 
 const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -118,7 +119,7 @@ export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout:
               <MenuSection>
                 <Header className="menu-header">Restore previous session</Header>
                 {previous.map((session) => {
-                  const tabs = `${session.tabs} ${session.tabs === 1 ? 'tab' : 'tabs'}${session.windows > 1 ? ` in ${session.windows} windows` : ''}`;
+                  const tabs = `${plural(session.tabs, 'tab', 'tabs')}${session.windows > 1 ? ` in ${session.windows} windows` : ''}`;
                   return (
                     <MenuItem key={session.snapshot} id={`restore:${session.snapshot}`} className="menu-item" textValue={`${WHEN.format(session.savedAt)}, ${tabs}`}>
                       <Text slot="label" className="menu-label">

@@ -18,6 +18,7 @@ import {
 import type { Platform } from '../../shared/keymap';
 import type { QuickOpenEntry, QuickOpenResults } from '../../shared/quick-open';
 import { keepCaretKeys } from '../overlay-keys';
+import { plural } from '../../shared/words';
 
 /**
  * Quick open (UX F8): a field over main's results, open tabs and recent files first, then the
@@ -169,7 +170,7 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
               {filled}
             </span>
             <span className="visually-hidden" role="status" data-testid="quick-open-count">
-              {results ? `${count} ${count === 1 ? 'result' : 'results'}${searching ? ', searching' : ''}` : ''}
+              {results ? `${plural(count, 'result', 'results')}${searching ? ', searching' : ''}` : ''}
             </span>
           </div>
         </Dialog>

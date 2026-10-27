@@ -1,6 +1,7 @@
 import type { DocumentRecord } from '../../shared/documents';
 import type { ReaderWidth, ScrollAnchor, TabSnapshot, TabView, TabViewState } from '../../shared/tabs';
 import type { WhatwgEncoding } from '../text/decode';
+import { clamp } from '../../shared/math';
 
 /**
  * A place in a tab's history: a file, where a link pointed in it (an anchor, or the top), and
@@ -281,7 +282,7 @@ export class TabRegistry {
     if (!this.owned(id, window)) return false;
     const order = this.orderOf(window);
     order.splice(order.indexOf(id), 1);
-    order.splice(Math.max(0, Math.min(position, order.length)), 0, id);
+    order.splice(clamp(position, 0, order.length), 0, id);
     this.changed(window);
     return true;
   }
@@ -298,7 +299,7 @@ export class TabRegistry {
     if (this.active.get(from) === id) this.active.delete(from);
     record.window = to;
     const target = this.orderOf(to);
-    target.splice(Math.max(0, Math.min(position, target.length)), 0, id);
+    target.splice(clamp(position, 0, target.length), 0, id);
     this.active.set(to, id);
     this.changed(from);
     this.changed(to);

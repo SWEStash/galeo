@@ -2,6 +2,7 @@
 // and so which rows are visible, each row's label, place among its siblings and source line, and
 // the path that names it. Built on the worker's index; nothing here walks the document as objects.
 import { keyOf, scalarText, typeOf, type JsonTree, type JsonType } from '../../shared/json-index';
+import { plural } from '../../shared/words';
 
 interface RowParts {
   key: string | null;
@@ -75,7 +76,6 @@ function countAtMost(values: Uint32Array, value: number): number {
   return low;
 }
 
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export function createTreeModel(text: string, tree: JsonTree): TreeModel {
   const { nodes, parents, ends, counts, places } = tree;

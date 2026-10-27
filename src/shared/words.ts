@@ -24,3 +24,8 @@ export function readingTime(words: number): string | null {
   const minutes = Math.round(words / WORDS_PER_MINUTE);
   return minutes === 0 ? '< 1 min' : `${minutes} min`;
 }
+
+/** A count and its noun: `1 tab`, `3 tabs`. */
+export function plural(count: number, one: string, many: string): string {
+  return `${count} ${count === 1 ? one : many}`;
+}

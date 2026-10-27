@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { PreviousSession } from '../../shared/contracts';
 import type { Platform } from '../../shared/keymap';
 import { fileName } from '../../shared/paths';
+import { plural } from '../../shared/words';
 
 const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -62,7 +63,7 @@ export function EmptyWindow({ platform }: { platform: Platform }) {
                 <button type="button" className="empty-window-item" onClick={() => void window.galeo.session.restorePrevious(session.snapshot)}>
                   <span>{WHEN.format(session.savedAt)}</span>
                   <span className="empty-window-folder">
-                    {session.tabs} {session.tabs === 1 ? 'tab' : 'tabs'}
+                    {plural(session.tabs, 'tab', 'tabs')}
                     {session.windows > 1 ? ` in ${session.windows} windows` : ''}
                   </span>
                 </button>

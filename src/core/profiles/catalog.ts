@@ -1,6 +1,6 @@
 import { joinPath } from '../../shared/paths';
 import type { SettingsNotice } from '../../shared/settings';
-import { FsError, type FileSystem } from '../ports';
+import { isMissing, type FileSystem } from '../ports';
 import { ConfigFile } from '../settings/config-file';
 import { kindOf, readJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
 import { CONFIG_MAX_BYTES, SETTINGS_VERSION, type ProfileFile } from '../settings/profile-settings';
@@ -110,7 +110,7 @@ export class ProfileCatalog {
         if (entry.kind === 'directory' && isProfileId(entry.name)) ids.push(entry.name);
       }
     } catch (error) {
-      if (!(error instanceof FsError && error.code === 'ENOENT')) throw error;
+      if (!isMissing(error)) throw error;
     }
     return ids;
   }

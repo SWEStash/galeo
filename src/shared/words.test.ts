@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countWords, readingTime } from './words';
+import { countWords, plural, readingTime } from './words';
 
 describe('countWords', () => {
   it('counts runs of letters or digits between spaces and punctuation', () => {
@@ -37,5 +37,13 @@ describe('readingTime', () => {
     expect(readingTime(230)).toBe('1 min');
     expect(readingTime(1380)).toBe('6 min');
     expect(readingTime(13_800)).toBe('60 min');
+  });
+});
+
+describe('plural', () => {
+  it('counts in the singular only for one', () => {
+    expect(plural(1, 'tab', 'tabs')).toBe('1 tab');
+    expect(plural(0, 'tab', 'tabs')).toBe('0 tabs');
+    expect(plural(3, 'key', 'keys')).toBe('3 keys');
   });
 });

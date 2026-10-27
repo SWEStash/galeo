@@ -1,6 +1,6 @@
 import { joinPath } from '../../shared/paths';
 import type { Settings, SettingsNotice, SettingsOverrides } from '../../shared/settings';
-import { FsError, type FileSystem, type FileWatcher, type Unsubscribe } from '../ports';
+import { FsError, isMissing, type FileSystem, type FileWatcher, type Unsubscribe } from '../ports';
 import { isProfileId } from '../profiles/names';
 import { ConfigFile } from './config-file';
 import type { Parse, Utf8 } from './json-file';
@@ -179,7 +179,7 @@ export class ProfileSettings {
       this.cssValue = { ...this.cssValue, [key]: this.deps.utf8.decode(await this.deps.fs.readFile(path, { maxBytes: CONFIG_MAX_BYTES })) };
       return null;
     } catch (error) {
-      if (error instanceof FsError && error.code === 'ENOENT') {
+      if (isMissing(error)) {
         this.cssValue = { ...this.cssValue, [key]: '' };
         return null;
       }

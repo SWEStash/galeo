@@ -16,6 +16,7 @@ import {
 } from 'react-aria-components';
 import type { TabHit, TabSearchResults } from '../../shared/tabs';
 import { keepCaretKeys } from '../overlay-keys';
+import { plural } from '../../shared/words';
 
 interface Row extends TabHit {
   /** Unique in the list: an open tab and a closed one are told apart. */
@@ -130,7 +131,7 @@ export function TabSearch({ onShow, onReopen, onClose }: { onShow: (id: string) 
               </ListBox>
             </Autocomplete>
             <span className="visually-hidden" role="status" data-testid="tab-search-count">
-              {results ? `${count} ${count === 1 ? 'tab' : 'tabs'}` : ''}
+              {results ? plural(count, 'tab', 'tabs') : ''}
             </span>
           </div>
         </Dialog>

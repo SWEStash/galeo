@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { FindResult } from './source-view';
+import type { FindResult } from '../../shared/find';
 
 export interface FindBarProps {
   result: FindResult;

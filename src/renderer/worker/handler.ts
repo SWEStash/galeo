@@ -2,6 +2,7 @@ import { parseCsv, type CsvParse, type Separator } from '../../shared/csv';
 import type { WorkerFormat } from '../../shared/formats';
 import { indexJson, type JsonParse } from '../../shared/json-index';
 import type { Renderer, RenderResult } from './pipeline/render';
+import { errorMessage } from '../../shared/errors';
 
 /**
  * Window → worker: one job. `kind` says which: a Markdown or MDX `article` (ADR-003's format
@@ -72,7 +73,7 @@ export function createMessageHandler(
       reply({ type: 'rendered', id: message.id, result: await (await renderer).markdown(message.text, { cache: message.noCache !== true, format: message.format }) });
     } catch (error) {
       const line = (error as { line?: unknown } | null)?.line;
-      reply({ type: 'failed', id: message.id, message: error instanceof Error ? error.message : String(error), ...(typeof line === 'number' ? { line } : {}) });
+      reply({ type: 'failed', id: message.id, message: errorMessage(error), ...(typeof line === 'number' ? { line } : {}) });
     }
   };
 }
