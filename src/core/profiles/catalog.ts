@@ -9,13 +9,13 @@ import { isProfileId, validateName, type NameProblem } from './names';
 export const DEFAULT_PROFILE = 'default';
 
 /** A profile as the app shows it: its id, display name and accent colour (null: the default one). */
-export interface Profile {
+interface Profile {
   id: string;
   name: string;
   accent: string | null;
 }
 
-export interface ProfileCatalogDeps {
+interface ProfileCatalogDeps {
   fs: FileSystem;
   utf8: Utf8;
   configDir: string;
@@ -24,10 +24,10 @@ export interface ProfileCatalogDeps {
 }
 
 /** Why a name can't be used: see `validateName`, or another profile has it (ignoring case). */
-export type NameRefusal = NameProblem | 'taken';
+type NameRefusal = NameProblem | 'taken';
 
-export type Created = { ok: true; profile: Profile } | { ok: false; reason: NameRefusal };
-export type Updated = Created | { ok: false; reason: 'invalid-file'; notice: SettingsNotice };
+type Created = { ok: true; profile: Profile } | { ok: false; reason: NameRefusal };
+type Updated = Created | { ok: false; reason: 'invalid-file'; notice: SettingsNotice };
 
 /**
  * The profiles on disk (ADR-005): one folder per id under `profiles/` in the config directory,

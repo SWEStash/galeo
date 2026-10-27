@@ -1,6 +1,6 @@
 import { CHANNELS, EVENTS, type GaleoApi, type Channel, type EventName, type StartInfo } from './ipc';
 
-export type Invoke = (channel: Channel, args: unknown[]) => Promise<unknown>;
+type Invoke = (channel: Channel, args: unknown[]) => Promise<unknown>;
 /** Calls `listener` with each payload of `event` until the returned function is called. */
 export type Subscribe = (event: EventName, listener: (payload: never) => void) => () => void;
 

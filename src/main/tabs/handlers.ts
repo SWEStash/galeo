@@ -30,7 +30,7 @@ type TabChannels =
   | 'tabs.moveTo'
   | 'tabs.windows';
 
-export interface TabHandlerDeps {
+interface TabHandlerDeps {
   tabs: TabRegistry;
   warm: WarmTabs;
   reads: ReadIdentities;

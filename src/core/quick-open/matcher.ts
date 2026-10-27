@@ -2,7 +2,7 @@
 // so that letters in the file name, letters in a row and letters that start words rank first.
 // The scoring follows the well-known fzy recurrence (optimal alignment by dynamic programming).
 
-export interface PathMatch {
+interface PathMatch {
   path: string;
   score: number;
   /** Indices in `path` of the matched letters, for highlighting. */

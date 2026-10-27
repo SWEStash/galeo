@@ -25,7 +25,7 @@ const REFUSALS: Record<RefusalReason, string> = {
   'open-failed': 'No app could open this link',
 };
 
-export interface TabDocumentProps {
+interface TabDocumentProps {
   id: string;
   active: boolean;
   /** False while hibernated: nothing is read or kept (ADR-002). */

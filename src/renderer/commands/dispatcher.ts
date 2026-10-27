@@ -1,6 +1,6 @@
 import { commandFor, tabNumberFor, type Command, type Platform } from '../../shared/keymap';
 
-export interface CommandContext {
+interface CommandContext {
   /** The key was pressed in a text field (End and Alt+arrows edit the text there). */
   typing: boolean;
   /** The tab a "go to tab" key names, 1 to 8. */

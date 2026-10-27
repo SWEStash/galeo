@@ -18,7 +18,7 @@ export interface CsvLimits {
 }
 
 /** The starting values (ADR-018 "Limits"): 10M fields' offsets are 40 MB; 10,000 columns still scroll sideways well. */
-export const CSV_LIMITS: CsvLimits = { rows: 1_000_000, fields: 10_000_000, columns: 10_000 };
+const CSV_LIMITS: CsvLimits = { rows: 1_000_000, fields: 10_000_000, columns: 10_000 };
 
 export interface CsvTable {
   separator: Separator;

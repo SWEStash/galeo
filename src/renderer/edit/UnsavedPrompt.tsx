@@ -6,7 +6,7 @@ import { editors } from './editors';
 type Choice = 'save' | 'discard' | 'cancel';
 
 /** Asks about one tab's unsaved changes; true once they are saved or discarded, false on Cancel. */
-export type ConfirmUnsaved = (id: string, name: string) => Promise<boolean>;
+type ConfirmUnsaved = (id: string, name: string) => Promise<boolean>;
 
 const PromptContext = createContext<ConfirmUnsaved | null>(null);
 

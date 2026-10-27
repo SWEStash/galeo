@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { DocumentContent } from '../../shared/contracts';
 import { unlessClosed } from '../tabs/closed-tab';
 
-export interface OpenDocument {
+interface OpenDocument {
   content: DocumentContent;
   /** Which navigation this read belongs to: a new one starts the document's state afresh. */
   navigation: number;

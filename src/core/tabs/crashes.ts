@@ -7,7 +7,7 @@ const LOOP_CRASHES = 3;
  * After a crash: bring the window back with its tabs (`reload`), show it the crash-loop message
  * instead of its tabs (`give-up`), or leave it down: the message's own page crashed (`stay-down`).
  */
-export type AfterCrash = 'reload' | 'give-up' | 'stay-down';
+type AfterCrash = 'reload' | 'give-up' | 'stay-down';
 
 /**
  * Crash recovery (ADR-002): which tab each window was rendering when its renderer went away (its

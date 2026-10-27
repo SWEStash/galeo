@@ -12,7 +12,7 @@ type Settled =
   /** `slow`: over the render budget; `cancelled`: by the reader (ADR-020); `error`: the worker broke. */
   | { status: 'failed'; reason: 'slow' | 'cancelled' | 'error' };
 
-export type JsonTreeState = (
+type JsonTreeState = (
   | { status: 'idle' }
   /** `model` is the last tree's while a new version of the text is read. */
   | { status: 'pending'; model: TreeModel | null }

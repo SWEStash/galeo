@@ -14,13 +14,13 @@ const DIR_MODE = 0o700;
 type File = 'global' | 'profile' | 'global-css' | 'profile-css';
 
 /** The user's CSS for documents (ADR-005): the global file, then the profile's. */
-export interface CustomCss {
+interface CustomCss {
   global: string;
   profile: string;
 }
 
 /** The profile's own name and accent colour, as `profile.json` says. */
-export interface ProfileIdentity {
+interface ProfileIdentity {
   name?: string;
   accent?: string;
 }
@@ -32,7 +32,7 @@ export interface ProfileFile {
   settings?: SettingsOverrides;
 }
 
-export interface ProfileSettingsDeps {
+interface ProfileSettingsDeps {
   fs: FileSystem;
   utf8: Utf8;
   watcher: FileWatcher;

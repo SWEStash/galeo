@@ -1,4 +1,4 @@
-export interface WarmLimits {
+interface WarmLimits {
   /** Tabs kept rendered besides the active one. */
   count: number;
   /** Rendered weight the warm tabs may hold together. */

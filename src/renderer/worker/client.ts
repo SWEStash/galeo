@@ -5,7 +5,7 @@ import type { RenderRequest, WorkerReply } from './handler';
 import type { RenderResult } from './pipeline/render';
 
 /** The part of `Worker` the client uses. */
-export interface WorkerPort extends EventTarget {
+interface WorkerPort extends EventTarget {
   postMessage(message: RenderRequest): void;
   terminate(): void;
 }

@@ -19,7 +19,7 @@ const MIME_TYPES = [
   'application/xml', 'text/x-patch', 'text/x-makefile',
 ];
 
-export type LauncherFiles =
+type LauncherFiles =
   | {
       ok: true;
       bin: { path: string; content: string };

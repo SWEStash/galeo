@@ -1,7 +1,7 @@
 import { COMMANDS, formatKeys } from '../../shared/commands';
 import { keymap, type Command, type Platform, type WindowCommand } from '../../shared/keymap';
 
-export type PaletteAction =
+type PaletteAction =
   | { kind: 'command'; command: Command; tabNumber?: number }
   | { kind: 'main'; command: WindowCommand }
   /** A capability (ADR-004): the palette names its key and grants nothing. */

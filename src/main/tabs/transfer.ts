@@ -3,7 +3,7 @@ import type { CrashRecovery } from '../../core/tabs/crashes';
 import type { WarmTabs } from '../../core/tabs/lifecycle';
 import type { TabRegistry } from '../../core/tabs/registry';
 
-export interface TabMoverDeps {
+interface TabMoverDeps {
   tabs: TabRegistry;
   grants: Pick<EditGrants, 'transfer'>;
   warm: Pick<WarmTabs, 'forget' | 'activated'>;

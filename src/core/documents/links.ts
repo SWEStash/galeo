@@ -12,7 +12,7 @@ import type { HistoryEntry, TabRegistry } from '../tabs/registry';
 /** Extraction runs in a worker thread; hostile Markdown gets this long before it's abandoned. */
 const REFERENCES_TIMEOUT_MS = 2000;
 
-export interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
+interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
   records: TabRegistry;
   /** The reader's input: following a link spends a credit of it (threat T6). */
   input: Pick<InputCredits, 'spend'>;

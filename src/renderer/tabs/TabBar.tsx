@@ -5,7 +5,7 @@ import type { TabStore, TabsView } from './store';
 import { overflowEdges, wheelScroll } from './strip';
 import { TabStrip } from './TabStrip';
 
-export const SIDE_PANEL_ID = 'side-tab-panel';
+const SIDE_PANEL_ID = 'side-tab-panel';
 
 /**
  * The title bar and the window's tabs (UX §2). With the tabs on top it is the tab bar: an ARIA tablist

@@ -3,7 +3,7 @@ import type { TabRegistry } from '../tabs/registry';
 import type { SessionFile, WindowBounds } from './model';
 import { SaveScheduler } from './scheduler';
 
-export interface SessionKeeperDeps {
+interface SessionKeeperDeps {
   tabs: TabRegistry;
   clock: Clock;
   save: (session: SessionFile) => Promise<void>;

@@ -14,7 +14,7 @@ import { insertion, spanOf, type Axis } from './strip';
  * How the strip draws its tabs: along the tab bar, as rows of the side panel, or as the collapsed
  * panel's markers (ADR-023).
  */
-export type TabLayout = 'bar' | 'rows' | 'markers';
+type TabLayout = 'bar' | 'rows' | 'markers';
 
 /** A marker the keyboard or the pointer is on: the side panel shows its tooltip beside it. */
 export interface MarkerTip {

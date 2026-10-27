@@ -2,7 +2,7 @@
 // `data-src-line` of rendered blocks (ADR-003), and keeping a tab's place across re-renders (ADR-002).
 import type { ScrollAnchor } from '../../shared/tabs';
 
-export interface BlockBox {
+interface BlockBox {
   line: number;
   top: number;
   bottom: number;
@@ -32,7 +32,7 @@ export interface PlacedBlock extends BlockBox {
 }
 
 /** The scroll container: how far down it is, how tall its content, how tall its viewport. */
-export interface ScrollState {
+interface ScrollState {
   top: number;
   height: number;
   viewport: number;

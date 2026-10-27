@@ -1,6 +1,6 @@
 import type { Clock, Unsubscribe } from '../ports';
 
-export interface SaveSchedulerDeps {
+interface SaveSchedulerDeps {
   clock: Clock;
   save: () => Promise<void>;
   /** Saves this long after the last change. */

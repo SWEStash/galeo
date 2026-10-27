@@ -8,7 +8,7 @@ export type WhatwgEncoding = Exclude<TextEncoding, 'utf-32le' | 'utf-32be'>;
 /** The platform's decoder, injected so core stays free of runtime globals. It must not strip BOMs. */
 export type Decode = (bytes: Uint8Array, encoding: WhatwgEncoding, options: { fatal: boolean }) => string;
 
-export type DecodedText =
+type DecodedText =
   | {
       kind: 'text';
       text: string;

@@ -85,7 +85,7 @@ export function DocumentLoading({ onCancel }: { onCancel?: () => void }) {
   );
 }
 
-export type BannerKind = 'too-large' | 'rows-capped' | 'json-invalid' | 'encoding' | 'render-failed' | 'render-slow' | 'render-cancelled' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
+type BannerKind = 'too-large' | 'rows-capped' | 'json-invalid' | 'encoding' | 'render-failed' | 'render-slow' | 'render-cancelled' | 'syntax-error' | 'preview-failed' | 'preview-slow' | 'preview-syntax' | DiskChange;
 
 /** What happened on disk to a file with unsaved edits (UX F12). */
 export type DiskChange = 'disk-changed' | 'disk-deleted' | 'disk-unreadable';

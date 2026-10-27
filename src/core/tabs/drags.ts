@@ -7,7 +7,7 @@ export const DRAG_MS = 120_000;
 export const SETTLE_MS = 500;
 
 /** One drag, as its window said it ended: settled, it ends unless another window took it first. */
-export interface Drag {
+interface Drag {
   id: string;
   token: string;
   window: number;

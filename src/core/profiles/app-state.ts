@@ -6,7 +6,7 @@ interface AppStateFile {
   lastProfile: string | null;
 }
 
-export interface AppStateDeps {
+interface AppStateDeps {
   fs: FileSystem;
   utf8: Utf8;
   /** `app-state.json` in the state directory. */

@@ -1,6 +1,6 @@
 import type { Decode, TextEncoding } from './decode';
 
-export type LineEnding = 'lf' | 'crlf';
+type LineEnding = 'lf' | 'crlf';
 
 /** How a file's text goes back to bytes: as it was read (ADR-013). */
 export interface Target {
@@ -9,7 +9,7 @@ export interface Target {
   lineEnding: LineEnding;
 }
 
-export type Encoded =
+type Encoded =
   | { kind: 'bytes'; bytes: Uint8Array }
   /** The first character the encoding can't hold, and its line (from 1): nothing is written. */
   | { kind: 'unencodable'; character: string; line: number };

@@ -15,7 +15,7 @@ interface ListedSection extends Omit<QuickOpenSection, 'entries'> {
 /** How many entries a section shows. */
 const SHOWN = { tabs: 50, recentEmpty: 8, recent: 20, repo: 50, path: 50 } as const;
 
-export interface QuickOpenDeps {
+interface QuickOpenDeps {
   fs: Pick<FileSystem, 'readDir' | 'stat'>;
   clock: Clock;
   grants: SelectionGrants;

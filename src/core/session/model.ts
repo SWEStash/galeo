@@ -9,7 +9,7 @@ export interface WindowBounds {
   maximized: boolean;
 }
 
-export interface SessionWindow extends WindowState {
+interface SessionWindow extends WindowState {
   bounds: WindowBounds | null;
 }
 

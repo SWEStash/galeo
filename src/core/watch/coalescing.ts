@@ -1,15 +1,15 @@
 import { FsError, type Clock, type FileSystem, type FileWatcher, type Unsubscribe, type WatchEvent } from '../ports';
 
 /** A burst is delivered once the file has been quiet this long… */
-export const QUIET_MS = 75;
+const QUIET_MS = 75;
 /** …or this long after its first event, whichever comes first. */
-export const MAX_WAIT_MS = 250;
+const MAX_WAIT_MS = 250;
 /** At most one delivery per interval: 4 a second while an agent streams into the file. */
-export const MIN_INTERVAL_MS = 250;
+const MIN_INTERVAL_MS = 250;
 /** How often a file is polled while its folder can't be watched. */
-export const POLL_MS = 1000;
+const POLL_MS = 1000;
 
-export interface CoalescingWatcherDeps {
+interface CoalescingWatcherDeps {
   inner: FileWatcher;
   clock: Clock;
   fs: Pick<FileSystem, 'stat'>;

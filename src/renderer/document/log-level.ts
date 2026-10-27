@@ -27,7 +27,7 @@ const PATTERNS: { pattern: RegExp; level: (text: string) => LogLevel | undefined
   { pattern: /^(<[0-7]>)/d, level: (text) => SYSLOG[Number(text[1])] },
 ];
 
-export interface FoundLevel {
+interface FoundLevel {
   level: LogLevel;
   /** Where the level's own text is on the line. */
   from: number;

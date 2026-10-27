@@ -3,7 +3,7 @@
 // the path that names it. Built on the worker's index; nothing here walks the document as objects.
 import { keyOf, scalarText, typeOf, type JsonTree, type JsonType } from '../../shared/json-index';
 
-export interface RowParts {
+interface RowParts {
   key: string | null;
   value: string;
   type: JsonType;

@@ -51,9 +51,9 @@ export interface TabsView {
 }
 
 /** How long a tab shows that it reloaded. */
-export const RELOADED_MS = 1000;
+const RELOADED_MS = 1000;
 
-export type TabsApi = Pick<
+type TabsApi = Pick<
   GaleoApi['tabs'],
   | 'snapshot'
   | 'activated'

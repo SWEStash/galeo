@@ -2,7 +2,7 @@ import { findLevel, HEAD_CHARS, type LogLevel } from './log-level';
 
 export type LogPart = 'time' | `level-${LogLevel}` | 'key';
 
-export interface LogSpan {
+interface LogSpan {
   from: number;
   to: number;
   kind: LogPart;

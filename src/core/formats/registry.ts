@@ -1,7 +1,7 @@
 import { CODE_LANGUAGES, type FormatId, type ViewMode } from '../../shared/formats';
 import { fileName } from '../../shared/paths';
 
-export interface FormatSpec {
+interface FormatSpec {
   /** Lower-case, with the dot; matched against the end of the file name. */
   extensions: readonly string[];
   /** Names matched whole (lower-case) or by a rule: rotated logs (`app.log.1`), `Dockerfile`. */
@@ -83,7 +83,7 @@ export function detectFormat(path: string): FormatId {
   return 'plain';
 }
 
-export interface ViewChoice {
+interface ViewChoice {
   view: ViewMode;
   banner: 'too-large' | null;
 }

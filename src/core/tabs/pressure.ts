@@ -1,6 +1,6 @@
 import type { Clock, SystemMetrics, Unsubscribe } from '../ports';
 
-export interface MemoryPressureDeps {
+interface MemoryPressureDeps {
   clock: Clock;
   metrics: SystemMetrics;
   intervalMs: number;

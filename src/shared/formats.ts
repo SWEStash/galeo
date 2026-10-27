@@ -2,7 +2,7 @@
 export type FormatId = 'markdown' | 'mdx' | 'text' | 'log' | 'json' | 'jsonl' | 'yaml' | 'toml' | 'csv' | 'tsv' | 'code' | 'plain';
 
 /** What a format's tab can show and do: the shared part of its descriptor (ADR-018). */
-export interface FormatViews {
+interface FormatViews {
   /** Who draws the rendered view: the render worker, the page itself, or nobody (source only). */
   rendered: 'worker' | 'host' | 'none';
   /** The rendered view is reader text (`.txt`): the status bar calls it "Reader". */

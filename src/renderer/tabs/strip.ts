@@ -24,7 +24,7 @@ export function wheelScroll({ deltaX, deltaY, deltaMode }: { deltaX: number; del
 export type Axis = 'x' | 'y';
 
 /** A box's extent along the tabs' axis. */
-export interface Span {
+interface Span {
   start: number;
   end: number;
   size: number;

@@ -1,4 +1,4 @@
-export interface TextParagraph {
+interface TextParagraph {
   /** The paragraph's first source line, for view toggles and scroll anchors. */
   line: number;
   text: string;

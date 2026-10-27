@@ -1,7 +1,7 @@
 import type { Subscribe } from '../shared/contracts/api';
 
 /** The part of `ipcRenderer` subscriptions need. */
-export interface IpcListeners {
+interface IpcListeners {
   on(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
   off(channel: string, listener: (event: unknown, payload: unknown) => void): unknown;
 }

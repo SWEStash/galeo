@@ -26,8 +26,8 @@ export type FindAllTab = { id: string; found: FindInTextResult } | { id: string;
 export type FindAllResult = { kind: 'done'; tabs: FindAllTab[] } | { kind: 'superseded' };
 
 /** The find bar's cap too: past it the count reads "10000+". */
-export const FIND_ALL_CAP = 10_000;
-export const FIND_ALL_HITS = 20;
+const FIND_ALL_CAP = 10_000;
+const FIND_ALL_HITS = 20;
 /** Shorter queries match too much to be worth a search of every tab. */
 export const FIND_ALL_MIN_CHARACTERS = 2;
 const CONTEXT = 40;

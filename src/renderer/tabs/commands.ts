@@ -1,7 +1,7 @@
 import type { Command } from '../../shared/keymap';
 import type { TabsView } from './store';
 
-export type TabAction =
+type TabAction =
   | { kind: 'activate'; id: string }
   | { kind: 'move'; id: string; position: number }
   | { kind: 'close'; id: string }

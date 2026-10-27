@@ -6,7 +6,7 @@ export interface ProfileName {
 
 export type NameProblem = 'empty' | 'too-long' | 'control-character';
 
-export type Resolved =
+type Resolved =
   | { kind: 'existing'; id: string }
   | { kind: 'create'; id: string; name: string }
   | { kind: 'invalid'; reason: NameProblem };

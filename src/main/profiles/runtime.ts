@@ -15,7 +15,7 @@ import { windowBounds } from '../window/factory';
 
 const CLOSED_WINDOWS = 10;
 
-export interface RuntimeDeps {
+interface RuntimeDeps {
   fs: FileSystem;
   utf8: Utf8;
   watcher: FileWatcher;

@@ -13,7 +13,7 @@ interface Shown {
 /** How reading a text ended. */
 type Settled = ({ status: 'ready' } & Shown) | { status: 'too-large' } | { status: 'failed'; reason: FailReason };
 
-export type CsvTableState = (
+type CsvTableState = (
   | { status: 'idle' }
   /** The last table (and its text) stays while a new version of the text is read. */
   | ({ status: 'pending' } & (Shown | { text: null; table: null }))

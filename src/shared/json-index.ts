@@ -18,7 +18,7 @@ export interface JsonLimits {
 }
 
 /** The starting values (ADR-018 "Limits"). */
-export const JSON_LIMITS: JsonLimits = { nodes: 200_000, depth: 1_000 };
+const JSON_LIMITS: JsonLimits = { nodes: 200_000, depth: 1_000 };
 
 /** The nodes in document order: a node's children follow it, and its subtree ends at `ends[node]`. */
 export interface JsonTree {

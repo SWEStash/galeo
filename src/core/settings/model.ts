@@ -30,7 +30,7 @@ export function resolveSettings(global: SettingsOverrides, profile: SettingsOver
 /** Turns a file of version `n` into version `n + 1`. */
 export type Migration = (data: Record<string, unknown>) => Record<string, unknown>;
 
-export type Migrated =
+type Migrated =
   | { kind: 'ok'; data: Record<string, unknown> }
   | { kind: 'newer'; version: number }
   | { kind: 'invalid'; detail: string };

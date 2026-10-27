@@ -3,7 +3,7 @@ import { folderOf } from '../../shared/paths';
 import { FsError, type EntryKind, type FileSystem } from '../ports';
 import { migrate, type Migration } from './model';
 
-export type Parsed<T> = { ok: true; value: T } | { ok: false; detail: string };
+type Parsed<T> = { ok: true; value: T } | { ok: false; detail: string };
 /** Validates a migrated file (main passes its schema, SR-17). `schemaVersion` is still in `data`. */
 export type Parse<T> = (data: unknown) => Parsed<T>;
 
@@ -23,7 +23,7 @@ export interface JsonFileSpec<T> {
   maxBytes: number;
 }
 
-export type JsonRead<T> = { kind: 'ok'; value: T } | { kind: 'missing' } | { kind: 'failed'; notice: SettingsNotice };
+type JsonRead<T> = { kind: 'ok'; value: T } | { kind: 'missing' } | { kind: 'failed'; notice: SettingsNotice };
 
 const DIR_MODE = 0o700;
 const FILE_MODE = 0o600;

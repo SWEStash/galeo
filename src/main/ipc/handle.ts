@@ -23,7 +23,7 @@ export function isTrustedSender(event: IpcEvent, trustedOrigins: ReadonlySet<str
   return origin !== null && trustedOrigins.has(origin);
 }
 
-export interface HandlerOptions<Args extends unknown[], Result, Event extends IpcEvent = IpcEvent> {
+interface HandlerOptions<Args extends unknown[], Result, Event extends IpcEvent = IpcEvent> {
   channel: string;
   schema: ZodType<Args>;
   trustedOrigins: ReadonlySet<string>;

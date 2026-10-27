@@ -7,7 +7,7 @@ import type { Command } from '../../shared/keymap';
 import { schemeFor, type ThemeMode } from '../../shared/settings';
 import { appIcon, hardenedWebPreferences, keymapPlatform, mainKey, titleBarOverlay, windowTitle } from './policy';
 
-export interface WindowOptions {
+interface WindowOptions {
   url: string;
   sandboxed: boolean;
   /** A small fixed-size window for app-level choices, such as "sandbox unavailable". */

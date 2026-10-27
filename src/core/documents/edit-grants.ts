@@ -1,5 +1,5 @@
 /** A dirty tab's text and the version it was loaded from (null: the file was gone), held for a page that crashes. */
-export interface KeptText {
+interface KeptText {
   text: string;
   base: string | null;
 }

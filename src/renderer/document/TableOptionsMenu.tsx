@@ -14,7 +14,7 @@ const COMMANDS: Record<SeparatorChoice, Command> = {
   '|': 'tableSeparatorPipe',
 };
 
-export interface TableOptions {
+interface TableOptions {
   separator: SeparatorChoice;
   /** The separator the table was read with: Auto's pick. */
   found: Separator | null;

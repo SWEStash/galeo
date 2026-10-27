@@ -1,13 +1,13 @@
 import type { SettingsNotice } from '../../shared/settings';
 import { readJsonFile, writeJsonFile, type JsonFileSpec } from './json-file';
 
-export interface ConfigFileDeps<T> extends JsonFileSpec<T> {
+interface ConfigFileDeps<T> extends JsonFileSpec<T> {
   path: string;
   /** The value when the file doesn't exist. */
   empty: T;
 }
 
-export interface Loaded<T> {
+interface Loaded<T> {
   value: T;
   notice: SettingsNotice | null;
 }

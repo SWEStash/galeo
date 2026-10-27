@@ -1,6 +1,6 @@
 import { hasScheme, isNetworkPathReference } from '../../shared/markdown/urls';
 
-export type LinkTarget =
+type LinkTarget =
   | { kind: 'anchor'; anchor: string }
   | { kind: 'file'; path: string; anchor: string | null }
   | { kind: 'external'; url: string }

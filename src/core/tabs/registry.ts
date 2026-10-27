@@ -40,7 +40,7 @@ interface Stored {
 }
 
 /** A tab as a session keeps it: its history, where in it, its zoom (absent at 100 %) and reader width. */
-export interface TabState {
+interface TabState {
   entries: HistoryEntry[];
   index: number;
   zoom?: number;

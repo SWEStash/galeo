@@ -20,7 +20,7 @@ export const BUILT_IN_EXCLUDES: readonly string[] = [
   '.cache',
 ];
 
-export interface WalkOptions {
+interface WalkOptions {
   clock: Clock;
   /** Names skipped besides the built-in ones. */
   exclude?: readonly string[];
@@ -36,7 +36,7 @@ export interface WalkEnd {
   truncated: 'files' | 'depth' | 'time' | null;
 }
 
-export const WALK_LIMITS = { maxFiles: 50_000, maxDepth: 32, budgetMs: 3_000, batchSize: 500 } as const;
+const WALK_LIMITS = { maxFiles: 50_000, maxDepth: 32, budgetMs: 3_000, batchSize: 500 } as const;
 
 /**
  * The files under `root`, as `/`-separated paths relative to it, in batches, shallow ones first.

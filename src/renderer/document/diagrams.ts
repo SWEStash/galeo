@@ -32,7 +32,7 @@ export interface Diagrams {
  * enlarges a diagram; a wide one would otherwise shrink until its labels can't be read (4.6 px
  * seen), so past this it keeps its size and its block scrolls sideways.
  */
-export const MIN_DIAGRAM_SCALE = 0.75;
+const MIN_DIAGRAM_SCALE = 0.75;
 
 // `style A fill:#fff`, `classDef x color:red`, `linkStyle 0 stroke:#333`: not `stroke-width`.
 const OWN_COLOURS = /^\s*(style|classDef|linkStyle)\b.*\b(fill|color|stroke)\s*:/m;

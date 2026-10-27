@@ -4,9 +4,9 @@ import type { Command, Platform } from './keymap';
  * Where a command runs: in the page, in main (window commands, over `window.command`), or only by
  * main's own key (a capability, ADR-004: the palette shows its key instead of running it).
  */
-export type CommandRuns = 'page' | 'main' | 'capability';
+type CommandRuns = 'page' | 'main' | 'capability';
 
-export interface CommandInfo {
+interface CommandInfo {
   /** The palette's name for it (UX §5). */
   label: string;
   group: string;

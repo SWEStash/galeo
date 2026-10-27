@@ -19,7 +19,7 @@ function nest(entries: readonly OutlineEntry[]): OutlineNode[] {
   return roots;
 }
 
-export interface OutlinePanelProps {
+interface OutlinePanelProps {
   entries: readonly OutlineEntry[];
   /** The id of the heading being read, or null. */
   current: string | null;

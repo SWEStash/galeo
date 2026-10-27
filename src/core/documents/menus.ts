@@ -3,7 +3,7 @@ import { canOpenWithDefaultApp } from '../links/open-with';
 import type { Clipboard, FileSystem, MenuItem, OsShell } from '../ports';
 import type { TabRegistry } from '../tabs/registry';
 
-export interface DocumentMenusDeps {
+interface DocumentMenusDeps {
   tabs: TabRegistry;
   fs: FileSystem;
   shell: OsShell;

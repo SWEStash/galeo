@@ -9,7 +9,7 @@ import { loadMathStyles } from './host';
  * `cancelled`: by the reader (ADR-020); `syntax`: the text doesn't parse (MDX), at `syntax.line`;
  * `error`: the render broke.
  */
-export type FailReason = 'slow' | 'cancelled' | 'syntax' | 'error';
+type FailReason = 'slow' | 'cancelled' | 'syntax' | 'error';
 
 /** Where a text that doesn't parse goes wrong. */
 export interface SyntaxProblem {
@@ -17,7 +17,7 @@ export interface SyntaxProblem {
   message: string;
 }
 
-export type RenderState = (
+type RenderState = (
   | { status: 'idle'; html: null }
   /** `html` is the last render's while the next one runs (a changed file keeps showing until then). */
   | { status: 'pending'; html: string | null }

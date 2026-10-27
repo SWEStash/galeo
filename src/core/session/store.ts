@@ -9,7 +9,7 @@ import { SESSION_VERSION, type SessionFile } from './model';
 const SESSION_MAX_BYTES = 4 * 1024 * 1024;
 const SNAPSHOTS = [1, 2, 3] as const;
 
-export interface SessionStoreDeps {
+interface SessionStoreDeps {
   fs: FileSystem;
   utf8: Utf8;
   /** The profile's state folder (`profiles/<id>` in the state directory). */

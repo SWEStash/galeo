@@ -15,9 +15,9 @@ export interface LaunchArgs {
   files: string[];
 }
 
-export type ParseResult = { ok: true; args: LaunchArgs } | { ok: false; error: string };
+type ParseResult = { ok: true; args: LaunchArgs } | { ok: false; error: string };
 
-export interface ParseContext {
+interface ParseContext {
   /** Working directory of the launch that sent these arguments. */
   cwd: string;
   /** True for arguments forwarded from a later launch to the running instance. */

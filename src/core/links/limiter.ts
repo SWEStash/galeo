@@ -6,7 +6,7 @@ const WINDOW_INTERVAL_MS = 1000;
 const BURST_OPENS = 3;
 const BURST_WINDOW_MS = 10_000;
 
-export type OpenDecision = 'open' | 'confirm' | 'too-fast' | 'blocked';
+type OpenDecision = 'open' | 'confirm' | 'too-fast' | 'blocked';
 
 /**
  * Rate limits for handing URLs to the browser, so a document can't turn it into a spam or

@@ -64,7 +64,7 @@ export function titleBarOverlay(scheme: 'light' | 'dark') {
 }
 
 /** The part of Electron's `Input` (from `before-input-event`) key matching needs. */
-export interface KeyInput {
+interface KeyInput {
   type: string;
   key: string;
   control: boolean;

@@ -10,7 +10,7 @@ export interface RecentFile {
 const RECENT_MAX = 200;
 const RECENT_MAX_BYTES = 1024 * 1024;
 
-export interface RecentFilesDeps {
+interface RecentFilesDeps {
   fs: FileSystem;
   utf8: Utf8;
   path: string;

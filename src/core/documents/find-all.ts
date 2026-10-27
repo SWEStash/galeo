@@ -7,7 +7,7 @@ import type { EditGrants } from './edit-grants';
 import { STATE_BY_CODE } from './read';
 
 /** One tab's search; past it the worker is replaced and the tab is "too slow" (SR-14). */
-export const FIND_ALL_TAB_BUDGET_MS = 5000;
+const FIND_ALL_TAB_BUDGET_MS = 5000;
 
 /**
  * Searches a window's tabs for a query (ADR-024): main reads each tab's text, or takes its kept
