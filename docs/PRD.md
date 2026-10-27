@@ -314,6 +314,15 @@ must not obstruct (plain files only, no sidecar metadata).
 - **Remove the command-line launcher.** Settings can remove what "Install command-line launcher"
   added for the AppImage (the `galeo`/`gal` commands, the menu entry and the file types), so that
   deleting the AppImage leaves nothing behind.
+- **Colour in the JSON tree and in logs.** The JSON tree and the log view use the code-highlighting
+  colours, so that the parts of a value or a log line stand apart (added by the owner, 2026-10-26).
+  - AC: The tree shows keys, numbers, `true`, `false` and `null` in one colour and strings in
+    another, as the JSON source view does; the `{3 keys}` and `[2 items]` previews are muted. Light
+    and dark, every colour at 4.5:1.
+  - AC: A log line shows its level word in the level's colour, its timestamp muted and the keys of
+    `key=value` pairs in colour; the text and the level badges stay as they are, so colour is never
+    the only cue and a screen reader reads the same text.
+  - AC: Opening, scrolling and following a log of hundreds of MB stays within its budgets.
 
 ### Could Have
 
@@ -333,8 +342,8 @@ must not obstruct (plain files only, no sidecar metadata).
 ### Won't Have (v0.4)
 
 - Official macOS and Windows support: planned for v0.5 (owner, 2026-10-21).
-- Optional Vim keybindings, spell check in edit mode, ticking task-list checkboxes in the rendered
-  view, and colour in the JSON tree and in logs: a later release (owner, 2026-10-21).
+- Optional Vim keybindings, spell check in edit mode and ticking task-list checkboxes in the
+  rendered view: a later release (owner, 2026-10-21).
 - More diagram engines (Vega-Lite, Graphviz, D2, PlantUML): a later release (owner, 2026-10-21).
 - Drag between windows checked on X11: the owner's desktop has no X11 session; Wayland stays the
   checked platform.
