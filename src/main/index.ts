@@ -16,7 +16,6 @@ import { ExternalOpenLimiter } from '../core/links/limiter';
 import { AppState } from '../core/profiles/app-state';
 import { ProfileCatalog } from '../core/profiles/catalog';
 import { profileIdFor } from '../core/profiles/names';
-import { appImageLauncher, installLauncher } from '../core/desktop/launcher';
 import { ThemeGate } from '../core/desktop/theme-gate';
 import { openFiles } from '../core/routing/open-files';
 import { editToggle } from '../core/documents/edit-toggle';
@@ -52,6 +51,7 @@ import { runFile } from './adapters/run-file';
 import { decodeWithPlatform } from './adapters/text-decoder';
 import { sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
+import { appHandlers, appImagePath } from './app/handlers';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { sendEvent } from './ipc/send';
@@ -209,6 +209,7 @@ function start(initialMode: StartupMode): void {
   // Window ids, the last focused first, across all profiles.
   let focusOrder: number[] = [];
   let quitting = false;
+  const appImage = appImagePath(app.isPackaged, process.env);
   /** What a window's page needs to paint, handed over when the window is created (and in `app.info`). */
   const startInfo = (): StartInfo => ({
     name: app.getName(),
@@ -216,7 +217,7 @@ function start(initialMode: StartupMode): void {
     platform: keymapPlatform(process.platform),
     sandboxed,
     sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
-    appImage: appImagePath() !== null,
+    appImage: appImage !== null,
   });
   // Open once the desktop's theme settings have arrived (set when the app is ready).
   let themeSettled: Promise<void> = Promise.resolve();
@@ -789,44 +790,31 @@ function start(initialMode: StartupMode): void {
     const fonts = process.platform === 'linux' ? new FcListFontCatalog() : new EmptyFontCatalog();
     registerIpc(
       {
-        'app.info': (_args, event) => ({ ...startInfo(), crashLoop: crashes.gaveUp(event.sender.id) }),
-        // Changes beyond the page (a launcher, a profile) only on the reader's input (T6).
-        'app.installLauncher': async (_args, event) => {
-          if (!input.spend(event.sender.id)) throw new Error('no input');
-          const appImage = appImagePath();
-          if (!appImage) throw new Error('not an AppImage');
-          const home = app.getPath('home');
-          const script = utf8.decode(await fs.readFile(path.join(path.dirname(process.execPath), 'gal'), { maxBytes: 64 * 1024 }));
-          const files = appImageLauncher(
-            appImage,
-            {
-              binDir: path.join(home, '.local', 'bin'),
-              applicationsDir: path.join(xdgDataHome(home), 'applications'),
-              iconsDir: path.join(xdgDataHome(home), 'icons'),
-              mimeDir: path.join(xdgDataHome(home), 'mime'),
+        ...appHandlers({
+          info: (windowId) => ({ ...startInfo(), crashLoop: crashes.gaveUp(windowId) }),
+          sandboxChoice: {
+            offered: () => mode.kind === 'sandbox-unavailable',
+            quit: () => app.quit(),
+            proceed: () => {
+              mode = { kind: 'normal' };
+              acceptOpenRequests();
+              // Closed once the launch's window is open: the app quits when its last window closes.
+              void enqueue(async () => choiceWindow?.close()).catch(() => {});
             },
-            script,
-          );
-          if (!files.ok) return files;
-          const icon = await fs.readFile(path.join(process.resourcesPath, 'icon.png'), { maxBytes: 1024 * 1024 }).catch(() => null);
-          const mime = await fs.readFile(path.join(process.resourcesPath, 'mime.xml'), { maxBytes: 64 * 1024 }).catch(() => null);
-          const packageEntries = xdgDataDirs().map((dir) => path.join(dir, 'applications', 'galeo.desktop'));
-          // Fixed program and arguments; the folder is the user's own MIME database.
-          const refreshMime = (database: string) => runFile('update-mime-database', [database], { timeout: 30_000, maxBuffer: 1024 * 1024 }).then(() => undefined);
-          const installed = await installLauncher({ fs, utf8, refreshMime }, files, { icon, mime }, packageEntries);
-          return installed.ok ? { ok: true, bin: files.bin.path } : installed;
-        },
-        'app.resolveSandboxUnavailable': ([choice]) => {
-          if (mode.kind !== 'sandbox-unavailable') throw new Error('sandbox choice not offered');
-          if (choice === 'quit') {
-            app.quit();
-            return;
-          }
-          mode = { kind: 'normal' };
-          acceptOpenRequests();
-          // Closed once the launch's window is open: the app quits when its last window closes.
-          void enqueue(async () => choiceWindow?.close()).catch(() => {});
-        },
+          },
+          launcher: {
+            input,
+            fs,
+            utf8,
+            appImage,
+            home: app.getPath('home'),
+            execDir: path.dirname(process.execPath),
+            resourcesDir: process.resourcesPath,
+            env: process.env,
+            // Fixed program and arguments; the folder is the user's own MIME database.
+            refreshMime: (database) => runFile('update-mime-database', [database], { timeout: 30_000, maxBuffer: 1024 * 1024 }).then(() => undefined),
+          },
+        }),
         'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
         'window.command': ([command], event) => {
           const profile = profileOf(event.sender.id);
@@ -1104,22 +1092,4 @@ function recordBlockedRequest(url: string): void {
   if (app.isPackaged) return;
   const global = globalThis as { __galeoBlockedRequests?: string[] };
   (global.__galeoBlockedRequests ??= []).push(url);
-}
-
-/** The AppImage this packaged run came from (its runtime sets APPIMAGE), or null. */
-function appImagePath(): string | null {
-  const appImage = app.isPackaged ? process.env['APPIMAGE'] : undefined;
-  return appImage && path.isAbsolute(appImage) ? appImage : null;
-}
-
-/** `$XDG_DATA_DIRS`, keeping only absolute entries, else the XDG spec's default. */
-function xdgDataDirs(): string[] {
-  const dirs = (process.env['XDG_DATA_DIRS'] ?? '').split(':').filter((dir) => path.isAbsolute(dir));
-  return dirs.length ? dirs : ['/usr/local/share', '/usr/share'];
-}
-
-/** `$XDG_DATA_HOME`, which the XDG spec says to ignore unless absolute, else `~/.local/share`. */
-function xdgDataHome(home: string): string {
-  const configured = process.env['XDG_DATA_HOME'];
-  return configured && path.isAbsolute(configured) ? configured : path.join(home, '.local', 'share');
 }
