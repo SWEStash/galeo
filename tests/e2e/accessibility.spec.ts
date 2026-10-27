@@ -62,6 +62,21 @@ for (const scheme of SCHEMES) {
       }
     });
 
+    test('the JSON tree', async () => {
+      const dir = tempHome();
+      const file = path.join(dir, 'data.json');
+      writeFileSync(file, JSON.stringify({ name: 'galeo', count: 2, ok: true, none: null, list: [1, 'two'] }));
+      const { app, window, close } = await launchApp(['--', file]);
+      try {
+        await setScheme(app, scheme);
+        await expect(shownPanel(window).locator('.galeo-json-key').first()).toBeVisible();
+        expect(await violations(window, '[data-testid="tab-panel"][data-active="true"]')).toEqual([]);
+      } finally {
+        await close();
+        removeTempHome(dir);
+      }
+    });
+
     test('document states and banners', async () => {
       const dir = mkdtempSync(path.join(tmpdir(), 'galeo-a11y-'));
       const big = path.join(dir, 'big.md');

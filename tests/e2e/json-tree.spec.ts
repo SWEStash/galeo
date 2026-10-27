@@ -3,6 +3,7 @@ import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
 import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { tokenColour } from '../helpers/token-colour';
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const tree = (window: Page) => shownDocument(window).locator('[role=tree]');
@@ -139,3 +140,31 @@ test('JSON over 10 MB opens as source, with no Render anyway; Ctrl+F in the tree
     removeTempHome(home);
   }
 });
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`keys and values take the JSON source view's colours (${scheme})`, async () => {
+    const { home, files } = setUp({ 'data.json': '{"name": "galeo", "count": 2, "ok": true, "none": null, "list": [1]}' });
+    const { app, window, close } = await launchApp(['--', files['data.json']!], { home });
+    try {
+      await app.evaluate(({ nativeTheme }, value) => (nativeTheme.themeSource = value), scheme);
+      await expect(window.locator('html')).toHaveAttribute('data-scheme', scheme);
+      await expect(rows(window)).toHaveCount(6);
+      for (const [part, token] of [
+        ['.galeo-json-object', '--galeo-color-muted'],
+        ['.galeo-json-key', '--galeo-syntax-constant'],
+        ['.galeo-json-string', '--galeo-syntax-string'],
+        ['.galeo-json-number', '--galeo-syntax-constant'],
+        ['.galeo-json-true', '--galeo-syntax-constant'],
+        ['.galeo-json-null', '--galeo-syntax-constant'],
+        ['.galeo-json-array', '--galeo-color-muted'],
+      ] as const) {
+        const colours = await tokenColour(shownDocument(window).locator(part).first(), token);
+        expect(colours.shown, part).toBe(colours.token);
+        expect(colours.token, `${token} differs from the row's text`).not.toBe(colours.around);
+      }
+    } finally {
+      await close();
+      removeTempHome(home);
+    }
+  });
+}

@@ -1,6 +1,8 @@
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { launchApp } from '../helpers/launch';
+import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { tokenColour } from '../helpers/token-colour';
 
 const fixture = (name: string) => path.resolve(import.meta.dirname, '../fixtures/docs', name);
 
@@ -38,3 +40,34 @@ test('a log shows level badges and follows its end on End until scrolled up', as
     await close();
   }
 });
+
+for (const scheme of ['light', 'dark'] as const) {
+  test(`a log line's timestamp, level word and keys take their colours, the text unchanged (${scheme})`, async () => {
+    const home = tempHome();
+    const file = path.join(home, 'service.log');
+    const line = '2026-10-26T12:00:01Z ERROR worker failed code=7 retry=false';
+    writeFileSync(file, `${line}\n`);
+    const { app, window, close } = await launchApp(['--', file], { home });
+    try {
+      await app.evaluate(({ nativeTheme }, value) => (nativeTheme.themeSource = value), scheme);
+      await expect(window.locator('html')).toHaveAttribute('data-scheme', scheme);
+      const document = window.getByTestId('document');
+      await expect(document.locator('.cm-line').first()).toHaveText(line);
+      await expect(document.locator('.galeo-log-badge-error').first()).toHaveText('ERR');
+      for (const [part, text, token] of [
+        ['.galeo-log-time', '2026-10-26T12:00:01Z', '--galeo-color-muted'],
+        ['.galeo-log-word-error', 'ERROR', '--galeo-color-log-error'],
+        ['.galeo-log-key', 'code', '--galeo-syntax-constant'],
+      ] as const) {
+        const span = document.locator(part).first();
+        await expect(span).toHaveText(text);
+        const colours = await tokenColour(span, token);
+        expect(colours.shown, part).toBe(colours.token);
+        expect(colours.token, `${token} differs from the line's text`).not.toBe(colours.around);
+      }
+    } finally {
+      await close();
+      removeTempHome(home);
+    }
+  });
+}
