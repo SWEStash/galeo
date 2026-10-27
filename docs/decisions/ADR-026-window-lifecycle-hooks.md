@@ -32,8 +32,9 @@ window and lands in another (ADR-022).
    what that behaviour needs, and adds its listeners: following bounds, focus order, the close guard, input
    credits, crash recovery. The focus order becomes a small class instead of a variable rewritten in three
    places. Listeners are added in today's order, so events are handled in the same order as before.
-3. **State that only Main keeps for a window** (agreed to close, emptied by a tab move, the dropped folder)
-   lives in one record per window, removed with the window, instead of in three sets and maps.
+3. **State that only Main keeps for a window lives with the code that uses it**: inside the one hook that
+   uses it (agreed to close, in the close guard), or, when several places use it, in a map that registers
+   its cleanup like the registries (emptied by a tab move, the dropped folder).
 4. **The shared registries stay as they are.** Windows are still plain numbers to Core (ADR-025).
 5. The function that opens a window keeps: creating it, adding it to its profile, the perf mark, calling the
    attach functions, and on `closed` running the cleanup list and then stopping the profile if that was its
@@ -43,10 +44,11 @@ window and lands in another (ADR-022).
 
 | Option | Pros | Cons | Verdict |
 |---|---|---|---|
-| **Registered cleanup, attach functions, a small per-window record** | The window code no longer knows each feature; each behaviour unit-tested with its own few dependencies; Core untouched | One cleanup list whose order matters; more small modules in `src/main/window/` | **Chosen** |
+| **Registered cleanup, attach functions, per-window state with the code that uses it** | The window code no longer knows each feature; each behaviour unit-tested with its own few dependencies; Core untouched | One cleanup list whose order matters; more small modules in `src/main/window/` | **Chosen** |
 | One object per window owning all its state | Nothing to clean up: the object goes with the window | A tab move becomes a coordinated move across five owners; lookups without a window and cross-window operations need a global index again; rewrites 11 Core classes, their tests and the main call sites | Rejected |
 | Move the function as is behind a dependencies object | Shorter `index.ts` | The same 29 dependencies behind one object; needs 29 fakes to test | Rejected |
 | Only the cleanup list and the focus-order class | Small | The unrelated handlers stay bundled in one function | Rejected |
+| One record per window for Main's own per-window state | One cleanup for all of it | Every writer outside the window code looks the record up and handles a window that is gone | Rejected (amended 2026-10-27, owner) |
 | A string-keyed event bus | Loose coupling | Loses types and hides the order handlers run in | Rejected |
 
 ## Consequences
