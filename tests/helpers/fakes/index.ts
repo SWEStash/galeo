@@ -5,7 +5,6 @@ export {
   FakeInstanceChannel,
   FakeOsShell,
   FakeSystemMetrics,
-  FakeWindowHost,
   fakeAppPaths,
 } from './recorders';
 export { FakeTaskRunner } from './task-runner';

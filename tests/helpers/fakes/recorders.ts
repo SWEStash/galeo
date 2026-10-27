@@ -2,14 +2,11 @@ import type {
   AppPaths,
   FileWatcher,
   InstanceChannel,
-  MenuItem,
   OpenRequest,
   OsShell,
   SystemMetrics,
   Unsubscribe,
   WatchEvent,
-  WindowHost,
-  WindowId,
 } from '../../../src/core/ports';
 
 /** A listener set with an `emit` for tests to drive events. */
@@ -55,59 +52,6 @@ export class FakeInstanceChannel implements InstanceChannel {
 
   deliver(request: OpenRequest): void {
     this.requests.emit(request);
-  }
-}
-
-export class FakeWindowHost implements WindowHost {
-  readonly windows = new Map<WindowId, { title: string }>();
-  readonly focusCalls: WindowId[] = [];
-  /** The id the next context menu resolves with (null = dismissed). */
-  menuChoice: string | null = null;
-  readonly menus: { id: WindowId; items: readonly MenuItem[] }[] = [];
-  private nextId = 1;
-  private readonly focusEvents = new Emitter<[WindowId]>();
-  private readonly closedEvents = new Emitter<[WindowId]>();
-  private readonly capabilityKeys = new Emitter<[WindowId, string]>();
-
-  create({ title }: { title: string }): WindowId {
-    const id: WindowId = this.nextId++;
-    this.windows.set(id, { title });
-    return id;
-  }
-
-  focus(id: WindowId): void {
-    this.focusCalls.push(id);
-    this.focusEvents.emit(id);
-  }
-
-  close(id: WindowId): void {
-    if (this.windows.delete(id)) this.closedEvents.emit(id);
-  }
-
-  setTitle(id: WindowId, title: string): void {
-    const window = this.windows.get(id);
-    if (window) window.title = title;
-  }
-
-  onFocus(listener: (id: WindowId) => void): Unsubscribe {
-    return this.focusEvents.on(listener);
-  }
-
-  onClosed(listener: (id: WindowId) => void): Unsubscribe {
-    return this.closedEvents.on(listener);
-  }
-
-  onCapabilityKey(listener: (id: WindowId, key: string) => void): Unsubscribe {
-    return this.capabilityKeys.on(listener);
-  }
-
-  pressCapabilityKey(id: WindowId, key: string): void {
-    this.capabilityKeys.emit(id, key);
-  }
-
-  async showContextMenu(id: WindowId, items: readonly MenuItem[]): Promise<string | null> {
-    this.menus.push({ id, items });
-    return this.menuChoice;
   }
 }
 

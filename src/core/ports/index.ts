@@ -6,7 +6,7 @@ export { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem,
 export type { FileWatcher, WatchEvent } from './file-watcher';
 export type { FontCatalog } from './font-catalog';
 export type { InstanceChannel, OpenRequest } from './instance-channel';
+export type { MenuItem } from './menu-item';
 export type { OsShell } from './os-shell';
 export type { SystemMetrics } from './system-metrics';
 export type { TaskResult, TaskRunner } from './task-runner';
-export type { MenuItem, WindowHost, WindowId } from './window-host';
