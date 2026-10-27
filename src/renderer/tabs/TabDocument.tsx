@@ -2,7 +2,6 @@ import type { SeparatorChoice } from '../../shared/csv';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChosenEncoding, FollowResult, HistoryResult } from '../../shared/contracts';
 import type { ImageResult, RefusalReason, SaveResult } from '../../shared/documents';
-import type { Platform } from '../../shared/keymap';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import { DocumentPane, type DocumentPaneProps } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
@@ -38,7 +37,6 @@ export interface TabDocumentProps {
   zoom: number;
   store: TabStore;
   client: RenderClient | null;
-  platform: Platform;
   scheme: ColorScheme;
   onMessage: (message: string) => void;
   /** How tables read without a choice of their own: the settings (ADR-021). */
@@ -80,7 +78,7 @@ interface Arrival {
   position: ScrollAnchor | null;
 }
 
-function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, scheme, onMessage, tableDefaults, findRequest, onFindShown }: TabDocumentProps) {
+function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, onMessage, tableDefaults, findRequest, onFindShown }: TabDocumentProps) {
   // A tab not shown has no layout to keep its place in: it takes a changed file when shown again.
   const [appliedReads, setAppliedReads] = useState(staleReads);
   useEffect(() => {
@@ -211,7 +209,6 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, platform, 
       key={`${id}:${document.navigation}`}
       content={document.content}
       client={client}
-      platform={platform}
       scheme={scheme}
       active={active}
       pendingAnchor={pendingAnchor?.navigation === document.navigation ? pendingAnchor : null}

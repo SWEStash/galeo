@@ -266,7 +266,6 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
                         zoom={view.zooms.get(tab.id) ?? 1}
                         store={store}
                         client={client}
-                        platform={platform}
                         scheme={scheme}
                         onMessage={setMessage}
                         tableDefaults={tableDefaults}

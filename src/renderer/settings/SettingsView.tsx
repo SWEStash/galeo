@@ -397,23 +397,6 @@ function FontSetting({
   );
 }
 
-/** A text setting, written when the field is left or Enter is pressed. */
-function TextSetting({ label, value, onCommit }: { label: string; value: string; onCommit: (value: string) => void }) {
-  const [draft, setDraft] = useState(value);
-  // A value from main (this change, a hand edit, the other scope) replaces the draft in place, keeping focus.
-  useEffect(() => setDraft(value), [value]);
-  const commit = () => {
-    const next = draft.trim();
-    if (next && next !== value) onCommit(next);
-  };
-  return (
-    <TextField className="field" value={draft} onChange={setDraft} onBlur={commit} onKeyDown={(event) => event.key === 'Enter' && commit()}>
-      <Label>{label}</Label>
-      <Input />
-    </TextField>
-  );
-}
-
 /** A list setting, one entry per line, written when the field is left. */
 function ListSetting({ label, hint, value, onCommit }: { label: string; hint: string; value: readonly string[]; onCommit: (value: string[]) => void }) {
   const text = value.join('\n');

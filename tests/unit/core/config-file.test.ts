@@ -5,7 +5,6 @@ import { utf8 } from '../../../src/main/adapters/utf8';
 import { FakeFileSystem } from '../../helpers/fakes';
 
 const PATH = '/cfg/galeo/settings.json';
-const text = (s: string) => new TextEncoder().encode(s);
 
 /** Accepts objects whose values are all numbers; stands in for the real schema. */
 const parse: Parse<Record<string, number>> = (data) => {

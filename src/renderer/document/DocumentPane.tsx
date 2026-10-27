@@ -5,7 +5,6 @@ import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
 import { FORMAT_VIEWS, workerFormat, type ViewMode } from '../../shared/formats';
 import { fileName } from '../../shared/paths';
-import type { Platform } from '../../shared/keymap';
 import { useCommands } from '../commands/useCommands';
 import { OutlinePanel } from '../outline/OutlinePanel';
 import { useOutline } from '../outline/useOutline';
@@ -58,7 +57,6 @@ const NO_MATCHES: FindResult = { current: 0, total: 0, capped: false };
 export interface DocumentPaneProps {
   content: DocumentContent;
   client: RenderClient | null;
-  platform: Platform;
   scheme: ColorScheme;
   /** Only the shown tab's pane hears the keyboard. */
   active: boolean;
@@ -155,7 +153,6 @@ function countLines(text: string): number {
 export function DocumentPane({
   content,
   client,
-  platform,
   scheme,
   active,
   pendingAnchor,
