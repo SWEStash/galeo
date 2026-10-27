@@ -16,8 +16,6 @@ import {
   RadioButton,
   RadioField,
   RadioGroup,
-  SwitchButton,
-  SwitchField,
   TextArea,
   TextField,
 } from 'react-aria-components';
@@ -28,6 +26,7 @@ import { TAB_PANEL_MAX, TAB_PANEL_MIN, type Settings, type SettingsOverrides, ty
 import type { SystemFont } from '../../shared/fonts';
 import type { ReaderWidth } from '../../shared/tabs';
 import { fontStack } from './tokens';
+import { NumberSetting, RadioSetting, SwitchSetting, useDraft } from './fields';
 
 const SOURCE_NAMES = { default: 'Default', global: 'All profiles', profile: 'This profile' } as const;
 
@@ -38,6 +37,17 @@ const SEPARATOR_CHOICES: readonly [SeparatorChoice, string][] = [
   [';', 'Semicolon'],
   ['\t', 'Tab'],
   ['|', 'Pipe'],
+];
+
+const THEME_CHOICES: readonly [ThemeMode, string][] = [
+  ['system', 'System'],
+  ['light', 'Light'],
+  ['dark', 'Dark'],
+];
+
+const TABS_CHOICES: readonly [TabsPosition, string][] = [
+  ['top', 'Top'],
+  ['left', 'Left'],
 ];
 
 /**
@@ -60,8 +70,6 @@ export function SettingsView({
 }) {
   const [scope, setScope] = useState<SettingsScope>('profile');
   const [refused, setRefused] = useState<string | null>(null);
-  const [launcher, setLauncher] = useState<string | null>(null);
-  const [accentRefused, setAccentRefused] = useState(false);
   const values = scope === 'profile' ? state.settings : state.shared;
   // The installed fonts, asked for when a font picker first opens (main runs fc-list once).
   const [installed, setInstalled] = useState<readonly SystemFont[] | null>(null);
@@ -92,15 +100,16 @@ export function SettingsView({
   return (
     <section className="settings-view" aria-labelledby="settings-title" data-testid="settings-view">
       <h1 id="settings-title">Settings</h1>
-      <RadioGroup className="settings-scope" value={scope} onChange={(value) => setScope(value as SettingsScope)} orientation="horizontal">
-        <Label>Change settings for</Label>
-        <RadioField value="profile">
-          <RadioButton>This profile ({profile.name})</RadioButton>
-        </RadioField>
-        <RadioField value="global">
-          <RadioButton>All profiles</RadioButton>
-        </RadioField>
-      </RadioGroup>
+      <RadioSetting
+        className="settings-scope"
+        label="Change settings for"
+        value={scope}
+        options={[
+          ['profile', `This profile (${profile.name})`],
+          ['global', 'All profiles'],
+        ]}
+        onChange={setScope}
+      />
       {refused && (
         <p className="settings-refused" role="alert">
           <code>{refused}</code> has an error from a hand edit, so it was left untouched. Fix it, then change the setting again.
@@ -110,114 +119,41 @@ export function SettingsView({
       <h2>Appearance</h2>
       {setting(
         'themeMode',
-        <RadioGroup className="field" value={values.themeMode} onChange={(value) => set({ themeMode: value as ThemeMode })} orientation="horizontal">
-          <Label>Theme</Label>
-          <RadioField value="system">
-            <RadioButton>System</RadioButton>
-          </RadioField>
-          <RadioField value="light">
-            <RadioButton>Light</RadioButton>
-          </RadioField>
-          <RadioField value="dark">
-            <RadioButton>Dark</RadioButton>
-          </RadioField>
-        </RadioGroup>,
+        <RadioSetting label="Theme" value={values.themeMode} options={THEME_CHOICES} onChange={(themeMode) => set({ themeMode })} />,
       )}
-      <div className="setting" data-setting="accent">
-        <span className="field-label" id="settings-accent" data-label>
-          Accent colour
-        </span>
-        <ColorSwatchPicker
-          aria-labelledby="settings-accent"
-          className="swatches"
-          value={accentOf(profile.accent)}
-          onChange={(color) =>
-            void window.galeo.profiles.update(profile.name, color.toString('hex').toLowerCase()).then((result) => setAccentRefused(!result.ok))
-          }
-        >
-          {ACCENTS.map((each) => (
-            <ColorSwatchPickerItem key={each.color} color={each.color} className="swatch-item">
-              <ColorSwatch colorName={each.name} className="swatch" />
-            </ColorSwatchPickerItem>
-          ))}
-        </ColorSwatchPicker>
-        <span className="setting-source">This profile</span>
-        {accentRefused && (
-          <p className="settings-refused" role="alert">
-            The accent wasn't saved: this profile's profile.json has an error from a hand edit. Fix it, then pick again.
-          </p>
-        )}
-      </div>
+      <AccentSetting profile={profile} />
 
       <h2>Reading</h2>
       {setting('proseFont', <FontSetting kind="prose" value={values.proseFont} installed={installed} onOpen={listFonts} onCommit={(proseFont) => set({ proseFont })} />)}
       {setting('codeFont', <FontSetting kind="code" value={values.codeFont} installed={installed} onOpen={listFonts} onCommit={(codeFont) => set({ codeFont })} />)}
       {setting(
         'fontSize',
-        <NumberField className="field" value={values.fontSize} minValue={10} maxValue={40} onChange={(fontSize) => !Number.isNaN(fontSize) && fontSize !== values.fontSize && set({ fontSize })}>
-          <Label>Font size</Label>
-          <Input />
-        </NumberField>,
+        <NumberSetting label="Font size" value={values.fontSize} min={10} max={40} onChange={(fontSize) => set({ fontSize })} />,
       )}
       {setting('measure', <MeasureSetting value={values.measure} onChange={(measure) => measure !== values.measure && set({ measure })} />)}
 
       <h2>Window</h2>
       {setting(
         'statusBar',
-        <SwitchField className="switch" isSelected={values.statusBar} onChange={(statusBar) => set({ statusBar })}>
-          <SwitchButton>
-            <span className="switch-track" aria-hidden="true" />
-            Status bar
-          </SwitchButton>
-        </SwitchField>,
+        <SwitchSetting label="Status bar" value={values.statusBar} onChange={(statusBar) => set({ statusBar })} />,
       )}
       {setting(
         'tabsPosition',
-        <RadioGroup className="field" value={values.tabsPosition} onChange={(value) => set({ tabsPosition: value as TabsPosition })} orientation="horizontal">
-          <Label>Tabs</Label>
-          <RadioField value="top">
-            <RadioButton>Top</RadioButton>
-          </RadioField>
-          <RadioField value="left">
-            <RadioButton>Left</RadioButton>
-          </RadioField>
-        </RadioGroup>,
+        <RadioSetting label="Tabs" value={values.tabsPosition} options={TABS_CHOICES} onChange={(tabsPosition) => set({ tabsPosition })} />,
       )}
       {setting(
         'tabPanelWidth',
-        <NumberField
-          className="field"
-          value={values.tabPanelWidth}
-          minValue={TAB_PANEL_MIN}
-          maxValue={TAB_PANEL_MAX}
-          step={1}
-          onChange={(tabPanelWidth) => !Number.isNaN(tabPanelWidth) && tabPanelWidth !== values.tabPanelWidth && set({ tabPanelWidth })}
-        >
-          <Label>Tab panel width</Label>
-          <Input />
-        </NumberField>,
+        <NumberSetting label="Tab panel width" value={values.tabPanelWidth} min={TAB_PANEL_MIN} max={TAB_PANEL_MAX} step={1} onChange={(tabPanelWidth) => set({ tabPanelWidth })} />,
       )}
 
       <h2>Tables</h2>
       {setting(
         'tableSeparator',
-        <RadioGroup className="field" value={values.tableSeparator} onChange={(value) => set({ tableSeparator: value as SeparatorChoice })} orientation="horizontal">
-          <Label>Separator</Label>
-          {SEPARATOR_CHOICES.map(([value, name]) => (
-            <RadioField key={value} value={value}>
-              <RadioButton>{name}</RadioButton>
-            </RadioField>
-          ))}
-        </RadioGroup>,
+        <RadioSetting label="Separator" value={values.tableSeparator} options={SEPARATOR_CHOICES} onChange={(tableSeparator) => set({ tableSeparator })} />,
       )}
       {setting(
         'tableHeader',
-        <SwitchField className="switch" isSelected={values.tableHeader} onChange={(tableHeader) => set({ tableHeader })}>
-          <SwitchButton>
-            <span className="switch-track" aria-hidden="true" />
-            First row is a header
-          </SwitchButton>
-        </SwitchField>,
+        <SwitchSetting label="First row is a header" value={values.tableHeader} onChange={(tableHeader) => set({ tableHeader })} />,
       )}
 
       <h2>Quick open</h2>
@@ -233,27 +169,7 @@ export function SettingsView({
         <Button onPress={() => void window.galeo.settings.openCustomCss('global')}>Open CSS for all profiles</Button>
       </div>
 
-      {appImage && (
-        <>
-          <h2>Command line</h2>
-          <p className="field-hint">Adds galeo to ~/.local/bin and to your applications, for this AppImage.</p>
-          <div className="settings-buttons">
-            <Button
-              onPress={() =>
-                void window.galeo.app
-                  .installLauncher()
-                  .then((result) => setLauncher(result.ok ? `Installed ${result.bin}. Open a new terminal to use galeo.` : `Not installed: ${result.reason}.`))
-                  .catch(() => setLauncher("Not installed: galeo couldn't write the files."))
-              }
-            >
-              Install command-line launcher
-            </Button>
-          </div>
-          <p className="field-hint" role="status" data-testid="launcher-result">
-            {launcher}
-          </p>
-        </>
-      )}
+      {appImage && <LauncherSection />}
 
       <h2>About</h2>
       <div className="setting settings-about" data-setting="about">
@@ -339,8 +255,7 @@ function FontSetting({
   onOpen: () => void;
   onCommit: (value: string) => void;
 }) {
-  const [draft, setDraft] = useState(value);
-  useEffect(() => setDraft(value), [value]);
+  const [draft, setDraft] = useDraft(value);
   const commit = (name: string) => {
     const next = name.trim();
     if (next && next !== value) onCommit(next);
@@ -400,8 +315,7 @@ function FontSetting({
 /** A list setting, one entry per line, written when the field is left. */
 function ListSetting({ label, hint, value, onCommit }: { label: string; hint: string; value: readonly string[]; onCommit: (value: string[]) => void }) {
   const text = value.join('\n');
-  const [draft, setDraft] = useState(text);
-  useEffect(() => setDraft(text), [text]);
+  const [draft, setDraft] = useDraft(text);
   const commit = () => {
     const next = draft
       .split('\n')
@@ -415,5 +329,63 @@ function ListSetting({ label, hint, value, onCommit }: { label: string; hint: st
       <TextArea rows={4} />
       <span className="field-hint">{hint}</span>
     </TextField>
+  );
+}
+
+/** The profile's accent colour: always this profile's own (it names the profile in the chip). */
+function AccentSetting({ profile }: { profile: ProfileView }) {
+  const [accentRefused, setAccentRefused] = useState(false);
+  return (
+    <div className="setting" data-setting="accent">
+      <span className="field-label" id="settings-accent" data-label>
+        Accent colour
+      </span>
+      <ColorSwatchPicker
+        aria-labelledby="settings-accent"
+        className="swatches"
+        value={accentOf(profile.accent)}
+        onChange={(color) =>
+          void window.galeo.profiles.update(profile.name, color.toString('hex').toLowerCase()).then((result) => setAccentRefused(!result.ok))
+        }
+      >
+        {ACCENTS.map((each) => (
+          <ColorSwatchPickerItem key={each.color} color={each.color} className="swatch-item">
+            <ColorSwatch colorName={each.name} className="swatch" />
+          </ColorSwatchPickerItem>
+        ))}
+      </ColorSwatchPicker>
+      <span className="setting-source">This profile</span>
+      {accentRefused && (
+        <p className="settings-refused" role="alert">
+          The accent wasn't saved: this profile's profile.json has an error from a hand edit. Fix it, then pick again.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Adds galeo to ~/.local/bin and to the applications menu, for the AppImage it runs from. */
+function LauncherSection() {
+  const [launcher, setLauncher] = useState<string | null>(null);
+  return (
+    <>
+      <h2>Command line</h2>
+      <p className="field-hint">Adds galeo to ~/.local/bin and to your applications, for this AppImage.</p>
+      <div className="settings-buttons">
+        <Button
+          onPress={() =>
+            void window.galeo.app
+              .installLauncher()
+              .then((result) => setLauncher(result.ok ? `Installed ${result.bin}. Open a new terminal to use galeo.` : `Not installed: ${result.reason}.`))
+              .catch(() => setLauncher("Not installed: galeo couldn't write the files."))
+          }
+        >
+          Install command-line launcher
+        </Button>
+      </div>
+      <p className="field-hint" role="status" data-testid="launcher-result">
+        {launcher}
+      </p>
+    </>
   );
 }
