@@ -77,6 +77,7 @@ import { tabMover } from './tabs/transfer';
 import { testHooks } from './test-hooks';
 import { WindowCleanups } from './window/cleanups';
 import { windowCrashes } from './window/crash';
+import { FocusOrder } from './window/focus-order';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { windowHandlers } from './window/handlers';
 import { applicationMenu } from './window/menu';
@@ -212,8 +213,8 @@ function start(initialMode: StartupMode): void {
   const catalog = new ProfileCatalog({ fs, utf8, configDir: paths.configDir, stateDir: paths.stateDir, parse: parseProfileFile });
   const appState = new AppState({ fs, utf8, path: path.join(paths.stateDir, 'app-state.json'), parse: parseAppState });
   const running = new RunningProfiles<ProfileRuntime>({ create: (id) => createRuntime(id), changed: () => void broadcastProfiles() });
-  // Window ids, the last focused first, across all profiles.
-  let focusOrder: number[] = [];
+  const focusOrder = new FocusOrder();
+  cleanups.add((windowId) => focusOrder.remove(windowId));
   let quitting = false;
   const appImage = appImagePath(app.isPackaged, process.env);
   /** What a window's page needs to paint, handed over when the window is created (and in `app.info`). */
@@ -411,7 +412,7 @@ function start(initialMode: StartupMode): void {
     const windowId = window.webContents.id;
     profile.windows.push(window);
     // A new window comes to the front; after the profile's last one closed (macOS runs on), saving resumes.
-    focusOrder = [windowId, ...focusOrder];
+    focusOrder.front(windowId);
     rememberProfile(profile.id);
     warm.setLimits(warmLimits(profile.settings.current), [windowId]);
     profile.keeper.resume();
@@ -427,7 +428,7 @@ function start(initialMode: StartupMode): void {
     window.on('resize', followBounds);
     window.on('focus', () => {
       window.flashFrame(false);
-      focusOrder = [windowId, ...focusOrder.filter((id) => id !== windowId)];
+      focusOrder.front(windowId);
       rememberProfile(profile.id);
       profile.keeper.changed();
       // A shown file that came back (or changed) is read again (UX: missing recovers). Hibernated
@@ -465,7 +466,6 @@ function start(initialMode: StartupMode): void {
     });
     window.on('closed', () => {
       profile.windows.splice(profile.windows.indexOf(window), 1);
-      focusOrder = focusOrder.filter((id) => id !== windowId);
       // Out of its profile first: the registry's change on letting the window go looks its profile up.
       cleanups.run(windowId);
       // A quit saves every running profile itself, before its windows close.
@@ -507,7 +507,7 @@ function start(initialMode: StartupMode): void {
   /** A profile's runtime, with its settings' listeners. */
   const createRuntime = async (id: string): Promise<ProfileRuntime> => {
     const name = (await catalog.list()).find((each) => each.id === id)?.name ?? id;
-    const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder });
+    const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder.ids() });
     profile.settings.onChange((current) => {
       for (const window of profile.windows) followScheme(window);
       for (const [windowId, ids] of warm.setLimits(warmLimits(current), idsOf(profile))) demote(windowId, ids);
@@ -584,6 +584,7 @@ function start(initialMode: StartupMode): void {
   const otherWindows = async (windowId: number): Promise<OtherWindow[]> => {
     const accents = new Map((await catalog.list()).map((profile) => [profile.id, profile.accent]));
     return focusOrder
+      .ids()
       .filter((id) => id !== windowId)
       .flatMap((id) => {
         const profile = profileOf(id);
@@ -598,7 +599,7 @@ function start(initialMode: StartupMode): void {
     windows: [...running.values()]
       .filter((profile) => profile.id !== without)
       .flatMap((profile) => idsOf(profile).map((id) => ({ id, profile: profile.id }))),
-    focusOrder,
+    focusOrder: focusOrder.ids(),
     lastProfile: appState.lastProfile === without ? null : appState.lastProfile,
   });
 
