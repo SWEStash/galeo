@@ -26,7 +26,8 @@
   [021](decisions/ADR-021-table-options.md) ·
   [022](decisions/ADR-022-drag-tokens.md) ·
   [023](decisions/ADR-023-window-layout-with-tabs-on-the-left.md) ·
-  [024](decisions/ADR-024-find-in-all-tabs.md)
+  [024](decisions/ADR-024-find-in-all-tabs.md) ·
+  [025](decisions/ADR-025-no-window-host-port.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -41,7 +42,7 @@ Every diagram uses these names exactly.
 | **Launcher** | The `gal` shell script. Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that routes every launch through `gal`'s argument handling and relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
 | **Main** | The Electron main process (Node). Hosts the Core and the Adapters |
 | **Core** | Pure TypeScript domain logic: routing, tab registry, lifecycle policy, sessions, settings, capability checks, argv parsing, link extraction (ADR-007) |
-| **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `WindowHost`, `OsShell`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `FontCatalog`, `Clock` |
+| **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `OsShell`, `Clipboard`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `FontCatalog`, `Clock`. Window code is Main's own (`src/main/window/`), not a port (ADR-025) |
 | **Network Guard** | The part of Main that cancels every non-`galeo:`/`data:` request, makes every host unresolvable in the network stack, and registers the `galeo:` protocol (ADR-004) |
 | **Preload** | The only bridge. Exposes the typed `window.galeo` API from Contracts |
 | **Contracts** | Shared IPC and domain types plus runtime schemas (`src/shared`) |
@@ -158,7 +159,7 @@ flowchart LR
   end
   subgraph adapt[Adapters · Electron + Node]
     inst[InstanceChannel<br/>requestSingleInstanceLock]
-    win[WindowHost<br/>BrowserWindow · focus events · menus/accelerators]
+    win[Windows · main/window<br/>BrowserWindow · focus events · menus/accelerators]
     fsys[FileSystem<br/>caps · atomic write]
     watch[FileWatcher<br/>one fs.watch per folder]
     shellp[OsShell<br/>openExternal · openPath · reveal]
@@ -185,8 +186,8 @@ flowchart LR
 - Each IPC handler follows the same path: **validate** (schema + sender), then **Capability
   checker**, then a Core operation, then Adapters. There is no handler that goes straight to
   Adapters.
-- Capability-granting user actions (edit mode, "open with default app") come from **WindowHost
-  `before-input-event` keys or native menus built by Main**, which Main observes directly
+- Capability-granting user actions (edit mode, "open with default app") come from **`before-input-event`
+  keys in Main's window code or native menus built by Main**, which Main observes directly
   (ADR-004). Drop grants come from the preload's isolated world (trusted drop events only); the
   page gets a one-time token and says where the files landed. Quick open walks and matches in
   Main and offers the page ids for the files it lists, never paths to request.
@@ -394,8 +395,8 @@ saves a session without it. Into another profile's window, the tab joins that pr
 | Layer | Where it lives | Requirements |
 |---|---|---|
 | 1. Inert content | Render Worker (sanitize), Document Host (Shadow DOM, strict Mermaid), CSP on app pages | SR-02, SR-03 |
-| 2. Hardened renderer | WindowHost window options, navigation and permission handlers, Fuses | SR-01, SR-08 |
-| 3. Verified capabilities | IPC handlers → Capability checker, Link extractor, accelerators in WindowHost | SR-04, SR-05, SR-11, SR-12, SR-15 |
+| 2. Hardened renderer | Window options (`src/main/window/`), navigation and permission handlers, Fuses | SR-01, SR-08 |
+| 3. Verified capabilities | IPC handlers → Capability checker, Link extractor, accelerators in Main's window code | SR-04, SR-05, SR-11, SR-12, SR-15 |
 | 4. Zero network | Network Guard | SR-06 |
 | 5. Proof | CI: socket-connect harness, fuse read-back, payload corpus | SR-07, SR-08, SR-10 |
 

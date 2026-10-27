@@ -1,6 +1,7 @@
 # ADR-007 — Platform seam: Electron-free core behind ports, typed IPC contract, renderer never imports Electron
 
-- Status: Accepted (2026-09-26, with review amendments)
+- Status: Accepted (2026-09-26, with review amendments; the `WindowHost` port superseded by
+  [ADR-025](ADR-025-no-window-host-port.md))
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [ADR-001](ADR-001-app-shell-stack.md) (reversibility), [ADR-002](ADR-002-window-and-tab-model.md),
