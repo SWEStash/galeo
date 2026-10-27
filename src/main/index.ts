@@ -78,6 +78,7 @@ import { testHooks } from './test-hooks';
 import { WindowCleanups } from './window/cleanups';
 import { windowCrashes } from './window/crash';
 import { FocusOrder } from './window/focus-order';
+import { countInput, followBounds, guardClose, recoverOnCrash, trackFocus } from './window/hooks';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { windowHandlers } from './window/handlers';
 import { applicationMenu } from './window/menu';
@@ -276,9 +277,6 @@ function start(initialMode: StartupMode): void {
     ackMs: UNSAVED_ACK_MS,
   });
   cleanups.add((windowId) => unsaved.closeWindow(windowId));
-  /** Windows whose reader already agreed to close them with unsaved changes. */
-  const agreedToClose = new Set<number>();
-  cleanups.add((windowId) => agreedToClose.delete(windowId));
   let agreedToQuit = false;
 
   const sendTo = <E extends EventName>(windowId: number, event: E, payload: Events[E]) => {
@@ -423,47 +421,29 @@ function start(initialMode: StartupMode): void {
       const active = documents.snapshot(windowId).active;
       if (active) warm.activated(windowId, active);
     }
-    const followBounds = () => profile.keeper.changed();
-    window.on('move', followBounds);
-    window.on('resize', followBounds);
-    window.on('focus', () => {
-      window.flashFrame(false);
-      focusOrder.front(windowId);
-      rememberProfile(profile.id);
-      profile.keeper.changed();
-      // A shown file that came back (or changed) is read again (UX: missing recovers). Hibernated
-      // tabs read when they wake anyway.
-      for (const id of warm.warm(windowId)) {
-        const tab = documents.get(id, windowId);
-        if (tab) void reads.changed(id, tab.path).then((changed) => changed && sendTo(windowId, 'tabs.stale', id));
-      }
+    followBounds(window, () => profile.keeper.changed());
+    trackFocus(window, {
+      order: focusOrder,
+      focused: () => {
+        rememberProfile(profile.id);
+        profile.keeper.changed();
+      },
+      warm,
+      tabs: documents,
+      reads,
+      stale: (id) => sendTo(windowId, 'tabs.stale', id),
     });
-    window.on('close', (event) => {
-      if (!quitting && !profile.discard && !agreedToClose.has(windowId) && grants.dirty(windowId).length > 0) {
-        event.preventDefault();
-        void unsaved.confirm([windowId]).then((proceed) => {
-          if (!proceed || window.isDestroyed()) return;
-          agreedToClose.add(windowId);
-          window.close();
-        });
-        return;
-      }
-      if (quitting || profile.discard) return;
-      // The profile's last window: what it holds now is what the save keeps, not the empty aftermath.
-      if (profile.windows.length === 1) return void profile.keeper.holdForQuit(emptiedByMove.has(windowId) ? { without: windowId } : {});
-      // One of several: its tabs stay recoverable with Ctrl+Shift+T while the profile runs (UX F5).
-      const closed = documents.exportWindow(windowId);
-      if (closed.tabs.length > 0) profile.keepClosed({ state: closed, bounds: windowBounds(window), at: documents.stamp() });
+    guardClose(window, {
+      quitting: () => quitting,
+      profile,
+      dirty: (id) => grants.dirty(id),
+      confirm: (ids) => unsaved.confirm(ids),
+      emptiedByMove: (id) => emptiedByMove.has(id),
+      tabs: documents,
+      bounds: () => windowBounds(window),
     });
-    window.webContents.on('input-event', (_event, event) => {
-      if (REAL_INPUT.has(event.type)) input.received(windowId);
-      if (event.type === 'mouseDown') input.pressed(windowId);
-      else if (event.type === 'mouseUp') input.released(windowId);
-    });
-    window.webContents.on('render-process-gone', (_event, details) => {
-      if (details.reason === 'clean-exit' || quitting || window.isDestroyed()) return;
-      windowCrash.recover(window, details.reason);
-    });
+    countInput(window, input);
+    recoverOnCrash(window, { quitting: () => quitting, recover: (crashed, reason) => windowCrash.recover(crashed, reason) });
     window.on('closed', () => {
       profile.windows.splice(profile.windows.indexOf(window), 1);
       // Out of its profile first: the registry's change on letting the window go looks its profile up.
@@ -907,7 +887,6 @@ function start(initialMode: StartupMode): void {
  * The reader pressing a key, clicking or tapping: one event each, so each earns one input credit (a
  * key press also sends `char`, not counted; Chromium sends `rawKeyDown` or `keyDown` per press).
  */
-const REAL_INPUT = new Set<Electron.InputEvent['type']>(['rawKeyDown', 'keyDown', 'mouseDown', 'gestureTap', 'touchStart']);
 
 /**
  * Makes the window ask for attention without raising it (ADR-005): on Wayland an activation request,
