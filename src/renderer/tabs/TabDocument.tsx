@@ -2,6 +2,7 @@ import type { SeparatorChoice } from '../../shared/csv';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChosenEncoding, FollowResult, HistoryResult } from '../../shared/contracts';
 import type { ImageResult, RefusalReason, SaveResult } from '../../shared/documents';
+import { fileName } from '../../shared/paths';
 import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
 import { DocumentPane, type DocumentPaneProps } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
@@ -184,7 +185,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
     };
   }, [id, onMessage]);
   const confirm = useConfirmUnsaved();
-  const confirmLeave = useCallback(() => confirm(id, path.split('/').pop() ?? 'this file'), [confirm, id, path]);
+  const confirmLeave = useCallback(() => confirm(id, fileName(path)), [confirm, id, path]);
 
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
   const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);

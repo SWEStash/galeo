@@ -3,6 +3,7 @@ import { TabPanel, Tabs } from 'react-aria-components';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
 import { TAB_PANEL_DEFAULT, type TabsPosition } from '../shared/settings';
 import type { ReaderWidth } from '../shared/tabs';
+import { fileName } from '../shared/paths';
 import { AboutDialog } from './about/AboutDialog';
 import type { Command, Platform } from '../shared/keymap';
 import { CommandsProvider, useCommands, useDispatcher } from './commands/useCommands';
@@ -350,7 +351,10 @@ function useTabsPosition(position: TabsPosition | undefined, width: number | und
 function useUnsavedGuards(store: TabStore) {
   const confirm = useConfirmUnsaved();
   useEffect(() => {
-    const nameOf = (id: string) => store.getSnapshot().tabs.find((tab) => tab.id === id)?.path.split('/').pop() ?? 'this file';
+    const nameOf = (id: string) => {
+      const tab = store.getSnapshot().tabs.find((each) => each.id === id);
+      return tab ? fileName(tab.path) : 'this file';
+    };
     const ask = (id: string) => confirm(id, nameOf(id));
     store.setCloseGuard(ask);
     const stop = window.galeo.documents.onConfirmClose((ids) => {
