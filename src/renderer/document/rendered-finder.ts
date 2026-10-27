@@ -2,6 +2,7 @@ import { blockAtOrBefore } from './anchor';
 import { findRanges, nextIndex } from './find-rendered';
 import type { FindOptions } from './source-view';
 import type { FindResult } from '../../shared/find';
+import { blockElements } from './blocks';
 
 export interface Finder {
   find(query: string, options: FindOptions): FindResult;
@@ -78,7 +79,7 @@ function firstInView(ranges: readonly Range[], scroller: HTMLElement): number {
 /** The first match in or after the rendered block that holds source `line`. */
 function firstFromLine(article: HTMLElement, ranges: readonly Range[], line: number): number {
   const lineOf = (node: Node) => Number((node instanceof Element ? node : node.parentElement)?.closest<HTMLElement>('[data-src-line]')?.dataset['srcLine'] ?? 0);
-  const lines = [...article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => Number(element.dataset['srcLine']));
+  const lines = blockElements(article).map((element) => Number(element.dataset['srcLine']));
   const block = lines[blockAtOrBefore(lines, line)] ?? 0;
   return ranges.findIndex((range) => lineOf(range.startContainer) >= block);
 }

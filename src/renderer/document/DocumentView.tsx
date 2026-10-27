@@ -19,12 +19,11 @@ import type { SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 import { NO_MATCHES, type FindResult } from '../../shared/find';
 import type { DiagramExpand, FindRequest } from './requests';
+import { blockElements, measureBlocks, onFrameScroll } from './blocks';
+import { contentWeight } from './content-weight';
 
 /** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`), or a JSON tree or a CSV table (of `source`) named `label`. */
 export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string } | { table: CsvTable; source: string; label: string; header: boolean };
-
-/** A tree row's weight for the warm-tab budget: its share of the worker's index and the model. */
-const TREE_BYTES_PER_NODE = 48;
 
 export interface DocumentViewProps {
   /** The rendered view's content, or null while it isn't needed or ready. */
@@ -92,29 +91,20 @@ const showsSource = (view: ViewMode | null) => view === 'source' || view === 'sp
 /** The rendered blocks in scroll-content coordinates, headings named by their id. */
 function placedBlocks(host: DocumentHost, scroller: HTMLElement): PlacedBlock[] {
   const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
-  return [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => {
-    const box = element.getBoundingClientRect();
-    return {
-      line: Number(element.dataset['srcLine']),
-      top: box.top - origin,
-      bottom: box.bottom - origin,
-      heading: /^H[1-6]$/.test(element.tagName) && element.id ? element.id : null,
-    };
-  });
+  return measureBlocks(host.article, origin).map(({ element, line, top, bottom }) => ({
+    line,
+    top,
+    bottom,
+    heading: /^H[1-6]$/.test(element.tagName) && element.id ? element.id : null,
+  }));
 }
 
 /** The rendered blocks with both their source lines, in the rendered scroller's content coordinates. */
 function syncBlocks(host: DocumentHost): SyncBlock[] {
   const scroller = host.renderedScroller;
   const origin = scroller.getBoundingClientRect().top - scroller.scrollTop;
-  return [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].flatMap((element) => {
-    const box = element.getBoundingClientRect();
-    // Not laid out (inside a closed `details`): it has no place to sync to.
-    if (box.width === 0 && box.height === 0) return [];
-    const line = Number(element.dataset['srcLine']);
-    const end = Number(element.dataset['srcEnd'] ?? line);
-    return [{ line, end, top: box.top - origin, bottom: box.bottom - origin }];
-  });
+  // A block not laid out has no place to sync to.
+  return measureBlocks(host.article, origin).flatMap(({ line, end, top, bottom, laidOut }) => (laidOut ? [{ line, end, top, bottom }] : []));
 }
 
 export interface DocumentHandle extends Finder {
@@ -140,16 +130,12 @@ function renderedTopLine(host: DocumentHost): number {
   // A tree or a table draws only the rows in view: it knows its own place.
   if (host.placed) return host.placed.topLine();
   const viewportTop = host.renderedScroller.getBoundingClientRect().top;
-  const blocks = [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')].map((element) => {
-    const box = element.getBoundingClientRect();
-    return { line: Number(element.dataset['srcLine']), top: box.top, bottom: box.bottom };
-  });
-  return firstVisibleLine(blocks, viewportTop);
+  return firstVisibleLine(measureBlocks(host.article, 0), viewportTop);
 }
 
 function scrollRenderedTo(host: DocumentHost, line: number): void {
   if (host.placed) return host.placed.scrollToLine(line);
-  const blocks = [...host.article.querySelectorAll<HTMLElement>('[data-src-line]')];
+  const blocks = blockElements(host.article);
   const index = blockAtOrBefore(
     blocks.map((element) => Number(element.dataset['srcLine'])),
     line,
@@ -517,24 +503,15 @@ export function DocumentView({
     if (!onHeading || !showsRendered(view) || !rendered) return;
     const element = host().renderedScroller;
     const article = host().article;
-    let frame = 0;
     const update = () => {
-      frame = 0;
       const headings = [...article.querySelectorAll<HTMLElement>('h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]')].map((heading) => ({
         id: heading.id,
         top: heading.getBoundingClientRect().top,
       }));
       onHeading(currentHeading(headings, element.getBoundingClientRect().top));
     };
-    const onScroll = () => {
-      frame ||= requestAnimationFrame(update);
-    };
     update();
-    element.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(frame);
-      element.removeEventListener('scroll', onScroll);
-    };
+    return onFrameScroll(element, update);
   }, [onHeading, view, rendered]);
 
   // The source view's outline (YAML, TOML) and the entry at the top of the view, as the reader scrolls or edits.
@@ -542,9 +519,7 @@ export function DocumentView({
     const source = host().source;
     if (!onSourceOutline || view !== 'source' || !sourceReady || !source) return;
     let entries: OutlineEntry[] = [];
-    let frame = 0;
     const update = () => {
-      frame = 0;
       const top = source.topLine();
       // As for headings: the last entry at or above the top; the first before any is reached.
       onHeading?.((entries.findLast((entry) => entry.line <= top) ?? entries[0])?.id ?? null);
@@ -554,31 +529,19 @@ export function DocumentView({
       onSourceOutline(next);
       update();
     };
-    const onScroll = () => {
-      frame ||= requestAnimationFrame(update);
-    };
     let current = true;
     void source.grammar.then(() => current && show(source.outline()));
     const stop = source.onOutline(show);
-    source.view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
+    const stopScroll = onFrameScroll(source.view.scrollDOM, update);
     return () => {
       current = false;
       stop();
-      cancelAnimationFrame(frame);
-      source.view.scrollDOM.removeEventListener('scroll', onScroll);
+      stopScroll();
     };
   }, [onSourceOutline, onHeading, view, sourceReady]);
 
   useEffect(() => {
-    const renderedBytes = !rendered
-      ? 0
-      : 'tree' in rendered
-        ? rendered.tree.nodes * TREE_BYTES_PER_NODE
-        : 'table' in rendered
-          ? 2 * rendered.source.length + 4 * (rendered.table.fieldEnds.length + 3 * rendered.table.rows)
-          : 2 * ('html' in rendered ? rendered.html.length : rendered.text.length);
-    const sourceBytes = showsSource(view) || host().source ? 2 * source.text.length : 0;
-    onWeight?.(renderedBytes + sourceBytes);
+    onWeight?.(contentWeight(rendered, showsSource(view) || host().source ? source.text : null));
   }, [rendered, view, source.text, onWeight]);
 
   useLayoutEffect(() => {
