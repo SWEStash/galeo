@@ -23,17 +23,17 @@ import { FORMAT_NAMES, sourceLanguage } from './formats';
 import { useDelayed } from './useDelayed';
 import { useLatest } from './useLatest';
 import { countWords } from '../../shared/words';
-import type { ImageExpand } from './images';
-import { ZoomViewer, type ZoomContent } from './ZoomViewer';
+import { ZoomViewer } from './ZoomViewer';
 import { pauseOrMax } from './pause-or-max';
 import { settleFocus } from './settle-focus';
 import { useCsvTable } from './useCsvTable';
 import { useJsonTree } from './useJsonTree';
 import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
-import { NO_MATCHES, type FindResult } from '../../shared/find';
-import type { DiagramExpand, EditRequest, FindRequest } from './requests';
+import type { EditRequest, FindRequest } from './requests';
 import { countLines, DISK_UNSAVED, formatView, notSaved } from './pane-model';
+import { useFind } from './useFind';
+import { useZoomViewer } from './useZoomViewer';
 
 const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed', cancelled: 'preview-failed' } as const;
 
@@ -432,78 +432,14 @@ export function DocumentPane({
     ],
     'disk-unreadable': [{ label: 'Load theirs', onAction: choose(loadTheirs) }],
   };
-  const actions = useRef({ save, discard });
-  actions.current = { save, discard };
+  const actions = useLatest({ save, discard });
   useEffect(() => {
     if (!editing) return;
     onEditor?.({ save: () => actions.current.save(), discard: () => actions.current.discard(), focus: () => documentHandle.current?.focus(), keepNow });
     return () => onEditor?.(null);
   }, [editing, onEditor]);
-  const [viewer, setViewer] = useState<{ content: ZoomContent; name: string; returnFocus: () => void } | null>(null);
-  const expandDiagram = useCallback(
-    ({ svg, name, panel, returnFocus }: DiagramExpand) =>
-      setViewer({ content: { kind: 'diagram', svg, panel }, name, returnFocus }),
-    [],
-  );
-  const expandImage = useCallback(
-    ({ url, name, returnFocus }: ImageExpand) => setViewer({ content: { kind: 'image', url }, name, returnFocus }),
-    [],
-  );
-  const closeViewer = useCallback(() => setViewer(null), []);
-  // The viewer is the shown tab's: switching tabs closes it.
-  useEffect(() => {
-    if (!active) setViewer(null);
-  }, [active]);
-  // Back to the diagram's or image's Expand button once the viewer is gone.
-  const returnFocus = useRef<(() => void) | null>(null);
-  useEffect(() => {
-    if (viewer) {
-      returnFocus.current = viewer.returnFocus;
-      return;
-    }
-    const back = returnFocus.current;
-    returnFocus.current = null;
-    if (!back) return;
-    return settleFocus(back);
-  }, [viewer]);
-  // `line`: where a match chosen in find in all tabs is, until the reader types or steps.
-  const [find, setFind] = useState<{ open: boolean; replace: boolean; token: number; query: string; caseSensitive: boolean; line?: number | undefined }>({
-    open: false,
-    replace: false,
-    token: 0,
-    query: '',
-    caseSensitive: false,
-  });
-  // The match chosen in find in all tabs, which the find bar opens with.
-  const [findSeed, setFindSeed] = useState<NonNullable<DocumentPaneProps['findRequest']> | null>(null);
-  const [findResult, setFindResult] = useState<FindResult>(NO_MATCHES);
-  // What Replace all last did, shown until find moves on.
-  const [replaced, setReplaced] = useState<number | null>(null);
-  const runFind = useCallback((query: string, caseSensitive: boolean, line?: number) => {
-    setFind((current) => ({ ...current, query, caseSensitive, line }));
-    setReplaced(null);
-    setFindResult(documentHandle.current?.find(query, { caseSensitive, line }) ?? NO_MATCHES);
-  }, []);
-  const stepFind = useCallback((direction: 1 | -1) => {
-    setReplaced(null);
-    setFind((current) => (current.line === undefined ? current : { ...current, line: undefined }));
-    if (documentHandle.current) setFindResult(documentHandle.current.step(direction));
-  }, []);
-  const replaceMatch = useCallback((text: string) => {
-    setReplaced(null);
-    if (documentHandle.current) setFindResult(documentHandle.current.replace(text));
-  }, []);
-  const replaceAll = useCallback((text: string) => {
-    if (documentHandle.current) setReplaced(documentHandle.current.replaceAll(text));
-  }, []);
-  const closeFind = useCallback(() => {
-    documentHandle.current?.clear();
-    setReplaced(null);
-    setFind((current) => ({ ...current, open: false, replace: false, query: '', line: undefined }));
-    setFindSeed(null);
-    // Esc keeps the scroll position at the current match; focus goes back to the document.
-    documentHandle.current?.focus();
-  }, []);
+  const { viewer, expandDiagram, expandImage, closeViewer } = useZoomViewer(active);
+  const { find, findSeed, findResult, setFindResult, replaced, openFind, openFindOn, endReplace, runFind, stepFind, replaceMatch, replaceAll, closeFind } = useFind(documentHandle);
 
   // The outline: open for the window, shown by the active pane only. Markdown's comes with its
   // rendered view; a format with no rendered view (YAML, TOML) has its source's.
@@ -603,13 +539,13 @@ export function DocumentPane({
           onMessage?.('Find works in the source view (Ctrl+U)');
           return true;
         }
-        setFind((current) => ({ ...current, open: true, token: current.token + 1 }));
+        openFind();
         return true;
       },
       findReplace: () => {
         if (!ready) return false;
         if (!editing) onMessage?.('Find and replace works in edit mode (Ctrl+E)');
-        else setFind((current) => ({ ...current, open: true, replace: true, token: current.token + 1 }));
+        else openFind({ replace: true });
         return true;
       },
       findNext: step(1),
@@ -671,8 +607,8 @@ export function DocumentPane({
 
   // Replace is edit mode's: leaving edit mode closes its row and leaves find open.
   useEffect(() => {
-    if (!editing) setFind((current) => (current.replace ? { ...current, replace: false } : current));
-  }, [editing]);
+    if (!editing) endReplace();
+  }, [editing, endReplace]);
 
   // Switching views, the rendered HTML arriving, or replace moving find to the source repeats the
   // search in what is now showing.
@@ -686,9 +622,7 @@ export function DocumentPane({
   useEffect(() => {
     if (!findRequest || !ready) return;
     if ((json || tabular) && view === 'rendered') setChosenView('source');
-    setReplaced(null);
-    setFind((current) => ({ ...current, open: true, token: current.token + 1, query: findRequest.query, caseSensitive: findRequest.caseSensitive, line: findRequest.line }));
-    setFindSeed(findRequest);
+    openFindOn(findRequest);
     onFindShown?.();
   }, [findRequest, ready !== null]);
 
