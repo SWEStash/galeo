@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseCsv } from '../../shared/csv';
 import { indexJson } from '../../shared/json-index';
 import { createTreeModel } from './json-tree-model';
-import { mountDocumentHost, setCustomCss } from './host';
+import { mountDocumentHost, placesFractions, setCustomCss, type PlacedView } from './host';
 
 function container(): HTMLElement {
   const element = document.createElement('div');
@@ -217,5 +217,16 @@ describe('mountDocumentHost', () => {
     expect(element.dataset['scheme']).toBe('dark');
     host.setScheme('light');
     expect(element.dataset['scheme']).toBe('light');
+  });
+});
+
+const tree: PlacedView = { topLine: () => 1, scrollToLine: () => {}, focus: () => {} };
+
+describe('placesFractions', () => {
+  it('is true only for a placed view that both reports and scrolls to fractional lines', () => {
+    expect(placesFractions({ ...tree, topPosition: () => 1.5, scrollToPosition: () => {} })).toBe(true);
+    expect(placesFractions({ ...tree, topPosition: () => 1.5 })).toBe(false);
+    expect(placesFractions(tree)).toBe(false);
+    expect(placesFractions(null)).toBe(false);
   });
 });

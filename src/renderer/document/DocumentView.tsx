@@ -12,7 +12,7 @@ import { markDocumentPaint } from '../perf';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
 import { attachDiagrams, type Diagrams } from './diagrams';
-import { loadSourceView, mountDocumentHost, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
+import { loadSourceView, mountDocumentHost, placesFractions, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBlock, type SyncPane } from './scroll-sync';
 import type { SourceLanguage } from './source-view';
@@ -394,13 +394,13 @@ export function DocumentView({
     const scroller = documentHost.renderedScroller;
     // A table has no blocks to measure: it places fractional lines itself (asked each time, as it
     // may arrive after the split shows).
-    const placed = () => (documentHost.placed?.topPosition ? documentHost.placed : null);
+    const placed = () => (placesFractions(documentHost.placed) ? documentHost.placed : null);
     const rendered: SyncPane = {
       scroller,
-      position: () => placed()?.topPosition!() ?? lineAtOffset(syncBlocks(documentHost), scroller.scrollTop),
+      position: () => placed()?.topPosition() ?? lineAtOffset(syncBlocks(documentHost), scroller.scrollTop),
       scrollTo: (line) => {
         const table = placed();
-        if (table) table.scrollToPosition!(line);
+        if (table) table.scrollToPosition(line);
         else scroller.scrollTop = offsetOfLine(syncBlocks(documentHost), line);
       },
     };
@@ -482,8 +482,8 @@ export function DocumentView({
     const onScroll = () => {
       const scroll = { top: scroller.scrollTop, height: scroller.scrollHeight, viewport: scroller.clientHeight };
       latest =
-        view === 'source'
-          ? { ...anchorAt([], scroll), line: documentHost.source!.topLine() }
+        view === 'source' && documentHost.source
+          ? { ...anchorAt([], scroll), line: documentHost.source.topLine() }
           : documentHost.placed
             ? { ...anchorAt([], scroll), line: documentHost.placed.topLine() }
             : anchorAt(placedBlocks(documentHost, scroller), scroll);

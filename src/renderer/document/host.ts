@@ -17,6 +17,11 @@ export interface PlacedView {
   topPosition?(): number;
   scrollToPosition?(line: number): void;
 }
+
+/** A placed view that places fractional lines (the table), for split's scroll sync. */
+export function placesFractions(view: PlacedView | null | undefined): view is Required<PlacedView> {
+  return view?.topPosition !== undefined && view.scrollToPosition !== undefined;
+}
 import type { SourceLanguage, SourceView } from './source-view';
 import { ratioAt, ratioForKey } from './split-divider';
 import { textParagraphs } from './text-reader';
