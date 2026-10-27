@@ -22,8 +22,7 @@ import { openFiles } from '../core/routing/open-files';
 import { editToggle } from '../core/documents/edit-toggle';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds } from '../core/session/model';
-import { DEFAULT_SETTINGS, settingSources } from '../core/settings/model';
-import { openConfigFile } from '../core/settings/open-config';
+import { DEFAULT_SETTINGS } from '../core/settings/model';
 import { CrashRecovery } from '../core/tabs/crashes';
 import { TabDrags } from '../core/tabs/drags';
 import { WarmTabs } from '../core/tabs/lifecycle';
@@ -31,7 +30,7 @@ import { forPage } from '../core/tabs/page';
 import { MemoryPressure } from '../core/tabs/pressure';
 import { TabRegistry, type WindowState } from '../core/tabs/registry';
 import type { OpenRequest, OsShell } from '../core/ports';
-import type { EventName, Events, OtherWindow, ProfileResult, ProfilesState, SettingsResult, SettingsState, StartInfo } from '../shared/contracts';
+import type { EventName, Events, OtherWindow, ProfileResult, ProfilesState, StartInfo } from '../shared/contracts';
 import type { Command } from '../shared/keymap';
 import type { Settings, SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
@@ -63,6 +62,7 @@ import { quickOpenHandlers } from './quick-open/handlers';
 import { dropHandlers } from './drops/handlers';
 import { ProfileRuntime } from './profiles/runtime';
 import { parseAppState } from './session/schemas';
+import { settingsHandlers, settingsState } from './settings/handlers';
 import { parseProfileFile } from './settings/schemas';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
@@ -220,14 +220,6 @@ function start(initialMode: StartupMode): void {
   let themeSettled: Promise<void> = Promise.resolve();
   const profileOf = (windowId: number) => [...running.values()].find((runtime) => runtime.has(windowId));
   const idsOf = (runtime: ProfileRuntime) => runtime.windows.map((window) => window.webContents.id);
-  const settingsState = (profile: ProfileRuntime): SettingsState => ({
-    settings: profile.settings.current,
-    notices: profile.settings.notices,
-    session: profile.sessionNotice,
-    css: profile.settings.css,
-    shared: profile.settings.shared,
-    sources: profile.settings.sources,
-  });
   const broadcastSettings = (profile: ProfileRuntime) => {
     for (const window of profile.windows) sendEvent(window.webContents, 'settings.changed', settingsState(profile));
   };
@@ -841,10 +833,6 @@ function start(initialMode: StartupMode): void {
           // Closed once the launch's window is open: the app quits when its last window closes.
           void enqueue(async () => choiceWindow?.close()).catch(() => {});
         },
-        'settings.get': (_args, event) => {
-          const profile = profileOf(event.sender.id);
-          return profile ? settingsState(profile) : { settings: DEFAULT_SETTINGS, notices: [], session: null, css: { global: '', profile: '' }, shared: DEFAULT_SETTINGS, sources: settingSources({}, {}) };
-        },
         'profiles.list': (_args, event) => profilesState(profileOf(event.sender.id)?.id ?? DEFAULT_PROFILE),
         'profiles.open': async ([id]) => {
           if (!(await catalog.list()).some((profile) => profile.id === id)) throw new Error('no such profile');
@@ -887,20 +875,6 @@ function start(initialMode: StartupMode): void {
           if (undoable.get(token)?.window !== event.sender.id) throw new Error('not offered');
           return enqueue(() => undoCreate(token));
         },
-        'settings.set': async ([scope, change], event) => written(await ownProfile(event).settings.set(scope, change)),
-        'settings.reset': async ([key], event) => written(await ownProfile(event).settings.reset(key)),
-        // fc-list with fixed arguments, nothing from the page; any window may ask (zero network).
-        'settings.fonts': () => fonts.list(),
-        'settings.openCustomCss': ([scope], event) => {
-          const profile = ownProfile(event);
-          const dir = scope === 'global' ? paths.configDir : path.join(paths.configDir, 'profiles', profile.id);
-          return openConfigFile({ fs, shell, utf8 }, path.join(dir, 'custom.css'), customCssTemplate(scope));
-        },
-        'settings.openNoticeFile': ([index], event) => {
-          const notice = ownProfile(event).settings.notices[index];
-          if (!notice) throw new Error('no such notice');
-          return openConfigFile({ fs, shell, utf8 }, notice.path);
-        },
         'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
         'window.command': ([command], event) => {
           const profile = profileOf(event.sender.id);
@@ -920,6 +894,7 @@ function start(initialMode: StartupMode): void {
           if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
           return menus.document(id, event.sender.id);
         },
+        ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8 } }),
         ...documentHandlers({
           records: documents,
           links,
@@ -1157,20 +1132,6 @@ function recordBlockedRequest(url: string): void {
   if (app.isPackaged) return;
   const global = globalThis as { __galeoBlockedRequests?: string[] };
   (global.__galeoBlockedRequests ??= []).push(url);
-}
-
-function written(notice: SettingsNotice | null): SettingsResult {
-  return notice ? { ok: false, path: notice.path } : { ok: true };
-}
-
-/** The first text of a new `custom.css`, so the file says what it is for. */
-function customCssTemplate(scope: 'global' | 'profile'): string {
-  return [
-    `/* galeo: CSS for documents in ${scope === 'global' ? 'every profile' : 'this profile'}.`,
-    '   It applies inside documents only, after the bundled theme; saving applies it at once.',
-    '   The --galeo-* variables (fonts, sizes, colours) are the stable way to restyle. */',
-    '',
-  ].join('\n');
 }
 
 /** The AppImage this packaged run came from (its runtime sets APPIMAGE), or null. */
