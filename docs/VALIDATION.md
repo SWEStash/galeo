@@ -28,7 +28,10 @@ Wayland) before each release.
   (`tab-move` spec).
 - **Contrast** (`tests/unit/design/colour-contrast.test.ts`): text tokens at 4.5:1 and focus ring
   and text-field borders at 3:1 on the page and on panels, in both schemes; the 8 accent presets
-  at 3:1 on the tab bar; every code-highlighting colour at 4.5:1 on code blocks.
+  at 3:1 on the tab bar; every code-highlighting colour at 4.5:1 on code blocks. Colour in the JSON
+  tree and in logs (v0.4): the tree's classes use only checked tokens, and every colour on a log
+  line (text, timestamp, keys, its level word) reads at 4.5:1 on the tinted error and warning lines.
+  axe on the JSON tree in both schemes (`accessibility` spec).
 
 ### Manual (keyboard only, then Orca)
 
@@ -53,6 +56,7 @@ Record the date, the build and the result of each row.
 | Orca: search tabs and filling quick open (v0.4) | Close two tabs, Ctrl+Shift+A: Orca says "Search tabs", the count ("4 tabs") and each row's name and folder under "Open tabs" and "Recently closed"; Enter on a closed one brings it back where it was. Ctrl+P, arrow to a result: Orca reads its name and folder, then "Tab fills in its path"; Tab: "Filled ~/…". Home/End move the caret in both fields | Not run (2026-10-21): for the 0.4.0 run |
 | Orca: tabs on the left (v0.4) | With *Tabs: Left*: Orca reads the list as vertical tabs ("Open documents") and each row's name, folder and marks; ↑/↓ move between rows. Ctrl+Shift+B: Orca hears "Tab panel collapsed", and the markers still read the full name and folder. The panel button says "Collapse tab panel" / "Expand tab panel" and whether it is expanded; the divider says "Resize tab panel, 220 pixels" and its arrows change the number | Not run (2026-10-22): for the 0.4.0 run |
 | Orca: tab overview (v0.4) | Ctrl+Shift+E: Orca says "Tab overview" and the shown tab's card: its name, folder, marks ("unsaved changes"), format, "shown now" and its position ("2 of 5"); the arrows read each card; Delete on an edited card asks first and Cancel goes back to the card; Esc returns to the document | Not run (2026-10-21): for the 0.4.0 run |
+| JSON tree and log colours, then Orca (v0.4) | Open a JSON file and a service log, in light and then dark: the tree's keys, numbers, booleans and null in one colour, strings in another, previews muted; the log's timestamps muted, level words in their level's colour, `key=value` keys in colour, error and warning lines faintly tinted. Orca reads each tree row and log line as before ("name: \"galeo\"", the whole line) | Not run (2026-10-26): for the 0.4.0 run |
 | Orca: find in all tabs (v0.4) | Ctrl+Shift+F, type a word in three tabs: Orca says "Find in all tabs", then "Searching…" and the total ("6 matches in 3 tabs"); ↓ reads each match with its line and the tab group's name and count; Match case reads as a toggle; Enter shows the tab and Orca reads the find bar with the word and "2 of 3"; Esc returns to the document | Not run (2026-10-26): for the 0.4.0 run |
 | Data views by keyboard, then Orca (v0.3) | In a CSV table the arrows move cell to cell and Orca reads each cell; in a JSON tree the arrows expand and collapse items and Orca reads each one | Pass (2026-10-20, `.deb` 0.3.0) |
 
@@ -82,6 +86,8 @@ Electron and Mermaid updates (1257 → 1377 MB).
 | Open a 99 MB CSV as a table: launch → first row painted (v0.3) | 5000 ms (ADR-020) | — | — | — | 2722 ms |
 | Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — | 16.7 ms (p95 16.7) both |
 | Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB |
+| Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — |
+| A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — |
 
 The v0.3 rows were first measured on 2026-10-16 during development (headless, Electron 44.8.0, the
 machine under a load average of 2–3, so not release figures): the JSON tree opened in 1550–1986 ms and
@@ -98,6 +104,12 @@ theme settings, and the page paints from the start info its window was created w
 headless medians: window 853 → 571 and 577 ms, 50 KB document 1249 → 1119 and 1106 ms (two runs
 each). On the owner's Wayland desktop (direct launches, two interleaved pairs of 10 against the
 build before): window 941 and 940 → 668 and 656 ms. The budgets became 650 ms and 1250 ms.
+
+The log rows were first measured on 2026-10-26 during development (headless, not release figures),
+before log lines had colour: 16.7 ms per frame paging (p95 16.8–33.3), 1609–1762 ms for an appended
+line, nearly all of it reading the whole file again. With colour, under a load average of 2.5–4.5
+(another project's tests running): 16.7 ms and 1502–1714 ms in three runs, 33.3 ms and 2278 ms in
+one. Colouring a line costs about 4 µs, about 0.3 ms for a screen of 80 lines.
 
 The first strict run of the 0.2.0 candidate measured 913 ms for a blank window: its first
 launches after a fresh build, with the operating system's file cache cold. A run straight after

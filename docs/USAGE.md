@@ -93,13 +93,15 @@ the file into the window in front of you) when you want it here.
 - **Live reload**: a file that changes on disk updates in place and keeps your place; the tab
   shows `↻` for a moment. F5 or Ctrl+R reloads by hand.
 - **Views**: Ctrl+U switches a Markdown or JSON file between rendered (or tree) and source; Alt+Z toggles wrapping;
-  logs open in source view, and End follows the end of a growing log.
-- **JSON** opens as a **tree** with its top level shown. ↑/↓ move between nodes, → opens a node
-  (or steps into it), ← closes it (or steps out); a click focuses a node, its arrow or a
-  double-click opens or closes it. *Expand all nodes*, *Collapse all nodes* and *Copy JSON path*
-  (`$.items[3].name`) are in the palette. JSON that doesn't parse opens as source, with a banner
-  saying where it breaks and the cursor there; JSON over 10 MB (or 200,000 values, or nested over
-  1,000 deep) opens as source. Find (Ctrl+F) works in the source view.
+  logs open in source view, and End follows the end of a growing log. A log line shows its level
+  as a badge (ERR, WRN, INF, DBG), its timestamp muted, its level word in the level's colour and
+  the keys of `key=value` pairs and JSON lines in colour; error and warning lines are tinted.
+- **JSON** opens as a **tree** with its top level shown, in the source view's colours. ↑/↓ move
+  between nodes, → opens a node (or steps into it), ← closes it (or steps out); a click focuses a
+  node, its arrow or a double-click opens or closes it. *Expand all nodes*, *Collapse all nodes*
+  and *Copy JSON path* (`$.items[3].name`) are in the palette. JSON that doesn't parse opens as
+  source, with a banner saying where it breaks and the cursor there; JSON over 10 MB (or 200,000
+  values, or nested over 1,000 deep) opens as source. Find (Ctrl+F) works in the source view.
 - **CSV and TSV** open as a **table**: the header row stays in view, rows are numbered, and each
   cell shows its full value as a tooltip. Arrow keys move between cells, Home/End to a row's ends,
   Ctrl+Home/End to the table's. The separator is found from the first lines (comma, semicolon, tab

@@ -213,7 +213,9 @@ mode closes the replace row and keeps find open.
   The toggle keeps the reading position (rendered block ⇄ source line).
 - `.txt` opens in the **reader** view: proportional font, reading column, preserved line breaks.
 - `.log` opens in the **log** view: monospace, line numbers, level highlighting
-  (ERROR/WARN/INFO/DEBUG, also as text badges), follow-end mode:
+  (ERROR/WARN/INFO/DEBUG, also as text badges; error and warning lines tinted), and in colour (v0.4)
+  the timestamp (muted), the level word (its level's colour) and the keys of `key=value` pairs and
+  JSON lines (the key colour), the text unchanged; follow-end mode:
   pressing End (or clicking `⇣`) enables it; scrolling up disables it.
 - Alt+Z toggles line wrapping in source/log views.
 
@@ -262,7 +264,9 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 ### F14 — Rich views (v0.3)
 
 - **JSON** opens as a **tree**: the top level expanded, each node showing its key, its type and a
-  short preview (`{3 keys}`, `[120 items]`, the value for strings and numbers). ↑/↓ move, →/←
+  short preview (`{3 keys}`, `[120 items]`, the value for strings and numbers), in the JSON source
+  view's colours (v0.4): keys, numbers, `true`, `false` and `null` in one, strings in another,
+  previews muted. ↑/↓ move, →/←
   expand/collapse (or move to the child/parent), as in the ARIA tree pattern; a click focuses a
   node, and its arrow or a double-click opens or closes it. *Expand all nodes* / *Collapse all
   nodes* and *Copy JSON path* (`$.items[3].name`, the focused node's; not the file's *Copy path*)
@@ -543,7 +547,8 @@ this map only.
 - **Announcements** (`aria-live="polite"`): find results ("3 of 12"), file reloaded, file missing,
   saved (v0.2). Errors in dialogs use `assertive`.
 - **Contrast**: bundled themes and accent presets meet 4.5:1 for text and 3:1 for UI components
-  and focus rings; log-level colours also carry text badges.
+  and focus rings; log-level colours also carry text badges, and the coloured parts of log lines
+  and JSON tree rows keep their text, so colour is never the only cue (v0.4).
 - **Zoom and motion**: 200% zoom keeps the reading column without horizontal scroll (code blocks
   scroll internally); honour `prefers-reduced-motion` (no animated tab transitions or reload
   pulses).
