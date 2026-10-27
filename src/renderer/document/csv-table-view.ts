@@ -3,23 +3,14 @@
 // document's shadow root (ADR-006), like the JSON tree. The first row is the header and stays in
 // view; one cell is in the tab order, and the focused one is always drawn, wherever the view scrolls.
 import { cell, type CsvTable } from '../../shared/csv';
-import { clamp, clamp01 } from '../../shared/math';
+import { clamp } from '../../shared/math';
+import { columnStarts, columnWindow, countAtMost, keyToMove, lineAt, positionAt, rowAtPosition, sampleWidths } from './table-geometry';
 
 /** Every row is this tall (px), so a row's place is its index times this. */
 export const TABLE_ROW_HEIGHT = 24;
 
 /** Rows drawn beyond each edge of the view, so a scroll shows no gap before the next frame. */
 const OVERSCAN = 10;
-
-/** Columns drawn beyond each side of the view, and at most this many in all (a very wide window). */
-const COLUMN_OVERSCAN = 2;
-const MAX_DRAWN_COLUMNS = 300;
-
-/** Column widths come from the first rows (fewer for a wide table), in characters, within these bounds. */
-const SAMPLE_ROWS = 200;
-const SAMPLE_CELLS = 100_000;
-const MIN_CHARS = 4;
-const MAX_CHARS = 40;
 
 /** A cell shows at most this much of its text: laying out a megabyte in one cell would stall the page. */
 const MAX_CELL_CHARS = 1000;
@@ -44,30 +35,6 @@ export interface CsvTableView {
   /** Draws now (scrolling draws on the next frame). */
   flush(): void;
   dispose(): void;
-}
-
-const LF = 0x0a;
-const CR = 0x0d;
-
-/** The line `to` is on, counting line breaks from `from` (on `line`) as the source view counts them. */
-function lineAt(text: string, from: number, line: number, to: number): number {
-  for (let i = from; i < to; i++) {
-    const c = text.charCodeAt(i);
-    if (c === LF || (c === CR && text.charCodeAt(i + 1) !== LF)) line++;
-  }
-  return line;
-}
-
-/** How many of the sorted `values` are at most `value`. */
-function countAtMost(values: Uint32Array, value: number): number {
-  let low = 0;
-  let high = values.length;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (values[middle]! <= value) low = middle + 1;
-    else high = middle;
-  }
-  return low;
 }
 
 export function createCsvTableView({ parent, scroller, label }: { parent: HTMLElement; scroller: () => HTMLElement; label: string }): CsvTableView {
@@ -120,7 +87,8 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   };
   /** How many body rows are scrolled past, fractional. */
   const scrolled = () => Math.max(0, (scroller().scrollTop - gridTop()) / TABLE_ROW_HEIGHT);
-  const lineOf = (row: number) => (row < table!.rows ? table!.rowLines[row]! : endLine);
+  /** The source line a table row starts on; past the last row, the line after it. */
+  const lineOf = (current: CsvTable, row: number) => (row < current.rows ? current.rowLines[row]! : endLine);
   const tableRowOf = (index: number) => index + first;
 
   const leftOf = (column: number) => `calc(${numberChars + starts[column]!}ch + ${column + 1}rem)`;
@@ -134,26 +102,12 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     return (element.getBoundingClientRect().left || 0) - (pane.getBoundingClientRect().left || 0) + pane.scrollLeft;
   };
   /** The columns in view, with a few beyond each side. */
-  function columnWindow(): [number, number] {
-    if (!table || table.columns === 0) return [0, 0];
+  function columnsInView(current: CsvTable): [number, number] {
+    if (current.columns === 0) return [0, 0];
     const size = units();
     const pane = scroller();
     const from = pane.scrollLeft - gridLeft();
-    const to = from + pane.clientWidth;
-    // The first column whose right edge is past `from`, and the first that starts at or past `to`.
-    const search = (x: number, right: boolean) => {
-      let low = 0;
-      let high = table!.columns;
-      while (low < high) {
-        const middle = (low + high) >>> 1;
-        if (pxLeftOf(middle + (right ? 1 : 0), size) <= x) low = middle + 1;
-        else high = middle;
-      }
-      return low;
-    };
-    const start = Math.max(0, search(from, true) - COLUMN_OVERSCAN);
-    const end = Math.min(table.columns, search(to, false) + COLUMN_OVERSCAN, start + MAX_DRAWN_COLUMNS);
-    return [start, Math.max(end, Math.min(table.columns, start + 1))];
+    return columnWindow(current.columns, (column) => pxLeftOf(column, size), from, from + pane.clientWidth);
   }
 
   /** Puts `cells` (by column) in `parent` for the columns wanted: new ones made, others removed. */
@@ -184,8 +138,8 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     return item;
   }
 
-  function dataCell(tableRow: number, column: number): HTMLElement {
-    const value = cell(text, table!, tableRow, column) ?? '';
+  function dataCell(current: CsvTable, tableRow: number, column: number): HTMLElement {
+    const value = cell(text, current, tableRow, column) ?? '';
     const each = document.createElement('div');
     each.className = 'galeo-csv-cell';
     each.setAttribute('role', 'gridcell');
@@ -197,7 +151,7 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     return each;
   }
 
-  function row(index: number): HTMLElement {
+  function row(current: CsvTable, index: number): HTMLElement {
     const existing = drawn.get(index);
     if (existing) return existing;
     const tableRow = index + first;
@@ -206,7 +160,7 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
     item.setAttribute('role', 'row');
     item.setAttribute('aria-rowindex', String(index + 2));
     item.dataset['row'] = String(index);
-    item.dataset['srcLine'] = String(table!.rowLines[tableRow]);
+    item.dataset['srcLine'] = String(current.rowLines[tableRow]);
     const number = document.createElement('div');
     number.className = 'galeo-csv-cell galeo-csv-number';
     number.setAttribute('role', 'rowheader');
@@ -225,7 +179,8 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   function draw() {
     cancelAnimationFrame(frame);
     frame = 0;
-    if (!table) return;
+    const current = table;
+    if (!current) return;
     body.style.height = `${bodyCount * TABLE_ROW_HEIGHT}px`;
     const first = Math.max(0, Math.floor(scrolled()) - OVERSCAN);
     const last = Math.min(bodyCount, Math.ceil(scrolled() + scroller().clientHeight / TABLE_ROW_HEIGHT) + OVERSCAN);
@@ -240,14 +195,14 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       drawn.delete(index);
       drawnCells.delete(index);
     }
-    const [start, end] = columnWindow();
+    const [start, end] = columnsInView(current);
     const columns = Array.from({ length: end - start }, (_, at) => start + at);
     syncCells(headerRow, headerCells, columns, (column) => columnHeader(columnName(column), column + 1));
     // Rows already drawn keep their order, so only new ones are inserted: the focused cell's row is
     // never moved, and keeps focus.
     let cursor = body.firstElementChild;
     for (const index of wanted) {
-      const item = row(index);
+      const item = row(current, index);
       item.style.top = `${index * TABLE_ROW_HEIGHT}px`;
       if (item === cursor) cursor = cursor.nextElementSibling;
       else body.insertBefore(item, cursor);
@@ -256,7 +211,7 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       const cells = drawnCells.get(index)!;
       // The focused cell stays drawn, wherever the view scrolls sideways.
       const wanted = index === focusRow && (focusColumn < start || focusColumn >= end) ? [...columns, focusColumn] : columns;
-      syncCells(item, cells, wanted, (column) => dataCell(tableRowOf(index), column));
+      syncCells(item, cells, wanted, (column) => dataCell(current, tableRowOf(index), column));
       for (const [column, each] of cells) each.tabIndex = index === focusRow && column === focusColumn ? 0 : -1;
     }
   }
@@ -289,36 +244,9 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   element.addEventListener('keydown', (event) => {
     if (!table || event.altKey || event.metaKey || event.shiftKey) return;
     const page = Math.max(1, Math.floor(scroller().clientHeight / TABLE_ROW_HEIGHT) - 2);
-    const ctrl = event.ctrlKey;
-    if (ctrl && event.key !== 'Home' && event.key !== 'End') return;
-    switch (event.key) {
-      case 'ArrowDown':
-        focusCell(focusRow + 1, focusColumn);
-        break;
-      case 'ArrowUp':
-        focusCell(focusRow - 1, focusColumn);
-        break;
-      case 'ArrowRight':
-        focusCell(focusRow, focusColumn + 1);
-        break;
-      case 'ArrowLeft':
-        focusCell(focusRow, focusColumn - 1);
-        break;
-      case 'PageDown':
-        focusCell(focusRow + page, focusColumn);
-        break;
-      case 'PageUp':
-        focusCell(focusRow - page, focusColumn);
-        break;
-      case 'Home':
-        focusCell(ctrl ? 0 : focusRow, 0);
-        break;
-      case 'End':
-        focusCell(ctrl ? bodyCount - 1 : focusRow, table.columns - 1);
-        break;
-      default:
-        return;
-    }
+    const move = keyToMove(event.key, event.ctrlKey, { row: focusRow, column: focusColumn }, { page, lastRow: bodyCount - 1, lastColumn: table.columns - 1 });
+    if (!move) return;
+    focusCell(move.row, move.column);
     event.preventDefault();
   });
 
@@ -352,14 +280,8 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       element.setAttribute('aria-rowcount', String(bodyCount + 1));
       element.setAttribute('aria-colcount', String(next.columns + 1));
       // Widths from the first rows: the header and a sample of the data, in characters.
-      const sampled = Math.min(next.rows, SAMPLE_ROWS, Math.max(1, Math.floor(SAMPLE_CELLS / Math.max(1, next.columns))));
-      widths = Array.from({ length: next.columns }, (_, column) => {
-        let longest = MIN_CHARS;
-        for (let row = 0; row < sampled; row++) longest = Math.max(longest, (cell(text, next, row, column) ?? '').length);
-        return Math.min(longest, MAX_CHARS);
-      });
-      starts = new Float64Array(next.columns + 1);
-      for (let column = 0; column < next.columns; column++) starts[column + 1] = starts[column]! + widths[column]!;
+      widths = sampleWidths(text, next);
+      starts = columnStarts(widths);
       numberChars = Math.max(2, String(bodyCount).length) + 1;
       element.style.width = `calc(${numberChars + starts[next.columns]!}ch + ${next.columns + 1}rem)`;
       columnName = (column: number) => (!header ? String(column + 1) : next.rows > 0 ? (cell(text, next, 0, column) ?? '') : '');
@@ -380,7 +302,7 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       if (!table) return 1;
       const pane = scroller();
       if (pane.scrollTop <= gridTop()) return table.rowLines[0] ?? 1;
-      return lineOf(Math.min(table.rows - 1, Math.floor(scrolled()) + first));
+      return lineOf(table, Math.min(table.rows - 1, Math.floor(scrolled()) + first));
     },
     scrollToLine(line) {
       if (!table) return;
@@ -389,17 +311,15 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
       draw();
     },
     topPosition() {
-      if (!table || table.rows === 0) return 1;
-      // Body row `i` is table row `i + first`, spread over its lines up to the next row's.
-      const at = scrolled() + first;
-      const row = Math.min(table.rows - 1, Math.floor(at));
-      return lineOf(row) + Math.min(1, at - row) * (lineOf(row + 1) - lineOf(row));
+      const current = table;
+      if (!current || current.rows === 0) return 1;
+      // Body row `i` is table row `i + first`.
+      return positionAt(scrolled() + first, current.rows, (row) => lineOf(current, row));
     },
     scrollToPosition(line) {
-      if (!table || table.rows === 0) return;
-      const row = clamp(countAtMost(table.rowLines, line) - 1, 0, table.rows - 1);
-      const span = lineOf(row + 1) - lineOf(row);
-      const at = row + (span > 0 ? clamp01((line - lineOf(row)) / span) : 0);
+      const current = table;
+      if (!current || current.rows === 0) return;
+      const at = rowAtPosition(line, current.rowLines, current.rows, (row) => lineOf(current, row));
       scroller().scrollTop = gridTop() + Math.max(0, at - first) * TABLE_ROW_HEIGHT;
       draw();
     },
