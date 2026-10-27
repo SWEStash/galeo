@@ -2,7 +2,9 @@ import { appendFileSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Locator } from '@playwright/test';
 import { launchApp, tempHome } from '../helpers/launch';
-import { summarize, type Summary } from './stats';
+import { checkBudget, summarize, type Summary } from './stats';
+
+const budgets = (await import('./budgets.json', { with: { type: 'json' } })).default as { logScrollFrameMs: number; logFollowMs: number };
 
 const factor = process.env['GALEO_PERF_ENFORCE'] === '1' ? 1 : 3;
 const LEVELS = ['INFO', 'INFO', 'DEBUG', 'INFO', 'WARN', 'INFO', 'ERROR', 'DEBUG'];
@@ -102,8 +104,13 @@ test('a 100 MB log scrolls smoothly and shows appended lines quickly while follo
       console.log(
         `log-view: scroll median ${frames.median.toFixed(1)} ms, p95 ${frames.p95.toFixed(1)} ms per frame (n=${frames.n}); follow median ${follow.median.toFixed(0)} ms, p95 ${follow.p95.toFixed(0)} ms (n=${follow.n})`,
       );
-      // Scrolling keeps up with the display: no worse than one dropped frame in two.
-      expect(frames.median, 'scroll frame median').toBeLessThanOrEqual(34);
+      for (const [summary, budget, name] of [
+        [frames, budgets.logScrollFrameMs, 'scroll frame median'],
+        [follow, budgets.logFollowMs, 'follow median'],
+      ] as const) {
+        const verdict = checkBudget(summary, budget, factor);
+        expect(summary.median, `${name} over the ${verdict.limit} ms limit`).toBeLessThanOrEqual(verdict.limit);
+      }
     } finally {
       await close();
     }

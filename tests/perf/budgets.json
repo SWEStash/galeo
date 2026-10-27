@@ -1,10 +1,12 @@
 {
-  "$comment": "Performance budgets in milliseconds. GALEO_PERF_ENFORCE=1 (the release check, on the owner's machine) holds the median to these; other runs fail only above 3x. Cold start: tightened on 2026-10-21 to the profiled build's medians + ~10 % (owner; 850 / 1300 ms since v0.1, PRD 2026-10-05); the PRD's 500 ms target stays the goal. warmSwitchMs is one frame at 60 Hz (the PRD's 'next frame'). splitTypingMs: last keystroke to the preview painted, in a 5,000-word article in split, the 150 ms typing pause included (owner, 2026-10-09, from a 260 ms median). jsonTreeOpenMs / csvTableOpenMs: launch to the first row painted, a 9 MB / 195k-node JSON and a 100 MB CSV, cold start included (csvTableOpenMs is ADR-020's target; jsonTreeOpenMs a starting value, both set from the first measurements).",
+  "$comment": "Performance budgets in milliseconds. GALEO_PERF_ENFORCE=1 (the release check, on the owner's machine) holds the median to these; other runs fail only above 3x. Cold start: tightened on 2026-10-21 to the profiled build's medians + ~10 % (owner; 850 / 1300 ms since v0.1, PRD 2026-10-05); the PRD's 500 ms target stays the goal. warmSwitchMs is one frame at 60 Hz (the PRD's 'next frame'). splitTypingMs: last keystroke to the preview painted, in a 5,000-word article in split, the 150 ms typing pause included (owner, 2026-10-09, from a 260 ms median). jsonTreeOpenMs / csvTableOpenMs: launch to the first row painted, a 9 MB / 195k-node JSON and a 100 MB CSV, cold start included (csvTableOpenMs is ADR-020's target; jsonTreeOpenMs a starting value, both set from the first measurements). logScrollFrameMs / logFollowMs: a generated 100 MB log; the median frame while paging through its top, middle and end (one frame at 60 Hz), and an appended line painted while the log is followed. Set 2026-10-26 from the first measurements (16.7 ms; 1609 to 1762 ms, nearly all of it reading the whole file again).",
   "coldStartToFirstPaintMs": 650,
   "coldStartToDocumentPaintMs": 1250,
   "warmSwitchMs": 17,
   "wakeMs": 150,
   "splitTypingMs": 300,
   "jsonTreeOpenMs": 3000,
-  "csvTableOpenMs": 5000
+  "csvTableOpenMs": 5000,
+  "logScrollFrameMs": 17,
+  "logFollowMs": 2000
 }
