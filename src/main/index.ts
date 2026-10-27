@@ -63,6 +63,7 @@ import { dropHandlers } from './drops/handlers';
 import { profileHandlers } from './profiles/handlers';
 import { ProfileRuntime } from './profiles/runtime';
 import { parseAppState } from './session/schemas';
+import { sessionHandlers } from './session/session-handlers';
 import { settingsHandlers, settingsState } from './settings/handlers';
 import { parseProfileFile } from './settings/schemas';
 import { registerAppProtocol, registerSchemes } from './protocol/register';
@@ -785,7 +786,6 @@ function start(initialMode: StartupMode): void {
     registerAppProtocol(path.join(import.meta.dirname, '../renderer'), appResponseHeaders(), (url) =>
       serveImage(url, { lookup: (id) => images.lookup(id), fs }),
     );
-    let restoring = false;
     const fonts = process.platform === 'linux' ? new FcListFontCatalog() : new EmptyFontCatalog();
     registerIpc(
       {
@@ -827,23 +827,6 @@ function start(initialMode: StartupMode): void {
           // Closed once the launch's window is open: the app quits when its last window closes.
           void enqueue(async () => choiceWindow?.close()).catch(() => {});
         },
-        'session.previous': (_args, event) => profileOf(event.sender.id)?.sessions.previous() ?? [],
-        'session.restorePrevious': async ([snapshot], event) => {
-          const profile = profileOf(event.sender.id);
-          if (mode.kind !== 'normal' || restoring || !profile) throw new Error('not now');
-          restoring = true;
-          try {
-            const previous = await profile.sessions.readPrevious(snapshot);
-            if (!previous) throw new Error('no such session');
-            // The asking window, empty, takes the first window's tabs; the others open new windows.
-            const [first, ...rest] = previous.windows;
-            if (first && documents.list(event.sender.id).length === 0) documents.restoreWindow(event.sender.id, first);
-            else if (first) rest.unshift(first);
-            for (const window of rest) openMainWindow(profile, { bounds: window.bounds, state: window });
-          } finally {
-            restoring = false;
-          }
-        },
         'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
         'window.command': ([command], event) => {
           const profile = profileOf(event.sender.id);
@@ -876,6 +859,12 @@ function start(initialMode: StartupMode): void {
           undo: undoCreate,
           input,
           unsaved,
+        }),
+        ...sessionHandlers({
+          profileOf,
+          ready: () => mode.kind === 'normal',
+          tabs: documents,
+          openWindow: (profile, window) => openMainWindow(profile, window),
         }),
         ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8 } }),
         ...documentHandlers({
