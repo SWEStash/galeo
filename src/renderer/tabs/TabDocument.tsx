@@ -1,9 +1,8 @@
-import type { SeparatorChoice } from '../../shared/csv';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChosenEncoding, FollowResult, HistoryResult } from '../../shared/contracts';
+import type { ChosenEncoding, FollowResult, HistoryResult, Recovered } from '../../shared/contracts';
 import type { ImageResult, RefusalReason, SaveResult } from '../../shared/documents';
 import { fileName } from '../../shared/paths';
-import type { ScrollAnchor, TabViewState } from '../../shared/tabs';
+import type { ScrollAnchor, TableDefaults, TabViewState } from '../../shared/tabs';
 import { DocumentPane, type DocumentPaneProps } from '../document/DocumentPane';
 import type { ColorScheme } from '../document/host';
 import { useDocument } from '../document/useDocument';
@@ -12,6 +11,7 @@ import { useConfirmUnsaved } from '../edit/UnsavedPrompt';
 import type { RenderClient } from '../worker/client';
 import { unlessClosed } from './closed-tab';
 import type { TabStatus, TabStore } from './store';
+import type { EditRequest } from '../document/requests';
 
 const REFUSALS: Record<RefusalReason, string> = {
   'not-in-document': "This link can't be opened",
@@ -41,7 +41,7 @@ interface TabDocumentProps {
   scheme: ColorScheme;
   onMessage: (message: string) => void;
   /** How tables read without a choice of their own: the settings (ADR-021). */
-  tableDefaults: { separator: SeparatorChoice; header: boolean };
+  tableDefaults: TableDefaults;
   /** A match chosen in find in all tabs, for the find bar to open on (ADR-024). */
   findRequest?: DocumentPaneProps['findRequest'];
   onFindShown?: (() => void) | undefined;
@@ -140,7 +140,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
   );
 
   // Main's Ctrl+E for this tab (ADR-013): each one is a new request for the pane.
-  const [editRequest, setEditRequest] = useState<{ edit: 'granted' | 'leave' | 'refused'; token: number } | null>(null);
+  const [editRequest, setEditRequest] = useState<EditRequest | null>(null);
   useEffect(
     () =>
       window.galeo.documents.onEditMode(({ id: tab, edit }) => {
@@ -168,7 +168,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
   );
   // What main holds for the tab, for its first document only: unsaved text from before a renderer
   // crash, or edit mode and unsaved text it had in the window it moved from (ADR-019).
-  const [recovered, setRecovered] = useState<{ text: string; base: string | null } | null>(null);
+  const [recovered, setRecovered] = useState<Recovered['kept']>(null);
   useEffect(() => {
     let current = true;
     void window.galeo.documents

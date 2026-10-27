@@ -1,6 +1,7 @@
 import type { ColorScheme } from './host';
 import { setTrustedHtml } from './host';
 import { renderMermaid, sanitizeSvg } from './mermaid-engine';
+import type { DiagramExpand } from './requests';
 
 export interface DiagramOptions {
   scheme: ColorScheme;
@@ -17,7 +18,7 @@ export interface DiagramOptions {
    * mode. `returnFocus` focuses its Expand button afterwards, the one there by then (a redraw, e.g.
    * on a scheme change, replaces it).
    */
-  onExpand?: (diagram: { svg: string; name: string; panel: boolean; returnFocus: () => void }) => void;
+  onExpand?: (diagram: DiagramExpand) => void;
 }
 
 export interface Diagrams {

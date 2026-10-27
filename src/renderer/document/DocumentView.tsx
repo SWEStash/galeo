@@ -1,4 +1,5 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
+import { useLatest } from './useLatest';
 import type { ImageResult } from '../../shared/documents';
 import { offerZoom, type ImageExpand } from './images';
 import type { ViewMode } from '../../shared/formats';
@@ -17,6 +18,7 @@ import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBl
 import type { SourceLanguage } from './source-view';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 import { NO_MATCHES, type FindResult } from '../../shared/find';
+import type { DiagramExpand, FindRequest } from './requests';
 
 /** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`), or a JSON tree or a CSV table (of `source`) named `label`. */
 export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string } | { table: CsvTable; source: string; label: string; header: boolean };
@@ -51,7 +53,7 @@ export interface DocumentViewProps {
   /** Scales the document (per tab), not the app around it. */
   zoom?: number;
   /** A diagram's Expand button: show it in the viewer (`returnFocus` after it closes). */
-  onExpandDiagram?: ((diagram: { svg: string; name: string; panel: boolean; returnFocus: () => void }) => void) | undefined;
+  onExpandDiagram?: ((diagram: DiagramExpand) => void) | undefined;
   /** An image's Expand button or a click on it: show it in the viewer. */
   onExpandImage?: ((image: ImageExpand) => void) | undefined;
   /** Edit mode (ADR-013): the source view takes the reader's typing, and focus when it starts. */
@@ -73,7 +75,7 @@ export interface DocumentViewProps {
   /** The document area became too narrow for a split, or wide enough again. */
   onNarrow?: ((narrow: boolean) => void) | undefined;
   /** A find to run once the view showing can search (a match chosen in find in all tabs); a new token runs it again. */
-  pendingFind?: { query: string; caseSensitive: boolean; line: number; token: number } | null;
+  pendingFind?: FindRequest | null;
   /** Where `pendingFind` landed. */
   onPendingFind?: ((result: FindResult) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
@@ -194,15 +196,11 @@ export function DocumentView({
   const container = useRef<HTMLDivElement>(null);
   // A waking tab is inserted hidden, scrolled to its place, then shown: no visible jump (ADR-002).
   const [waking, setWaking] = useState(initialPosition !== null);
-  const positionListener = useRef(onPosition);
-  positionListener.current = onPosition;
-  const linkListener = useRef(onLink);
-  linkListener.current = onLink;
-  const menuListener = useRef(onContextMenu);
-  menuListener.current = onContextMenu;
+  const positionListener = useLatest(onPosition);
+  const linkListener = useLatest(onLink);
+  const menuListener = useLatest(onContextMenu);
   const shownView = useRef<ViewMode | null>(null);
-  const editing = useRef(editable);
-  editing.current = editable;
+  const editing = useLatest(editable);
   const renderedFinder = useRef<Finder | null>(null);
   // The split pane the reader last turned to: find searches it, else the source (ADR-014).
   const turnedTo = useRef<'source' | 'rendered'>('source');
@@ -294,10 +292,8 @@ export function DocumentView({
 
   const hasContent = useRef(false);
   const diagrams = useRef<Diagrams | null>(null);
-  const expandListener = useRef(onExpandDiagram);
-  expandListener.current = onExpandDiagram;
-  const imageListener = useRef(onExpandImage);
-  imageListener.current = onExpandImage;
+  const expandListener = useLatest(onExpandDiagram);
+  const imageListener = useLatest(onExpandImage);
   const shownScheme = useRef(scheme);
   useEffect(() => () => diagrams.current?.dispose(), []);
   useLayoutEffect(() => {
@@ -399,8 +395,7 @@ export function DocumentView({
   useLayoutEffect(() => {
     host().setSplitRatio(splitRatio);
   }, [splitRatio]);
-  const ratioListener = useRef(onSplitRatio);
-  ratioListener.current = onSplitRatio;
+  const ratioListener = useLatest(onSplitRatio);
   useEffect(() => host().onSplitRatio((ratio) => ratioListener.current?.(ratio)), []);
 
   // Split keeps both panes on the same block, whichever the reader scrolls (ADR-014). Listening
@@ -432,8 +427,7 @@ export function DocumentView({
   }, [view, sourceReady]);
 
   // Whether a split fits: measured as the document area resizes; a hidden tab (no width) keeps its say.
-  const narrowListener = useRef(onNarrow);
-  narrowListener.current = onNarrow;
+  const narrowListener = useLatest(onNarrow);
   useEffect(() => {
     const element = container.current!;
     let narrow: boolean | null = null;
@@ -449,8 +443,7 @@ export function DocumentView({
 
   // After the view switch above (a hidden view can't take focus): edit mode makes the source view
   // editable and puts the caret in it; reading makes it read-only again.
-  const editListener = useRef(onEdit);
-  editListener.current = onEdit;
+  const editListener = useLatest(onEdit);
   useLayoutEffect(() => {
     const sourceView = host().source;
     if (!sourceReady || !sourceView) return;

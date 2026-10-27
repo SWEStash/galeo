@@ -20,6 +20,9 @@ export interface TableOptions {
   asTable?: true;
 }
 
+/** The profile's table settings a tab starts from (ADR-021). */
+export type TableDefaults = Required<Pick<TableOptions, 'separator' | 'header'>>;
+
 /** A tab's reading column: a width in `ch` (40 to 200), or the whole window. */
 export type ReaderWidth = number | 'full';
 

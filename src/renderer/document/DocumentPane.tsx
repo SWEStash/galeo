@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChosenEncoding, DocumentContent } from '../../shared/contracts';
+import type { ChosenEncoding, DocumentContent, Recovered } from '../../shared/contracts';
 import { READ_MAX_BYTES, type ImageResult, type SaveResult, type TextEncoding } from '../../shared/documents';
 import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
@@ -9,7 +9,7 @@ import { useCommands } from '../commands/useCommands';
 import { OutlinePanel } from '../outline/OutlinePanel';
 import { useOutline } from '../outline/useOutline';
 import type { SeparatorChoice } from '../../shared/csv';
-import type { ScrollAnchor, TableOptions, TabViewState } from '../../shared/tabs';
+import type { ScrollAnchor, TableDefaults, TableOptions, TabViewState } from '../../shared/tabs';
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
@@ -21,6 +21,7 @@ import { FindBar } from './FindBar';
 import type { ColorScheme } from './host';
 import { FORMAT_NAMES, sourceLanguage } from './formats';
 import { useDelayed } from './useDelayed';
+import { useLatest } from './useLatest';
 import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
@@ -32,6 +33,7 @@ import { useJsonTree } from './useJsonTree';
 import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 import { NO_MATCHES, type FindResult } from '../../shared/find';
+import type { DiagramExpand, EditRequest, FindRequest } from './requests';
 
 const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed', cancelled: 'preview-failed' } as const;
 
@@ -62,7 +64,7 @@ export interface DocumentPaneProps {
   /** An anchor to scroll to once the document is shown; `onAnchorShown` confirms it. */
   pendingAnchor: { anchor: string; token: number } | null;
   /** A match chosen in find in all tabs, to open the find bar on; a new token opens it again. */
-  findRequest?: { query: string; caseSensitive: boolean; line: number; token: number } | null | undefined;
+  findRequest?: FindRequest | null | undefined;
   /** `findRequest` was taken. */
   onFindShown?: (() => void) | undefined;
   onAnchorShown: () => void;
@@ -88,7 +90,7 @@ export interface DocumentPaneProps {
   /** The reader chose another view, or started or stopped following a log. */
   onViewState?: (state: TabViewState) => void;
   /** Main's word on edit mode for this tab (Ctrl+E, ADR-013); a new token is a new request. */
-  editRequest?: { edit: 'granted' | 'leave' | 'refused'; token: number } | null;
+  editRequest?: EditRequest | null;
   /** Saves the edited text, naming the version it was loaded from. */
   onSave?: (text: string, base: string | null) => Promise<SaveResult>;
   /** The tab in edit mode now has unsaved changes, or no longer has. */
@@ -104,9 +106,9 @@ export interface DocumentPaneProps {
   /** Hands main the unsaved text, kept in memory for a renderer crash (ADR-013). */
   onKeep?: (text: string, base: string | null) => void;
   /** How a table reads when its tab has no choice of its own: the settings (ADR-021). */
-  tableDefaults?: { separator: SeparatorChoice; header: boolean };
+  tableDefaults?: TableDefaults;
   /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
-  recovered?: { text: string; base: string | null } | null;
+  recovered?: Recovered['kept'];
   /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
   onReread?: () => void;
 }
@@ -277,8 +279,7 @@ export function DocumentPane({
   // A split in a window too narrow for it shows one view; the toggles still act on the split.
   const view = shownView(layout, { narrow, editing });
   const live = editing && view === 'split' && splittable;
-  const liveNow = useRef(live);
-  liveNow.current = live;
+  const liveNow = useLatest(live);
   const preview = useMemo(() => pauseOrMax(() => setPreviewText(documentHandle.current?.sourceText() ?? null), PREVIEW_TIMING), []);
   useEffect(() => {
     // Into live: the preview starts from the editor's text as it is; out of it, from the file's.
@@ -323,8 +324,7 @@ export function DocumentPane({
     dirtyNow.current = next;
     setDirty(next);
   };
-  const keepListener = useRef(onKeep);
-  keepListener.current = onKeep;
+  const keepListener = useLatest(onKeep);
   const keepTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const keepNow = useCallback(() => {
     clearTimeout(keepTimer.current);
@@ -473,7 +473,7 @@ export function DocumentPane({
   }, [editing, onEditor]);
   const [viewer, setViewer] = useState<{ content: ZoomContent; name: string; returnFocus: () => void } | null>(null);
   const expandDiagram = useCallback(
-    ({ svg, name, panel, returnFocus }: { svg: string; name: string; panel: boolean; returnFocus: () => void }) =>
+    ({ svg, name, panel, returnFocus }: DiagramExpand) =>
       setViewer({ content: { kind: 'diagram', svg, panel }, name, returnFocus }),
     [],
   );

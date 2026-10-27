@@ -48,6 +48,7 @@ import { DropArea } from './tabs/DropArea';
 import { useFileDrops } from './tabs/useFileDrops';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
+import type { FindRequest } from './document/requests';
 
 export function App() {
   // What the window's creation told the page, so a new window paints without waiting on main;
@@ -166,7 +167,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   });
   // Find in all tabs (ADR-024): a chosen match shows its tab with the find bar open on it, and focus
   // goes to the find bar.
-  const [findRequest, setFindRequest] = useState<{ id: string; query: string; caseSensitive: boolean; line: number; token: number } | null>(null);
+  const [findRequest, setFindRequest] = useState<(FindRequest & { id: string }) | null>(null);
   const findRequests = useRef(0);
   const showMatch = useCallback(
     (id: string, choice: FindAllChoice) => {
