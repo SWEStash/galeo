@@ -8,8 +8,12 @@ function model(text: string): TreeModel {
   return createTreeModel(text, parsed.tree);
 }
 
+const label = (tree: TreeModel, node: number) => {
+  const { key, value } = tree.parts(node);
+  return key === null ? value : `${key}: ${value}`;
+};
 /** The visible rows as the tree shows them: indent, label. */
-const shown = (tree: TreeModel) => Array.from(tree.rows(), (node) => `${'  '.repeat(tree.depth(node))}${tree.label(node)}`);
+const shown = (tree: TreeModel) => Array.from(tree.rows(), (node) => `${'  '.repeat(tree.depth(node))}${label(tree, node)}`);
 
 const SAMPLE = '{"name": "galeo", "tags": ["a", "b"], "nested": {"deep": {"x": 1}}, "empty": {}}';
 

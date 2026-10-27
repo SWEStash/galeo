@@ -34,9 +34,10 @@ export interface TreeModel {
   positionInSet(node: number): number;
   /** Its siblings and itself (`aria-setsize`). */
   setSize(node: number): number;
-  /** `key: value`, the value previewed: `{3 keys}`, `[2 items]`, a scalar as JSON writes it. */
-  label(node: number): string;
-  /** The label's key (null in an array or at the top) and value, with the value's type. */
+  /**
+   * The row's key (null in an array or at the top) and value, with the value's type. The value is previewed:
+   * `{3 keys}`, `[2 items]`, a scalar as JSON writes it.
+   */
   parts(node: number): RowParts;
   /** The path naming the node: `$.items[3].name`, `$["odd key"]`. */
   path(node: number): string;
@@ -150,10 +151,6 @@ export function createTreeModel(text: string, tree: JsonTree): TreeModel {
     parent: (node) => parents[node]!,
     positionInSet: (node) => positions[node]!,
     setSize: (node) => (node === 0 ? 1 : counts[parents[node]!]!),
-    label(node) {
-      const { key, value } = model.parts(node);
-      return key === null ? value : `${key}: ${value}`;
-    },
     parts(node) {
       const type = typeOf(tree, node);
       let value: string;

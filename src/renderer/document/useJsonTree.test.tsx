@@ -53,7 +53,10 @@ describe('useJsonTree', () => {
     await act(async () => pending[0]!.resolve(indexJson('{"a": 1}')));
     const state = probe.latest();
     expect(state.status).toBe('ready');
-    expect(state.status === 'ready' && Array.from(state.model.rows(), (node) => state.model.label(node))).toEqual(['{1 key}', 'a: 1']);
+    expect(state.status === 'ready' && Array.from(state.model.rows(), (node) => state.model.parts(node))).toEqual([
+      { key: null, value: '{1 key}', type: 'object' },
+      { key: 'a', value: '1', type: 'number' },
+    ]);
   });
 
   it('passes on where invalid JSON breaks, and that a document is too large for a tree', async () => {
