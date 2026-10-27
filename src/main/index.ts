@@ -74,6 +74,7 @@ import { appResponseHeaders, hostResolverRules, networkLockdown } from './securi
 import { tabHandlers } from './tabs/handlers';
 import { tabMover } from './tabs/transfer';
 import { testHooks } from './test-hooks';
+import { windowCrashes } from './window/crash';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { windowHandlers } from './window/handlers';
 import { applicationMenu } from './window/menu';
@@ -434,7 +435,7 @@ function start(initialMode: StartupMode): void {
     });
     window.webContents.on('render-process-gone', (_event, details) => {
       if (details.reason === 'clean-exit' || quitting || window.isDestroyed()) return;
-      recoverFromCrash(window, details.reason);
+      windowCrash.recover(window, details.reason);
     });
     window.on('closed', () => {
       profile.windows.splice(profile.windows.indexOf(window), 1);
@@ -470,57 +471,27 @@ function start(initialMode: StartupMode): void {
     return window;
   };
 
-  /**
-   * A window's renderer went away (ADR-002): the tab it was rendering is marked crashed, so it isn't
-   * rendered again until the reader asks, and the page comes back with its tabs from the registry,
-   * only the shown one rendered. A window that keeps crashing comes back showing the crash-loop
-   * message instead (UX §4), and is left down if even that crashes.
-   */
-  const recoverFromCrash = (window: BrowserWindow, reason: string) => {
-    const windowId = window.webContents.id;
-    const { tab, then } = crashes.crashed(windowId);
-    crashingForTests.delete(windowId);
-    console.warn(`galeo: window ${windowId} renderer gone (${reason})${tab ? ', crashed while rendering a tab' : ''}`);
-    if (tab) documents.markCrashed(tab, windowId);
-    if (then === 'stay-down') return console.warn(`galeo: window ${windowId} crashed again on the crash-loop message; left down`);
-    if (then === 'give-up') console.warn(`galeo: window ${windowId} crashed repeatedly; showing the crash-loop message`);
-    reloadWithTabs(window, { activate: then === 'reload' });
-  };
-
-  /** The window's page loads again, its tabs hibernated but for the shown one (unless it shows the crash loop). */
-  const reloadWithTabs = (window: BrowserWindow, { activate }: { activate: boolean }) => {
-    const windowId = window.webContents.id;
-    for (const id of warm.warm(windowId)) warm.forget(windowId, id);
-    for (const record of documents.list(windowId)) reads.forget(record.id);
-    // The page comes back read-only; tabs with unsaved text get it back from main, still editable.
-    grants.dropClean(windowId);
-    const active = documents.snapshot(windowId).active;
-    if (active && activate) warm.activated(windowId, active);
-    window.webContents.reload();
-  };
-
-  /**
-   * Unpackaged test runs kill a window's renderer as it starts rendering the file
-   * `globalThis.__galeoCrashOnRendering` names. The page goes on until the crash lands, so its later
-   * reports are ignored, as a crash in the middle of rendering would never have sent them.
-   */
-  const crashingForTests = new Set<number>();
-  const crashesForTests: Pick<CrashRecovery, 'rendering' | 'rendered'> = {
-    rendering: (windowId, id) => {
-      crashes.rendering(windowId, id);
-      (testHooks.__galeoRenderingSeen ??= []).push(documents.get(id, windowId)?.path ?? id);
-      const wanted = testHooks.__galeoCrashOnRendering;
-      if (!wanted || documents.get(id, windowId)?.path !== wanted) return;
-      crashingForTests.add(windowId);
-      // Killed by the OS, after this handler: forcefullyCrashRenderer can leave a renderer hung
-      // instead of gone (seen on a Linux CI runner), and then main never hears it went.
-      const contents = webContents.fromId(windowId);
-      if (contents) setImmediate(() => process.kill(contents.getOSProcessId(), 'SIGKILL'));
-    },
-    rendered: (windowId, id) => {
-      if (!crashingForTests.has(windowId)) crashes.rendered(windowId, id);
-    },
-  };
+  const windowCrash = windowCrashes({
+    crashes,
+    tabs: documents,
+    warm,
+    reads,
+    grants,
+    ...(app.isPackaged
+      ? {}
+      : {
+          forTests: {
+            crashOn: () => testHooks.__galeoCrashOnRendering,
+            seen: (path: string) => void (testHooks.__galeoRenderingSeen ??= []).push(path),
+            // Killed by the OS, after the report: forcefullyCrashRenderer can leave a renderer hung
+            // instead of gone (seen on a Linux CI runner), and then main never hears it went.
+            kill: (windowId: number) => {
+              const contents = webContents.fromId(windowId);
+              if (contents) setImmediate(() => process.kill(contents.getOSProcessId(), 'SIGKILL'));
+            },
+          },
+        }),
+  });
 
   /** The profile last worked in, where launches go when no window is open (ADR-005). */
   const rememberProfile = (id: string) => void appState.setLastProfile(id).catch((error: unknown) => console.warn('galeo: app state not saved', error));
@@ -837,7 +808,7 @@ function start(initialMode: StartupMode): void {
           },
           command: (command, { profile, window }) => mainKey(command, profile, window),
           crashes,
-          reload: ({ window }) => reloadWithTabs(window, { activate: true }),
+          reload: ({ window }) => windowCrash.reload(window, { activate: true }),
         }),
         ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8 } }),
         ...documentHandlers({
@@ -859,7 +830,7 @@ function start(initialMode: StartupMode): void {
           tabs: documents,
           warm,
           reads,
-          crashes: app.isPackaged ? crashes : crashesForTests,
+          crashes: windowCrash.reports,
           resync: pushSnapshot,
           closed: (id) => links.forget(id),
           demote,
