@@ -51,6 +51,11 @@ export interface TabsView {
   dragging: boolean;
 }
 
+/** The tab the window shows, if any. */
+export function shownTab(view: Pick<TabsView, 'tabs' | 'active'>): TabView | undefined {
+  return view.tabs.find((tab) => tab.id === view.active);
+}
+
 /** How long a tab shows that it reloaded. */
 const RELOADED_MS = 1000;
 

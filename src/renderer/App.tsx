@@ -1,54 +1,52 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TabPanel, Tabs } from 'react-aria-components';
+import { accentOf } from '../shared/accents';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
-import { TAB_PANEL_DEFAULT, type TabsPosition } from '../shared/settings';
-import type { ReaderWidth } from '../shared/tabs';
-import { fileName } from '../shared/paths';
+import type { Platform } from '../shared/keymap';
 import { AboutDialog } from './about/AboutDialog';
-import type { Command, Platform } from '../shared/keymap';
-import { CommandsProvider, useCommands, useDispatcher } from './commands/useCommands';
+import { movableTab, moveShownTab } from './app/tab-moves';
+import { useOverlay } from './app/useOverlay';
+import { usePaletteActions } from './app/usePaletteActions';
+import { useTabShortcuts } from './app/useTabShortcuts';
+import { useTabsPosition } from './app/useTabsPosition';
+import { useTransientMessage } from './app/useTransientMessage';
+import { useUnsavedGuards } from './app/useUnsavedGuards';
+import { CommandsProvider, useCommands } from './commands/useCommands';
+import { setCustomCss } from './document/host';
+import type { FindRequest } from './document/requests';
+import { useColorScheme } from './document/theme';
+import { readerWidthStyle } from './document/width';
+import { UnsavedPrompt } from './edit/UnsavedPrompt';
+import { OutlineProvider } from './outline/useOutline';
 import type { PaletteEntry } from './palette/entries';
 import { Palette } from './palette/Palette';
-import { OutlineProvider } from './outline/useOutline';
-import { settleFocus } from './document/settle-focus';
-import { useColorScheme } from './document/theme';
 import { markFirstPaint, markStart } from './perf';
+import { ProfileChip } from './profiles/ProfileChip';
 import { ProfileCreatedNotice } from './profiles/ProfileCreatedNotice';
+import { useProfiles } from './profiles/useProfiles';
+import { QuickOpen } from './quick-open/QuickOpen';
 import { SessionNotice, SettingsNotice } from './settings/SettingsNotice';
 import { settingsTokens } from './settings/tokens';
-import { setCustomCss } from './document/host';
-import { ProfileChip } from './profiles/ProfileChip';
-import { useProfiles } from './profiles/useProfiles';
-import { accentOf } from '../shared/accents';
 import { useSettings } from './settings/useSettings';
 import { CrashLoop, SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
+import { DropArea } from './tabs/DropArea';
+import { EmptyWindow } from './tabs/EmptyWindow';
+import type { FindAllChoice } from './tabs/FindAll';
+import { MoveTabDialog } from './tabs/MoveTabDialog';
+import { StatusBar } from './tabs/StatusBar';
+import { TabBar } from './tabs/TabBar';
+import { TabDocument } from './tabs/TabDocument';
+import { TabSearch } from './tabs/TabSearch';
+import { useFileDrops } from './tabs/useFileDrops';
+import { useTabs } from './tabs/useTabs';
+import { createRenderClient, type RenderClient } from './worker/client';
+import { spawnRenderWorker } from './worker/spawn';
 
 // The Settings tab loads when first shown: its pickers are nothing a window needs to start.
 const SettingsView = lazy(() => import('./settings/SettingsView').then((module) => ({ default: module.SettingsView })));
 // Opened on demand: the grid and its drag and drop stay out of the start-up bundle.
 const TabOverview = lazy(() => import('./tabs/TabOverview').then((module) => ({ default: module.TabOverview })));
 const FindAll = lazy(() => import('./tabs/FindAll').then((module) => ({ default: module.FindAll })));
-import { hasReadingColumn, readerWidthStyle } from './document/width';
-import { tabAction } from './tabs/commands';
-import type { TabStore } from './tabs/store';
-import { EmptyWindow } from './tabs/EmptyWindow';
-import { MoveTabDialog } from './tabs/MoveTabDialog';
-import { unlessClosed } from './tabs/closed-tab';
-import { editors } from './edit/editors';
-import { StatusBar } from './tabs/StatusBar';
-import { TabBar } from './tabs/TabBar';
-import { TabDocument } from './tabs/TabDocument';
-import { useTabs } from './tabs/useTabs';
-import { UnsavedPrompt, useConfirmUnsaved } from './edit/UnsavedPrompt';
-import { wheelZoom } from './tabs/wheel-zoom';
-import { QuickOpen } from './quick-open/QuickOpen';
-import { TabSearch } from './tabs/TabSearch';
-import type { FindAllChoice } from './tabs/FindAll';
-import { DropArea } from './tabs/DropArea';
-import { useFileDrops } from './tabs/useFileDrops';
-import { createRenderClient, type RenderClient } from './worker/client';
-import { spawnRenderWorker } from './worker/spawn';
-import type { FindRequest } from './document/requests';
 
 export function App() {
   // What the window's creation told the page, so a new window paints without waiting on main;
@@ -120,7 +118,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   useEffect(() => {
     document.documentElement.style.setProperty('--galeo-color-accent', accent);
   }, [accent]);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useTransientMessage(MESSAGE_MS);
 
   useEffect(markFirstPaint, []);
 
@@ -137,31 +135,20 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     return () => client.dispose();
   }, []);
 
-  // One overlay at a time: quick open, tab search, the tab overview, find in all tabs, the palette, About or the windows a tab can move to.
-  const [overlay, setOverlay] = useState<'quickOpen' | 'tabSearch' | 'tabOverview' | 'findAll' | 'palette' | 'about' | 'moveTab' | null>(null);
-  const openQuickOpen = useCallback(() => setOverlay('quickOpen'), []);
-  const openOverview = useCallback(() => setOverlay('tabOverview'), []);
-  // Where focus goes when the overlay closes, if not the document: About from the profile menu, whose item is gone.
-  const returnFocus = useRef<string | null>(null);
-  const closeOverlay = useCallback(() => {
-    setOverlay(null);
-    const to = returnFocus.current ?? '[data-testid="tab-panel"][data-active="true"] [data-testid="document"]';
-    returnFocus.current = null;
-    // Focus goes back to the document being read (UX F8), once the dialog has let it go: its own
-    // restore lands a frame or more later, on the tab shown before (hidden if another is shown now).
-    settleFocus(() => document.querySelector<HTMLElement>(to)?.focus());
-  }, []);
+  const { overlay, openOverlay, closeOverlay, returnFocusTo } = useOverlay();
+  const openQuickOpen = useCallback(() => openOverlay('quickOpen'), [openOverlay]);
+  const openOverview = useCallback(() => openOverlay('tabOverview'), [openOverlay]);
   const { tabsLeft, panelWidth, collapsed, setCollapsed, keepPanelWidth } = useTabsPosition(settings?.settings.tabsPosition, settings?.settings.tabPanelWidth, setMessage);
   useTabShortcuts(store, openQuickOpen, settings?.settings.measure ?? 72, setMessage);
   useUnsavedGuards(store);
   useCommands({
-    commandPalette: () => setOverlay('palette'),
-    searchTabs: () => setOverlay('tabSearch'),
+    commandPalette: () => openOverlay('palette'),
+    searchTabs: () => openOverlay('tabSearch'),
     tabOverview: openOverview,
-    findAll: () => setOverlay('findAll'),
+    findAll: () => openOverlay('findAll'),
     moveTabToWindow: () => {
       const shown = movableTab(store, setMessage);
-      if (shown) setOverlay('moveTab');
+      if (shown) openOverlay('moveTab');
       return shown !== undefined;
     },
   });
@@ -173,10 +160,10 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     (id: string, choice: FindAllChoice) => {
       store.activate(id);
       if (!choice) return;
-      returnFocus.current = '[data-testid="tab-panel"][data-active="true"] .find-bar input';
+      returnFocusTo('[data-testid="tab-panel"][data-active="true"] .find-bar input');
       setFindRequest({ id, ...choice, token: ++findRequests.current });
     },
-    [store],
+    [store, returnFocusTo],
   );
   const moveToChosenWindow = useCallback(
     (target: number) => {
@@ -187,10 +174,13 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     [store, closeOverlay],
   );
   const [recentRevision, setRecentRevision] = useState(0);
-  const openAbout = useCallback((from: string | null = null) => {
-    returnFocus.current = from;
-    setOverlay('about');
-  }, []);
+  const openAbout = useCallback(
+    (from: string | null = null) => {
+      returnFocusTo(from);
+      openOverlay('about');
+    },
+    [returnFocusTo, openOverlay],
+  );
   const runEntry = usePaletteActions(store, setMessage, () => setRecentRevision((revision) => revision + 1), openAbout);
   const choose = useCallback(
     (entry: PaletteEntry) => {
@@ -201,12 +191,6 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
     [closeOverlay, runEntry],
   );
   const { landed } = useFileDrops(openQuickOpen, setMessage);
-
-  useEffect(() => {
-    if (!message) return;
-    const timer = setTimeout(() => setMessage(null), MESSAGE_MS);
-    return () => clearTimeout(timer);
-  }, [message]);
 
   return (
     <>
@@ -307,197 +291,5 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       {overlay === 'about' && <AboutDialog version={version} onClose={closeOverlay} />}
       {overlay === 'moveTab' && <MoveTabDialog onChoose={moveToChosenWindow} onClose={closeOverlay} />}
     </>
-  );
-}
-
-/**
- * Where this window shows its tabs (ADR-023): the profile's setting, and whether the side panel is
- * collapsed here, which lasts until the window closes. The palette moves the tabs, Ctrl+Shift+B
- * collapses and expands the panel.
- */
-function useTabsPosition(position: TabsPosition | undefined, width: number | undefined, say: (message: string) => void) {
-  const tabsLeft = position === 'left';
-  const [collapsed, setCollapsed] = useState(false);
-  // Back to the tab bar and to the left again: the panel shows expanded.
-  useEffect(() => {
-    if (!tabsLeft) setCollapsed(false);
-  }, [tabsLeft]);
-  const keep = useCallback(
-    (change: { tabsPosition: TabsPosition } | { tabPanelWidth: number }) =>
-      void window.galeo.settings.set('profile', change).then((result) => {
-        if (!result.ok) say("Not kept: this profile's profile.json has an error from a hand edit");
-      }),
-    [say],
-  );
-  useCommands({
-    toggleTabPanel: () => {
-      if (!tabsLeft) say('The tab panel shows only with tabs on the left');
-      else {
-        setCollapsed(!collapsed);
-        say(collapsed ? 'Tab panel expanded' : 'Tab panel collapsed');
-      }
-      return true;
-    },
-    tabsOnLeft: () => (keep({ tabsPosition: 'left' }), true),
-    tabsOnTop: () => (keep({ tabsPosition: 'top' }), true),
-  });
-  const keepPanelWidth = useCallback((tabPanelWidth: number) => keep({ tabPanelWidth }), [keep]);
-  return { tabsLeft, panelWidth: width ?? TAB_PANEL_DEFAULT, collapsed, setCollapsed, keepPanelWidth };
-}
-
-/**
- * Unsaved changes (ADR-013): closing a dirty tab asks first, and so does main before it closes the
- * window, quits or deletes the profile, one dirty tab at a time, showing each.
- */
-function useUnsavedGuards(store: TabStore) {
-  const confirm = useConfirmUnsaved();
-  useEffect(() => {
-    const nameOf = (id: string) => {
-      const tab = store.getSnapshot().tabs.find((each) => each.id === id);
-      return tab ? fileName(tab.path) : 'this file';
-    };
-    const ask = (id: string) => confirm(id, nameOf(id));
-    store.setCloseGuard(ask);
-    const stop = window.galeo.documents.onConfirmClose((ids) => {
-      void window.galeo.documents.closeAnswer('asking');
-      void (async () => {
-        for (const id of ids) {
-          store.activate(id);
-          if (!(await ask(id))) return window.galeo.documents.closeAnswer('cancel');
-        }
-        await window.galeo.documents.closeAnswer('proceed');
-      })();
-    });
-    return () => {
-      stop();
-      store.setCloseGuard(null);
-    };
-  }, [store, confirm]);
-}
-
-/**
- * The shown tab, if it can move to another window: the settings tab stays (UX F15). Undefined when
- * no tab is shown; null, said why, for the settings tab.
- */
-function movableTab(store: TabStore, say: (message: string) => void): string | null | undefined {
-  const view = store.getSnapshot();
-  const shown = view.tabs.find((tab) => tab.id === view.active);
-  if (!shown) return undefined;
-  if (shown.kind !== 'settings') return shown.id;
-  say('The Settings tab stays in its window');
-  return null;
-}
-
-/** Moves the tab to another window or a new one (ADR-019), its unsaved text handed to main first. */
-function moveShownTab(id: string, target: number | 'new', say: (message: string) => void) {
-  editors.get(id)?.keepNow();
-  void window.galeo.tabs.moveTo(id, target).then((moved) => {
-    if (!moved) say("The tab didn't move");
-  }, unlessClosed(say, "The tab didn't move"));
-}
-
-/** The tab shortcuts, per-tab zoom and reader width (UX §5), wherever the focus is. */
-function useTabShortcuts(store: TabStore, openQuickOpen: () => void, measure: ReaderWidth, say: (message: string) => void) {
-  // The store's state as of the key, not of the last render: keys can come faster than renders.
-  const active = () => store.getSnapshot().active;
-  const zoom = (direction: 'in' | 'out' | 'reset') => () => {
-    const id = active();
-    if (!id) return false;
-    store.zoom(id, direction);
-    return true;
-  };
-  const width = (direction: 'wider' | 'narrower' | 'reset' | 'full') => () => {
-    const id = active();
-    if (!id) return false;
-    if (!hasReadingColumn(store.getSnapshot().statuses.get(id))) say('Reader width applies to the rendered view');
-    else store.width(id, direction, measure);
-    return true;
-  };
-  const tabs = (command: Command) => ({ tabNumber }: { tabNumber: number | null }) => {
-    const action = tabAction(command, tabNumber, store.getSnapshot());
-    if (!action) return false;
-    if (action.kind === 'activate') store.activate(action.id);
-    else if (action.kind === 'move') store.move(action.id, action.position);
-    else if (action.kind === 'close') store.close(action.id);
-    else store.reopenClosed();
-    return true;
-  };
-  // Ctrl and the wheel zoom too, unless something under the pointer took the wheel (the viewer).
-  useEffect(() => {
-    let pending = 0;
-    const onWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey || event.defaultPrevented) return;
-      event.preventDefault();
-      const turned = wheelZoom(pending, event);
-      pending = turned.pending;
-      if (turned.step) zoom(turned.step)();
-    };
-    window.addEventListener('wheel', onWheel, { passive: false });
-    return () => window.removeEventListener('wheel', onWheel);
-  }, [store]);
-  useCommands({
-    zoomIn: zoom('in'),
-    zoomOut: zoom('out'),
-    zoomReset: zoom('reset'),
-    widenReader: width('wider'),
-    narrowReader: width('narrower'),
-    resetReaderWidth: width('reset'),
-    fullWidth: width('full'),
-    quickOpen: openQuickOpen,
-    reload: () => {
-      const id = active();
-      if (!id) return false;
-      store.reread(id);
-      return true;
-    },
-    settings: () => void window.galeo.tabs.openSettings(),
-    nextTab: tabs('nextTab'),
-    previousTab: tabs('previousTab'),
-    goToTab: tabs('goToTab'),
-    goToLastTab: tabs('goToLastTab'),
-    moveTabLeft: tabs('moveTabLeft'),
-    moveTabRight: tabs('moveTabRight'),
-    moveTabToNewWindow: () => {
-      const id = movableTab(store, say);
-      if (id === undefined) return false;
-      if (id === null) return true;
-      if (store.getSnapshot().tabs.length < 2) say("It's this window's only tab");
-      else moveShownTab(id, 'new', say);
-      return true;
-    },
-    closeTab: tabs('closeTab'),
-    reopenClosed: tabs('reopenClosed'),
-  });
-}
-
-/** What a palette entry does in this window, besides running a command. */
-function usePaletteActions(store: TabStore, say: (message: string) => void, recentCleared: () => void, openAbout: () => void) {
-  const dispatcher = useDispatcher();
-  return useCallback(
-    (entry: PaletteEntry) => {
-      const { action } = entry;
-      if (action.kind === 'command') {
-        if (!dispatcher.run(action.command, { typing: false, tabNumber: action.tabNumber ?? null })) say(`${entry.label} isn't available here`);
-      } else if (action.kind === 'main') void window.galeo.window.command(action.command);
-      else if (action.kind === 'hint') say(action.message);
-      else if (action.kind === 'openWithDefaultApp') {
-        const view = store.getSnapshot();
-        const shown = view.tabs.find((tab) => tab.id === view.active);
-        if (shown && shown.kind !== 'settings') void window.galeo.documents.contextMenu(shown.id);
-        else say('No document is shown');
-      } else if (action.kind === 'restorePrevious') {
-        void window.galeo.session.previous().then(([latest]) => {
-          if (latest) void window.galeo.session.restorePrevious(latest.snapshot);
-          else say('No previous session to restore');
-        });
-      } else if (action.kind === 'about') openAbout();
-      else {
-        void window.galeo.recent.clear().then(() => {
-          recentCleared();
-          say('Recent files cleared');
-        });
-      }
-    },
-    [dispatcher, store, say, recentCleared, openAbout],
   );
 }

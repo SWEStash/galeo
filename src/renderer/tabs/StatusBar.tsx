@@ -8,7 +8,7 @@ import { RENDERED_VIEW_NAMES } from '../document/formats';
 import { widthLabel } from '../document/width';
 import { unlessClosed } from './closed-tab';
 import { metricsLabel } from './metrics';
-import type { TabStatus, TabStore, TabsView } from './store';
+import { shownTab, type TabStatus, type TabStore, type TabsView } from './store';
 
 const VIEW_NAMES = { rendered: 'Rendered', source: 'Source', split: 'Split' } as const;
 
@@ -25,7 +25,7 @@ function viewName(status: TabStatus): string {
  * messages.
  */
 export function StatusBar({ view, store, say, children }: { view: TabsView; store: TabStore; say: (message: string) => void; children: ReactNode }) {
-  const tab = view.tabs.find((each) => each.id === view.active);
+  const tab = shownTab(view);
   const status = tab && view.statuses.get(tab.id);
   const zoom = tab ? (view.zooms.get(tab.id) ?? 1) : 1;
   const width = tab && view.widths.get(tab.id);
