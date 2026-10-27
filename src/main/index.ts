@@ -73,6 +73,7 @@ import { installNetworkGuard, lockDownBackgroundNetworking } from './security/ne
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
 import { tabMover } from './tabs/transfer';
+import { testHooks } from './test-hooks';
 import { createAppWindow, followScheme, windowBounds } from './window/factory';
 import { windowHandlers } from './window/handlers';
 import { applicationMenu } from './window/menu';
@@ -507,8 +508,8 @@ function start(initialMode: StartupMode): void {
   const crashesForTests: Pick<CrashRecovery, 'rendering' | 'rendered'> = {
     rendering: (windowId, id) => {
       crashes.rendering(windowId, id);
-      ((globalThis as { __galeoRenderingSeen?: string[] }).__galeoRenderingSeen ??= []).push(documents.get(id, windowId)?.path ?? id);
-      const wanted = (globalThis as { __galeoCrashOnRendering?: string }).__galeoCrashOnRendering;
+      (testHooks.__galeoRenderingSeen ??= []).push(documents.get(id, windowId)?.path ?? id);
+      const wanted = testHooks.__galeoCrashOnRendering;
       if (!wanted || documents.get(id, windowId)?.path !== wanted) return;
       crashingForTests.add(windowId);
       // Killed by the OS, after this handler: forcefullyCrashRenderer can leave a renderer hung
@@ -968,8 +969,7 @@ function requestAttention(window: BrowserWindow): void {
   if (how === 'activate') window.focus();
   else window.flashFrame(true);
   if (!app.isPackaged) {
-    const requests = ((globalThis as { __galeoAttention?: number[] }).__galeoAttention ??= []);
-    requests.push(window.webContents.id);
+    (testHooks.__galeoAttention ??= []).push(window.webContents.id);
   }
 }
 
@@ -979,7 +979,7 @@ function requestAttention(window: BrowserWindow): void {
  */
 function reportSettingsNotices(notices: readonly SettingsNotice[]): void {
   for (const notice of notices) console.warn(`galeo: ${notice.path} left untouched (${notice.reason}): ${notice.detail ?? ''}`);
-  if (!app.isPackaged) (globalThis as { __galeoSettingsNotices?: readonly SettingsNotice[] }).__galeoSettingsNotices = notices;
+  if (!app.isPackaged) testHooks.__galeoSettingsNotices = notices;
 }
 
 /** How recently a session's window was focused: 0 for the last focused, higher for older ones. */
@@ -990,16 +990,15 @@ function rank(session: SessionFile, index: number): number {
 
 /**
  * A session file galeo couldn't use was backed up and replaced by the newest valid snapshot
- * (SR-17). Logged; unpackaged test runs read `globalThis.__galeoSessionNotice`.
+ * (SR-17). Logged; the window says so too (`sessionNotice`).
  */
 function reportSessionNotice(notice: SettingsNotice): void {
   console.warn(`galeo: ${notice.path} was invalid (${notice.reason}); restored the newest valid snapshot`);
-  if (!app.isPackaged) (globalThis as { __galeoSessionNotice?: SettingsNotice }).__galeoSessionNotice = notice;
 }
 
 /** Capability keys main took before the page saw them. Unpackaged test runs read `globalThis.__galeoCapabilityKeys`. */
 function recordCapabilityKey(command: Command): void {
-  if (!app.isPackaged) ((globalThis as { __galeoCapabilityKeys?: Command[] }).__galeoCapabilityKeys ??= []).push(command);
+  if (!app.isPackaged) (testHooks.__galeoCapabilityKeys ??= []).push(command);
 }
 
 /** Asks, in a native dialog the page can't answer for itself, whether a burst of opens may go on. */
@@ -1027,7 +1026,7 @@ async function confirmBurst(windowId: number): Promise<boolean> {
 async function confirmEdit(windowId: number, file: string): Promise<boolean> {
   const answer = !app.isPackaged ? process.env['GALEO_TEST_EDIT_ANSWER'] : undefined;
   if (answer) {
-    ((globalThis as { __galeoEditAsked?: string[] }).__galeoEditAsked ??= []).push(file);
+    (testHooks.__galeoEditAsked ??= []).push(file);
     return answer === 'edit';
   }
   const contents = webContents.fromId(windowId);
@@ -1073,8 +1072,7 @@ async function confirmCloseUnsaved(windowId: number): Promise<boolean> {
  */
 function externalShell(): OsShell {
   if (app.isPackaged || process.env['GALEO_TEST_EXTERNAL'] !== 'record') return new ElectronOsShell();
-  const global = globalThis as { __galeoOpenedExternal?: string[]; __galeoRevealed?: string[]; __galeoOpenedPaths?: string[] };
-  return new RecordingOsShell((global.__galeoOpenedExternal ??= []), (global.__galeoRevealed ??= []), (global.__galeoOpenedPaths ??= []));
+  return new RecordingOsShell((testHooks.__galeoOpenedExternal ??= []), (testHooks.__galeoRevealed ??= []), (testHooks.__galeoOpenedPaths ??= []));
 }
 
 /**
@@ -1082,7 +1080,5 @@ function externalShell(): OsShell {
  * `globalThis.__galeoBlockedRequests`. Unpackaged builds only.
  */
 function recordBlockedRequest(url: string): void {
-  if (app.isPackaged) return;
-  const global = globalThis as { __galeoBlockedRequests?: string[] };
-  (global.__galeoBlockedRequests ??= []).push(url);
+  if (!app.isPackaged) (testHooks.__galeoBlockedRequests ??= []).push(url);
 }
