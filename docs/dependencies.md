@@ -132,6 +132,7 @@ so they carry the tests those packages would have had).
 | Frontmatter display | Shown as a collapsible, syntax-highlighted YAML block (never parsed) | `yaml` | 0 |
 | Dev orchestration | `scripts/dev.mjs`: Vite watch builds + Electron restart on main/preload change; renderer hot reload via Vite's dev server | `electron-vite` | ~60 lines |
 | Import-boundary check (ADR-007) | `scripts/check-boundaries.mjs` scanning `import` specifiers per folder, plus value-import reachability of `zod` from the preload and renderer | `dependency-cruiser` (18 deps; needs the TS JS API, which TS 7 lacks) | ~200 lines |
+| Unused-export check | `scripts/check-exports.mjs`: `import`/`export` statements in `src/`, `tests/`, `scripts/` and `build/` (scanning shared with the boundary check in `scripts/lib/source-scan.mjs`); unused locals come from the compiler | `knip`, `ts-prune` (need the TS JS API, which TS 7 lacks) | ~110 lines |
 | Docs reference check | `scripts/check-docs.mjs`: relative links and `#anchors` (slugs from `rehype-slug`, on the `remark-parse` and `remark-gfm` already used for rendering), ADR and SR ids, repository paths in code spans; never fetches web links | `remark-validate-links` | ~120 lines |
 | Decoding text | `TextDecoder` (WHATWG encodings) | — | — |
 | Binary detection | Own sniff (NUL bytes / invalid UTF-8 ratio in the first 8 KB) | — | — |
