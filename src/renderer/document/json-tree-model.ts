@@ -1,7 +1,13 @@
 // What the JSON tree view shows (ADR-018, UX F14), apart from drawing it: which nodes are expanded
 // and so which rows are visible, each row's label, place among its siblings and source line, and
 // the path that names it. Built on the worker's index; nothing here walks the document as objects.
-import { keyOf, scalarText, typeOf, type JsonTree } from '../../shared/json-index';
+import { keyOf, scalarText, typeOf, type JsonTree, type JsonType } from '../../shared/json-index';
+
+export interface RowParts {
+  key: string | null;
+  value: string;
+  type: JsonType;
+}
 
 /** Strings longer than this show cut short in their row. */
 const PREVIEW_CHARS = 200;
@@ -30,6 +36,8 @@ export interface TreeModel {
   setSize(node: number): number;
   /** `key: value`, the value previewed: `{3 keys}`, `[2 items]`, a scalar as JSON writes it. */
   label(node: number): string;
+  /** The label's key (null in an array or at the top) and value, with the value's type. */
+  parts(node: number): RowParts;
   /** The path naming the node: `$.items[3].name`, `$["odd key"]`. */
   path(node: number): string;
   /** The node with this path, or null. */
@@ -143,6 +151,10 @@ export function createTreeModel(text: string, tree: JsonTree): TreeModel {
     positionInSet: (node) => positions[node]!,
     setSize: (node) => (node === 0 ? 1 : counts[parents[node]!]!),
     label(node) {
+      const { key, value } = model.parts(node);
+      return key === null ? value : `${key}: ${value}`;
+    },
+    parts(node) {
       const type = typeOf(tree, node);
       let value: string;
       if (type === 'object') value = `{${plural(counts[node]!, 'key', 'keys')}}`;
@@ -152,8 +164,7 @@ export function createTreeModel(text: string, tree: JsonTree): TreeModel {
         const shown = JSON.stringify(full.length > PREVIEW_CHARS ? full.slice(0, PREVIEW_CHARS) : full);
         value = full.length > PREVIEW_CHARS ? `${shown.slice(0, -1)}…"` : shown;
       } else value = scalarText(text, tree, node);
-      const key = keyOf(text, tree, node);
-      return key === null ? value : `${key}: ${value}`;
+      return { key: keyOf(text, tree, node), value, type };
     },
     path(node) {
       const segments: string[] = [];

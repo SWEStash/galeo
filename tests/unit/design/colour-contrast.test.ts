@@ -59,6 +59,25 @@ describe('code highlighting (ADR-003 themes, WCAG 2.1 AA)', () => {
 });
 
 
+describe('the JSON tree (UX F14): colours from the checked tokens, as the JSON source view', () => {
+  const documentCss = readFileSync(path.resolve(import.meta.dirname, '../../../src/renderer/document/document.css'), 'utf8');
+  const colourOf = (type: string) => new RegExp(`\\.galeo-json-${type}\\b[^{]*\\{[^}]*?\\bcolor:\\s*var\\(--galeo-(?:color-)?([a-z-]+)\\)`).exec(documentCss)?.[1];
+
+  it.each([
+    ['key', 'syntax-constant'],
+    ['number', 'syntax-constant'],
+    ['true', 'syntax-constant'],
+    ['false', 'syntax-constant'],
+    ['null', 'syntax-constant'],
+    ['string', 'syntax-string'],
+    ['object', 'muted'],
+    ['array', 'muted'],
+  ])('%s is %s', (type, token) => {
+    expect(colourOf(type)).toBe(token);
+    for (const tokens of Object.values(SCHEMES)) expect(tokens[token], token).toBeDefined();
+  });
+});
+
 describe("Mermaid's pie charts in the dark theme (WCAG 2.1 AA)", () => {
   const slices = Array.from({ length: 12 }, (_, n) => DARK_PIE[`pie${n + 1}` as keyof typeof DARK_PIE]);
 

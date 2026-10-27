@@ -18,6 +18,22 @@ describe('JSON tree model', () => {
     expect(shown(model(SAMPLE))).toEqual(['{4 keys}', '  name: "galeo"', '  tags: [2 items]', '  nested: {1 key}', '  empty: {0 keys}']);
   });
 
+  it("splits each row into its key and its value, with the value's type", () => {
+    const tree = model('{"s": "galeo", "n": -1.5e3, "t": true, "f": false, "z": null, "o": {}, "a": [1]}');
+    tree.expandAll();
+    expect(Array.from(tree.rows(), (node) => tree.parts(node))).toEqual([
+      { key: null, value: '{7 keys}', type: 'object' },
+      { key: 's', value: '"galeo"', type: 'string' },
+      { key: 'n', value: '-1.5e3', type: 'number' },
+      { key: 't', value: 'true', type: 'true' },
+      { key: 'f', value: 'false', type: 'false' },
+      { key: 'z', value: 'null', type: 'null' },
+      { key: 'o', value: '{0 keys}', type: 'object' },
+      { key: 'a', value: '[1 item]', type: 'array' },
+      { key: null, value: '1', type: 'number' },
+    ]);
+  });
+
   it('expands and collapses a node, and only nodes with children', () => {
     const tree = model(SAMPLE);
     const tags = tree.rows()[2]!;

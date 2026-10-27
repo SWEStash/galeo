@@ -28,6 +28,14 @@ export interface JsonTreeView {
   dispose(): void;
 }
 
+/** A part of a row, classed by what it is so it takes that colour. */
+function span(className: string, text: string): HTMLSpanElement {
+  const element = document.createElement('span');
+  element.className = className;
+  element.textContent = text;
+  return element;
+}
+
 /** The index of `node` in the visible rows (which rise by node), or -1. */
 function indexOf(rows: Uint32Array, node: number): number {
   let low = 0;
@@ -77,7 +85,10 @@ export function createJsonTreeView({ parent, scroller, label }: { parent: HTMLEl
     const toggle = document.createElement('span');
     toggle.className = 'galeo-json-toggle';
     toggle.setAttribute('aria-hidden', 'true');
-    item.append(toggle, tree.label(node));
+    const { key, value, type } = tree.parts(node);
+    item.append(toggle);
+    if (key !== null) item.append(span('galeo-json-key', key), ': ');
+    item.append(span(`galeo-json-${type}`, value));
     drawn.set(node, item);
     return item;
   }

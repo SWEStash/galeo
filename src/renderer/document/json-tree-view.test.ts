@@ -44,6 +44,21 @@ describe('JSON tree view', () => {
     expect(texts(tree())).toEqual(['{3 keys}', 'a: [2 items]', 'b: {1 key}', 'd: null']);
   });
 
+  it("marks each row's key and value by type for colour, keeping the row's text", () => {
+    const { view, tree } = setup('{"s": "x", "n": 1, "t": true, "z": null, "a": []}');
+    view.expandAll();
+    const marked = rows(tree()).map((row) => [...row.querySelectorAll('span:not(.galeo-json-toggle)')].map((span) => `${span.className}=${span.textContent}`));
+    expect(marked).toEqual([
+      ['galeo-json-object={5 keys}'],
+      ['galeo-json-key=s', 'galeo-json-string="x"'],
+      ['galeo-json-key=n', 'galeo-json-number=1'],
+      ['galeo-json-key=t', 'galeo-json-true=true'],
+      ['galeo-json-key=z', 'galeo-json-null=null'],
+      ['galeo-json-key=a', 'galeo-json-array=[0 items]'],
+    ]);
+    expect(texts(tree())).toEqual(['{5 keys}', 's: "x"', 'n: 1', 't: true', 'z: null', 'a: [0 items]']);
+  });
+
   it('has one row in the tab order, the first, until another takes focus', () => {
     const { tree } = setup(SAMPLE);
     expect(rows(tree()).map((row) => row.tabIndex)).toEqual([0, -1, -1, -1]);

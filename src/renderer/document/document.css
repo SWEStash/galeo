@@ -93,6 +93,21 @@
   outline-offset: -2px;
   background: var(--galeo-color-code-bg);
 }
+/* Colours as in the JSON source view (Ctrl+U); the previews of objects and arrays are muted. */
+.galeo-json-key,
+.galeo-json-number,
+.galeo-json-true,
+.galeo-json-false,
+.galeo-json-null {
+  color: var(--galeo-syntax-constant);
+}
+.galeo-json-string {
+  color: var(--galeo-syntax-string);
+}
+.galeo-json-object,
+.galeo-json-array {
+  color: var(--galeo-color-muted);
+}
 /* The CSV/TSV table (ADR-018): the document's whole width and more (it scrolls sideways), one
    fixed-height row per record (csv-table-view's TABLE_ROW_HEIGHT), the header row in view. Only
    the cells in view are drawn, each placed at its column's offset (set by csv-table-view). */
