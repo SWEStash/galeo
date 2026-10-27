@@ -40,9 +40,6 @@ const LOADING_DELAY_MS = 150;
 /** A render this long offers Cancel (ADR-020). */
 const CANCEL_AFTER_MS = 5000;
 
-/** A table's options with no settings to follow. */
-const TABLE_DEFAULTS = { separator: 'auto', header: true } as const;
-
 
 
 export interface DocumentPaneProps {
@@ -62,45 +59,45 @@ export interface DocumentPaneProps {
   onResolveImage: (src: string) => Promise<ImageResult>;
   onHistory: (direction: 'back' | 'forward') => void;
   /** Where to be once shown (a tab waking up, or back in its history). */
-  initialPosition?: ScrollAnchor | null;
-  onPosition?: (position: ScrollAnchor) => void;
-  onWeight?: (bytes: number) => void;
+  initialPosition: ScrollAnchor | null;
+  onPosition: (position: ScrollAnchor) => void;
+  onWeight: (bytes: number) => void;
   /** Content is about to go in (crash recovery's breadcrumb). */
-  onRendering?: () => void;
+  onRendering: () => void;
   /** What the tab bar and status bar show about this document. */
-  onStatus?: (status: TabStatus) => void;
-  onChooseEncoding?: (encoding: ChosenEncoding | null) => void;
+  onStatus: (status: TabStatus) => void;
+  onChooseEncoding: (encoding: ChosenEncoding | null) => void;
   /** Main's menu for the document (right-click, or a state's "File actions…"). */
-  onContextMenu?: () => void;
-  onClose?: () => void;
+  onContextMenu: () => void;
+  onClose: () => void;
   /** The tab's zoom; it scales the document only. */
-  zoom?: number;
+  zoom: number;
   /** How the reader last showed this document (a restored tab keeps its view and follow state). */
-  initialViewState?: TabViewState;
+  initialViewState: TabViewState;
   /** The reader chose another view, or started or stopped following a log. */
-  onViewState?: (state: TabViewState) => void;
+  onViewState: (state: TabViewState) => void;
   /** Main's word on edit mode for this tab (Ctrl+E, ADR-013); a new token is a new request. */
-  editRequest?: EditRequest | null;
+  editRequest: EditRequest | null;
   /** Saves the edited text, naming the version it was loaded from. */
-  onSave?: (text: string, base: string | null) => Promise<SaveResult>;
+  onSave: (text: string, base: string | null) => Promise<SaveResult>;
   /** The tab in edit mode now has unsaved changes, or no longer has. */
-  onDirty?: (dirty: boolean) => void;
+  onDirty: (dirty: boolean) => void;
   /** The page left edit mode: main takes the grant back. */
-  onLeaveEdit?: () => void;
+  onLeaveEdit: () => void;
   /** A short message for the status bar. */
-  onMessage?: (message: string) => void;
+  onMessage: (message: string) => void;
   /** While in edit mode, what close and quit can do with the edits; null once out of it. */
-  onEditor?: (editor: Editor | null) => void;
+  onEditor: (editor: Editor | null) => void;
   /** Leaving edit mode with unsaved changes: asks the reader; true once they are saved or discarded. */
-  onConfirmLeave?: () => Promise<boolean>;
+  onConfirmLeave: () => Promise<boolean>;
   /** Hands main the unsaved text, kept in memory for a renderer crash (ADR-013). */
-  onKeep?: (text: string, base: string | null) => void;
+  onKeep: (text: string, base: string | null) => void;
   /** How a table reads when its tab has no choice of its own: the settings (ADR-021). */
-  tableDefaults?: TableDefaults;
+  tableDefaults: TableDefaults;
   /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
-  recovered?: Recovered['kept'];
+  recovered: Recovered['kept'];
   /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
-  onReread?: () => void;
+  onReread: () => void;
 }
 
 /** Unsaved text goes to main once typing pauses this long. */
@@ -126,7 +123,7 @@ export function DocumentPane({
   onLink,
   onResolveImage,
   onHistory,
-  initialPosition = null,
+  initialPosition,
   onPosition,
   onWeight,
   onRendering,
@@ -134,10 +131,10 @@ export function DocumentPane({
   onChooseEncoding,
   onContextMenu,
   onClose,
-  zoom = 1,
-  initialViewState = {},
+  zoom,
+  initialViewState,
   onViewState,
-  editRequest = null,
+  editRequest,
   onSave,
   onDirty,
   onLeaveEdit,
@@ -145,9 +142,9 @@ export function DocumentPane({
   onEditor,
   onConfirmLeave,
   onKeep,
-  recovered = null,
+  recovered,
   onReread,
-  tableDefaults = TABLE_DEFAULTS,
+  tableDefaults,
 }: DocumentPaneProps) {
   const [dirty, setDirty] = useState(false);
   const dirtyNow = useRef(false);
@@ -290,7 +287,7 @@ export function DocumentPane({
   const keepNow = useCallback(() => {
     clearTimeout(keepTimer.current);
     const text = documentHandle.current?.sourceText();
-    if (dirtyNow.current && text != null) keepListener.current?.(text, base.current);
+    if (dirtyNow.current && text != null) keepListener.current(text, base.current);
   }, []);
   const edited = useCallback(() => {
     edits.current++;
@@ -317,53 +314,53 @@ export function DocumentPane({
   useEffect(() => {
     if (dirty === reportedDirty.current) return;
     reportedDirty.current = dirty;
-    onDirty?.(dirty);
+    onDirty(dirty);
   }, [dirty, onDirty]);
   useEffect(() => {
     if (!editRequest) return;
     // Main refuses a file it didn't read as text with content (ADR-015); there is no grant to give back.
-    if (editRequest.edit === 'refused') return onMessage?.("This file can't be edited");
+    if (editRequest.edit === 'refused') return onMessage("This file can't be edited");
     if (editRequest.edit === 'granted') {
       if (!ready) {
-        onLeaveEdit?.();
-        onMessage?.("This file can't be edited");
+        onLeaveEdit();
+        onMessage("This file can't be edited");
         return;
       }
       setEditing(true);
       setChosenView(viewForEditing(layout));
     } else if (dirtyNow.current) {
-      void onConfirmLeave?.().then((left) => {
+      void onConfirmLeave().then((left) => {
         if (!left) return;
         setEditing(false);
-        onLeaveEdit?.();
+        onLeaveEdit();
       });
     } else {
       setEditing(false);
-      onLeaveEdit?.();
+      onLeaveEdit();
     }
     // Only a new request acts; the callbacks may change on any render.
   }, [editRequest?.token]);
   /** True once the text is on disk and nothing typed meanwhile is left unsaved. */
   const save = async (): Promise<boolean> => {
     const text = documentHandle.current?.sourceText();
-    if (!ready || !onSave || text == null) return false;
+    if (!ready || text == null) return false;
     if (diskNow.current) {
-      onMessage?.(DISK_UNSAVED[diskNow.current]);
+      onMessage(DISK_UNSAVED[diskNow.current]);
       return false;
     }
     const editsAtSave = edits.current;
     const result = await onSave(text, base.current);
     if (result.kind !== 'saved') {
       if (result.kind === 'refused' && result.reason === 'not-editable') setEditing(false);
-      onMessage?.(notSaved(result, ready.encoding));
+      onMessage(notSaved(result, ready.encoding));
       // A change the watcher hasn't reported yet: reading it brings up the bar.
-      if (result.kind === 'conflict') onReread?.();
+      if (result.kind === 'conflict') onReread();
       return false;
     }
     base.current = result.version;
-    onMessage?.('Saved');
+    onMessage('Saved');
     // The pane shows the file as it is now: the saved text, or the file written back after it was gone.
-    onReread?.();
+    onReread();
     // Typing during the save stays unsaved.
     if (edits.current !== editsAtSave) return false;
     markDirty(false);
@@ -388,7 +385,7 @@ export function DocumentPane({
     discard();
     if (content.state === 'ready') return;
     setEditing(false);
-    onLeaveEdit?.();
+    onLeaveEdit();
   };
   // Show diff: the reader's text as it was when they asked, against the file on disk.
   const [diff, setDiff] = useState<string | null>(null);
@@ -428,8 +425,8 @@ export function DocumentPane({
   const actions = useLatest({ save, discard });
   useEffect(() => {
     if (!editing) return;
-    onEditor?.({ save: () => actions.current.save(), discard: () => actions.current.discard(), focus: () => documentHandle.current?.focus(), keepNow });
-    return () => onEditor?.(null);
+    onEditor({ save: () => actions.current.save(), discard: () => actions.current.discard(), focus: () => documentHandle.current?.focus(), keepNow });
+    return () => onEditor(null);
   }, [editing, onEditor]);
   const { viewer, expandDiagram, expandImage, closeViewer } = useZoomViewer(active);
   const { find, findSeed, findResult, setFindResult, replaced, openFind, openFindOn, endReplace, runFind, stepFind, replaceMatch, replaceAll, closeFind } = useFind(documentHandle);
@@ -465,7 +462,7 @@ export function DocumentPane({
     return true;
   };
   const toggle = (next: ViewToggle) => {
-    if ('refused' in next) onMessage?.(next.refused);
+    if ('refused' in next) onMessage(next.refused);
     else setChosenView(next.view);
     return true;
   };
@@ -502,7 +499,7 @@ export function DocumentPane({
       if (!ready) return false;
       // Its format draws a rendered view of its own instead of a table (ADR-021).
       if (!formatView(ready.format, true).table) {
-        onMessage?.(`${FORMAT_NAMES[ready.format]} files have their own view (Ctrl+U)`);
+        onMessage(`${FORMAT_NAMES[ready.format]} files have their own view (Ctrl+U)`);
         return true;
       }
       if (!tabular) setTableOptions((current) => ({ ...current, asTable: true }));
@@ -529,7 +526,7 @@ export function DocumentPane({
         if (!ready) return false;
         // The tree and the table draw only the rows in view: their text is searched in the source.
         if ((json || tabular) && view === 'rendered') {
-          onMessage?.('Find works in the source view (Ctrl+U)');
+          onMessage('Find works in the source view (Ctrl+U)');
           return true;
         }
         openFind();
@@ -537,7 +534,7 @@ export function DocumentPane({
       },
       findReplace: () => {
         if (!ready) return false;
-        if (!editing) onMessage?.('Find and replace works in edit mode (Ctrl+E)');
+        if (!editing) onMessage('Find and replace works in edit mode (Ctrl+E)');
         else openFind({ replace: true });
         return true;
       },
@@ -568,8 +565,8 @@ export function DocumentPane({
         if (!tree || !treeModel) return false;
         const path = treeModel.path(tree.focusedNode());
         void navigator.clipboard.writeText(path).then(
-          () => onMessage?.(`Copied ${path}`),
-          () => onMessage?.("Couldn't copy the path"),
+          () => onMessage(`Copied ${path}`),
+          () => onMessage("Couldn't copy the path"),
         );
         return true;
       },
@@ -627,7 +624,7 @@ export function DocumentPane({
   }, [pendingAnchor, view, rendered, onAnchorShown]);
 
   useEffect(() => {
-    onViewState?.({
+    onViewState({
       ...(chosenView ? { view: chosenView } : {}),
       ...(follow ? { follow: true as const } : {}),
       ...(ratio !== 0.5 ? { ratio } : {}),
@@ -641,7 +638,7 @@ export function DocumentPane({
   const textWords = useMemo(() => (ready && reader ? countWords(ready.text) : null), [ready, reader]);
   const words = article ? render.words : textWords;
   useEffect(() => {
-    onStatus?.({
+    onStatus({
       state: ready ? 'ready' : content.state,
       format: ready?.format ?? null,
       view: ready ? view : null,
