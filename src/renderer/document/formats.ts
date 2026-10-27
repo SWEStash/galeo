@@ -1,3 +1,4 @@
+import type { Separator } from '../../shared/csv';
 import { CODE_LANGUAGES, type FormatId } from '../../shared/formats';
 import { extensionOf, fileName } from '../../shared/paths';
 import type { SourceLanguage } from './source-view';
@@ -24,6 +25,12 @@ export function sourceLanguage(format: FormatId, path: string): SourceLanguage {
   const language = (key: string) => (Object.hasOwn(CODE_LANGUAGES, key) ? CODE_LANGUAGES[key] : undefined);
   return language(fileName(path).toLowerCase()) ?? language(extensionOf(path)) ?? null;
 }
+
+/** The page's own view that draws a format's rendered view, where the shared table says the page draws it (ADR-018). */
+export const RENDERED_HOSTS: Partial<Record<FormatId, 'tree' | 'table'>> = { json: 'tree', csv: 'table', tsv: 'table' };
+
+/** The separator a table format names; the others are sniffed (ADR-021). */
+export const TABLE_SEPARATORS: Partial<Record<FormatId, Separator>> = { tsv: '\t' };
 
 /** What the status bar calls a format's rendered view where "Rendered" says too little (UX F10, F14). */
 export const RENDERED_VIEW_NAMES: Partial<Record<FormatId, string>> = { text: 'Reader', json: 'Tree', csv: 'Table', tsv: 'Table' };

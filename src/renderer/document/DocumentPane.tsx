@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChosenEncoding, DocumentContent, Recovered } from '../../shared/contracts';
-import { READ_MAX_BYTES, type ImageResult, type SaveResult, type TextEncoding } from '../../shared/documents';
+import type { ImageResult, SaveResult } from '../../shared/documents';
 import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
-import { FORMAT_VIEWS, workerFormat, type ViewMode } from '../../shared/formats';
+import { workerFormat, type ViewMode } from '../../shared/formats';
 import { fileName } from '../../shared/paths';
 import { useCommands } from '../commands/useCommands';
 import { OutlinePanel } from '../outline/OutlinePanel';
@@ -25,7 +25,6 @@ import { useLatest } from './useLatest';
 import { countWords } from '../../shared/words';
 import type { ImageExpand } from './images';
 import { ZoomViewer, type ZoomContent } from './ZoomViewer';
-import { formatBytes } from './format-bytes';
 import { pauseOrMax } from './pause-or-max';
 import { settleFocus } from './settle-focus';
 import { useCsvTable } from './useCsvTable';
@@ -34,6 +33,7 @@ import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 import { NO_MATCHES, type FindResult } from '../../shared/find';
 import type { DiagramExpand, EditRequest, FindRequest } from './requests';
+import { countLines, DISK_UNSAVED, formatView, notSaved } from './pane-model';
 
 const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed', cancelled: 'preview-failed' } as const;
 
@@ -47,9 +47,6 @@ const CANCEL_AFTER_MS = 5000;
 
 /** A table's options with no settings to follow. */
 const TABLE_DEFAULTS = { separator: 'auto', header: true } as const;
-
-/** Formats whose rendered view is their own, which Show as table leaves alone (ADR-021). */
-const OWN_VIEWS: ReadonlySet<string> = new Set(['markdown', 'mdx', 'json', 'csv', 'tsv']);
 
 /** Row counts as the notice writes them: "Showing 1,000,000 of 1,250,000 rows". */
 const ROWS = new Intl.NumberFormat('en-US');
@@ -119,33 +116,6 @@ const KEEP_MS = 1000;
 /** Split while editing re-renders once typing pauses this long, and at least this often (ADR-014). */
 const PREVIEW_TIMING = { pauseMs: 150, maxMs: 1000 };
 
-/** Why Ctrl+S doesn't write while the bar waits for the reader's choice. */
-const DISK_UNSAVED: Record<DiskChange, string> = {
-  'disk-changed': 'Not saved: the file changed on disk. Keep mine or load theirs first',
-  'disk-deleted': 'Not saved: the file was deleted. Keep mine or save it again first',
-  'disk-unreadable': "Not saved: the file on disk can't be shown as text",
-};
-
-/** What the status bar says when a save didn't write. */
-function notSaved(result: Exclude<SaveResult, { kind: 'saved' }>, encoding: TextEncoding): string {
-  switch (result.kind) {
-    case 'conflict':
-      return result.version === null ? 'Not saved: the file is gone' : 'Not saved: the file changed on disk';
-    case 'unencodable':
-      return `Not saved: ${ENCODING_NAMES[encoding]} can't hold “${result.character}” (line ${result.line})`;
-    case 'failed':
-      return { 'no-permission': 'Not saved: no permission to write this file', 'not-a-file': "Not saved: this isn't a regular file", unavailable: "Not saved: the file couldn't be written", 'too-large': `Not saved: the file would be over ${formatBytes(READ_MAX_BYTES)}` }[result.reason];
-    case 'refused':
-      return result.reason === 'not-editable' ? "Not saved: this tab isn't in edit mode" : 'Not saved: press Ctrl+S to save';
-  }
-}
-
-function countLines(text: string): number {
-  let lines = 1;
-  for (let at = text.indexOf('\n'); at !== -1; at = text.indexOf('\n', at + 1)) lines++;
-  return lines;
-}
-
 /**
  * One document and everything about how it's shown: its view, banners, find and keys. The
  * window gives it a fresh key per navigation, so another document starts from its defaults; a
@@ -204,20 +174,18 @@ export function DocumentPane({
   const [narrow, setNarrow] = useState(false);
   // The reader's table options for this tab, kept with its view state (ADR-021).
   const [tableOptions, setTableOptions] = useState<TableOptions>(initialViewState.table ?? {});
-  // What the format's tab can show (ADR-018): Markdown and MDX render in the worker, `.txt` as
-  // reader text, JSON as a tree, CSV/TSV as a table; the rest is source only.
-  const views = ready ? FORMAT_VIEWS[ready.format] : null;
+  const shape = ready ? formatView(ready.format, tableOptions.asTable === true) : null;
+  const views = shape?.views ?? null;
   const format = ready ? workerFormat(ready.format) : null;
   const article = format !== null;
-  const reader = views?.reader === true;
-  const json = ready?.format === 'json';
-  // A text file the reader asked to see as a table, unless its format has a view of its own (ADR-021).
-  const asTable = tableOptions.asTable === true && ready !== null && !OWN_VIEWS.has(ready.format);
-  const tabular = ready?.format === 'csv' || ready?.format === 'tsv' || asTable;
+  const reader = shape?.reader === true;
+  const json = shape?.tree === true;
+  const asTable = shape?.asTable === true;
+  const tabular = shape?.table === true;
   const separatorChoice = tableOptions.separator ?? tableDefaults.separator;
   const header = tableOptions.header ?? tableDefaults.header;
-  const renderable = (views !== null && views.rendered !== 'none') || asTable;
-  const splittable = views?.split === true || asTable;
+  const renderable = shape?.renderable === true;
+  const splittable = shape?.splittable === true;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
   // Editing in split, the preview follows the editor's text rather than the file's (ADR-014).
   const [previewText, setPreviewText] = useState<string | null>(null);
@@ -225,7 +193,7 @@ export function DocumentPane({
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
   const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large', live: previewText !== null, format: format ?? 'markdown' });
   // JSON's tree: indexed by the worker, drawn by the page (ADR-018).
-  const jsonTree = useJsonTree(client, json ? ready.text : null, wantedView !== 'source');
+  const jsonTree = useJsonTree(client, json && ready ? ready.text : null, wantedView !== 'source');
   const treeFailed = jsonTree.status === 'invalid' || jsonTree.status === 'too-large' || jsonTree.status === 'failed';
   const treeModel = jsonTree.status === 'ready' || jsonTree.status === 'pending' ? jsonTree.model : null;
   // Invalid JSON opens as source with the cursor where it breaks (UX F14); a new reading moves it there again.
@@ -236,9 +204,9 @@ export function DocumentPane({
   );
   // CSV/TSV's table: read by the worker on its own budget, drawn by the page (ADR-018, ADR-020); in
   // split while editing it follows the editor's text.
-  const csvTable = useCsvTable(client, tabular ? (previewText ?? ready.text) : null, wantedView !== 'source', {
+  const csvTable = useCsvTable(client, tabular && ready ? (previewText ?? ready.text) : null, wantedView !== 'source', {
     // Auto keeps a .tsv on tabs; anything else is sniffed (ADR-021).
-    separator: separatorChoice !== 'auto' ? separatorChoice : ready?.format === 'tsv' ? '\t' : 'sniff',
+    separator: separatorChoice !== 'auto' ? separatorChoice : (shape?.separator ?? 'sniff'),
     readerAsked: ready?.banner === 'too-large',
     live: previewText !== null,
   });
@@ -603,7 +571,8 @@ export function DocumentPane({
     },
     showAsTable: () => {
       if (!ready) return false;
-      if (OWN_VIEWS.has(ready.format) && !tabular) {
+      // Its format draws a rendered view of its own instead of a table (ADR-021).
+      if (!formatView(ready.format, true).table) {
         onMessage?.(`${FORMAT_NAMES[ready.format]} files have their own view (Ctrl+U)`);
         return true;
       }
