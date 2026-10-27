@@ -14,7 +14,7 @@ import { DocumentWatches } from '../core/documents/watches';
 import { SelectionGrants } from '../core/documents/selections';
 import { ExternalOpenLimiter } from '../core/links/limiter';
 import { AppState } from '../core/profiles/app-state';
-import { DEFAULT_PROFILE, ProfileCatalog } from '../core/profiles/catalog';
+import { ProfileCatalog } from '../core/profiles/catalog';
 import { profileIdFor } from '../core/profiles/names';
 import { appImageLauncher, installLauncher } from '../core/desktop/launcher';
 import { ThemeGate } from '../core/desktop/theme-gate';
@@ -60,6 +60,7 @@ import { serveImage } from './protocol/file-images';
 import { recentHandlers } from './session/recent-handlers';
 import { quickOpenHandlers } from './quick-open/handlers';
 import { dropHandlers } from './drops/handlers';
+import { profileHandlers } from './profiles/handlers';
 import { ProfileRuntime } from './profiles/runtime';
 import { parseAppState } from './session/schemas';
 import { settingsHandlers, settingsState } from './settings/handlers';
@@ -628,13 +629,6 @@ function start(initialMode: StartupMode): void {
     stopping.set(profile.id, stop);
   };
 
-  /** The profile of the window a request came from; a window always belongs to one. */
-  const ownProfile = (event: { sender: { id: number } }) => {
-    const profile = profileOf(event.sender.id);
-    if (!profile) throw new Error('no profile');
-    return profile;
-  };
-
   /** What routing sees; `without` leaves a profile out (an undone creation). */
   const world = async (without?: string): Promise<RouteWorld> => ({
     profiles: (await catalog.list()).filter((profile) => profile.id !== without),
@@ -833,23 +827,6 @@ function start(initialMode: StartupMode): void {
           // Closed once the launch's window is open: the app quits when its last window closes.
           void enqueue(async () => choiceWindow?.close()).catch(() => {});
         },
-        'profiles.list': (_args, event) => profilesState(profileOf(event.sender.id)?.id ?? DEFAULT_PROFILE),
-        'profiles.open': async ([id]) => {
-          if (!(await catalog.list()).some((profile) => profile.id === id)) throw new Error('no such profile');
-          await enqueue(() => openRouted({ profile: id, newWindow: false }, []));
-        },
-        'profiles.create': ([name, accent]) => enqueue(() => createProfile(name, accent)),
-        'profiles.update': ([name, accent], event) => {
-          const profile = ownProfile(event);
-          return enqueue(() => updateProfile(profile, name, accent));
-        },
-        'profiles.delete': async (_args, event) => {
-          if (!input.spend(event.sender.id)) throw new Error('no input');
-          const profile = profileOf(event.sender.id);
-          if (!profile || profile.id === DEFAULT_PROFILE) throw new Error('not deletable');
-          if (!(await unsaved.confirm(profile.windows.map((window) => window.webContents.id)))) return;
-          return enqueue(() => removeProfile(profile.id, []));
-        },
         'session.previous': (_args, event) => profileOf(event.sender.id)?.sessions.previous() ?? [],
         'session.restorePrevious': async ([snapshot], event) => {
           const profile = profileOf(event.sender.id);
@@ -866,14 +843,6 @@ function start(initialMode: StartupMode): void {
           } finally {
             restoring = false;
           }
-        },
-        'profiles.created': (_args, event) => {
-          for (const [token, created] of undoable) if (created.window === event.sender.id) return { name: created.name, token };
-          return null;
-        },
-        'profiles.undoCreate': ([token], event) => {
-          if (undoable.get(token)?.window !== event.sender.id) throw new Error('not offered');
-          return enqueue(() => undoCreate(token));
         },
         'tabs.openSettings': (_args, event) => documents.openSettings(event.sender.id).id,
         'window.command': ([command], event) => {
@@ -894,6 +863,20 @@ function start(initialMode: StartupMode): void {
           if (documents.get(id, event.sender.id)?.kind === 'settings') throw new Error('not a document');
           return menus.document(id, event.sender.id);
         },
+        ...profileHandlers({
+          profileOf,
+          state: profilesState,
+          profileIds: async () => (await catalog.list()).map((profile) => profile.id),
+          enqueue,
+          open: (id) => openRouted({ profile: id, newWindow: false }, []),
+          create: createProfile,
+          update: updateProfile,
+          remove: (id) => removeProfile(id, []),
+          undoable,
+          undo: undoCreate,
+          input,
+          unsaved,
+        }),
         ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8 } }),
         ...documentHandlers({
           records: documents,
