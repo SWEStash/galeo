@@ -13,9 +13,7 @@ import type { ScrollAnchor, TableDefaults, TableOptions, TabViewState } from '..
 import type { TabStatus } from '../tabs/store';
 import type { RenderClient } from '../worker/client';
 import type { OutlineEntry } from '../worker/pipeline/render';
-import { DocumentBanner, DocumentLoading, DocumentState, type DiskChange } from './DocumentState';
-import { EncodingMenu } from './EncodingMenu';
-import { ENCODING_NAMES } from './encodings';
+import { DocumentLoading, DocumentState, type DiskChange } from './DocumentState';
 import { DocumentView, type DocumentHandle, type RenderedContent } from './DocumentView';
 import { FindBar } from './FindBar';
 import type { ColorScheme } from './host';
@@ -28,16 +26,13 @@ import { pauseOrMax } from './pause-or-max';
 import { settleFocus } from './settle-focus';
 import { useCsvTable } from './useCsvTable';
 import { useJsonTree } from './useJsonTree';
-import { useRenderedHtml, type SyntaxProblem } from './useRenderedHtml';
+import { useRenderedHtml } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 import type { EditRequest, FindRequest } from './requests';
 import { countLines, DISK_UNSAVED, formatView, notSaved } from './pane-model';
 import { useFind } from './useFind';
 import { useZoomViewer } from './useZoomViewer';
-
-const PAUSED_BANNERS = { slow: 'preview-slow', syntax: 'preview-syntax', error: 'preview-failed', cancelled: 'preview-failed' } as const;
-
-const syntaxDetail = (syntax: SyntaxProblem | null) => (syntax ? `on line ${syntax.line}: ${syntax.message}` : '');
+import { DocumentBanners } from './DocumentBanners';
 
 /** A render slower than this shows the loading skeleton (UX: nothing flashes under 150 ms). */
 const LOADING_DELAY_MS = 150;
@@ -48,8 +43,6 @@ const CANCEL_AFTER_MS = 5000;
 /** A table's options with no settings to follow. */
 const TABLE_DEFAULTS = { separator: 'auto', header: true } as const;
 
-/** Row counts as the notice writes them: "Showing 1,000,000 of 1,250,000 rows". */
-const ROWS = new Intl.NumberFormat('en-US');
 
 
 export interface DocumentPaneProps {
@@ -675,53 +668,21 @@ export function DocumentPane({
 
   return (
     <>
-      {disk && <DocumentBanner kind={disk} actions={diskActions[disk]} />}
-      {ready.banner === 'too-large' && view === 'source' && !renderAnyway && (
-        // Render anyway is Markdown's and the reader's; tables have Show as table (ADR-020); past its
-        // limits, JSON is source (ADR-018).
-        tabular ? (
-          <DocumentBanner kind="too-large" actions={[{ label: 'Show as table', onAction: showRendered }]} />
-        ) : (
-          <DocumentBanner kind="too-large" {...(json ? {} : { onAction: showRendered })} />
-        )
-      )}
-      {csvTable.status === 'too-large' && view === 'source' && <DocumentBanner kind="too-large" />}
-      {csvTable.status === 'failed' &&
-        (csvTable.reason === 'error' ? (
-          <DocumentBanner kind="render-failed" onAction={csvTable.retry} />
-        ) : (
-          <DocumentBanner kind={csvTable.reason === 'slow' ? 'render-slow' : 'render-cancelled'} actions={[{ label: 'Show as table', onAction: csvTable.showAnyway }]} />
-        ))}
-      {csvTable.status === 'paused' && <DocumentBanner kind={PAUSED_BANNERS[csvTable.reason]} />}
-      {shownTable?.table && shownTable.table.totalRows > shownTable.table.rows && view !== 'source' && (
-        <DocumentBanner kind="rows-capped" detail={`Showing ${ROWS.format(shownTable.table.rows - 1)} of ${ROWS.format(shownTable.table.totalRows - 1)} rows`} />
-      )}
-      {jsonTree.status === 'too-large' && view === 'source' && <DocumentBanner kind="too-large" />}
-      {jsonTree.status === 'invalid' && <DocumentBanner kind="json-invalid" detail={`line ${jsonTree.line}, column ${jsonTree.column}`} />}
-      {jsonTree.status === 'failed' &&
-        (jsonTree.reason === 'slow' ? (
-          <DocumentBanner kind="render-slow" />
-        ) : jsonTree.reason === 'cancelled' ? (
-          <DocumentBanner kind="render-cancelled" actions={[{ label: 'Try again', onAction: jsonTree.retry }]} />
-        ) : (
-          <DocumentBanner kind="render-failed" onAction={jsonTree.retry} />
-        ))}
-      {ready.guessedEncoding && (
-        <DocumentBanner kind="encoding" detail={ENCODING_NAMES[ready.encoding]}>
-          {onChooseEncoding && <EncodingMenu onChoose={onChooseEncoding}>Reopen with encoding…</EncodingMenu>}
-        </DocumentBanner>
-      )}
-      {render.status === 'paused' && <DocumentBanner kind={PAUSED_BANNERS[render.reason]} detail={syntaxDetail(render.syntax)} />}
-      {render.status === 'failed' &&
-        (render.reason === 'slow' ? (
-          <DocumentBanner kind="render-slow" onAction={render.renderAnyway} />
-        ) : render.reason === 'cancelled' ? (
-          <DocumentBanner kind="render-cancelled" actions={[{ label: 'Render anyway', onAction: render.renderAnyway }]} />
-        ) : render.reason === 'syntax' ? (
-          <DocumentBanner kind="syntax-error" detail={syntaxDetail(render.syntax)} />
-        ) : (
-          <DocumentBanner kind="render-failed" onAction={render.retry} />
-        ))}
+      <DocumentBanners
+        ready={ready}
+        view={view}
+        renderAnyway={renderAnyway}
+        tabular={tabular}
+        json={json}
+        disk={disk}
+        diskActions={diskActions}
+        render={render}
+        jsonTree={jsonTree}
+        csvTable={csvTable}
+        shownTable={shownTable?.table ?? null}
+        onShowRendered={showRendered}
+        onChooseEncoding={onChooseEncoding}
+      />
       {loading && <DocumentLoading {...(cancellable ? { onCancel: cancelRender } : {})} />}
       {find.open && (
         <FindBar
