@@ -38,7 +38,7 @@ import { startupMode, type StartupMode } from '../core/startup';
 import { CoalescingWatcher } from '../core/watch/coalescing';
 import { QuickOpen } from '../core/quick-open/session';
 import { DropGrants } from '../core/documents/drops';
-import { asksForAttention } from '../core/routing/attention';
+import { asksForAttention, attentionRequest } from '../core/routing/attention';
 import { createPrivateDirs, resolveAppPaths, withTestHome } from './adapters/app-paths';
 import { NodeFileSystem } from './adapters/file-system';
 import { NodeFileWatcher } from './adapters/file-watcher';
@@ -1026,11 +1026,19 @@ function start(initialMode: StartupMode): void {
 const REAL_INPUT = new Set<Electron.InputEvent['type']>(['rawKeyDown', 'keyDown', 'mouseDown', 'gestureTap', 'touchStart']);
 
 /**
- * Flashes the window's taskbar entry (GNOME: "galeo is ready") until it's focused. Unpackaged
- * test runs count the requests in `globalThis.__galeoAttention`, since a headless desktop shows none.
+ * Makes the window ask for attention without raising it (ADR-005): on Wayland an activation request,
+ * which GNOME refuses for a window that isn't the reader's focus and turns into its "galeo is ready"
+ * notice; elsewhere the taskbar entry flashes until the window is focused. Unpackaged test runs
+ * count the requests in `globalThis.__galeoAttention`, since a headless desktop shows none.
  */
 function requestAttention(window: BrowserWindow): void {
-  window.flashFrame(true);
+  const how = attentionRequest({
+    platform: process.platform,
+    ozonePlatform: app.commandLine.getSwitchValue('ozone-platform'),
+    waylandDisplay: Boolean(process.env['WAYLAND_DISPLAY']),
+  });
+  if (how === 'activate') window.focus();
+  else window.flashFrame(true);
   if (!app.isPackaged) {
     const requests = ((globalThis as { __galeoAttention?: number[] }).__galeoAttention ??= []);
     requests.push(window.webContents.id);
