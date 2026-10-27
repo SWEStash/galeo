@@ -27,7 +27,8 @@
   [022](decisions/ADR-022-drag-tokens.md) ·
   [023](decisions/ADR-023-window-layout-with-tabs-on-the-left.md) ·
   [024](decisions/ADR-024-find-in-all-tabs.md) ·
-  [025](decisions/ADR-025-no-window-host-port.md)
+  [025](decisions/ADR-025-no-window-host-port.md) ·
+  [026](decisions/ADR-026-window-lifecycle-hooks.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
