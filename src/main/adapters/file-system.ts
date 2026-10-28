@@ -124,6 +124,14 @@ export class NodeFileSystem implements FileSystem {
     }
   }
 
+  async removeFile(path: string): Promise<void> {
+    try {
+      await unlink(path);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw toFsError(error, path);
+    }
+  }
+
   async touch(path: string): Promise<void> {
     try {
       const now = new Date();

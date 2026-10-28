@@ -43,6 +43,9 @@ describe('serveImage', () => {
     remove: async () => {
       throw new Error('unused');
     },
+    removeFile: async () => {
+      throw new Error('unused');
+    },
     touch: async () => {
       throw new Error('unused');
     },

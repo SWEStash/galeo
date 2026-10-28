@@ -194,6 +194,8 @@ describe('uninstallLauncher ("Uninstall command-line launcher")', () => {
 
   it('removes what install wrote, has the desktop rescan its icons, and the MIME database read again', async () => {
     const fs = await installed();
+    // One file at a time: a folder swapped in after the check is never emptied.
+    fs.remove = () => Promise.reject(new Error('uninstall must not remove recursively'));
     const { refreshed, refreshMime } = refreshing();
     expect(launcherPaths(DIRS).bin).toBe(BIN);
     expect(await uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(DIRS), PNG)).toEqual({ removed: [BIN, ENTRY, ICON, MIME_FILE], kept: [] });

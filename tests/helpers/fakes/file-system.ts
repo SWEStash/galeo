@@ -134,6 +134,14 @@ export class FakeFileSystem implements FileSystem {
     for (const dir of [...this.directories]) if (inside(dir)) this.directories.delete(dir);
   }
 
+  async removeFile(path: string): Promise<void> {
+    this.throwIfFailing(path);
+    if (this.isDirectory(path)) throw new FsError('EISDIR', path);
+    this.files.delete(path);
+    this.links.delete(path);
+    this.modes.delete(path);
+  }
+
   /** Paths passed to `touch`, in order. */
   readonly touched: string[] = [];
 

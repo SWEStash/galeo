@@ -259,6 +259,31 @@ describe('NodeFileSystem.remove', () => {
   });
 });
 
+describe('NodeFileSystem.removeFile', () => {
+  it('removes one file, and is fine when it is already gone', async () => {
+    const dir = tempDir();
+    await fs.removeFile(file(dir, 'galeo', '#!/bin/sh'));
+    await fs.removeFile(path.join(dir, 'no'));
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it('never removes a folder or anything in it', async () => {
+    const dir = tempDir();
+    mkdirSync(path.join(dir, 'galeo'));
+    file(path.join(dir, 'galeo'), 'keep.md', 'mine');
+    await expect(fs.removeFile(path.join(dir, 'galeo'))).rejects.toMatchObject({ code: 'EISDIR' });
+    expect(readdirSync(path.join(dir, 'galeo'))).toEqual(['keep.md']);
+  });
+
+  it.runIf(posix)('removes a symlink, never what it points at', async () => {
+    const dir = tempDir();
+    const target = file(dir, 'keep.md', 'mine');
+    symlinkSync(target, path.join(dir, 'link'));
+    await fs.removeFile(path.join(dir, 'link'));
+    expect(readdirSync(dir)).toEqual(['keep.md']);
+  });
+});
+
 describe('NodeFileSystem.touch', () => {
   it("sets a folder's modification time to now, as desktops watch their icon themes", async () => {
     const dir = tempDir();

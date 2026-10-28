@@ -58,6 +58,8 @@ export interface FileSystem {
   rename(from: string, to: string): Promise<void>;
   /** Deletes a file or a folder with everything in it, symlinks as links; a missing path is fine. */
   remove(path: string): Promise<void>;
+  /** Deletes one file, or a symlink itself; never a folder. A missing path is fine. */
+  removeFile(path: string): Promise<void>;
   /** Sets an existing file's or folder's modification time to now. */
   touch(path: string): Promise<void>;
 }

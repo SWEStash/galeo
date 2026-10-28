@@ -171,7 +171,7 @@ export async function uninstallLauncher(
       kept.push(path);
       return false;
     }
-    await fs.remove(path);
+    await fs.removeFile(path);
     removed.push(path);
     return true;
   };
