@@ -1,6 +1,6 @@
 import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, standardKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { foldGutter, foldKeymap, HighlightStyle, LanguageDescription, syntaxHighlighting, syntaxTree } from '@codemirror/language';
+import { foldGutter, foldKeymap, LanguageDescription, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import {
   closeSearchPanel,
   findNext,
@@ -17,13 +17,14 @@ import {
 } from '@codemirror/search';
 import { Annotation, Compartment, EditorSelection, EditorState, Transaction, type Extension, type Text } from '@codemirror/state';
 import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers, rectangularSelection, type KeyBinding } from '@codemirror/view';
-import { tags } from '@lezer/highlight';
 import { takenByDesktop } from '../../shared/desktop-keys';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import { logLevels } from './log-view';
 import { sourceOutline } from './source-outline';
 import { clamp, clamp01 } from '../../shared/math';
 import type { FindResult } from '../../shared/find';
+import { sourceHighlight, sourceTheme } from './source-theme';
+import { diffSpan } from './text-diff';
 
 /** `markdown` and `log` are built in; any other name is a grammar from `@codemirror/language-data`. */
 export type SourceLanguage = 'markdown' | 'log' | (string & {}) | null;
@@ -83,53 +84,13 @@ export interface SourceView {
 }
 
 // Colours come from the app's tokens, so the source view follows light/dark like everything else.
-const highlight = HighlightStyle.define([
-  { tag: tags.heading, fontWeight: '650' },
-  { tag: tags.emphasis, fontStyle: 'italic' },
-  { tag: tags.strong, fontWeight: '650' },
-  { tag: tags.strikethrough, textDecoration: 'line-through' },
-  { tag: [tags.link, tags.url], color: 'var(--galeo-color-link)' },
-  { tag: [tags.processingInstruction, tags.meta, tags.contentSeparator, tags.quote], color: 'var(--galeo-color-muted)' },
-  { tag: tags.monospace, color: 'var(--galeo-color-fg)', backgroundColor: 'var(--galeo-color-code-bg)' },
-  // Code, YAML, TOML and JSON.
-  { tag: [tags.keyword, tags.operatorKeyword], color: 'var(--galeo-syntax-keyword)' },
-  { tag: [tags.string, tags.special(tags.string), tags.regexp, tags.character, tags.inserted], color: 'var(--galeo-syntax-string)' },
-  { tag: [tags.number, tags.bool, tags.null, tags.atom, tags.unit, tags.constant(tags.name), tags.propertyName, tags.attributeName], color: 'var(--galeo-syntax-constant)' },
-  { tag: tags.comment, color: 'var(--galeo-syntax-comment)' },
-  { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.definition(tags.function(tags.variableName))], color: 'var(--galeo-syntax-function)' },
-  { tag: [tags.typeName, tags.className, tags.namespace, tags.tagName, tags.definition(tags.propertyName)], color: 'var(--galeo-syntax-type)' },
-  { tag: [tags.definition(tags.variableName), tags.self, tags.changed], color: 'var(--galeo-syntax-variable)' },
-  { tag: [tags.invalid, tags.deleted], color: 'var(--galeo-syntax-invalid)' },
-]);
-
-const theme = EditorView.theme({
-  '&': { height: '100%', color: 'var(--galeo-color-fg)', backgroundColor: 'var(--galeo-color-bg)' },
-  '.cm-scroller': { fontFamily: 'var(--galeo-font-code)', fontSize: '14px', lineHeight: '1.5' },
-  '.cm-gutters': { backgroundColor: 'var(--galeo-color-bg)', color: 'var(--galeo-color-muted)', border: 'none' },
-  '.cm-activeLineGutter': { backgroundColor: 'transparent', color: 'var(--galeo-color-fg)' },
-  '&.cm-focused': { outline: 'none' },
-  '.cm-content': { caretColor: 'var(--galeo-color-fg)' },
-  // Edit mode draws its own selections and cursors (several at once); they follow light/dark too.
-  '.cm-cursor, .cm-dropCursor': { borderLeftColor: 'var(--galeo-color-fg)' },
-  '& .cm-selectionLayer .cm-selectionBackground': { background: 'color-mix(in srgb, var(--galeo-color-focus) 18%, transparent)' },
-  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
-    background: 'color-mix(in srgb, var(--galeo-color-focus) 30%, transparent)',
-  },
-  '.cm-searchMatch': { backgroundColor: 'var(--galeo-color-mark)' },
-  '.cm-searchMatch.cm-searchMatch-selected': { backgroundColor: 'var(--galeo-color-mark-current)', color: '#1f2328' },
-});
-
 /** Marks the file's own text arriving (`setText`), which isn't an edit and can't be undone. */
 const fromFile = Annotation.define<boolean>();
 
 /** A line number within the document's lines. */
 const lineIn = (doc: Text, line: number) => clamp(line, 1, doc.lines);
 
-/**
- * Read-only, or editing: undo history and the editing keys, before the reading keys. The window's
- * own keys still come first: the app takes them in the capture phase and CodeMirror skips a key
- * already handled, so only keys the app declines (typing, Alt+arrows) reach the editor.
- */
+/** Reading: the text can't change. */
 const reading = (): Extension => EditorState.readOnly.of(true);
 
 /**
@@ -200,8 +161,8 @@ export async function addGrammar(views: readonly EditorView[], language: SourceL
 
 /** How source text looks, in the source view and in the diff of unsaved edits. */
 export const sourceLook = (language: SourceLanguage): Extension => [
-  syntaxHighlighting(highlight),
-  theme,
+  syntaxHighlighting(sourceHighlight),
+  sourceTheme,
   builtIn(language) ? BUILT_IN[language!]!() : [],
   grammarSlot.of([]),
 ];
@@ -219,6 +180,11 @@ export function createSourceView(options: {
   findCap?: number;
 }): SourceView {
   const wrapping = new Compartment();
+  /**
+   * Read-only, or editing: undo history and the editing keys, before the reading keys. The window's
+   * own keys still come first: the app takes them in the capture phase and CodeMirror skips a key
+   * already handled, so only keys the app declines (typing, Alt+arrows) reach the editor.
+   */
   const mode = new Compartment();
   const editListeners = new Set<() => void>();
   const outlineListeners = new Set<(entries: OutlineEntry[]) => void>();
@@ -352,13 +318,8 @@ export function createSourceView(options: {
       // snapshot keeps the scroll position through the change (a file changed on disk).
       const old = view.state.doc.toString();
       if (old === text) return;
-      let start = 0;
-      const shorter = Math.min(old.length, text.length);
-      while (start < shorter && old.charCodeAt(start) === text.charCodeAt(start)) start++;
-      let end = 0;
-      while (end < shorter - start && old.charCodeAt(old.length - 1 - end) === text.charCodeAt(text.length - 1 - end)) end++;
       view.dispatch({
-        changes: { from: start, to: old.length - end, insert: text.slice(start, text.length - end) },
+        changes: diffSpan(old, text),
         effects: view.scrollSnapshot(),
         annotations: [fromFile.of(true), Transaction.addToHistory.of(false)],
       });
