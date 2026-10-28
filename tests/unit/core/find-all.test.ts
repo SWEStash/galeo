@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EditGrants } from '../../../src/core/documents/edit-grants';
 import { TabSearches } from '../../../src/core/documents/find-all';
 import { TabRegistry } from '../../../src/core/tabs/registry';
@@ -14,10 +14,17 @@ class SlowFileSystem extends FakeFileSystem {
   readonly reads: string[] = [];
   private waiting: (() => void)[] = [];
   slow = '';
+  inFlight = 0;
+  mostInFlight = 0;
   override async readFile(file: string, options: { maxBytes: number }): Promise<Uint8Array> {
     this.reads.push(file);
-    if (file === this.slow) await new Promise<void>((resolve) => this.waiting.push(resolve));
-    return super.readFile(file, options);
+    this.mostInFlight = Math.max(this.mostInFlight, ++this.inFlight);
+    try {
+      if (file === this.slow) await new Promise<void>((resolve) => this.waiting.push(resolve));
+      return await super.readFile(file, options);
+    } finally {
+      this.inFlight--;
+    }
   }
   finishSlowReads() {
     this.slow = '';
@@ -110,6 +117,22 @@ describe('TabSearches', () => {
     fs.finishSlowReads();
     expect(await cancelled).toEqual({ kind: 'superseded' });
     expect(fs.reads.filter((file) => file === '/d/b.md')).toHaveLength(1);
+  });
+
+  it('reads one file at a time per window however many queries arrive at once, and answers only the last', async () => {
+    const { fs, records, searches } = setup({ '/d/a.md': 'needle', '/d/b.md': 'needle' });
+    records.open('/d/a.md', 1);
+    records.open('/d/b.md', 1);
+    fs.slow = '/d/a.md';
+    const first = searches.search(1, 'needle', ANY_CASE);
+    await vi.waitFor(() => expect(fs.inFlight).toBe(1));
+    const all = [first, ...Array.from({ length: 4 }, () => searches.search(1, 'needle', ANY_CASE))];
+    fs.finishSlowReads();
+    const results = await Promise.all(all);
+    expect(results.slice(0, 4)).toEqual(Array(4).fill({ kind: 'superseded' }));
+    expect(counts(results[4]!)).toEqual(['id-1:1', 'id-2:1']);
+    expect(fs.mostInFlight).toBe(1);
+    expect(fs.reads).toEqual(['/d/a.md', '/d/a.md', '/d/b.md']);
   });
 
   it("leaves another window's search running", async () => {

@@ -12,10 +12,13 @@ const FIND_ALL_TAB_BUDGET_MS = 5000;
 /**
  * Searches a window's tabs for a query (ADR-024): main reads each tab's text, or takes its kept
  * unsaved text, and the task worker matches it, one tab at a time. A newer query from the same
- * window stops the older search before its next tab.
+ * window stops the older search before its next tab, and starts only once the older one has
+ * stopped: a window never has more than one file read in flight, however many queries it sends.
  */
 export class TabSearches {
   private readonly latest = new Map<number, number>();
+  /** Each window's last search, which the next one waits for. */
+  private readonly running = new Map<number, Promise<unknown>>();
 
   constructor(
     private readonly deps: {
@@ -30,11 +33,27 @@ export class TabSearches {
   async search(window: number, query: string, { caseSensitive }: { caseSensitive: boolean }): Promise<FindAllResult> {
     const search = (this.latest.get(window) ?? 0) + 1;
     this.latest.set(window, search);
+    if ([...query].length < FIND_ALL_MIN_CHARACTERS) return { kind: 'done', tabs: [] };
+    const previous = this.running.get(window);
+    const current = (async () => {
+      await previous;
+      return this.searchTabs(window, search, query, caseSensitive);
+    })();
+    this.running.set(window, current);
+    return current;
+  }
+
+  closeWindow(window: number): void {
+    this.latest.delete(window);
+    this.running.delete(window);
+  }
+
+  private async searchTabs(window: number, search: number, query: string, caseSensitive: boolean): Promise<FindAllResult> {
     const tabs: FindAllTab[] = [];
-    if ([...query].length < FIND_ALL_MIN_CHARACTERS) return { kind: 'done', tabs };
     const superseded = () => this.latest.get(window) !== search;
     for (const record of this.deps.records.list(window)) {
       if (record.kind === 'settings') continue;
+      if (superseded()) return { kind: 'superseded' };
       const text = await this.textOf(record.id, record.path, window);
       if (superseded()) return { kind: 'superseded' };
       if (typeof text !== 'string') {
@@ -47,10 +66,6 @@ export class TabSearches {
       else if (result.value.count > 0) tabs.push({ id: record.id, found: result.value });
     }
     return { kind: 'done', tabs };
-  }
-
-  closeWindow(window: number): void {
-    this.latest.delete(window);
   }
 
   /** The tab's unsaved text if main keeps one, else its file's text as the tab reads it. */
