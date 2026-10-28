@@ -200,6 +200,13 @@ flowchart LR
   Router (running profiles, the global focus order, `app-state.json`'s last profile) → the
   target window, starting a profile first when needed. A profile's last window closing saves
   and stops it. Window ids are the page's `webContents` id, which tabs, grants and metrics share.
+- `src/main/index.ts` is the composition root: it creates the services, wires them and keeps the
+  start-up order (§5.6). The IPC channels are served by one handler group per area
+  (`main/*/handlers.ts`, `session-handlers.ts`, `recent-handlers.ts`), joined in one registration.
+  The running profiles and their pending saves are `main/profiles/lifecycle.ts`. A window's own
+  behaviour (bounds, focus order, the close guard, input credits, crash recovery) is a hook in
+  `main/window/hooks.ts` with only what it needs, and every per-window registry registers its
+  cleanup where it is created, run when the window closes (ADR-026).
 
 ### 4.2 Window Renderer
 
@@ -447,7 +454,8 @@ Cache stores.
 
 ```
 src/
-  shared/     contracts (IPC schemas + types), domain types, keymap, formats (what each format's tab offers),
+  shared/     contracts (IPC schemas + types), domain types, default settings, keymap, formats (what
+              each format's tab offers), small helpers (clamp, plural, errorMessage, keysOf),
               markdown/ (the parse up to sanitizing, MDX handling, sanitize schema, link and image
               rules and extraction: the page and main parse a document, Markdown or MDX, with the
               same function, so they find its links the same way)
@@ -455,15 +463,19 @@ src/
               formats, desktop (the AppImage's launcher files), watch/ (coalescing),
               quick-open/ (git root, walker, matcher, session), documents/ (reads, identities,
               grants, watches), text/ (decode and encode), fonts/ (fc-list parsing), ports/
-  main/       adapters, IPC handlers, network guard, window factory, profile runtimes, app entry,
-              tasks/ (the worker thread for the parsing main's checks need, and find in all tabs)
+  main/       index.ts (the composition root), adapters, IPC handler groups (one per area),
+              network guard, window/ (factory, hooks, cleanups, focus order, crash recovery,
+              menus), profiles/ (runtimes, the running profiles), tasks/ (the worker thread for the
+              parsing main's checks need, and find in all tabs)
   preload/    window.galeo bridge
   renderer/   document/ (host, rendered/source/text/log views, diagrams, find, states) · tabs/
               (tab bar, side panel, store, status bar, empty window, drops, tab search, tab
               overview, find in all tabs) · edit/ (editors, unsaved prompt, diff) · about/ ·
               security/ (Trusted Types, WebRTC off) · commands/ (dispatcher) ·
               quick-open/ · palette/ · outline/ · profiles/ (chip, menu, dialogs) · settings/
-              (Settings tab, notices, tokens) · styles/ (tokens, fonts) · worker/ (render pipeline)
+              (Settings tab, fields, notices, tokens) · styles/ (tokens, fonts) · worker/ (render
+              pipeline) · app/ (the window's hooks: tab shortcuts, overlays, palette actions) ·
+              testing/ (helpers for the component tests only)
 tests/
   unit/       core + shared (vitest, node)
   renderer/   pipeline, sanitizer corpus, format registry (vitest)
