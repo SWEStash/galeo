@@ -137,3 +137,38 @@ describe('EditGrants', () => {
     });
   });
 });
+
+describe('EditGrants: the kept text is capped in UTF-8 bytes, as saves are', () => {
+  const keeping = (maxBytes: number) => {
+    const grants = new EditGrants(maxBytes);
+    grants.grant('t1', 1, '/d/a.md');
+    return grants;
+  };
+
+  it('keeps text up to the cap, and keeps the last text that fit when a longer one comes', () => {
+    const grants = keeping(6);
+    grants.keep('t1', 1, 'abcdef', 'v1');
+    expect(grants.kept('t1', 1)).toEqual({ text: 'abcdef', base: 'v1' });
+    grants.keep('t1', 1, 'abcdefg', 'v1');
+    expect(grants.kept('t1', 1)).toEqual({ text: 'abcdef', base: 'v1' });
+  });
+
+  it('still marks the tab unsaved when its text is past the cap, so closing it asks first', () => {
+    const grants = keeping(6);
+    grants.keep('t1', 1, 'abcdefg', null);
+    expect(grants.dirty(1)).toEqual(['t1']);
+    expect(grants.kept('t1', 1)).toBeNull();
+  });
+
+  it('counts bytes, not characters: 3 for a CJK character, 4 for an emoji', () => {
+    const grants = keeping(6);
+    grants.keep('t1', 1, '日本', null);
+    expect(grants.kept('t1', 1)?.text).toBe('日本');
+    grants.keep('t1', 1, '日本語', null);
+    expect(grants.kept('t1', 1)?.text).toBe('日本');
+    grants.keep('t1', 1, 'a😀b', null);
+    expect(grants.kept('t1', 1)?.text).toBe('a😀b');
+    grants.keep('t1', 1, 'ab😀c', null);
+    expect(grants.kept('t1', 1)?.text).toBe('a😀b');
+  });
+});

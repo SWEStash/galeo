@@ -1,3 +1,6 @@
+import { exceedsUtf8Bytes } from '../text/utf8-length';
+import { READ_MAX_BYTES } from '../../shared/documents';
+
 /** A dirty tab's text and the version it was loaded from (null: the file was gone), held for a page that crashes. */
 interface KeptText {
   text: string;
@@ -21,6 +24,9 @@ interface Grant {
 export class EditGrants {
   private readonly grants = new Map<string, Grant>();
 
+  /** Kept text is capped in UTF-8 bytes, as saves are (`maxBytes`): no larger text could be saved. */
+  constructor(private readonly maxBytes = READ_MAX_BYTES) {}
+
   grant(id: string, window: number, path: string): void {
     this.grants.set(id, { window, path, dirty: false, kept: null });
   }
@@ -43,11 +49,12 @@ export class EditGrants {
     if (!dirty) grant.kept = null;
   }
 
-  /** The page's latest unsaved text for its own granted tab. */
+  /** The page's latest unsaved text for its own granted tab; past the cap the last text that fit stays. */
   keep(id: string, window: number, text: string, base: string | null): void {
     const grant = this.grants.get(id);
     if (grant?.window !== window) return;
     grant.dirty = true;
+    if (exceedsUtf8Bytes(text, this.maxBytes)) return;
     grant.kept = { text, base };
   }
 

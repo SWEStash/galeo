@@ -441,7 +441,8 @@ the rename that replaces the old one.
 scroll positions only, never document content. Recent files are capped at 200 per profile, and
 there is a "Clear recent files" command per profile. Crash dumps stay local, and the crash
 reporter is not enabled for upload. A tab's unsaved text stays in main's memory, also when the tab
-moves to another window or profile (ADR-019).
+moves to another window or profile (ADR-019), up to the save cap (256 MB in UTF-8): past it, main
+keeps the last text that fit and the tab stays marked unsaved.
 *AC*: tests for file modes and for no document content in state files.
 
 **SR-17 — Robust configuration.** Settings and session files are schema-validated on load, and
