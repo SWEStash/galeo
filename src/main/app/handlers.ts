@@ -1,12 +1,12 @@
 import path from 'node:path';
-import { appImageLauncher, installLauncher } from '../../core/desktop/launcher';
+import { appImageLauncher, installLauncher, launcherPaths, uninstallLauncher } from '../../core/desktop/launcher';
 import type { InputCredits } from '../../core/documents/input-credits';
 import type { FileSystem } from '../../core/ports';
 import type { Utf8 } from '../../core/settings/json-file';
 import type { AppInfo } from '../../shared/contracts';
 import type { Handlers } from '../ipc/register';
 
-type AppChannels = 'app.info' | 'app.installLauncher' | 'app.resolveSandboxUnavailable';
+type AppChannels = 'app.info' | 'app.installLauncher' | 'app.uninstallLauncher' | 'app.resolveSandboxUnavailable';
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -55,30 +55,36 @@ export function appHandlers(deps: {
   };
 }): Pick<Handlers, AppChannels> {
   const { info, sandboxChoice, launcher } = deps;
+  const launcherDirs = () => {
+    const dataHome = xdgDataHome(launcher.home, launcher.env);
+    return {
+      binDir: path.join(launcher.home, '.local', 'bin'),
+      applicationsDir: path.join(dataHome, 'applications'),
+      iconsDir: path.join(dataHome, 'icons'),
+      mimeDir: path.join(dataHome, 'mime'),
+    };
+  };
+  const bundledIcon = () => launcher.fs.readFile(path.join(launcher.resourcesDir, 'icon.png'), { maxBytes: 1024 * 1024 }).catch(() => null);
   return {
     'app.info': (_args, event) => info(event.sender.id),
     'app.installLauncher': async (_args, event) => {
-      const { input, fs, utf8, appImage, home, execDir, resourcesDir, env, refreshMime } = launcher;
+      const { input, fs, utf8, appImage, execDir, resourcesDir, env, refreshMime } = launcher;
       if (!input.spend(event.sender.id)) throw new Error('no input');
       if (!appImage) throw new Error('not an AppImage');
       const script = utf8.decode(await fs.readFile(path.join(execDir, 'gal'), { maxBytes: 64 * 1024 }));
-      const dataHome = xdgDataHome(home, env);
-      const files = appImageLauncher(
-        appImage,
-        {
-          binDir: path.join(home, '.local', 'bin'),
-          applicationsDir: path.join(dataHome, 'applications'),
-          iconsDir: path.join(dataHome, 'icons'),
-          mimeDir: path.join(dataHome, 'mime'),
-        },
-        script,
-      );
+      const files = appImageLauncher(appImage, launcherDirs(), script);
       if (!files.ok) return files;
-      const icon = await fs.readFile(path.join(resourcesDir, 'icon.png'), { maxBytes: 1024 * 1024 }).catch(() => null);
+      const icon = await bundledIcon();
       const mime = await fs.readFile(path.join(resourcesDir, 'mime.xml'), { maxBytes: 64 * 1024 }).catch(() => null);
       const packageEntries = xdgDataDirs(env).map((dir) => path.join(dir, 'applications', 'galeo.desktop'));
       const installed = await installLauncher({ fs, utf8, refreshMime }, files, { icon, mime }, packageEntries);
       return installed.ok ? { ok: true, bin: files.bin.path } : installed;
+    },
+    'app.uninstallLauncher': async (_args, event) => {
+      const { input, fs, utf8, appImage, refreshMime } = launcher;
+      if (!input.spend(event.sender.id)) throw new Error('no input');
+      if (!appImage) throw new Error('not an AppImage');
+      return uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(launcherDirs()), await bundledIcon());
     },
     'app.resolveSandboxUnavailable': ([choice]) => {
       if (!sandboxChoice.offered()) throw new Error('sandbox choice not offered');

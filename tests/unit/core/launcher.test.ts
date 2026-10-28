@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { appImageLauncher, installLauncher, LAUNCHER_MARK, MIME_MARK } from '../../../src/core/desktop/launcher';
+import { appImageLauncher, installLauncher, launcherPaths, LAUNCHER_MARK, MIME_MARK, uninstallLauncher } from '../../../src/core/desktop/launcher';
 import { utf8 } from '../../../src/main/adapters/utf8';
 import { FakeFileSystem } from '../../helpers/fakes';
 // The same check the packages' desktop entry passes (verify:package).
@@ -173,5 +173,56 @@ describe('installLauncher', () => {
       expect(await installLauncher({ fs, utf8, refreshMime }, files(), { icon: null, mime: MIME_XML }, [])).toEqual({ ok: true });
       expect(await text(fs, MIME_FILE)).toContain(MIME_MARK);
     });
+  });
+});
+
+describe('uninstallLauncher ("Uninstall command-line launcher")', () => {
+  const BIN = '/home/u/.local/bin/galeo';
+  const ENTRY = '/home/u/.local/share/applications/galeo.desktop';
+  const installed = async () => {
+    const fs = new FakeFileSystem({});
+    const made = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, LAUNCHER_SCRIPT);
+    if (!made.ok) throw new Error(made.reason);
+    await installLauncher({ fs, utf8, refreshMime: async () => {} }, made, { icon: PNG, mime: MIME_XML }, []);
+    fs.touched.length = 0;
+    return fs;
+  };
+  const refreshing = () => {
+    const refreshed: string[] = [];
+    return { refreshed, refreshMime: async (database: string) => void refreshed.push(database) };
+  };
+
+  it('removes what install wrote, has the desktop rescan its icons, and the MIME database read again', async () => {
+    const fs = await installed();
+    const { refreshed, refreshMime } = refreshing();
+    expect(launcherPaths(DIRS).bin).toBe(BIN);
+    expect(await uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(DIRS), PNG)).toEqual({ removed: [BIN, ENTRY, ICON, MIME_FILE], kept: [] });
+    for (const path of [BIN, ENTRY, ICON, MIME_FILE]) await expect(fs.stat(path)).rejects.toThrow(/ENOENT/);
+    expect(fs.touched).toEqual(['/home/u/.local/share/icons/hicolor']);
+    expect(refreshed).toEqual(['/home/u/.local/share/mime']);
+  });
+
+  it("keeps files galeo didn't write, and an icon with other bytes, and says which it kept", async () => {
+    const fs = new FakeFileSystem({ [BIN]: '#!/bin/sh\necho mine', [ENTRY]: '[Desktop Entry]\nName=mine\n', [ICON]: 'theirs', [MIME_FILE]: '<mime-info/>' });
+    const { refreshed, refreshMime } = refreshing();
+    expect(await uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(DIRS), PNG)).toEqual({ removed: [], kept: [BIN, ENTRY, ICON, MIME_FILE] });
+    expect(await fs.readFile(BIN, { maxBytes: 100 })).toEqual(new TextEncoder().encode('#!/bin/sh\necho mine'));
+    expect(await fs.readFile(ICON, { maxBytes: 100 })).toEqual(new TextEncoder().encode('theirs'));
+    expect(fs.touched).toEqual([]);
+    expect(refreshed).toEqual([]);
+  });
+
+  it('removes nothing, and is fine, when nothing was installed', async () => {
+    const { refreshed, refreshMime } = refreshing();
+    expect(await uninstallLauncher({ fs: new FakeFileSystem({}), utf8, refreshMime }, launcherPaths(DIRS), PNG)).toEqual({ removed: [], kept: [] });
+    expect(refreshed).toEqual([]);
+  });
+
+  it('still removes the launcher when the MIME database refuses to update', async () => {
+    const fs = await installed();
+    const refreshMime = async () => {
+      throw new Error('update-mime-database: not found');
+    };
+    expect((await uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(DIRS), PNG)).removed).toContain(MIME_FILE);
   });
 });

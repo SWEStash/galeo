@@ -370,13 +370,20 @@ function AccentSetting({ profile, say }: { profile: ProfileView; say: (message: 
   );
 }
 
-/** Adds galeo to ~/.local/bin and to the applications menu, for the AppImage it runs from. */
+/** What "Uninstall command-line launcher" did, in a sentence. */
+function uninstalled({ removed, kept }: { removed: string[]; kept: string[] }): string {
+  const keptNote = kept.length === 0 ? '' : ` Kept ${kept.join(', ')}: galeo didn't write ${kept.length === 1 ? 'it' : 'them'}.`;
+  if (removed.length > 0) return `Removed the launcher: ${removed.join(', ')}.${keptNote}`;
+  return kept.length > 0 ? `Nothing removed.${keptNote}` : 'Nothing removed: the launcher is not installed.';
+}
+
+/** Adds galeo to ~/.local/bin and to the applications menu, for the AppImage it runs from, or takes it out again. */
 function LauncherSection() {
   const [launcher, setLauncher] = useState<string | null>(null);
   return (
     <>
       <h2>Command line</h2>
-      <p className="field-hint">Adds galeo to ~/.local/bin and to your applications, for this AppImage.</p>
+      <p className="field-hint">Adds galeo to ~/.local/bin and to your applications, for this AppImage, or removes it again.</p>
       <div className="settings-buttons">
         <Button
           onPress={() =>
@@ -387,6 +394,16 @@ function LauncherSection() {
           }
         >
           Install command-line launcher
+        </Button>
+        <Button
+          onPress={() =>
+            void window.galeo.app
+              .uninstallLauncher()
+              .then((result) => setLauncher(uninstalled(result)))
+              .catch(() => setLauncher("Not uninstalled: galeo couldn't remove the files."))
+          }
+        >
+          Uninstall command-line launcher
         </Button>
       </div>
       <p className="field-hint" role="status" data-testid="launcher-result">

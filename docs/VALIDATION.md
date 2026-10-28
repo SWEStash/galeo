@@ -153,6 +153,7 @@ these.
 |---|---|
 | Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log`; a `.markdown` opens too | Pass (2026-10-06; again after removing and reinstalling the `.deb`, 2026-10-07) |
 | `galeo file.md` and `gal file.md` from a terminal (the `.deb`'s `/usr/bin/galeo` and `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06; `.deb` again on 2026-10-07; as `galeo`/`gal`, `.deb` 0.2.0, 2026-10-15) |
+| Uninstall the AppImage's launcher (v0.4): after *Install command-line launcher*, *Uninstall command-line launcher* names what it removed; `galeo` is no longer found in a new terminal, galeo is gone from the applications grid, and an `.mdx` file is no longer *MDX document* in Files. A hand-written `~/.local/bin/galeo` stays, and the message names it | Not run (2026-10-28): for the 0.4.0 run |
 | Two profiles' windows open: `galeo --profile acme a.md`, a double-click in Files, a drop from Files and a plain `galeo` each land in the right window (a plain one in the window focused last) | Pass (2026-10-07; 0.2.0 `.deb`, 2026-10-15) |
 | Drop files from Files onto the document area: they open after the shown tab, the first one shown | Pass (2026-10-05) |
 | Drop onto a tab (the caret between tabs): they open at the caret | Pass (2026-10-05) |

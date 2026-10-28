@@ -1,5 +1,5 @@
 import { folderOf, joinPath } from '../../shared/paths';
-import { isMissing, type FileSystem } from '../ports';
+import type { FileSystem } from '../ports';
 import { kindOf, type Utf8 } from '../settings/json-file';
 
 /** The line every installed launcher carries, so galeo only ever replaces its own. */
@@ -19,16 +19,35 @@ const MIME_TYPES = [
   'application/xml', 'text/x-patch', 'text/x-makefile',
 ];
 
+type LauncherDirs = { binDir: string; applicationsDir: string; iconsDir: string; mimeDir: string };
+
+interface LauncherPaths {
+  bin: string;
+  desktop: string;
+  icon: { path: string; theme: string };
+  /** The MDX type's file in the user's MIME database, and the database to update after it. */
+  mime: { path: string; database: string };
+}
+
 type LauncherFiles =
   | {
       ok: true;
       bin: { path: string; content: string };
       desktop: { path: string; content: string };
-      icon: { path: string; theme: string };
-      /** The MDX type's file in the user's MIME database, and the database to update after it. */
-      mime: { path: string; database: string };
+      icon: LauncherPaths['icon'];
+      mime: LauncherPaths['mime'];
     }
   | { ok: false; reason: string };
+
+/** Where the launcher's files go, in the user's own folders. */
+export function launcherPaths(dirs: LauncherDirs): LauncherPaths {
+  return {
+    bin: joinPath(dirs.binDir, 'galeo'),
+    desktop: joinPath(dirs.applicationsDir, 'galeo.desktop'),
+    icon: { path: joinPath(dirs.iconsDir, 'hicolor', '256x256', 'apps', 'galeo.png'), theme: joinPath(dirs.iconsDir, 'hicolor') },
+    mime: { path: joinPath(dirs.mimeDir, 'packages', 'galeo.xml'), database: dirs.mimeDir },
+  };
+}
 
 // Characters the Desktop Entry spec reserves in an Exec argument, which must then be quoted.
 const RESERVED = /[\s"'\\><~|&;$*?#()`]/;
@@ -50,7 +69,7 @@ function shellQuote(value: string): string {
  */
 export function appImageLauncher(
   appImage: string,
-  dirs: { binDir: string; applicationsDir: string; iconsDir: string; mimeDir: string },
+  dirs: LauncherDirs,
   launcherScript: string,
 ): LauncherFiles {
   if (/\p{Cc}/u.test(appImage)) return { ok: false, reason: 'the AppImage path has a control character' };
@@ -80,13 +99,8 @@ export function appImageLauncher(
     `Exec=${exec} --new-window`,
     '',
   ].join('\n');
-  return {
-    ok: true,
-    bin: { path: joinPath(dirs.binDir, 'galeo'), content: bin },
-    desktop: { path: joinPath(dirs.applicationsDir, 'galeo.desktop'), content: desktop },
-    icon: { path: joinPath(dirs.iconsDir, 'hicolor', '256x256', 'apps', 'galeo.png'), theme: joinPath(dirs.iconsDir, 'hicolor') },
-    mime: { path: joinPath(dirs.mimeDir, 'packages', 'galeo.xml'), database: dirs.mimeDir },
-  };
+  const paths = launcherPaths(dirs);
+  return { ok: true, bin: { path: paths.bin, content: bin }, desktop: { path: paths.desktop, content: desktop }, icon: paths.icon, mime: paths.mime };
 }
 
 /**
@@ -137,21 +151,62 @@ export async function installLauncher(
   return { ok: true };
 }
 
-/** Nothing is at `path`, or the same icon already is (the icon carries no mark). */
-async function iconFree(fs: FileSystem, path: string, icon: Uint8Array): Promise<boolean> {
+/**
+ * Removes what `installLauncher` wrote: the `galeo` command, the desktop entry and the MDX type
+ * only while they carry galeo's mark, and the icon only while it has `icon`'s bytes. Anything else
+ * at those paths is kept and named in `kept`. The paths are the user's own; a package's files are
+ * never among them.
+ */
+export async function uninstallLauncher(
+  deps: { fs: FileSystem; utf8: Utf8; refreshMime: (database: string) => Promise<void> },
+  paths: LauncherPaths,
+  icon: Uint8Array | null,
+): Promise<{ removed: string[]; kept: string[] }> {
+  const { fs } = deps;
+  const removed: string[] = [];
+  const kept: string[] = [];
+  const sort = async (path: string, mine: () => Promise<boolean>) => {
+    if ((await kindOf(fs, path)) === null) return false;
+    if (!(await mine())) {
+      kept.push(path);
+      return false;
+    }
+    await fs.remove(path);
+    removed.push(path);
+    return true;
+  };
+  await sort(paths.bin, () => marked(deps, paths.bin, LAUNCHER_MARK));
+  await sort(paths.desktop, () => marked(deps, paths.desktop, ENTRY_MARK));
+  if (await sort(paths.icon.path, async () => icon !== null && (await sameBytes(fs, paths.icon.path, icon)))) await fs.touch(paths.icon.theme);
+  if (await sort(paths.mime.path, () => marked(deps, paths.mime.path, MIME_MARK))) await deps.refreshMime(paths.mime.database).catch(() => undefined);
+  return { removed, kept };
+}
+
+/** The file at `path` carries galeo's `mark`. */
+async function marked(deps: { fs: FileSystem; utf8: Utf8 }, path: string, mark: string): Promise<boolean> {
+  try {
+    return deps.utf8.decode(await deps.fs.readFile(path, { maxBytes: 64 * 1024 })).includes(mark);
+  } catch {
+    return false;
+  }
+}
+
+/** The file at `path` has exactly `icon`'s bytes. */
+async function sameBytes(fs: FileSystem, path: string, icon: Uint8Array): Promise<boolean> {
   try {
     const existing = await fs.readFile(path, { maxBytes: icon.length });
     return existing.length === icon.length && existing.every((byte, at) => byte === icon[at]);
-  } catch (error) {
-    return isMissing(error);
+  } catch {
+    return false;
   }
+}
+
+/** Nothing is at `path`, or the same icon already is (the icon carries no mark). */
+async function iconFree(fs: FileSystem, path: string, icon: Uint8Array): Promise<boolean> {
+  return (await kindOf(fs, path)) === null || sameBytes(fs, path, icon);
 }
 
 /** Nothing is at `path`, or what is there carries galeo's `mark`. */
 async function ownedOrAbsent(deps: { fs: FileSystem; utf8: Utf8 }, path: string, mark: string): Promise<boolean> {
-  try {
-    return deps.utf8.decode(await deps.fs.readFile(path, { maxBytes: 64 * 1024 })).includes(mark);
-  } catch (error) {
-    return isMissing(error);
-  }
+  return (await kindOf(deps.fs, path)) === null || marked(deps, path, mark);
 }

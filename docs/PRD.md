@@ -312,7 +312,7 @@ must not obstruct (plain files only, no sidecar metadata).
   recorded; the start budgets are tightened to what the profiled build achieves, and no new
   feature adds work before the first window paints. The 500 ms target stays the goal.
 - **Remove the command-line launcher.** Settings can remove what "Install command-line launcher"
-  added for the AppImage (the `galeo`/`gal` commands, the menu entry and the file types), so that
+  added for the AppImage (the `galeo` command, the menu entry, its icon and the MDX file type), so that
   deleting the AppImage leaves nothing behind.
 - **Colour in the JSON tree and in logs.** The JSON tree and the log view use the code-highlighting
   colours, so that the parts of a value or a log line stand apart (added by the owner, 2026-10-26).

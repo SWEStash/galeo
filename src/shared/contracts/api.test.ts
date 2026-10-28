@@ -41,7 +41,7 @@ describe('buildApi', () => {
     // Registered by the preload only: the page never gets a way to name dropped paths (SR-12).
     expect(Object.keys(api.drops)).toEqual(['open', 'onReceived']);
     expect(Object.keys(api.quickOpen)).toEqual(['start', 'query', 'open', 'close', 'onResults']);
-    expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable', 'installLauncher', 'startInfo']);
+    expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable', 'installLauncher', 'uninstallLauncher', 'startInfo']);
     expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'pathMenu', 'contextMenu', 'save', 'dirty', 'leaveEdit', 'closeAnswer', 'keep', 'recover', 'findAll', 'onEditMode', 'onConfirmClose']);
     expect(Object.keys(api.tabs)).toEqual([
       'snapshot',

@@ -325,7 +325,9 @@ Quick open lists a typed folder (`~/…`, `/…`), and opens any selection, only
 credit of real input to that window: each key press, click or tap main observes (`input-event`)
 earns one, for a second, at most five held. Following a link the document has spends one too,
 whether it opens a file, moves to an anchor or opens the browser, and so do deleting the
-window's profile, clearing recent files and installing the AppImage launcher. A compromised page
+window's profile, clearing recent files and installing or uninstalling the AppImage launcher.
+Uninstalling removes, in the user's own folders, only the files that still carry galeo's mark,
+and the icon only while it has galeo's bytes; anything else there stays. A compromised page
 can then neither list folders, open files, follow links nor make those changes on its own, only
 once per key the reader presses. Link
 and image extraction runs in a worker thread in main with a time budget, so hostile input cannot

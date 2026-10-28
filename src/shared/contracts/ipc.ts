@@ -102,6 +102,7 @@ export const CHANNELS = [
   'app.info',
   'app.resolveSandboxUnavailable',
   'app.installLauncher',
+  'app.uninstallLauncher',
   'documents.read',
   'documents.setEncoding',
   'documents.followLink',
@@ -186,6 +187,8 @@ export interface Requests {
   'app.resolveSandboxUnavailable': [choice: SandboxChoice];
   /** AppImage only: writes `~/.local/bin/galeo` and a desktop entry for this AppImage. */
   'app.installLauncher': [];
+  /** AppImage only: removes what install wrote, while it is still galeo's. */
+  'app.uninstallLauncher': [];
   /** Reads one of them by id; there is no way to read by path (SR-12). */
   'documents.read': [id: string];
   /** Reads the document with this encoding from now on ("Reopen with encoding…"); null detects it again. */
@@ -313,6 +316,8 @@ export interface Responses {
   'app.resolveSandboxUnavailable': void;
   /** Where `galeo` was written, or why it wasn't. */
   'app.installLauncher': { ok: true; bin: string } | { ok: false; reason: string };
+  /** What was removed, and what was kept because galeo didn't write it. */
+  'app.uninstallLauncher': { removed: string[]; kept: string[] };
   'documents.read': DocumentContent;
   'documents.setEncoding': void;
   'documents.followLink': FollowResult;

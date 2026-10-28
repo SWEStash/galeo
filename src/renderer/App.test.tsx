@@ -68,6 +68,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       info: vi.fn().mockResolvedValue({ ...baseInfo, ...info }),
       resolveSandboxUnavailable: vi.fn().mockResolvedValue(undefined),
       installLauncher: vi.fn().mockResolvedValue({ ok: false, reason: 'not an AppImage' }),
+      uninstallLauncher: vi.fn().mockRejectedValue(new Error('not an AppImage')),
     },
     documents: {
       read: vi.fn().mockResolvedValue(documents.content),

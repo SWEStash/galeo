@@ -11,7 +11,7 @@ const GAL = ['#!/bin/sh', 'GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"', 'exec "$
 const APPIMAGE = '/home/me/Apps/galeo.AppImage';
 
 function setup({ appImage = APPIMAGE as string | null, env = {} as Record<string, string>, files = {} as Record<string, string> } = {}) {
-  const fs = new FakeFileSystem({ '/opt/galeo/gal': GAL, '/opt/galeo/resources/mime.xml': '<mime/>', ...files });
+  const fs = new FakeFileSystem({ '/opt/galeo/gal': GAL, '/opt/galeo/resources/mime.xml': '<!-- The MDX type, installed by galeo. --><mime/>', ...files });
   const input = new InputCredits(() => 0);
   const refreshed: string[] = [];
   const sandbox: string[] = [];
@@ -67,6 +67,27 @@ describe('appHandlers', () => {
     const packaged = setup({ env: { XDG_DATA_DIRS: 'relative:/usr/share' }, files: { '/usr/share/applications/galeo.desktop': '' } });
     packaged.input.received(1);
     expect(await packaged.handlers['app.installLauncher']([], from(1))).toEqual({ ok: false, reason: expect.stringContaining('package') });
+  });
+
+  it('uninstalls the launcher from the same folders install used, on real input only', async () => {
+    const { handlers, fs, input, refreshed } = setup({ env: { XDG_DATA_HOME: '/home/me/data' } });
+    input.received(1);
+    await handlers['app.installLauncher']([], from(1));
+    refreshed.length = 0;
+    await expect(async () => handlers['app.uninstallLauncher']([], from(1))).rejects.toThrow('no input');
+    input.received(1);
+    expect(await handlers['app.uninstallLauncher']([], from(1))).toEqual({
+      removed: ['/home/me/.local/bin/galeo', '/home/me/data/applications/galeo.desktop', '/home/me/data/mime/packages/galeo.xml'],
+      kept: [],
+    });
+    await expect(fs.stat('/home/me/.local/bin/galeo')).rejects.toThrow(/ENOENT/);
+    expect(refreshed).toEqual(['/home/me/data/mime']);
+  });
+
+  it('refuses to install or uninstall outside an AppImage', async () => {
+    const { handlers, input } = setup({ appImage: null });
+    input.received(1);
+    await expect(async () => handlers['app.uninstallLauncher']([], from(1))).rejects.toThrow('not an AppImage');
   });
 
   it('refuses to install outside an AppImage', async () => {

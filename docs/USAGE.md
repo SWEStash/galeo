@@ -30,6 +30,8 @@ For other distributions: make `galeo-<version>.AppImage` executable and run it. 
 `galeo` command and a desktop entry, open Settings (Ctrl+,) and choose
 **Install command-line launcher**: it writes `~/.local/bin/galeo` and an entry in your
 applications, both pointing at that AppImage, and the MDX file type in `~/.local/share/mime`.
+**Uninstall command-line launcher**, beside it, removes them again (a file galeo didn't write
+stays, and the message names it), so deleting the AppImage afterwards leaves nothing behind.
 
 On Ubuntu 24.04 and later the AppImage can't start Chromium's sandbox, which needs an AppArmor
 profile only the `.deb` provides. galeo then shows why and offers **Quit** or

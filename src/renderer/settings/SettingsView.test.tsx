@@ -48,7 +48,10 @@ function stubBridge() {
     fonts: vi.fn().mockResolvedValue(INSTALLED),
   };
   const profiles = { update: vi.fn().mockResolvedValue({ ok: true }) };
-  const app = { installLauncher: vi.fn().mockResolvedValue({ ok: true, bin: '/home/u/.local/bin/galeo' }) };
+  const app = {
+    installLauncher: vi.fn().mockResolvedValue({ ok: true, bin: '/home/u/.local/bin/galeo' }),
+    uninstallLauncher: vi.fn().mockResolvedValue({ removed: ['/home/u/.local/bin/galeo', '/home/u/.local/share/applications/galeo.desktop'], kept: [] }),
+  };
   Object.defineProperty(window, 'galeo', { value: { settings, profiles, app }, configurable: true });
   return { settings, profiles, app };
 }
@@ -295,6 +298,25 @@ describe('SettingsView (UX §6)', () => {
     const container = await render(STATE, true);
     await act(async () => button(container, 'Install command-line launcher').click());
     await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('Not installed'));
+  });
+
+  it('uninstalls the launcher from an AppImage only, and says what it removed and what it kept', async () => {
+    const { app } = stubBridge();
+    expect(button(await render(), 'Uninstall command-line launcher')).toBeUndefined();
+    const container = await render(STATE, true);
+    const result = () => container.querySelector('[data-testid="launcher-result"]')?.textContent;
+    await act(async () => button(container, 'Uninstall command-line launcher').click());
+    expect(app.uninstallLauncher).toHaveBeenCalled();
+    await vi.waitFor(() => expect(result()).toBe('Removed the launcher: /home/u/.local/bin/galeo, /home/u/.local/share/applications/galeo.desktop.'));
+    app.uninstallLauncher.mockResolvedValue({ removed: [], kept: ['/home/u/.local/bin/galeo'] });
+    await act(async () => button(container, 'Uninstall command-line launcher').click());
+    await vi.waitFor(() => expect(result()).toBe("Nothing removed. Kept /home/u/.local/bin/galeo: galeo didn't write it."));
+    app.uninstallLauncher.mockResolvedValue({ removed: [], kept: [] });
+    await act(async () => button(container, 'Uninstall command-line launcher').click());
+    await vi.waitFor(() => expect(result()).toBe('Nothing removed: the launcher is not installed.'));
+    app.uninstallLauncher.mockRejectedValue(new Error('EACCES'));
+    await act(async () => button(container, 'Uninstall command-line launcher').click());
+    await vi.waitFor(() => expect(result()).toBe("Not uninstalled: galeo couldn't remove the files."));
   });
 
   it("keeps focus on a control when main sends back the change it made (keyboard use, WCAG 2.4.3)", async () => {
