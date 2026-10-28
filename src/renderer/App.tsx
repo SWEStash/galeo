@@ -42,6 +42,7 @@ import { useTabs } from './tabs/useTabs';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
 import { logFailure } from './tabs/closed-tab';
+import { panelOrder } from './tabs/panel-order';
 
 // The Settings tab loads when first shown: its pickers are nothing a window needs to start.
 const SettingsView = lazy(() => import('./settings/SettingsView').then((module) => ({ default: module.SettingsView })));
@@ -99,6 +100,12 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
   const { view, store } = useTabs();
+  const panelIds = useRef<string[]>([]);
+  const panels = useMemo(() => {
+    panelIds.current = panelOrder(panelIds.current, view.tabs.map((tab) => tab.id));
+    const byId = new Map(view.tabs.map((tab) => [tab.id, tab]));
+    return panelIds.current.map((id) => byId.get(id)!);
+  }, [view.tabs]);
   const settings = useSettings();
   const scheme = useColorScheme(settings?.settings.themeMode ?? 'system');
   const tableSeparator = settings?.settings.tableSeparator ?? 'auto';
@@ -223,8 +230,9 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
             <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
               <DropArea onDrop={() => landed({})}>
                 {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow key={recentRevision} platform={platform} say={setMessage} />}
-                {view.tabs.map((tab) => (
+                {panels.map((tab) => (
                   // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
+                  // Drawn in panelOrder, so moving a tab never moves its panel (which would lose its scroll).
                   // The tab's own reader width overrides the profile's measure for everything it shows.
                   <TabPanel
                     key={tab.id}
