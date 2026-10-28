@@ -23,7 +23,7 @@ const updates = new Map<string, Promise<void>>();
  * the last valid value stays in use; galeo writes the file only on a settings change, re-reading
  * it right before, and never over an invalid hand edit.
  */
-export class ConfigFile<T> {
+export class ConfigFile<T extends object> {
   private last: T;
 
   constructor(private readonly deps: ConfigFileDeps<T>) {
@@ -44,7 +44,7 @@ export class ConfigFile<T> {
       const loaded = await this.load();
       if (loaded.notice) return loaded;
       const value = change(loaded.value);
-      await writeJsonFile(this.deps as JsonFileSpec<unknown>, path, value as object);
+      await writeJsonFile(this.deps, path, value);
       this.last = value;
       return { value, notice: null };
     });

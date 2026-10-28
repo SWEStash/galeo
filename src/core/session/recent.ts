@@ -78,7 +78,7 @@ export class RecentFiles {
   }
 
   private save(): Promise<void> {
-    const write = this.writing.then(() => writeJsonFile(this.spec as JsonFileSpec<unknown>, this.deps.path, { files: this.files }));
+    const write = this.writing.then(() => writeJsonFile(this.spec, this.deps.path, { files: this.files }));
     this.writing = write.catch(() => {});
     return write;
   }

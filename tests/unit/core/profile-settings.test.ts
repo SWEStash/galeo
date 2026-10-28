@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ProfileSettings } from '../../../src/core/settings/profile-settings';
-import { DEFAULT_SETTINGS } from '../../../src/core/settings/model';
+import { DEFAULT_SETTINGS } from '../../../src/shared/settings';
 import type { Parse } from '../../../src/core/settings/json-file';
 import type { SettingsOverrides } from '../../../src/shared/settings';
 import { utf8 } from '../../../src/main/adapters/utf8';

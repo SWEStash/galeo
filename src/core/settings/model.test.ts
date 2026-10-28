@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, migrate, resolveSettings } from './model';
+import { DEFAULT_SETTINGS } from '../../shared/settings';
+import { migrate, resolveSettings } from './model';
 
 describe('resolveSettings', () => {
   it('starts from the built-in defaults', () => {
@@ -13,11 +14,6 @@ describe('resolveSettings', () => {
   it('lets the global file override the defaults, and the profile override both', () => {
     const settings = resolveSettings({ fontSize: 18, themeMode: 'dark' }, { fontSize: 20 });
     expect(settings).toMatchObject({ fontSize: 20, themeMode: 'dark', measure: DEFAULT_SETTINGS.measure });
-  });
-
-  it('never shares arrays with the defaults', () => {
-    resolveSettings({}, {}).quickOpenExclude.push('x');
-    expect(DEFAULT_SETTINGS.quickOpenExclude).not.toContain('x');
   });
 });
 

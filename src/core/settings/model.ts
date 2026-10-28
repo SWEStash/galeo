@@ -1,24 +1,9 @@
-import { TAB_PANEL_DEFAULT, type SettingSource, type Settings, type SettingsOverrides } from '../../shared/settings';
-
-export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
-  themeMode: 'system',
-  proseFont: 'Inter',
-  codeFont: 'JetBrains Mono',
-  fontSize: 17,
-  measure: 72,
-  statusBar: true,
-  quickOpenExclude: Object.freeze([]) as unknown as string[],
-  warmTabs: 3,
-  warmMegabytes: 20,
-  tableSeparator: 'auto',
-  tableHeader: true,
-  tabsPosition: 'top',
-  tabPanelWidth: TAB_PANEL_DEFAULT,
-});
+import { DEFAULT_SETTINGS, type SettingSource, type Settings, type SettingsOverrides } from '../../shared/settings';
+import { keysOf } from '../../shared/records';
 
 /** Built-in defaults, then the global file, then the profile's overrides (ADR-005). */
 export function resolveSettings(global: SettingsOverrides, profile: SettingsOverrides): Settings {
-  const settings: Settings = { ...DEFAULT_SETTINGS, quickOpenExclude: [...DEFAULT_SETTINGS.quickOpenExclude] };
+  const settings: Settings = { ...DEFAULT_SETTINGS };
   for (const level of [global, profile]) {
     for (const [key, value] of Object.entries(level)) {
       if (Object.hasOwn(DEFAULT_SETTINGS, key)) Object.assign(settings, { [key]: value });
@@ -59,7 +44,7 @@ export function migrate(data: unknown, current: number, migrations: Readonly<Rec
 
 /** Where each setting's value comes from, given the global file's and the profile's overrides. */
 export function settingSources(global: SettingsOverrides, profile: SettingsOverrides): Record<keyof Settings, SettingSource> {
-  const keys = Object.keys(DEFAULT_SETTINGS) as (keyof Settings)[];
+  const keys = keysOf(DEFAULT_SETTINGS);
   return Object.fromEntries(keys.map((key) => [key, key in profile ? 'profile' : key in global ? 'global' : 'default'])) as Record<
     keyof Settings,
     SettingSource

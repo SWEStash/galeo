@@ -653,15 +653,8 @@ export function DocumentPane({
     });
   }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, tabular, separatorChoice, shownTable?.table, header]);
 
-  if (!ready) {
-    return (
-      <DocumentState
-        content={content as Exclude<DocumentContent, { state: 'ready' }>}
-        onClose={onClose}
-        onFileActions={onContextMenu}
-      />
-    );
-  }
+  // Ready content is always shown: no document means the content is a state of its own.
+  if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={onContextMenu} />;
 
   return (
     <>

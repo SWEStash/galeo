@@ -1,6 +1,7 @@
 import { Button, Menu, MenuItem, MenuSection, MenuTrigger, Popover, Separator as MenuSeparator } from 'react-aria-components';
 import type { Separator, SeparatorChoice } from '../../shared/csv';
 import type { Command } from '../../shared/keymap';
+import { keysOf } from '../../shared/records';
 
 const NAMES: Record<Separator, string> = { ',': 'Comma', ';': 'Semicolon', '\t': 'Tab', '|': 'Pipe' };
 /** What a separator looks like in "Auto (;)": a tab has no glyph of its own. */
@@ -39,7 +40,7 @@ export function TableOptionsMenu({ options, onCommand, className }: { options: T
             <MenuItem id={COMMANDS.auto} className="menu-item">
               {`Detect automatically${options.found ? ` (${GLYPHS[options.found]})` : ''}`}
             </MenuItem>
-            {(Object.keys(NAMES) as Separator[]).map((each) => (
+            {keysOf(NAMES).map((each) => (
               <MenuItem key={each} id={COMMANDS[each]} className="menu-item">
                 {NAMES[each]}
               </MenuItem>

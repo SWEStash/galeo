@@ -57,7 +57,8 @@ const CACHE_ENTRIES = 64;
  * container's: the shadow host the article sits in.
  */
 function observeVisible(element: Element, onVisible: () => void): () => void {
-  const root = (element.getRootNode() as ShadowRoot).host ?? null;
+  const rootNode = element.getRootNode();
+  const root = rootNode instanceof ShadowRoot ? rootNode.host : null;
   let idle: number | undefined;
   const stop = () => {
     near.disconnect();

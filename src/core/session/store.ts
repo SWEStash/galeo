@@ -61,7 +61,7 @@ export class SessionStore {
         await moveIfPresent(this.deps.fs, n === 1 ? this.file : `${this.file}.${n - 1}`, `${this.file}.${n}`);
       }
     }
-    await writeJsonFile(this.spec as JsonFileSpec<unknown>, this.file, session);
+    await writeJsonFile(this.spec, this.file, session);
   }
 
   /** The valid previous sessions, newest first, for "Restore previous session". */

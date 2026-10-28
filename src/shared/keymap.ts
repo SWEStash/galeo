@@ -1,3 +1,5 @@
+import { keysOf } from './records';
+
 export type Platform = 'linux' | 'darwin' | 'win32';
 
 /** The v0.1 shortcuts (UX §5). `CmdOrCtrl` is Cmd on macOS and Ctrl elsewhere. */
@@ -123,7 +125,7 @@ function matches(accelerator: string, event: KeyEventLike, platform: Platform): 
 /** The command a key press triggers on `platform`, or null. */
 export function commandFor(event: KeyEventLike, platform: Platform): Command | null {
   const map = keymap(platform);
-  for (const command of Object.keys(map) as Command[]) {
+  for (const command of keysOf(map)) {
     if (map[command].some((accelerator) => matches(accelerator, event, platform))) return command;
   }
   return null;

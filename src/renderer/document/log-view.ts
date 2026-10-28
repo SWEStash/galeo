@@ -10,6 +10,7 @@ import {
 } from '@codemirror/view';
 import { logLevel, type LogLevel } from './log-level';
 import { logSpans, type LogPart } from './log-parts';
+import { keysOf } from '../../shared/records';
 
 const LABELS: Record<LogLevel, string> = { error: 'ERR', warn: 'WRN', info: 'INF', debug: 'DBG' };
 
@@ -30,18 +31,18 @@ class LevelBadge extends GutterMarker {
 }
 
 const BADGES = Object.fromEntries(
-  (Object.keys(LABELS) as LogLevel[]).map((level) => [level, new LevelBadge(level)]),
+  keysOf(LABELS).map((level) => [level, new LevelBadge(level)]),
 ) as Record<LogLevel, LevelBadge>;
 
 const LINE_CLASSES = Object.fromEntries(
-  (Object.keys(LABELS) as LogLevel[]).map((level) => [level, Decoration.line({ class: `galeo-log-${level}` })]),
+  keysOf(LABELS).map((level) => [level, Decoration.line({ class: `galeo-log-${level}` })]),
 ) as Record<LogLevel, Decoration>;
 
 const PART_CLASSES: Record<LogPart, Decoration> = {
   time: Decoration.mark({ class: 'galeo-log-time' }),
   key: Decoration.mark({ class: 'galeo-log-key' }),
   ...(Object.fromEntries(
-    (Object.keys(LABELS) as LogLevel[]).map((level) => [`level-${level}`, Decoration.mark({ class: `galeo-log-word-${level}` })]),
+    keysOf(LABELS).map((level) => [`level-${level}`, Decoration.mark({ class: `galeo-log-word-${level}` })]),
   ) as Record<`level-${LogLevel}`, Decoration>),
 };
 

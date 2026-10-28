@@ -37,7 +37,7 @@ export class AppState {
   setLastProfile(id: string): Promise<void> {
     if (id === this.lastProfile) return this.writing;
     this.lastProfile = id;
-    const write = this.writing.then(() => writeJsonFile(this.spec as JsonFileSpec<unknown>, this.deps.path, { lastProfile: id }));
+    const write = this.writing.then(() => writeJsonFile(this.spec, this.deps.path, { lastProfile: id }));
     this.writing = write.catch(() => {});
     return write;
   }

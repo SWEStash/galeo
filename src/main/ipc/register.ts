@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import type { AnyChannel, Requests, Responses } from '../../shared/contracts';
 import { requestSchemas } from '../../shared/contracts/schemas';
 import { createHandler, type IpcEvent } from './handle';
+import { keysOf } from '../../shared/records';
 
 /** An IPC event with its sending window's web contents, whose id scopes per-window state. */
 export type WindowIpcEvent = IpcEvent & { sender: { id: number } };
@@ -22,5 +23,5 @@ export function registerIpc(handlers: Handlers, trustedOrigins: ReadonlySet<stri
         handle: handlers[channel],
       }),
     );
-  for (const channel of Object.keys(handlers) as AnyChannel[]) register(channel);
+  for (const channel of keysOf(handlers)) register(channel);
 }

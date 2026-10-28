@@ -1,7 +1,8 @@
 import path from 'node:path';
 import type { FileSystem, FontCatalog, OsShell } from '../../core/ports';
 import type { Utf8 } from '../../core/settings/json-file';
-import { DEFAULT_SETTINGS, settingSources } from '../../core/settings/model';
+import { settingSources } from '../../core/settings/model';
+import { DEFAULT_SETTINGS } from '../../shared/settings';
 import { openConfigFile } from '../../core/settings/open-config';
 import type { ProfileSettings } from '../../core/settings/profile-settings';
 import type { SettingsResult, SettingsState } from '../../shared/contracts';

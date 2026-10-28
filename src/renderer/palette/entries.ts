@@ -1,5 +1,6 @@
 import { COMMANDS, formatKeys } from '../../shared/commands';
 import { keymap, type Command, type Platform, type WindowCommand } from '../../shared/keymap';
+import { keysOf } from '../../shared/records';
 
 type PaletteAction =
   | { kind: 'command'; command: Command; tabNumber?: number }
@@ -24,7 +25,7 @@ export interface PaletteEntry {
 export function paletteEntries(platform: Platform): PaletteEntry[] {
   const keys = keymap(platform);
   const entries: PaletteEntry[] = [];
-  for (const command of Object.keys(COMMANDS) as Command[]) {
+  for (const command of keysOf(COMMANDS)) {
     const { label, group, runs } = COMMANDS[command];
     const shown = formatKeys(keys[command], platform);
     if (command === 'goToTab') {

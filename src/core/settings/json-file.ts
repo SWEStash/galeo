@@ -56,7 +56,8 @@ export async function readJsonFile<T>(spec: JsonFileSpec<T>, path: string): Prom
 }
 
 /** Writes `value` with its `schemaVersion`, atomically, owner-only (SR-16), creating its folder. */
-export async function writeJsonFile(spec: JsonFileSpec<unknown>, path: string, value: object): Promise<void> {
+/** Writes `value` with the spec's schema version; only the file system and the version are needed to write. */
+export async function writeJsonFile(spec: Pick<JsonFileSpec<unknown>, 'fs' | 'utf8' | 'version'>, path: string, value: object): Promise<void> {
   await spec.fs.mkdir(folderOf(path), { mode: DIR_MODE });
   const json = `${JSON.stringify({ schemaVersion: spec.version, ...value }, null, 2)}\n`;
   await spec.fs.writeFileAtomic(path, spec.utf8.encode(json), { mode: FILE_MODE });

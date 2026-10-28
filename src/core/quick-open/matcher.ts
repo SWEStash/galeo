@@ -136,7 +136,7 @@ export function matchPath(query: string, path: string): PathMatch | null {
  * path, then the given order. An empty query keeps the given order.
  */
 export function topMatches(query: string, paths: readonly string[] | PathIndex, limit: number): PathMatch[] {
-  const index = Array.isArray(paths) ? indexPaths(paths as readonly string[]) : (paths as PathIndex);
+  const index = 'paths' in paths ? paths : indexPaths(paths);
   const needle = normalize(query);
   if (!needle) return index.paths.slice(0, limit).map((path) => ({ path, score: 0, positions: [] }));
   const best: { path: string; score: number; order: number }[] = [];

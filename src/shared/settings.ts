@@ -22,7 +22,7 @@ export interface Settings {
   measure: ReaderWidth;
   statusBar: boolean;
   /** Extra folder or file names quick open skips. */
-  quickOpenExclude: string[];
+  quickOpenExclude: readonly string[];
   /** Tabs kept rendered besides the active one, per window (ADR-002). */
   warmTabs: number;
   /** Rendered weight those tabs may hold together, in MiB. */
@@ -34,6 +34,23 @@ export interface Settings {
   tabsPosition: TabsPosition;
   tabPanelWidth: number;
 }
+
+/** The built-in values, before the global file and the profile's overrides (ADR-005). */
+export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
+  themeMode: 'system',
+  proseFont: 'Inter',
+  codeFont: 'JetBrains Mono',
+  fontSize: 17,
+  measure: 72,
+  statusBar: true,
+  quickOpenExclude: Object.freeze([]),
+  warmTabs: 3,
+  warmMegabytes: 20,
+  tableSeparator: 'auto',
+  tableHeader: true,
+  tabsPosition: 'top',
+  tabPanelWidth: TAB_PANEL_DEFAULT,
+});
 
 /** What a settings file sets; anything it leaves out comes from the level below. */
 export type SettingsOverrides = Partial<Settings>;

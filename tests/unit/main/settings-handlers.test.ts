@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, settingSources } from '../../../src/core/settings/model';
+import { settingSources } from '../../../src/core/settings/model';
+import { DEFAULT_SETTINGS } from '../../../src/shared/settings';
 import { utf8 } from '../../../src/main/adapters/utf8';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
 import { settingsHandlers } from '../../../src/main/settings/handlers';
