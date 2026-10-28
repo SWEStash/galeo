@@ -258,3 +258,26 @@ test('main opens only what it offered this window, and nothing once quick open c
     }
   });
 });
+
+test('a choice main refuses says so in the status bar, and opens nothing', async () => {
+  await withRepository(async (root, home) => {
+    const { window: page, close } = await launchApp(['--', path.join(root, 'README.md')], { home });
+    try {
+      await expect(shownDocument(page).locator('h1')).toHaveText('Acme');
+      await page.keyboard.press('ControlOrMeta+P');
+      await field(page).fill('notes');
+      await expect(option(page, /notes\.md/)).toBeVisible();
+      // Another session for this window ends the one on screen: main no longer offers its results (the race).
+      await page.evaluate(async () => {
+        const { token } = await window.galeo.quickOpen.start();
+        await window.galeo.quickOpen.close(token);
+      });
+      await page.keyboard.press('Enter');
+      await expect(quickOpen(page)).toHaveCount(0);
+      await expect(page.getByTestId('status-message')).toHaveText("Couldn't open docs/notes.md");
+      await expect(page.getByRole('tab')).toHaveCount(1);
+    } finally {
+      await close();
+    }
+  });
+});
