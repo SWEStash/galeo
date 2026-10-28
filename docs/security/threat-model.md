@@ -354,7 +354,8 @@ answered only for input too, so a page can't watch what the other windows show. 
 Tab search (v0.4, UX F16) answers only with the sender's own tabs: its open ones and the ones it
 closed, by name and folder. Reopening one goes by the id main listed it under in that window's
 closed list (never another window's, never a closed window) and spends an input credit; the
-file is one the window already had open.
+file is one the window already had open. Ctrl+Shift+T (the last closed tab or window) spends one
+too.
 Find in all tabs (v0.4, ADR-024) searches only the sender's own open tabs: their files, which the
 window already shows, or the unsaved text main keeps for them. It answers with counts and short
 snippets by tab id. It reads nothing the page couldn't already read, so it spends no credit.
@@ -362,7 +363,8 @@ snippets by tab id. It reads nothing the page couldn't already read, so it spend
 that reads of paths never surfaced to the user are rejected; that Ctrl+E on a missing file is
 refused by main, and that a tab the page makes active just before Ctrl+E is asked about, not
 enabled (`edit.spec`); that a window can't take a tab no drag offered, or start a drag or a
-palette move or list the other windows without input, or reopen a closed tab by id without input or from another window
+palette move or list the other windows without input, or reopen a closed tab or window without
+input, or a closed tab by id from another window
 (`tab-handlers.test`).
 
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as

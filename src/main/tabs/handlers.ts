@@ -135,9 +135,10 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
       reads.forget(id);
       closed(id);
     },
-    // Whatever closed last comes back: this window's tab, or a whole window of its profile (UX F4).
+    // Whatever closed last comes back: this window's tab, or a whole window of its profile (UX F4), on real input.
     'tabs.reopenClosed': (_args, event) => {
       const window = event.sender.id;
+      if (!input.spend(window)) return null;
       const tabAt = tabs.closedAt(window);
       const windowAt = closedWindows.at(window);
       if (windowAt !== null && (tabAt === null || windowAt > tabAt)) {
