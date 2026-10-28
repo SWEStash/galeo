@@ -259,10 +259,9 @@ export interface Requests {
   'tabs.dragEnd': [id: string, outside: boolean];
   /** The tab another window's drag carries was dropped here, at `position`. */
   'tabs.adopt': [token: string, position: number];
-  /** The window's dragged tab was dropped outside every window: it gets a window of its own. */
   /** Moves the tab to another window, or to a new one (the palette). Spends real input. */
   'tabs.moveTo': [id: string, target: number | 'new'];
-  /** The other windows a tab can move to. */
+  /** The other windows a tab can move to. Spends real input. */
   'tabs.windows': [];
   'settings.get': [];
   /** The profile's previous sessions ("Restore previous session", UX F6). */
@@ -352,9 +351,8 @@ export interface Responses {
   /** False when main refused: a tab the window doesn't have, the settings tab, or no real input. */
   'tabs.dragStart': boolean;
   'tabs.dragEnd': void;
-  /** False when no live drag carried that tab from another window. */
+  /** The adopted tab's id; null when no live drag carried that tab from another window. */
   'tabs.adopt': string | null;
-  /** False when the drag was over, or the window had only that tab. */
   /** False when main refused: not the window's tab, the settings tab, no real input, or no such window. */
   'tabs.moveTo': boolean;
   'tabs.windows': OtherWindow[];
