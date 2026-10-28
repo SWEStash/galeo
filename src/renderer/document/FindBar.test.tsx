@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { FindBar, type FindBarProps } from './FindBar';
+import { fillInput } from '../testing/dom';
 
 let root: Root | undefined;
 
@@ -22,11 +23,7 @@ async function render(props: Partial<FindBarProps> = {}) {
 }
 
 async function type(input: HTMLInputElement, value: string) {
-  await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-    setter.call(input, value);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await fillInput(input, value);
 }
 
 const key = (input: HTMLInputElement, init: KeyboardEventInit) =>

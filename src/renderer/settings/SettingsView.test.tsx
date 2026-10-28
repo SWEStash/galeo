@@ -3,24 +3,8 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACCENTS } from '../../shared/accents';
 import type { ProfileView, SettingsState } from '../../shared/contracts';
-import type { Settings } from '../../shared/settings';
+import { DEFAULT_SETTINGS as DEFAULTS } from '../../shared/settings';
 import { SettingsView } from './SettingsView';
-
-const DEFAULTS: Settings = {
-  themeMode: 'system',
-  proseFont: 'Inter',
-  codeFont: 'JetBrains Mono',
-  fontSize: 17,
-  measure: 72,
-  statusBar: true,
-  quickOpenExclude: [],
-  warmTabs: 3,
-  warmMegabytes: 20,
-  tableSeparator: 'auto',
-  tableHeader: true,
-  tabsPosition: 'top',
-  tabPanelWidth: 220,
-};
 
 const STATE: SettingsState = {
   settings: { ...DEFAULTS, fontSize: 20, measure: 80 },
@@ -79,11 +63,15 @@ async function render(state: SettingsState = STATE, appImage = false, onAbout: (
   return Object.assign(container, { update });
 }
 
+/** The text that names elements in `root`: their labels, and what `aria-labelledby` points at. */
+const names = (root: HTMLElement) => [
+  ...[...root.querySelectorAll('label, [data-label]')].map((element) => element.textContent?.trim()),
+  ...[...root.querySelectorAll('[aria-labelledby]')].flatMap((element) =>
+    element.getAttribute('aria-labelledby')!.split(' ').map((id) => document.getElementById(id)?.textContent?.trim()),
+  ),
+];
 /** The row of one setting, found by its visible label. */
-const row = (container: HTMLElement, label: string) =>
-  [...container.querySelectorAll<HTMLElement>('[data-setting]')].find((each) =>
-    [...each.querySelectorAll('label, [data-label], .react-aria-Label')].some((element) => element.textContent?.trim() === label),
-  )!;
+const row = (container: HTMLElement, label: string) => [...container.querySelectorAll<HTMLElement>('[data-setting]')].find((each) => names(each).includes(label))!;
 const button = (root: ParentNode, name: string) => [...root.querySelectorAll('button')].find((each) => each.textContent === name)!;
 
 /** Opens a font picker's list with its button, as a reader would. */

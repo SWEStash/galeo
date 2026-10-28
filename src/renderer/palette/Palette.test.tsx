@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Palette } from './Palette';
+import { fillInput } from '../testing/dom';
 
 let root: Root | undefined;
 
@@ -20,11 +21,7 @@ async function render(onChoose = vi.fn(), platform: 'linux' | 'darwin' = 'linux'
 
 async function type(text: string) {
   const input = document.querySelector('input')!;
-  await act(async () => {
-    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-    set.call(input, text);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await fillInput(input, text);
 }
 
 // Our commands only: the list's empty state is wrapped in an option of its own.

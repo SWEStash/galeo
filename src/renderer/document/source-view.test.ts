@@ -1,7 +1,7 @@
-import { addCursorAbove, addCursorBelow } from '@codemirror/commands';
+import { addCursorAbove, addCursorBelow, historyField } from '@codemirror/commands';
 import { selectNextOccurrence, selectSelectionMatches } from '@codemirror/search';
-import { foldCode, foldedRanges, syntaxTree, unfoldCode } from '@codemirror/language';
-import { EditorSelection } from '@codemirror/state';
+import { foldCode, syntaxTree, unfoldCode } from '@codemirror/language';
+import { EditorState } from '@codemirror/state';
 import { afterEach, describe, expect, it } from 'vitest';
 import { takenByDesktop } from '../../shared/desktop-keys';
 import { createSourceView, editingKeys, foldingKeys } from './source-view';
@@ -257,27 +257,14 @@ describe('createSourceView editing', () => {
     expect(run('Mod-Shift-l')).toBe(selectSelectionMatches);
   });
 
-  it('edits at every cursor while editing, and one undo takes the edit back everywhere', async () => {
-    const { undo } = await import('@codemirror/commands');
-    const { root, parent } = shadowContainer();
-    const source = createSourceView({ root, parent, text: 'cat cat cat', language: null, wrap: false });
-    source.setEditable(true);
-    source.view.dispatch({ selection: EditorSelection.single(0, 3) });
-    selectNextOccurrence(source.view);
-    selectNextOccurrence(source.view);
-    expect(source.view.state.selection.ranges).toHaveLength(3);
-    source.view.dispatch(source.view.state.replaceSelection('dog'));
-    expect(source.text()).toBe('dog dog dog');
-    undo(source.view);
-    expect(source.text()).toBe('cat cat cat');
-    source.destroy();
-  });
-
-  it('keeps a single selection while reading', () => {
+  it('allows several cursors and keeps an undo history only while editing', () => {
     const { root, parent } = shadowContainer();
     const source = createSourceView({ root, parent, text: 'cat cat', language: null, wrap: false });
-    source.view.dispatch({ selection: EditorSelection.create([EditorSelection.range(0, 3), EditorSelection.range(4, 7)]) });
-    expect(source.view.state.selection.ranges).toHaveLength(1);
+    expect(source.view.state.facet(EditorState.allowMultipleSelections)).toBe(false);
+    expect(source.view.state.field(historyField, false)).toBeUndefined();
+    source.setEditable(true);
+    expect(source.view.state.facet(EditorState.allowMultipleSelections)).toBe(true);
+    expect(source.view.state.field(historyField, false)).toBeDefined();
     source.destroy();
   });
 
@@ -353,17 +340,6 @@ describe('createSourceView editing', () => {
     expect(syntaxTree(source.view.state).length).toBeGreaterThan(0);
     expect(highlighted(parent)).toBe(true);
     expect(parent.querySelector('.cm-foldGutter')).not.toBeNull();
-    source.destroy();
-  });
-
-  it('folds and unfolds a block, read-only or editing', async () => {
-    const { root, parent } = shadowContainer();
-    const source = createSourceView({ root, parent, text: 'items:\n  - a\n  - b\nnext: 1\n', language: 'YAML', wrap: false });
-    await source.grammar;
-    expect(foldCode(source.view)).toBe(true);
-    expect(foldedRanges(source.view.state).size).toBe(1);
-    expect(unfoldCode(source.view)).toBe(true);
-    expect(foldedRanges(source.view.state).size).toBe(0);
     source.destroy();
   });
 

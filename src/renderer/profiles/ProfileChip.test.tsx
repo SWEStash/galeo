@@ -5,6 +5,7 @@ import { ACCENTS } from '../../shared/accents';
 import type { ProfilesState } from '../../shared/contracts';
 import { CommandsProvider } from '../commands/useCommands';
 import { ProfileChip } from './ProfileChip';
+import { fillInput } from '../testing/dom';
 
 const STATE: ProfilesState = {
   current: 'acme',
@@ -57,10 +58,7 @@ async function openMenu(container: HTMLElement) {
 }
 
 async function type(input: HTMLInputElement, value: string) {
-  await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  await fillInput(input, value);
 }
 
 afterEach(async () => {

@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { TabSearchResults } from '../../shared/tabs';
 import { TabSearch } from './TabSearch';
+import { fillInput } from '../testing/dom';
 
 let root: Root | undefined;
 const say = vi.fn();
@@ -49,10 +50,7 @@ const press = async (target: Element, key: string) => {
 };
 
 const type = async (input: HTMLInputElement, text: string) =>
-  act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, text);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  fillInput(input, text);
 
 describe('TabSearch', () => {
   it('lists the open tabs, then the recently closed ones, with the field focused', async () => {

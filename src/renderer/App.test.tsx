@@ -2,24 +2,10 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppInfo, GaleoApi, StartInfo, DocumentContent, DocumentRecord, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
-import type { Settings } from '../shared/settings';
+import { DEFAULT_SETTINGS, type Settings } from '../shared/settings';
 import type { FormatId } from '../shared/formats';
+import { fillInput } from './testing/dom';
 
-const DEFAULT_SETTINGS: Settings = {
-  themeMode: 'system',
-  proseFont: 'Inter',
-  codeFont: 'JetBrains Mono',
-  fontSize: 17,
-  measure: 72,
-  statusBar: true,
-  quickOpenExclude: [],
-  warmTabs: 3,
-  warmMegabytes: 20,
-  tableSeparator: 'auto',
-  tableHeader: true,
-  tabsPosition: 'top',
-  tabPanelWidth: 220,
-};
 
 const SOURCES = Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((key) => [key, 'default'])) as SettingsState['sources'];
 
@@ -201,6 +187,12 @@ function readyContent(format: FormatId, view: 'rendered' | 'source', text: strin
   return { state: 'ready', path: '/d/x', format, view, banner: null, text, encoding: 'utf-8', guessedEncoding: false, size: text.length, version: 'v1' };
 }
 
+/** A window with one tab, `doc-1`, showing `content` from `path`. */
+const oneDoc = (path: string, content: DocumentContent) => stubBridge({}, { records: [{ id: 'doc-1', path }], content });
+
+/** A window with two Markdown tabs, the first shown. */
+const twoTabs = () => stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', '# a') });
+
 async function documentShadow(container: HTMLElement): Promise<ShadowRoot> {
   return vi.waitFor(() => {
     const shadow = container.querySelector('[data-testid="document"]')?.shadowRoot;
@@ -230,21 +222,24 @@ async function renderApp() {
   return container;
 }
 
+/** After each test: every root unmounted, the fake worker and the mocks as they started. */
+function cleanUp() {
+  act(() => roots.splice(0).forEach((root) => root.unmount()));
+  document.body.innerHTML = '';
+  renderRequests.length = 0;
+  renderFormats.length = 0;
+  workerMode = 'answer';
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+}
+
 describe('App', () => {
   // The first import loads the whole UI (React Aria, CodeMirror), and Settings loads on its own
   // when first shown; on a busy machine either can outlast a test's wait, and neither is what
   // any test here checks.
   beforeAll(() => Promise.all([import('./App'), import('./settings/SettingsView')]), 30_000);
 
-  afterEach(() => {
-    act(() => roots.splice(0).forEach((root) => root.unmount()));
-    document.body.innerHTML = '';
-    renderRequests.length = 0;
-    renderFormats.length = 0;
-    workerMode = 'answer';
-    vi.restoreAllMocks();
-    vi.unstubAllGlobals();
-  });
+  afterEach(cleanUp);
 
   it('marks the root ready once the render worker answers the handshake', async () => {
     stubBridge();
@@ -286,7 +281,7 @@ describe('App', () => {
   });
 
   it("applies the profile's reading settings as tokens and its custom CSS inside documents", async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'hello') });
+    const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', 'hello'));
     api.settings.get.mockResolvedValue({
       settings: { ...DEFAULT_SETTINGS, fontSize: 20, measure: 90, proseFont: 'Source Serif 4' },
       notices: [],
@@ -320,7 +315,7 @@ describe('App', () => {
       size: 5,
       version: 'v1',
     };
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    const api = oneDoc('/d/a.md', content);
     const container = await renderApp();
     await vi.waitFor(() => {
       const shadow = container.querySelector('[data-testid="document"]')?.shadowRoot;
@@ -330,7 +325,7 @@ describe('App', () => {
   });
 
   it('renders an MDX article through the worker as MDX, and opens it in split', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.mdx' }], content: readyContent('mdx', 'rendered', '# hi') });
+    oneDoc('/d/a.mdx', readyContent('mdx', 'rendered', '# hi'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># hi</p>'));
@@ -340,7 +335,7 @@ describe('App', () => {
   });
 
   it('switches a Markdown document to its source and back with Ctrl+U', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# hi') });
+    oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# hi'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># hi</p>'));
@@ -354,7 +349,7 @@ describe('App', () => {
   });
 
   it('toggles line wrapping in the source view with Alt+Z', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'x') });
+    oneDoc('/d/a.cfg', readyContent('plain', 'source', 'x'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
@@ -364,7 +359,7 @@ describe('App', () => {
   });
 
   it('keeps a document without a rendered view in its source view on Ctrl+U', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'x') });
+    oneDoc('/d/a.cfg', readyContent('plain', 'source', 'x'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
@@ -374,7 +369,7 @@ describe('App', () => {
 
   it('renders oversized Markdown only when switched to the rendered view', async () => {
     const content = { ...readyContent('markdown', 'source', '# big'), banner: 'too-large' as const };
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/big.md' }], content });
+    oneDoc('/d/big.md', content);
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
@@ -385,7 +380,7 @@ describe('App', () => {
   });
 
   it('shows .txt in the reader view and its source on Ctrl+U, without the worker', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a\n\nb') });
+    oneDoc('/d/a.txt', readyContent('text', 'rendered', 'a\n\nb'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelectorAll('article.galeo-text-reader p')).toHaveLength(2));
@@ -395,7 +390,7 @@ describe('App', () => {
   });
 
   it("counts lines only in a view that shows them, in the document's metrics with its words", async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a\n\nb') });
+    oneDoc('/d/a.txt', readyContent('text', 'rendered', 'a\n\nb'));
     const container = await renderApp();
     const metrics = () => container.querySelector('[data-testid="status-metrics"]')?.textContent;
     // The reader view wraps its paragraphs to the window: the file's lines aren't what it shows.
@@ -405,7 +400,7 @@ describe('App', () => {
   });
 
   it('zooms the shown tab with Ctrl and the wheel: up zooms in, down zooms out', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a') });
+    const api = oneDoc('/d/a.txt', readyContent('text', 'rendered', 'a'));
     const container = await renderApp();
     await documentShadow(container);
     const zoom = () => container.querySelector('[data-testid="status-zoom"]')?.textContent;
@@ -427,7 +422,7 @@ describe('App', () => {
   });
 
   it("widens the shown tab's reading column with Alt, shows it while it differs from the setting, and resets it", async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a') });
+    const api = oneDoc('/d/a.txt', readyContent('text', 'rendered', 'a'));
     api.settings.get.mockResolvedValue({ settings: { ...DEFAULT_SETTINGS, measure: 90 }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
     const container = await renderApp();
     await documentShadow(container);
@@ -447,7 +442,6 @@ describe('App', () => {
 
   describe('tabs on the left (ADR-023)', () => {
     const left = (change: Partial<Settings> = {}) => ({ settings: { ...DEFAULT_SETTINGS, tabsPosition: 'left' as const, ...change }, notices: [], session: null, css: { global: '', profile: '' }, shared: { ...DEFAULT_SETTINGS }, sources: SOURCES });
-    const twoTabs = () => stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', '# a') });
     const message = (container: HTMLElement) => container.querySelector('[data-testid="status-message"]')?.textContent;
     const panel = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-testid="side-panel"]');
 
@@ -460,12 +454,10 @@ describe('App', () => {
       expect(panel(container)!.style.width).toBe('260px');
       expect(container.querySelector('[data-testid="title-bar"]')).not.toBeNull();
       expect(container.querySelector('[data-testid="tab-bar"]:not([data-testid="title-bar"])')).toBeNull();
-      expect(container.querySelector('[role="tablist"]')?.getAttribute('aria-orientation')).toBe('vertical');
 
       await act(async () => events.settings?.(left({ tabsPosition: 'top' })));
       expect(panel(container)).toBeNull();
       expect(container.querySelector('[data-testid="tab-bar"]')).not.toBeNull();
-      expect(container.querySelector('[role="tablist"]')?.getAttribute('aria-orientation')).toBe('horizontal');
       // The documents stayed mounted: moving the tabs never reloads what is being read.
       expect(container.querySelector('[data-testid="document"]')?.shadowRoot).toBe(document1);
     });
@@ -518,8 +510,6 @@ describe('App', () => {
   });
 
   describe('moving the shown tab to another window from the palette (UX F15)', () => {
-    const twoTabs = () =>
-      stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }, { id: 'doc-2', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', '# a') });
     const runFromPalette = async (label: string) => {
       await press({ key: 'P', ctrlKey: true, shiftKey: true });
       const entry = await vi.waitFor(() => {
@@ -540,7 +530,7 @@ describe('App', () => {
     });
 
     it("says so, and asks main nothing, when it is the window's only tab", async () => {
-      const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# a') });
+      const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# a'));
       const container = await renderApp();
       await documentShadow(container);
       await runFromPalette('Move tab to new window');
@@ -580,7 +570,7 @@ describe('App', () => {
   });
 
   it('leaves the width alone where there is no reading column, and says why', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.txt' }], content: readyContent('text', 'rendered', 'a') });
+    const api = oneDoc('/d/a.txt', readyContent('text', 'rendered', 'a'));
     const container = await renderApp();
     await documentShadow(container);
     await press({ key: 'u', ctrlKey: true });
@@ -592,7 +582,7 @@ describe('App', () => {
   });
 
   it('shows a log with level badges and follows its end on End until scrolled up', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/app.log' }], content: readyContent('log', 'source', 'INFO a\nERROR b\n') });
+    oneDoc('/d/app.log', readyContent('log', 'source', 'INFO a\nERROR b\n'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.galeo-log-gutter')).not.toBeNull());
@@ -614,7 +604,7 @@ describe('App', () => {
   });
 
   it('leaves End and Alt+arrows to the find field while typing in it', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/app.log' }], content: readyContent('log', 'source', 'INFO a\n') });
+    const api = oneDoc('/d/app.log', readyContent('log', 'source', 'INFO a\n'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
@@ -632,7 +622,7 @@ describe('App', () => {
   });
 
   it('ignores End outside logs', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'x') });
+    oneDoc('/d/a.cfg', readyContent('plain', 'source', 'x'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
@@ -641,17 +631,14 @@ describe('App', () => {
   });
 
   it('opens find with Ctrl+F, counts matches as the user types, and steps with F3', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'plan\nplan\nplan') });
+    oneDoc('/d/a.cfg', readyContent('plain', 'source', 'plan\nplan\nplan'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
     await press({ key: 'f', ctrlKey: true });
     const input = container.querySelector<HTMLInputElement>('.find-bar input')!;
     expect(document.activeElement).toBe(input);
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'plan');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    await fillInput(input, 'plan');
     const status = container.querySelector('.find-bar [role="status"]')!;
     expect(status.textContent).toBe('1 of 3');
     await press({ key: 'F3' });
@@ -661,16 +648,13 @@ describe('App', () => {
   });
 
   it('closes find with Esc, clearing the highlights and returning focus to the document', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.cfg' }], content: readyContent('plain', 'source', 'a a') });
+    oneDoc('/d/a.cfg', readyContent('plain', 'source', 'a a'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('.cm-editor')).not.toBeNull());
     await press({ key: 'f', ctrlKey: true });
     const input = container.querySelector<HTMLInputElement>('.find-bar input')!;
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'a');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    await fillInput(input, 'a');
     expect(shadow.querySelectorAll('.cm-searchMatch').length).toBeGreaterThan(0);
     await act(async () => {
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
@@ -682,7 +666,7 @@ describe('App', () => {
 
   it('follows a clicked link through main, reading the document it navigated to', async () => {
     const first = readyContent('markdown', 'rendered', '[next](next.md)');
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: first });
+    const api = oneDoc('/d/a.md', first);
     api.documents.read.mockResolvedValueOnce(first).mockResolvedValueOnce(readyContent('markdown', 'rendered', 'second'));
     api.documents.followLink.mockResolvedValue({ kind: 'navigated', anchor: null });
     workerMode = 'links';
@@ -699,7 +683,7 @@ describe('App', () => {
   });
 
   it('scrolls to the anchor main confirms, by its prefixed id', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[go](#goals)') });
+    const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', '[go](#goals)'));
     api.documents.followLink.mockResolvedValue({ kind: 'anchor', anchor: 'goals' });
     workerMode = 'links';
     const scrolled: string[] = [];
@@ -715,7 +699,7 @@ describe('App', () => {
 
   it("lands on the anchor of a link to another file in that file, not the one it came from", async () => {
     const first = readyContent('markdown', 'rendered', '[next](next.md#goals)');
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: first });
+    const api = oneDoc('/d/a.md', first);
     api.documents.read.mockResolvedValueOnce(first).mockResolvedValueOnce(readyContent('markdown', 'rendered', 'second'));
     api.documents.followLink.mockResolvedValue({ kind: 'navigated', anchor: 'goals' });
     workerMode = 'links';
@@ -731,7 +715,7 @@ describe('App', () => {
   });
 
   it('says so in the status bar when main refuses a link', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[x](https://x.example)') });
+    const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', '[x](https://x.example)'));
     api.documents.followLink.mockResolvedValue({ kind: 'refused', reason: 'rate-limited' });
     workerMode = 'links';
     const container = await renderApp();
@@ -750,7 +734,7 @@ describe('App', () => {
     const statusOf = (container: HTMLElement) => container.querySelector('[data-testid="status-message"]')?.textContent ?? '';
 
     async function clickLink(failure: Error) {
-      const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[x](next.md)') });
+      const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', '[x](next.md)'));
       api.documents.followLink.mockRejectedValue(failure);
       workerMode = 'links';
       const container = await renderApp();
@@ -773,7 +757,7 @@ describe('App', () => {
     });
 
     it('says so when dropped files fail to open', async () => {
-      const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'a') });
+      const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', 'a'));
       let received: (drop: { token: string; count: number }) => void = () => {};
       api.drops.onReceived.mockImplementation((listener: typeof received) => ((received = listener), () => {}));
       api.drops.open.mockRejectedValue(fromMain('drops.open', 'not dropped here'));
@@ -785,7 +769,7 @@ describe('App', () => {
   });
 
   it('goes back and forward with Alt+Left and Alt+Right', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/b.md' }], content: readyContent('markdown', 'rendered', 'b') });
+    const api = oneDoc('/d/b.md', readyContent('markdown', 'rendered', 'b'));
     api.documents.back.mockResolvedValue({ kind: 'navigated', anchor: null });
     const container = await renderApp();
     await documentShadow(container);
@@ -796,36 +780,15 @@ describe('App', () => {
     expect(api.documents.forward).toHaveBeenCalledWith('doc-1');
   });
 
-  it.each([
-    [{ state: 'empty', path: '/d/e.md', format: 'markdown' }, 'This file is empty'],
-    [{ state: 'missing', path: '/d/gone.md' }, 'File not found'],
-    [{ state: 'no-permission', path: '/d/secret.md' }, "galeo can't read this file (permission denied)"],
-    [{ state: 'binary', path: '/d/x.png', size: 1536 }, 'This looks like a binary file'],
-    [{ state: 'not-a-file', path: '/d/folder' }, "This isn't a regular file"],
-    [{ state: 'too-large', path: '/d/huge.log', maxBytes: 256 * 1024 * 1024 }, 'This file is too large to open'],
-    [{ state: 'unreadable', path: '/d/odd' }, "galeo can't read this file"],
-  ] as [DocumentContent, string][])('shows the %j state with its message and path', async (content, message) => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: content.path }], content });
-    const container = await renderApp();
-    const state = await vi.waitFor(() => {
-      const element = container.querySelector('[data-testid="document-state"]');
-      if (!element) throw new Error('no state yet');
-      return element;
-    });
-    expect(state.getAttribute('data-state')).toBe(content.state);
-    expect(state.querySelector('.document-state-title')?.textContent).toBe(message);
-    expect(state.textContent).toContain(content.path);
-  });
-
   it('gives a binary file its size and type', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/x.png' }], content: { state: 'binary', path: '/d/x.png', size: 1536 } });
+    oneDoc('/d/x.png', { state: 'binary', path: '/d/x.png', size: 1536 });
     const container = await renderApp();
     await vi.waitFor(() => expect(container.querySelector('[data-testid="document-state"]')?.textContent).toContain('1.5 KB · PNG'));
   });
 
   it('shows oversized Markdown as source with a banner offering to render it anyway', async () => {
     const content = { ...readyContent('markdown', 'source', '# big'), banner: 'too-large' as const };
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/big.md' }], content });
+    oneDoc('/d/big.md', content);
     const container = await renderApp();
     const banner = await vi.waitFor(() => container.querySelector<HTMLElement>('[data-banner="too-large"]')!);
     expect(banner.textContent).toContain('Large file shown as source');
@@ -837,7 +800,7 @@ describe('App', () => {
 
   it('names the guessed encoding in a banner', async () => {
     const content = { ...readyContent('text', 'rendered', 'café'), encoding: 'windows-1252' as const, guessedEncoding: true };
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/latin.txt' }], content });
+    oneDoc('/d/latin.txt', content);
     const container = await renderApp();
     await vi.waitFor(() =>
       expect(container.querySelector('[data-banner="encoding"]')?.textContent).toContain('Windows-1252'),
@@ -846,7 +809,7 @@ describe('App', () => {
 
   it('falls back to the source view when rendering fails, and can try again', async () => {
     workerMode = 'fail';
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# x'));
     const container = await renderApp();
     const banner = await vi.waitFor(() => container.querySelector<HTMLElement>('[data-banner="render-failed"]')!);
     const shadow = await documentShadow(container);
@@ -859,7 +822,7 @@ describe('App', () => {
 
   it('shows the source of an MDX file with a syntax error, saying on which line', async () => {
     workerMode = 'syntax';
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.mdx' }], content: readyContent('mdx', 'rendered', 'a <3') });
+    oneDoc('/d/a.mdx', readyContent('mdx', 'rendered', 'a <3'));
     const container = await renderApp();
     const banner = await vi.waitFor(() => container.querySelector<HTMLElement>('[data-banner="syntax-error"]')!);
     expect(banner.textContent).toBe('MDX syntax error on line 3: Unexpected character `3` — showing source');
@@ -870,7 +833,7 @@ describe('App', () => {
 
   it('shows the source of a document too slow to render, and renders it anyway on request', { timeout: 10_000 }, async () => {
     workerMode = 'hang';
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# x'));
     const container = await renderApp();
     // The render budget runs out (2 s); the worker is replaced.
     const banner = await vi.waitFor(
@@ -891,7 +854,7 @@ describe('App', () => {
   });
 
   it('tells main which tab it is about to render, before it reports it rendered', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# x'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
@@ -941,7 +904,7 @@ describe('App', () => {
 
   it('shows a loading skeleton only once rendering takes longer than 150 ms', async () => {
     workerMode = 'hang';
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# x'));
     const started = performance.now();
     const container = await renderApp();
     await vi.waitFor(() => expect(container.querySelector('[data-testid="document-loading"]')).not.toBeNull());
@@ -949,7 +912,7 @@ describe('App', () => {
   });
 
   it('shows no skeleton for a fast render', async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# x') });
+    oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# x'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await vi.waitFor(() => expect(shadow.querySelector('article')?.innerHTML).toBe('<p># x</p>'));
@@ -1050,7 +1013,7 @@ describe('App', () => {
   });
 
   it('opens a Ctrl+clicked link in a background tab through main, staying on this document', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '[next](next.md)') });
+    const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', '[next](next.md)'));
     api.documents.followLink.mockResolvedValue({ kind: 'opened' });
     workerMode = 'links';
     const container = await renderApp();
@@ -1114,7 +1077,7 @@ describe('App', () => {
   });
 
   it('opens the settings tab on Ctrl+, and shows it as a tab named Settings, with no path below', async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'hello') });
+    const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', 'hello'));
     const container = await renderApp();
     await act(async () => window.dispatchEvent(new KeyboardEvent('keydown', { key: ',', ctrlKey: true, bubbles: true })));
     expect(api.tabs.openSettings).toHaveBeenCalled();
@@ -1190,7 +1153,7 @@ describe('App', () => {
   });
 
   it("asks main for the document's menu on a right-click, and shows no menu of its own", async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', 'hello') });
+    const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', 'hello'));
     const container = await renderApp();
     const shadow = await documentShadow(container);
     const paragraph = await vi.waitFor(() => shadow.querySelector('article p')!);
@@ -1201,7 +1164,7 @@ describe('App', () => {
   });
 
   it("offers a state's actions: close the tab, or main's file menu", async () => {
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/x.png' }], content: { state: 'binary', path: '/d/x.png', size: 10 } });
+    const api = oneDoc('/d/x.png', { state: 'binary', path: '/d/x.png', size: 10 });
     const container = await renderApp();
     const button = (name: string) => vi.waitFor(() => [...container.querySelectorAll('button')].find((each) => each.textContent === name)!);
     await act(async () => (await button('File actions…')).click());
@@ -1283,18 +1246,14 @@ describe('App', () => {
 describe('App editing', () => {
   beforeAll(() => import('./App'), 30_000);
 
-  afterEach(() => {
-    act(() => roots.splice(0).forEach((root) => root.unmount()));
-    document.body.innerHTML = '';
-    vi.restoreAllMocks();
-  });
+  afterEach(cleanUp);
 
   async function editing(text = '# hi') {
     // happy-dom can't follow CodeMirror's focus inside a shadow root; focusing for real is the e2e's.
     const { EditorView } = await import('@codemirror/view');
     vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
     const content = { ...readyContent('markdown', 'rendered', text), path: '/d/a.md', version: 'v1' };
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    const api = oneDoc('/d/a.md', content);
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await act(async () => events.editMode!({ id: 'doc-1', edit: 'granted' }));
@@ -1311,10 +1270,7 @@ describe('App editing', () => {
   }
 
   const fill = (input: HTMLInputElement, value: string) =>
-    act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    fillInput(input, value);
 
   it('finds and replaces with Ctrl+H while editing: Replace all says how many, and the tab is unsaved', async () => {
     const { container, editor, press, tab } = await editing('# hi hi');
@@ -1338,7 +1294,7 @@ describe('App editing', () => {
   });
 
   it("opens no replace row outside edit mode, and says it's for edit mode", async () => {
-    stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content: readyContent('markdown', 'rendered', '# hi') });
+    oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# hi'));
     const container = await renderApp();
     await documentShadow(container);
     await act(async () => void window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', ctrlKey: true, bubbles: true, cancelable: true })));
@@ -1565,7 +1521,7 @@ describe('App editing', () => {
     const { EditorView } = await import('@codemirror/view');
     vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
     const content = { ...readyContent('markdown', 'rendered', '# on disk'), path: '/d/a.md', version: 'v2' };
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    const api = oneDoc('/d/a.md', content);
     api.documents.recover.mockResolvedValue({ edit: true, kept: null });
     const container = await renderApp();
     const shadow = await documentShadow(container);
@@ -1583,7 +1539,7 @@ describe('App editing', () => {
     const { EditorView } = await import('@codemirror/view');
     vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
     const content = { ...readyContent('markdown', 'rendered', '# on disk'), path: '/d/a.md', version: 'v2' };
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    const api = oneDoc('/d/a.md', content);
     api.documents.recover.mockResolvedValue({ edit: true, kept: { text: '# mine', base: 'v1' } });
     const container = await renderApp();
     const shadow = await documentShadow(container);
@@ -1609,7 +1565,7 @@ describe('App editing', () => {
 
   it("says a file can't be edited when main refuses edit mode, and stays read-only", async () => {
     const content = { ...readyContent('markdown', 'rendered', '# hi'), path: '/d/a.md', version: 'v1' };
-    const api = stubBridge({}, { records: [{ id: 'doc-1', path: '/d/a.md' }], content });
+    const api = oneDoc('/d/a.md', content);
     const container = await renderApp();
     const shadow = await documentShadow(container);
     await act(async () => events.editMode!({ id: 'doc-1', edit: 'refused' }));

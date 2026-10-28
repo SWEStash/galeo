@@ -1,16 +1,21 @@
 import { act } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SandboxUnavailable, UnsandboxedBadge } from './StartupScreens';
+
+const roots: Root[] = [];
 
 async function render(node: React.ReactNode) {
   const container = document.createElement('div');
   document.body.append(container);
-  await act(async () => createRoot(container).render(node));
+  const root = createRoot(container);
+  roots.push(root);
+  await act(async () => root.render(node));
   return container;
 }
 
 afterEach(() => {
+  act(() => roots.splice(0).forEach((root) => root.unmount()));
   document.body.innerHTML = '';
 });
 

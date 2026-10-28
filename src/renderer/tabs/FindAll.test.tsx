@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { FindAllResult } from '../../shared/find';
 import { editors, type Editor } from '../edit/editors';
 import { FindAll } from './FindAll';
+import { fillInput } from '../testing/dom';
 
 let root: Root | undefined;
 
@@ -54,10 +55,7 @@ const press = async (target: Element, key: string) => {
 };
 
 const type = async (input: HTMLInputElement, text: string) =>
-  act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, text);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+  fillInput(input, text);
 
 const status = () => document.querySelector('[data-testid="find-all-status"]')?.textContent;
 const options = () => [...document.querySelectorAll('[role="option"]')].map((option) => option.textContent);
@@ -151,10 +149,7 @@ describe('FindAll when main fails', () => {
       throw new Error('boom');
     });
     const { input } = await shown();
-    await act(async () => {
-    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'needle');
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
+    await fillInput(input, 'needle');
     await vi.waitFor(() => expect(say).toHaveBeenCalledWith("Couldn't search the tabs"));
   });
 });

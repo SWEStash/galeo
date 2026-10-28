@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { QuickOpenResults } from '../../shared/quick-open';
 import { QuickOpen } from './QuickOpen';
+import { fillInput } from '../testing/dom';
 
 let root: Root | undefined;
 
@@ -60,12 +61,8 @@ describe('QuickOpen', () => {
     );
     await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('README.md'));
     const input = document.querySelector('input')!;
-    await act(async () => {
-      input.focus();
-      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      set.call(input, 'plan');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    await act(async () => input.focus());
+    await fillInput(input, 'plan');
     await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('plan.md'));
     expect(document.querySelector('[role="group"]')?.textContent).toContain('searching');
   });
@@ -83,11 +80,7 @@ describe('QuickOpen', () => {
     await act(async () => root!.render(<QuickOpen platform="linux" onClose={onClose} say={() => {}} />));
     await vi.waitFor(() => expect(document.querySelector('[role="option"]')?.textContent).toContain('README.md'));
     const input = document.querySelector('input')!;
-    await act(async () => {
-      const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      set.call(input, 'notes');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+    await fillInput(input, 'notes');
     await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
     // The list still shows the answer to the empty query: nothing opens from it.
     expect(api.open).not.toHaveBeenCalled();
