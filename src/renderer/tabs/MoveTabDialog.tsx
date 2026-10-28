@@ -1,24 +1,14 @@
-import { useEffect, useState } from 'react';
 import { Button, Dialog, Heading, ListBox, ListBoxItem, Modal, ModalOverlay } from 'react-aria-components';
 import { accentOf } from '../../shared/accents';
 import type { OtherWindow } from '../../shared/contracts';
+import { useLoaded } from '../useLoaded';
 
 /**
  * "Move tab to window…" (UX F15): the other windows, by profile (with its colour) and the file each
  * shows. Choosing one moves the shown tab there; main checks the window is still one of galeo's.
  */
 export function MoveTabDialog({ onChoose, onClose }: { onChoose: (window: number) => void; onClose: () => void }) {
-  const [windows, setWindows] = useState<OtherWindow[] | null>(null);
-  useEffect(() => {
-    let current = true;
-    void window.galeo.tabs
-      .windows()
-      .then((found) => current && setWindows(found))
-      .catch(() => current && setWindows([]));
-    return () => {
-      current = false;
-    };
-  }, []);
+  const [windows] = useLoaded<OtherWindow[] | null>(() => window.galeo.tabs.windows(), null, () => []);
 
   return (
     <ModalOverlay className="modal-overlay" isOpen isDismissable onOpenChange={(isOpen) => !isOpen && onClose()}>

@@ -1,17 +1,10 @@
-import { useEffect, useState } from 'react';
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
 import { loadNotices, type Notices } from './notices';
+import { useLoaded } from '../useLoaded';
 
 /** galeo's version and licence, and the notices of what it ships (docs/dependencies.md). */
 export function AboutDialog({ version, onClose }: { version: string; onClose: () => void }) {
-  const [notices, setNotices] = useState<Notices | null>(null);
-  useEffect(() => {
-    let current = true;
-    void loadNotices().then((loaded) => current && setNotices(loaded));
-    return () => {
-      current = false;
-    };
-  }, []);
+  const [notices] = useLoaded<Notices | null>(loadNotices, null);
 
   return (
     <ModalOverlay className="modal-overlay" isOpen isDismissable onOpenChange={(isOpen) => !isOpen && onClose()}>

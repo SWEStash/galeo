@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
 import type { PreviousSession } from '../../shared/contracts';
 import type { Platform } from '../../shared/keymap';
 import { fileName } from '../../shared/paths';
 import { plural } from '../../shared/words';
+import { useLoaded } from '../useLoaded';
 
 const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -11,17 +11,8 @@ const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle
  * main gave each, never by path), and the previous sessions to restore.
  */
 export function EmptyWindow({ platform }: { platform: Platform }) {
-  const [recent, setRecent] = useState<{ id: string; path: string }[]>([]);
-  const [previous, setPrevious] = useState<PreviousSession[]>([]);
-
-  useEffect(() => {
-    let current = true;
-    void window.galeo.recent.list().then((list) => current && setRecent(list));
-    void window.galeo.session.previous().then((list) => current && setPrevious(list));
-    return () => {
-      current = false;
-    };
-  }, []);
+  const [recent, setRecent] = useLoaded<{ id: string; path: string }[]>(() => window.galeo.recent.list(), []);
+  const [previous] = useLoaded<PreviousSession[]>(() => window.galeo.session.previous(), []);
 
   const clear = () => {
     setRecent([]);
