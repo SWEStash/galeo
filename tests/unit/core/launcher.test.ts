@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { appImageLauncher, installLauncher, LAUNCHER_MARK, MIME_MARK } from '../../../src/core/desktop/launcher';
 import { utf8 } from '../../../src/main/adapters/utf8';
@@ -42,6 +43,14 @@ describe('appImageLauncher ("Install command-line launcher", ADR-008)', () => {
     expect(files.desktop.content).toContain('Exec=/home/u/Apps/galeo.AppImage -- %F\n');
     expect(files.desktop.content).toContain('Exec=/home/u/Apps/galeo.AppImage --new-window\n');
     expect(desktopEntryProblems(files.desktop.content)).toEqual([]);
+  });
+
+  it("describes galeo as the packages' entry does (package.json's description)", () => {
+    const files = appImageLauncher('/home/u/Apps/galeo.AppImage', DIRS, LAUNCHER_SCRIPT);
+    if (!files.ok) throw new Error(files.reason);
+    const { description } = JSON.parse(readFileSync('package.json', 'utf8')) as { description: string };
+    expect(description).toBe('A fast, private desktop app to read and edit Markdown, text, logs, JSON, CSV and source code');
+    expect(files.desktop.content).toContain(`\nComment=${description}\n`);
   });
 
   it('quotes a path the desktop and the shell would otherwise split or expand', () => {

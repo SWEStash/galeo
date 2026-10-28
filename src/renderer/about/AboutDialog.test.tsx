@@ -34,7 +34,7 @@ describe('AboutDialog', () => {
     const dialog = document.querySelector('[data-testid="about"]')!;
     expect(dialog.querySelector('h2')?.textContent).toBe('galeo 0.1.0');
     expect(dialog.textContent).toContain('MIT licence');
-    expect(dialog.textContent).toContain('A desktop reader for Markdown, text, logs, JSON, CSV and source code.');
+    expect(dialog.textContent).toContain('A desktop app to read and edit Markdown, text, logs, JSON, CSV and source code.');
     expect(dialog.textContent).toContain('LICENSES.chromium.html');
   });
 

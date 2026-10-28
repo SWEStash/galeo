@@ -15,7 +15,7 @@ export function AboutDialog({ version, onClose }: { version: string; onClose: ()
       <Modal className="modal about">
         <Dialog className="dialog" data-testid="about">
           <Heading slot="title">galeo {version}</Heading>
-          <p>A desktop reader for Markdown, text, logs, JSON, CSV and source code. Free software under the MIT licence.</p>
+          <p>A desktop app to read and edit Markdown, text, logs, JSON, CSV and source code. Free software under the MIT licence.</p>
           <h3>Third-party notices</h3>
           <p>
             galeo is built on Electron and Chromium. Chromium&apos;s licences ship with it, in <code>LICENSES.chromium.html</code> in
