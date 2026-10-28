@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { chmodSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { describe, expect, it, onTestFinished } from 'vitest';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { FsError, type DirEntry } from '../../core/ports';
 import { NodeFileSystem } from './file-system';
 
@@ -391,6 +391,20 @@ describe('NodeFileSystem: temp files a crashed save left behind', () => {
     await fs.saveFile(target, new TextEncoder().encode('new'));
 
     expect(readdirSync(dir).sort()).toEqual([young, 'a.md'].sort());
+  });
+
+  it.runIf(posix)('says which temp file it removed, and says nothing when it removes none', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const dir = tempDir();
+    const target = file(dir, 'a.md', 'old');
+    const stale = aged(dir, `.a.md.${uuid}.tmp`, 2);
+
+    await fs.saveFile(target, new TextEncoder().encode('new'));
+    await fs.saveFile(target, new TextEncoder().encode('newer'));
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(`galeo: removed a temp file a crashed save left: ${path.join(dir, stale)}`);
+    warn.mockRestore();
   });
 
   it.runIf(posix)('keeps old files that only look like ours: another file’s, no id, no leading dot, a link', async () => {

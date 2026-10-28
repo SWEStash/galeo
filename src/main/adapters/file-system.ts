@@ -234,8 +234,8 @@ const TEMP_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f
 
 /**
  * Removes the temp files a crashed write of `path` left beside it: only names this file system
- * gives them (`.<name>.<uuid>.tmp`), only regular files the app's user owns, only old ones. Best
- * effort: the write it follows has already succeeded.
+ * gives them (`.<name>.<uuid>.tmp`), only regular files the app's user owns, only old ones, and logs
+ * each one. Best effort: the write it follows has already succeeded.
  */
 async function sweepStaleTemps(path: string): Promise<void> {
   const dir = dirname(path);
@@ -252,7 +252,10 @@ async function sweepStaleTemps(path: string): Promise<void> {
     try {
       const info = await lstat(temp);
       const mine = process.getuid === undefined || info.uid === process.getuid();
-      if (info.isFile() && mine && Date.now() - info.mtimeMs > STALE_TEMP_MS) await unlink(temp);
+      if (info.isFile() && mine && Date.now() - info.mtimeMs > STALE_TEMP_MS) {
+        await unlink(temp);
+        console.warn(`galeo: removed a temp file a crashed save left: ${temp}`);
+      }
     } catch {
       // Gone already, or not ours to remove: left as it is.
     }

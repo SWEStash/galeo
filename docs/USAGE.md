@@ -179,6 +179,9 @@ the file into the window in front of you) when you want it here.
   the next save write over it, *Load theirs* replaces your text with it. If the file was deleted,
   the bar offers *Keep mine* or *Save again*, which writes it back with its encoding and line
   endings. A read-only file isn't saved either.
+- **A save cut short** (galeo or the computer stopped mid-write) can leave a hidden
+  `.<name>.<id>.tmp` beside the file; the file itself is untouched. The next save of that file
+  removes such leftovers once they are an hour old, and says so in the terminal galeo runs in.
 - **If the window crashes**, unsaved text you typed more than a second before comes back in its
   tab, still unsaved. galeo keeps it in memory only: never in a file of its own.
 

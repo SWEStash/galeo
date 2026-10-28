@@ -423,7 +423,7 @@ e2e test.
   the channel's cap counts characters) is refused and writes nothing.
 - A crash between creating the temp file and the rename leaves the temp file behind. The next
   write of the same file removes such leftovers older than an hour: only its own name pattern
-  (`.<name>.<uuid>.tmp`), only regular files the user owns, never a symlink.
+  (`.<name>.<uuid>.tmp`), only regular files the user owns, never a symlink, and logs each one.
 - Before writing, main compares the hash of the file's current bytes with the version the user
   loaded. On mismatch it refuses the save (UX F12) and never overwrites silently: the page asks
   the user first (*Keep mine* / *Load theirs*).
