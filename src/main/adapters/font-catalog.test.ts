@@ -28,11 +28,21 @@ describe('FcListFontCatalog', () => {
     }
   });
 
-  it('asks again after a failure, since fontconfig may have been missing only for a moment', async () => {
+  it('keeps a failure for a minute, logging it once, then asks again (fontconfig may be back)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let now = 1_000;
     const run = vi.fn<RunFile>().mockRejectedValueOnce(new Error('busy')).mockResolvedValue('Inter\t\n');
-    const catalog = new FcListFontCatalog(run);
+    const catalog = new FcListFontCatalog(run, () => now);
     expect(await catalog.list()).toEqual([]);
+    now += 59_999;
+    expect(await catalog.list()).toEqual([]);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('galeo: listing the system fonts failed; trying again in a minute', expect.any(Error));
+    now += 1;
     expect(await catalog.list()).toEqual([{ family: 'Inter', mono: false }]);
+    expect(run).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
   });
 });
 

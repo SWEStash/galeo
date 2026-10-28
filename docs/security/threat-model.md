@@ -397,7 +397,8 @@ font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens
 - The own file watcher watches only open files (via their parent directories), coalesces events,
   and caps its rate.
 - `fc-list` (the font pickers' list) gets 5 s and 4 MB of output; past either it is stopped and the
-  pickers offer the bundled fonts only. A list is kept for the app's life, so it runs once.
+  pickers offer the bundled fonts only. A list is kept for the app's life, so it runs once; a
+  failure is logged and stands for a minute before `fc-list` runs again.
 - Find in all tabs (ADR-024) runs each tab's search in main's task worker under a 5 s budget,
   enforced the same way; a tab past it is listed as not searched. Counts stop at 10,000 per tab,
   with 20 snippets of at most 40 characters either side of a match. A newer query from the window
