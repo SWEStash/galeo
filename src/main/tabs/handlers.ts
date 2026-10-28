@@ -52,7 +52,7 @@ interface TabHandlerDeps {
   /** The tab being dragged, if any (ADR-019). */
   drags: TabDrags;
   now: () => number;
-  /** Real input per window: starting a drag or a palette move spends one; a drag can spend a held press instead. */
+  /** Real input per window: starting a drag, listing the windows or a palette move spends one; a drag can spend a held press instead. */
   input: Pick<InputCredits, 'spend' | 'spendPress'>;
   /** Moves a tab to another window, at `position`: false when main refused. */
   move: (id: string, from: number, to: number, position: number) => boolean;
@@ -198,7 +198,7 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
       deps.focus(target);
       return true;
     },
-    'tabs.windows': (_args, event) => deps.windows(event.sender.id),
+    'tabs.windows': async (_args, event) => (input.spend(event.sender.id) ? deps.windows(event.sender.id) : []),
     'tabs.openSettings': (_args, event) => tabs.openSettings(event.sender.id).id,
   };
 }

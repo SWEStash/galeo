@@ -173,7 +173,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo, or, while the reader types, spend their key presses on quick-open listings, opens and the document's own links of its choosing. In v0.2 it can also write the one file the reader put in edit mode, while it is in edit mode, and the reader may confirm main's question about a file without reading its path. In v0.3 it can send its own tabs, with their grants and unsaved text, to another galeo window while the reader gives input (ADR-019); that window gains nothing the page didn't have. Exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner (writes: 2026-10-11, ADR-015). | SR-12 (drop grants from the preload's isolated world; input credits for quick open and links; edit mode only for read text, and main's own question for files the reader didn't hand over) |
 | T14 | Mitigate | SR-17 |
 | T18 | Mitigate (v0.3 audit L3: only absolute `PATH` entries) | SR-13 |
-| T19 | Mitigate (a drag is claimed once, on input; v0.3 audit L1: claimed by a per-drag token, not the tab id). The window list's file and profile names are accepted as metadata a page can't send anywhere (SR-04, SR-06). | SR-12, SR-16 |
+| T19 | Mitigate (a drag is claimed once, on input; v0.3 audit L1: claimed by a per-drag token, not the tab id). The window list's file and profile names are accepted as metadata a page can't send anywhere (SR-04, SR-06), and are given only on real input (v0.3 audit I4). | SR-12, SR-16 |
 | T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
 
@@ -346,7 +346,8 @@ the page never sends them. A window starts a drag of its own tab only by spendin
 the mouse press that started it, while its button is still down, or an input credit. Another
 window takes a tab only by claiming that live drag, once (until half a second after it ended), so a page can't
 pull a tab out of another window. The palette's moves spend a credit too, and go only to
-another galeo window. A torn-off tab's new window is main's, of the tab's profile.
+another galeo window. The list of those windows (their profiles and the file each shows) is
+answered only for input too, so a page can't watch what the other windows show. A torn-off tab's new window is main's, of the tab's profile.
 Tab search (v0.4, UX F16) answers only with the sender's own tabs: its open ones and the ones it
 closed, by name and folder. Reopening one goes by the id main listed it under in that window's
 closed list (never another window's, never a closed window) and spends an input credit; the
@@ -358,7 +359,7 @@ snippets by tab id. It reads nothing the page couldn't already read, so it spend
 that reads of paths never surfaced to the user are rejected; that Ctrl+E on a missing file is
 refused by main, and that a tab the page makes active just before Ctrl+E is asked about, not
 enabled (`edit.spec`); that a window can't take a tab no drag offered, or start a drag or a
-palette move without input, or reopen a closed tab by id without input or from another window
+palette move or list the other windows without input, or reopen a closed tab by id without input or from another window
 (`tab-handlers.test`).
 
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as

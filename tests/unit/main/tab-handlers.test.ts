@@ -431,9 +431,12 @@ describe('tabHandlers', () => {
       expect(tornOff).toEqual([]);
     });
 
-    it('lists the other windows a tab can move to', async () => {
-      const { handlers } = setup();
+    it('lists the other windows a tab can move to, on real input only (the list names their files)', async () => {
+      const { handlers, input } = setup();
+      expect(await handlers['tabs.windows']([], from(1))).toEqual([]);
+      input.received(1);
       expect(await handlers['tabs.windows']([], from(1))).toEqual([{ window: 2, profile: 'p', accent: null, shows: null }]);
+      expect(await handlers['tabs.windows']([], from(1))).toEqual([]);
     });
   });
 });
