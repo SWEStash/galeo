@@ -486,5 +486,5 @@ Revisit this model when any of these arrive:
 - a change of shell (ADR-001 revisit triggers).
 
 Before each release, a security audit verifies every SR requirement against the code, and the release
-checklist records the result. Published audits: [v0.1](audits/2026-10-07-v0.1.md), [v0.2](audits/2026-10-10-v0.2.md)
-and [v0.3](audits/2026-10-20-v0.3.md).
+checklist records the result. Published audits: [v0.1](audits/2026-10-07-v0.1.md), [v0.2](audits/2026-10-10-v0.2.md),
+[v0.3](audits/2026-10-20-v0.3.md) and [v0.4](audits/2026-10-28-v0.4.md).

@@ -409,8 +409,8 @@ saves a session without it. Into another profile's window, the tab joins that pr
 | 5. Proof | CI: socket-connect harness, fuse read-back, payload corpus | SR-07, SR-08, SR-10 |
 
 The pre-release security audits check these layers against the code:
-[v0.1](security/audits/2026-10-07-v0.1.md), [v0.2](security/audits/2026-10-10-v0.2.md) and
-[v0.3](security/audits/2026-10-20-v0.3.md).
+[v0.1](security/audits/2026-10-07-v0.1.md), [v0.2](security/audits/2026-10-10-v0.2.md),
+[v0.3](security/audits/2026-10-20-v0.3.md) and [v0.4](security/audits/2026-10-28-v0.4.md).
 
 ## 7. Performance architecture
 
