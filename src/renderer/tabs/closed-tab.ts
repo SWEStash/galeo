@@ -15,5 +15,15 @@ export function unlessClosed(say: (message: string) => void, message: string): (
   };
 }
 
+/** A failure handler that says `message`: the reader asked for something main couldn't do. */
+export function reportFailure(say: (message: string) => void, message: string): (error: unknown) => void {
+  return () => say(message);
+}
+
+/** For a request nobody waits on (a report to main, a cancel): there's no one to tell, so it's logged. */
+export function logFailure(what: string): (error: unknown) => void {
+  return (error) => console.warn(`galeo: ${what} failed`, error);
+}
+
 /** For a request whose failure the reader sees anyway (a dragged tab that doesn't move). */
 export function ignoreFailure(): void {}

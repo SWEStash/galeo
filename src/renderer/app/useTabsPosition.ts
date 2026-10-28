@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { TAB_PANEL_DEFAULT, type TabsPosition } from '../../shared/settings';
 import { useCommands } from '../commands/useCommands';
+import { reportFailure } from '../tabs/closed-tab';
 
 /**
  * Where this window shows its tabs (ADR-023): the profile's setting, and whether the side panel is
@@ -18,7 +19,7 @@ export function useTabsPosition(position: TabsPosition | undefined, width: numbe
     (change: { tabsPosition: TabsPosition } | { tabPanelWidth: number }) =>
       void window.galeo.settings.set('profile', change).then((result) => {
         if (!result.ok) say("Not kept: this profile's profile.json has an error from a hand edit");
-      }),
+      }, reportFailure(say, "Couldn't save the setting")),
     [say],
   );
   useCommands({

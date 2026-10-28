@@ -26,6 +26,7 @@ import { ACCENTS, accentOf } from '../../shared/accents';
 import type { PreviousSession, ProfileRefusal, ProfileResult, ProfilesState } from '../../shared/contracts';
 import { useCommands } from '../commands/useCommands';
 import { plural } from '../../shared/words';
+import { logFailure, reportFailure } from '../tabs/closed-tab';
 
 const WHEN = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -43,7 +44,7 @@ type Editing = { kind: 'new' } | { kind: 'edit' } | { kind: 'delete' } | null;
  * The profile chip at the tab bar's left edge (UX F5): the window's profile by name and accent,
  * and its menu (Ctrl+Shift+M): switch, new, edit, delete, restore a previous session.
  */
-export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout: () => void }) {
+export function ProfileChip({ state, onAbout, say }: { state: ProfilesState; onAbout: () => void; say: (message: string) => void }) {
   const current = state.profiles.find((profile) => profile.id === state.current);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Editing>(null);
@@ -55,7 +56,7 @@ export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout:
   useEffect(() => {
     if (!open) return;
     let live = true;
-    void window.galeo.session.previous().then((list) => live && setPrevious(list));
+    void window.galeo.session.previous().then((list) => live && setPrevious(list), logFailure('reading the previous sessions'));
     return () => {
       live = false;
     };
@@ -68,8 +69,8 @@ export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout:
     if (key === 'new' || key === 'edit' || key === 'delete') setEditing({ kind: key });
     else if (key.startsWith('open:')) {
       const id = key.slice('open:'.length);
-      if (id !== state.current) void window.galeo.profiles.open(id);
-    } else if (key.startsWith('restore:')) void window.galeo.session.restorePrevious(Number(key.slice('restore:'.length)));
+      if (id !== state.current) void window.galeo.profiles.open(id).catch(reportFailure(say, "Couldn't open the profile"));
+    } else if (key.startsWith('restore:')) void window.galeo.session.restorePrevious(Number(key.slice('restore:'.length))).catch(reportFailure(say, "Couldn't restore the previous session"));
     else if (key === 'about') onAbout();
   };
 
@@ -145,7 +146,7 @@ export function ProfileChip({ state, onAbout }: { state: ProfilesState; onAbout:
           onClose={() => setEditing(null)}
         />
       )}
-      {editing?.kind === 'delete' && <DeleteDialog name={current.name} onClose={() => setEditing(null)} />}
+      {editing?.kind === 'delete' && <DeleteDialog name={current.name} onClose={() => setEditing(null)} say={say} />}
     </>
   );
 }
@@ -224,7 +225,7 @@ function ProfileDialog(props: {
   );
 }
 
-function DeleteDialog({ name, onClose }: { name: string; onClose: () => void }) {
+function DeleteDialog({ name, onClose, say }: { name: string; onClose: () => void; say: (message: string) => void }) {
   return (
     <ModalOverlay className="modal-overlay" isOpen isDismissable onOpenChange={(isOpen) => !isOpen && onClose()}>
       <Modal className="modal">
@@ -238,7 +239,7 @@ function DeleteDialog({ name, onClose }: { name: string; onClose: () => void }) 
             <Button
               onPress={() => {
                 onClose();
-                void window.galeo.profiles.delete();
+                void window.galeo.profiles.delete().catch(reportFailure(say, "Couldn't delete the profile"));
               }}
             >
               Delete

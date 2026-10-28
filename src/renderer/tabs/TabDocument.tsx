@@ -9,7 +9,7 @@ import { useDocument } from '../document/useDocument';
 import { editors, type Editor } from '../edit/editors';
 import { useConfirmUnsaved } from '../edit/UnsavedPrompt';
 import type { RenderClient } from '../worker/client';
-import { unlessClosed } from './closed-tab';
+import { logFailure, unlessClosed } from './closed-tab';
 import type { TabStatus, TabStore } from './store';
 import type { EditRequest } from '../document/requests';
 
@@ -128,7 +128,8 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
   );
 
   const resolveImage = useCallback(
-    (src: string): Promise<ImageResult> => window.galeo.documents.resolveImage(id, src),
+    // An image main couldn't answer for shows as not shown, like one it refused.
+    (src: string): Promise<ImageResult> => window.galeo.documents.resolveImage(id, src).catch((): ImageResult => ({ kind: 'refused', reason: 'unavailable' })),
     [id],
   );
 
@@ -188,8 +189,8 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
   const confirmLeave = useCallback(() => confirm(id, fileName(path)), [confirm, id, path]);
 
   const onPosition = useCallback((position: ScrollAnchor) => store.moved(id, position), [id, store]);
-  const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes), [id]);
-  const onRendering = useCallback(() => void window.galeo.tabs.rendering(id), [id]);
+  const onWeight = useCallback((bytes: number) => void window.galeo.tabs.rendered(id, bytes).catch(logFailure('the render report')), [id]);
+  const onRendering = useCallback(() => void window.galeo.tabs.rendering(id).catch(logFailure('the render report')), [id]);
   const onStatus = useCallback((status: TabStatus) => store.setStatus(id, status), [id, store]);
   const onViewState = useCallback((state: TabViewState) => store.setViewState(id, state), [id, store]);
   const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id).catch(unlessClosed(onMessage, "The menu couldn't open")), [id, onMessage]);

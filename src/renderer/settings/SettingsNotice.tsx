@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import type { SettingsNotice as Notice } from '../../shared/settings';
+import { reportFailure } from '../tabs/closed-tab';
 
 /** UX §4 "settings file invalid": non-modal, names the file, and says it was left as it is (SR-17). */
-export function SettingsNotice({ notices }: { notices: readonly Notice[] }) {
+export function SettingsNotice({ notices, say }: { notices: readonly Notice[]; say: (message: string) => void }) {
   // Main re-sends the notices with every settings change: equal ones stay dismissed.
   const [dismissed, setDismissed] = useState<string | null>(null);
   // Once the files are fixed, the same problem coming back is new again.
@@ -15,7 +16,7 @@ export function SettingsNotice({ notices }: { notices: readonly Notice[] }) {
       {notices.map((notice, index) => (
         <p key={notice.path}>
           <code>{notice.path}</code> can't be used. Your file was left untouched; using the last valid settings.{' '}
-          <button type="button" onClick={() => void window.galeo.settings.openNoticeFile(index)}>
+          <button type="button" onClick={() => void window.galeo.settings.openNoticeFile(index).catch(reportFailure(say, "Couldn't open the file"))}>
             Open file
           </button>
         </p>

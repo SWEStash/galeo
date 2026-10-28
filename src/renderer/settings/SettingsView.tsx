@@ -27,6 +27,7 @@ import type { SystemFont } from '../../shared/fonts';
 import type { ReaderWidth } from '../../shared/tabs';
 import { fontStack } from './tokens';
 import { NumberSetting, RadioSetting, SwitchSetting, useDraft } from './fields';
+import { reportFailure } from '../tabs/closed-tab';
 
 const SOURCE_NAMES = { default: 'Default', global: 'All profiles', profile: 'This profile' } as const;
 
@@ -60,6 +61,7 @@ export function SettingsView({
   appImage = false,
   version,
   onAbout,
+  say,
 }: {
   state: SettingsState;
   profile: ProfileView;
@@ -67,6 +69,7 @@ export function SettingsView({
   /** galeo's version, and the About dialog it opens (version, licence, notices). */
   version: string;
   onAbout: () => void;
+  say: (message: string) => void;
 }) {
   const [scope, setScope] = useState<SettingsScope>('profile');
   const [refused, setRefused] = useState<string | null>(null);
@@ -81,8 +84,9 @@ export function SettingsView({
   };
 
   const done = (result: SettingsResult) => setRefused(result.ok ? null : result.path);
-  const set = (change: SettingsOverrides) => void window.galeo.settings.set(scope, change).then(done);
-  const reset = (key: keyof Settings) => void window.galeo.settings.reset(key).then(done);
+  const notSaved = reportFailure(say, "Couldn't save the setting");
+  const set = (change: SettingsOverrides) => void window.galeo.settings.set(scope, change).then(done, notSaved);
+  const reset = (key: keyof Settings) => void window.galeo.settings.reset(key).then(done, notSaved);
 
   /** One setting: its control, where its value comes from, and "Reset to global" when this profile overrides it. */
   const setting = (key: keyof Settings, control: ReactNode) => (
@@ -121,7 +125,7 @@ export function SettingsView({
         'themeMode',
         <RadioSetting label="Theme" value={values.themeMode} options={THEME_CHOICES} onChange={(themeMode) => set({ themeMode })} />,
       )}
-      <AccentSetting profile={profile} />
+      <AccentSetting profile={profile} say={say} />
 
       <h2>Reading</h2>
       {setting('proseFont', <FontSetting kind="prose" value={values.proseFont} installed={installed} onOpen={listFonts} onCommit={(proseFont) => set({ proseFont })} />)}
@@ -165,8 +169,8 @@ export function SettingsView({
       <h2>Custom CSS</h2>
       <p className="field-hint">Your own styles for documents, edited in your editor; saving applies them at once.</p>
       <div className="settings-buttons">
-        <Button onPress={() => void window.galeo.settings.openCustomCss('profile')}>Open CSS for this profile</Button>
-        <Button onPress={() => void window.galeo.settings.openCustomCss('global')}>Open CSS for all profiles</Button>
+        <Button onPress={() => void window.galeo.settings.openCustomCss('profile').catch(reportFailure(say, "Couldn't open the CSS file"))}>Open CSS for this profile</Button>
+        <Button onPress={() => void window.galeo.settings.openCustomCss('global').catch(reportFailure(say, "Couldn't open the CSS file"))}>Open CSS for all profiles</Button>
       </div>
 
       {appImage && <LauncherSection />}
@@ -333,7 +337,7 @@ function ListSetting({ label, hint, value, onCommit }: { label: string; hint: st
 }
 
 /** The profile's accent colour: always this profile's own (it names the profile in the chip). */
-function AccentSetting({ profile }: { profile: ProfileView }) {
+function AccentSetting({ profile, say }: { profile: ProfileView; say: (message: string) => void }) {
   const [accentRefused, setAccentRefused] = useState(false);
   return (
     <div className="setting" data-setting="accent">
@@ -345,7 +349,9 @@ function AccentSetting({ profile }: { profile: ProfileView }) {
         className="swatches"
         value={accentOf(profile.accent)}
         onChange={(color) =>
-          void window.galeo.profiles.update(profile.name, color.toString('hex').toLowerCase()).then((result) => setAccentRefused(!result.ok))
+          void window.galeo.profiles
+            .update(profile.name, color.toString('hex').toLowerCase())
+            .then((result) => setAccentRefused(!result.ok), reportFailure(say, "Couldn't save the accent"))
         }
       >
         {ACCENTS.map((each) => (

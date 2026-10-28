@@ -41,6 +41,7 @@ import { useFileDrops } from './tabs/useFileDrops';
 import { useTabs } from './tabs/useTabs';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
+import { logFailure } from './tabs/closed-tab';
 
 // The Settings tab loads when first shown: its pickers are nothing a window needs to start.
 const SettingsView = lazy(() => import('./settings/SettingsView').then((module) => ({ default: module.SettingsView })));
@@ -64,17 +65,17 @@ export function App() {
       markStart('info');
       document.documentElement.dataset['platform'] = next.platform;
       setInfo(next);
-    });
+    }, logFailure('reading the app info'));
   }, []);
 
   const choose = useCallback((choice: SandboxChoice) => {
-    void window.galeo.app.resolveSandboxUnavailable(choice);
+    void window.galeo.app.resolveSandboxUnavailable(choice).catch(logFailure('the sandbox choice'));
   }, []);
 
   const shown: AppInfo | null = info ?? (start && { ...start, crashLoop: false });
   if (!shown) return null;
   if (shown.sandboxUnavailable) return <SandboxUnavailable cause={shown.sandboxUnavailable} onChoose={choose} />;
-  if (shown.crashLoop) return <CrashLoop onRetry={() => void window.galeo.window.retryAfterCrashes()} onClose={() => void window.galeo.window.command('closeWindow')} />;
+  if (shown.crashLoop) return <CrashLoop onRetry={() => void window.galeo.window.retryAfterCrashes().catch(logFailure('trying again'))} onClose={() => void window.galeo.window.command('closeWindow').catch(logFailure('closing the window'))} />;
   return (
     <CommandsProvider platform={shown.platform}>
       <OutlineProvider>
@@ -206,7 +207,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
         <TabBar
           view={view}
           store={store}
-          start={profiles && <ProfileChip state={profiles} onAbout={() => openAbout('[data-testid="profile-chip"]')} />}
+          start={profiles && <ProfileChip state={profiles} say={setMessage} onAbout={() => openAbout('[data-testid="profile-chip"]')} />}
           onOpenFile={openQuickOpen}
           onOverview={openOverview}
           onFilesDropped={(after) => landed({ after })}
@@ -216,12 +217,12 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
           {/* The side panel's room: the panel itself is drawn from the title bar, where the tab list always is. */}
           {tabsLeft && <div className="side-panel-space" aria-hidden="true" />}
           <div className="document-column">
-            <ProfileCreatedNotice />
-            {settings && <SettingsNotice notices={settings.notices} />}
+            <ProfileCreatedNotice say={setMessage} />
+            {settings && <SettingsNotice notices={settings.notices} say={setMessage} />}
             {settings && <SessionNotice notice={settings.session} />}
             <main data-testid="app-root" data-worker={workerReady ? 'ready' : 'starting'}>
               <DropArea onDrop={() => landed({})}>
-                {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow key={recentRevision} platform={platform} />}
+                {view.revision >= 0 && view.tabs.length === 0 && <EmptyWindow key={recentRevision} platform={platform} say={setMessage} />}
                 {view.tabs.map((tab) => (
                   // Tabs not shown stay mounted (warm): hidden and inert, so switching back shows them as they were.
                   // The tab's own reader width overrides the profile's measure for everything it shows.
@@ -238,7 +239,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
                       settings &&
                       profile && (
                         <Suspense fallback={null}>
-                          <SettingsView state={settings} profile={profile} appImage={appImage} version={version} onAbout={() => openAbout()} />
+                          <SettingsView state={settings} profile={profile} appImage={appImage} version={version} onAbout={() => openAbout()} say={setMessage} />
                         </Suspense>
                       )
                     ) : (
@@ -276,7 +277,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       </Tabs>
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
       {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} say={setMessage} />}
-      {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} />}
+      {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} say={setMessage} />}
       {overlay === 'tabOverview' && (
         <Suspense fallback={null}>
           <TabOverview store={store} onClose={closeOverlay} />
@@ -284,7 +285,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
       )}
       {overlay === 'findAll' && (
         <Suspense fallback={null}>
-          <FindAll tabs={view.tabs} onChoose={showMatch} onClose={closeOverlay} />
+          <FindAll tabs={view.tabs} onChoose={showMatch} onClose={closeOverlay} say={setMessage} />
         </Suspense>
       )}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}

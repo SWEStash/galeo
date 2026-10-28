@@ -16,6 +16,7 @@ const STATE: ProfilesState = {
 };
 
 let roots: Root[] = [];
+const say = vi.fn();
 
 function stubBridge() {
   const profiles = {
@@ -37,7 +38,7 @@ async function render(state: ProfilesState = STATE, onAbout: () => void = () => 
   await act(async () =>
     root.render(
       <CommandsProvider platform="linux">
-        <ProfileChip state={state} onAbout={onAbout} />
+        <ProfileChip state={state} onAbout={onAbout} say={say} />
       </CommandsProvider>,
     ),
   );
@@ -57,8 +58,7 @@ async function openMenu(container: HTMLElement) {
 
 async function type(input: HTMLInputElement, value: string) {
   await act(async () => {
-    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-    setter.call(input, value);
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
@@ -67,6 +67,7 @@ afterEach(async () => {
   for (const root of roots) await act(async () => root.unmount());
   roots = [];
   document.body.innerHTML = '';
+  say.mockReset();
 });
 
 describe('ProfileChip (UX F5)', () => {
@@ -195,5 +196,16 @@ describe('ProfileChip (UX F5)', () => {
     await act(async () => button(form, 'Create').click());
     await vi.waitFor(() => expect(form.querySelector('[role="alert"]')?.textContent).toContain("couldn't be saved"));
     expect(dialog()).not.toBeNull();
+  });
+});
+
+describe('ProfileChip when main fails', () => {
+  it("says the profile couldn't be opened, and leaves no unhandled rejection", async () => {
+    const { profiles } = stubBridge();
+    profiles.open.mockRejectedValue(new Error('boom'));
+    const container = await render();
+    await openMenu(container);
+    await act(async () => menuItem('Beta')!.click());
+    await vi.waitFor(() => expect(say).toHaveBeenCalledWith("Couldn't open the profile"));
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { isClosedTab, unlessClosed } from './closed-tab';
+import { isClosedTab, logFailure, reportFailure, unlessClosed } from './closed-tab';
 
 /** How a refusal from main reaches the page: Electron wraps the handler's error. */
 const fromMain = (channel: string, reason: string) => new Error(`Error invoking remote method '${channel}': Error: ${reason}`);
@@ -24,5 +24,23 @@ describe('unlessClosed', () => {
     unlessClosed(say, "Couldn't go back")(fromMain('documents.back', 'boom'));
     unlessClosed(say, "Couldn't go back")(fromMain('documents.back', 'unknown document'));
     expect(say.mock.calls).toEqual([["Couldn't go back"]]);
+  });
+});
+
+describe('reportFailure', () => {
+  it('says the message for any failure', () => {
+    const say = vi.fn();
+    reportFailure(say, "Couldn't clear the recent files")(new Error('boom'));
+    expect(say).toHaveBeenCalledWith("Couldn't clear the recent files");
+  });
+});
+
+describe('logFailure', () => {
+  it('logs a failure nobody waits on, with what failed', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const error = new Error('boom');
+    logFailure('the render report')(error);
+    expect(warn).toHaveBeenCalledWith('galeo: the render report failed', error);
+    warn.mockRestore();
   });
 });

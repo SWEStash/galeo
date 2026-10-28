@@ -1,10 +1,14 @@
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
 import { loadNotices, type Notices } from './notices';
 import { useLoaded } from '../useLoaded';
+import { logFailure } from '../tabs/closed-tab';
 
 /** galeo's version and licence, and the notices of what it ships (docs/dependencies.md). */
 export function AboutDialog({ version, onClose }: { version: string; onClose: () => void }) {
-  const [notices] = useLoaded<Notices | null>(loadNotices, null);
+  const [notices] = useLoaded<Notices | null>(loadNotices, null, (error) => {
+    logFailure('loading the notices')(error);
+    return null;
+  });
 
   return (
     <ModalOverlay className="modal-overlay" isOpen isDismissable onOpenChange={(isOpen) => !isOpen && onClose()}>

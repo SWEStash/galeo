@@ -5,10 +5,12 @@ import type { TabSearchResults } from '../../shared/tabs';
 import { TabSearch } from './TabSearch';
 
 let root: Root | undefined;
+const say = vi.fn();
 
 afterEach(() => {
   act(() => root?.unmount());
   document.body.innerHTML = '';
+  say.mockReset();
 });
 
 const all: TabSearchResults = {
@@ -33,7 +35,7 @@ async function shown() {
   const container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
-  await act(async () => root!.render(<TabSearch onShow={onShow} onReopen={onReopen} onClose={onClose} />));
+  await act(async () => root!.render(<TabSearch onShow={onShow} onReopen={onReopen} onClose={onClose} say={say} />));
   await vi.waitFor(() => expect(document.querySelectorAll('[role="option"]')).toHaveLength(3));
   return { onShow, onReopen, onClose, input: document.querySelector('input')! };
 }
@@ -109,5 +111,18 @@ describe('TabSearch', () => {
     const { input } = await shown();
     await type(input, 'zzz');
     await vi.waitFor(() => expect(document.querySelector('[data-testid="tab-search-empty"]')?.textContent).toBe('No tab matches.'));
+  });
+});
+
+describe('TabSearch when main fails', () => {
+  it("says it couldn't search, and leaves no unhandled rejection", async () => {
+    stub(async () => {
+      throw new Error('boom');
+    });
+    const container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<TabSearch onShow={vi.fn()} onReopen={vi.fn()} onClose={vi.fn()} say={say} />));
+    await vi.waitFor(() => expect(say).toHaveBeenCalledWith("Couldn't search the tabs"));
   });
 });

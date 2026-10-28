@@ -20,6 +20,7 @@ import type { TabView } from '../../shared/tabs';
 import { editors } from '../edit/editors';
 import { keepCaretKeys } from '../overlay-keys';
 import { plural } from '../../shared/words';
+import { logFailure, reportFailure } from './closed-tab';
 
 /** Typing pauses this long before the window's tabs are searched. */
 const DEBOUNCE_MS = 150;
@@ -55,11 +56,13 @@ export function FindAll({
   tabs,
   onChoose,
   onClose,
+  say,
 }: {
   /** The window's tabs, named as the tab bar names them. */
   tabs: readonly TabView[];
   onChoose: (id: string, choice: FindAllChoice) => void;
   onClose: () => void;
+  say: (message: string) => void;
 }) {
   const [query, setQuery] = useState('');
   const [caseSensitive, setCaseSensitive] = useState(false);
@@ -73,20 +76,18 @@ export function FindAll({
   // The field takes the focus (after the dialog's own focus handling, which runs first).
   useEffect(() => input.current?.focus(), []);
   // Closing stops the search main may still be running.
-  useEffect(() => () => void window.galeo.documents.findAll('', { caseSensitive: false }), []);
+  const stopSearch = () => void window.galeo.documents.findAll('', { caseSensitive: false }).catch(logFailure('stopping find in all tabs'));
+  useEffect(() => stopSearch, []);
 
   useEffect(() => {
-    if (!searchable) {
-      void window.galeo.documents.findAll('', { caseSensitive: false });
-      return;
-    }
+    if (!searchable) return stopSearch();
     let live = true;
     const timer = setTimeout(() => {
       // Unsaved edits are searched as they are on screen: main gets them before the query.
       for (const editor of editors.values()) editor.keepNow();
       void window.galeo.documents.findAll(query, { caseSensitive }).then((result) => {
         if (live && result.kind === 'done') setSearch({ query, caseSensitive, result });
-      });
+      }, (error: unknown) => live && reportFailure(say, "Couldn't search the tabs")(error));
     }, DEBOUNCE_MS);
     return () => {
       live = false;

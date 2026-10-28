@@ -1,12 +1,13 @@
 import { useLoaded } from '../useLoaded';
+import { reportFailure } from '../tabs/closed-tab';
 
 
 /**
  * "Created profile 'X' · Undo" (ADR-005): shown in the window of a profile `--profile` just
  * created, so a typo doesn't leave a stray profile. Undo sends the files where they would have gone.
  */
-export function ProfileCreatedNotice() {
-  const [created, setCreated] = useLoaded<{ name: string; token: string } | null>(() => window.galeo.profiles.created(), null);
+export function ProfileCreatedNotice({ say }: { say: (message: string) => void }) {
+  const [created, setCreated] = useLoaded<{ name: string; token: string } | null>(() => window.galeo.profiles.created(), null, () => null);
 
   if (!created) return null;
   return (
@@ -16,7 +17,7 @@ export function ProfileCreatedNotice() {
         type="button"
         onClick={() => {
           setCreated(null);
-          void window.galeo.profiles.undoCreate(created.token);
+          void window.galeo.profiles.undoCreate(created.token).catch(reportFailure(say, "Couldn't undo the new profile"));
         }}
       >
         Undo

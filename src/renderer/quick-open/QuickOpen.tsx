@@ -19,6 +19,7 @@ import type { Platform } from '../../shared/keymap';
 import type { QuickOpenEntry, QuickOpenResults } from '../../shared/quick-open';
 import { keepCaretKeys } from '../overlay-keys';
 import { plural } from '../../shared/words';
+import { logFailure, reportFailure } from '../tabs/closed-tab';
 
 /**
  * Quick open (UX F8): a field over main's results, open tabs and recent files first, then the
@@ -44,19 +45,20 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
   useEffect(() => {
     let current = true;
     let token = '';
+    const closeFailed = logFailure('closing quick open');
     void window.galeo.quickOpen.start().then((started) => {
       token = started.token;
-      if (!current) return void window.galeo.quickOpen.close(token);
+      if (!current) return void window.galeo.quickOpen.close(token).catch(closeFailed);
       latest.current = { token, query: '' };
       setStart(started);
-    });
+    }, (error: unknown) => current && reportFailure(say, "Couldn't start quick open")(error));
     const stop = window.galeo.quickOpen.onResults((next) => {
       if (next.token === latest.current.token && next.query === latest.current.query) setResults(next);
     });
     return () => {
       current = false;
       stop();
-      if (token) void window.galeo.quickOpen.close(token);
+      if (token) void window.galeo.quickOpen.close(token).catch(closeFailed);
     };
   }, []);
 
@@ -66,7 +68,7 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
     let current = true;
     void window.galeo.quickOpen.query(start.token, query).then((next) => {
       if (current && next.query === latest.current.query) setResults(next);
-    });
+    }, (error: unknown) => current && reportFailure(say, "Couldn't search")(error));
     return () => {
       current = false;
     };

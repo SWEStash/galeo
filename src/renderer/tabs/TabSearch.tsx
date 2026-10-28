@@ -17,6 +17,7 @@ import {
 import type { TabHit, TabSearchResults } from '../../shared/tabs';
 import { keepCaretKeys } from '../overlay-keys';
 import { plural } from '../../shared/words';
+import { reportFailure } from './closed-tab';
 
 interface Row extends TabHit {
   /** Unique in the list: an open tab and a closed one are told apart. */
@@ -28,7 +29,7 @@ interface Row extends TabHit {
  * Tab search (UX F16): a field over the window's open tabs and its recently closed ones, as main
  * matched them. Enter shows an open tab or reopens a closed one where it was; Esc closes.
  */
-export function TabSearch({ onShow, onReopen, onClose }: { onShow: (id: string) => void; onReopen: (id: string) => void; onClose: () => void }) {
+export function TabSearch({ onShow, onReopen, onClose, say }: { onShow: (id: string) => void; onReopen: (id: string) => void; onClose: () => void; say: (message: string) => void }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<TabSearchResults | null>(null);
   /** Enter came before main answered what was typed: it takes the first result of that answer. */
@@ -42,7 +43,7 @@ export function TabSearch({ onShow, onReopen, onClose }: { onShow: (id: string) 
     let current = true;
     void window.galeo.tabs.search(query).then((next) => {
       if (current && next.query === query) setResults(next);
-    });
+    }, (error: unknown) => current && reportFailure(say, "Couldn't search the tabs")(error));
     return () => {
       current = false;
     };

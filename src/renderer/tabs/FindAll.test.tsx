@@ -11,6 +11,7 @@ afterEach(() => {
   act(() => root?.unmount());
   document.body.innerHTML = '';
   editors.clear();
+  say.mockReset();
 });
 
 const tabs = [
@@ -29,6 +30,8 @@ const answer: FindAllResult = {
   ],
 };
 
+const say = vi.fn();
+
 function stub(reply: (query: string, options: { caseSensitive: boolean }) => Promise<FindAllResult> = async (query) => (query ? answer : { kind: 'done', tabs: [] })) {
   const findAll = vi.fn(reply);
   Object.defineProperty(window, 'galeo', { value: { documents: { findAll } }, configurable: true });
@@ -41,7 +44,7 @@ async function shown() {
   const container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
-  await act(async () => root!.render(<FindAll tabs={tabs} onChoose={onChoose} onClose={onClose} />));
+  await act(async () => root!.render(<FindAll tabs={tabs} onChoose={onChoose} onClose={onClose} say={say} />));
   return { onChoose, onClose, input: document.querySelector<HTMLInputElement>('input')! };
 }
 
@@ -139,5 +142,19 @@ describe('FindAll', () => {
     act(() => root!.unmount());
     root = undefined;
     expect(findAll).toHaveBeenLastCalledWith('', { caseSensitive: false });
+  });
+});
+
+describe('FindAll when main fails', () => {
+  it("says it couldn't search, and leaves no unhandled rejection", async () => {
+    stub(async () => {
+      throw new Error('boom');
+    });
+    const { input } = await shown();
+    await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'needle');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+    await vi.waitFor(() => expect(say).toHaveBeenCalledWith("Couldn't search the tabs"));
   });
 });

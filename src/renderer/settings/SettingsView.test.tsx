@@ -54,6 +54,7 @@ const INSTALLED = [
 ];
 
 let roots: Root[] = [];
+const say = vi.fn();
 
 function stubBridge() {
   const settings = {
@@ -73,8 +74,8 @@ async function render(state: SettingsState = STATE, appImage = false, onAbout: (
   document.body.append(container);
   const root = createRoot(container);
   roots.push(root);
-  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} />));
-  const update = (next: SettingsState) => act(async () => root.render(<SettingsView state={next} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} />));
+  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} say={say} />));
+  const update = (next: SettingsState) => act(async () => root.render(<SettingsView state={next} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} say={say} />));
   return Object.assign(container, { update });
 }
 
@@ -112,6 +113,7 @@ async function commit(input: HTMLInputElement | HTMLTextAreaElement, value: stri
 afterEach(async () => {
   for (const root of roots) await act(async () => root.unmount());
   roots = [];
+  say.mockReset();
   document.body.innerHTML = '';
 });
 
@@ -329,5 +331,16 @@ describe('SettingsView (UX §6)', () => {
     const purple = [...container.querySelectorAll<HTMLElement>('[role="option"]')].find((each) => each.querySelector('[aria-label="Purple"]'))!;
     await act(async () => purple.click());
     await vi.waitFor(() => expect(container.querySelector('[role="alert"]')?.textContent).toContain('profile.json'));
+  });
+});
+
+describe('SettingsView when main fails', () => {
+  it("says a setting couldn't be saved, and leaves no unhandled rejection", async () => {
+    const { settings } = stubBridge();
+    settings.set.mockRejectedValue(new Error('boom'));
+    const container = await render();
+    const dark = [...row(container, 'Theme').querySelectorAll('label')].find((each) => each.textContent === 'Dark')!;
+    await act(async () => dark.click());
+    await vi.waitFor(() => expect(say).toHaveBeenCalledWith("Couldn't save the setting"));
   });
 });

@@ -7,6 +7,7 @@ import { tabAction } from '../tabs/commands';
 import type { TabStore } from '../tabs/store';
 import { wheelZoom } from '../tabs/wheel-zoom';
 import { movableTab, moveShownTab } from './tab-moves';
+import { reportFailure } from '../tabs/closed-tab';
 
 /** The tab shortcuts, per-tab zoom and reader width (UX §5), wherever the focus is. */
 export function useTabShortcuts(store: TabStore, openQuickOpen: () => void, measure: ReaderWidth, say: (message: string) => void) {
@@ -62,7 +63,7 @@ export function useTabShortcuts(store: TabStore, openQuickOpen: () => void, meas
       store.reread(id);
       return true;
     },
-    settings: () => void window.galeo.tabs.openSettings(),
+    settings: () => void window.galeo.tabs.openSettings().catch(reportFailure(say, "Couldn't open Settings")),
     nextTab: tabs('nextTab'),
     previousTab: tabs('previousTab'),
     goToTab: tabs('goToTab'),
