@@ -382,9 +382,9 @@ tests on each system check them.
      same file. On Linux, where the two names are two files, they stay two tabs.
 5. **macOS keys.** As a user on macOS, I want galeo's shortcuts on Cmd, so that it behaves like
    other Mac apps.
-   - AC: Every Ctrl shortcut is on Cmd instead, zooming included (Cmd and the mouse wheel), and
-     the table's jumps to its first and last row; the shortcuts shown in menus and the palette use
-     the Mac symbols.
+   - AC: Every Ctrl shortcut is on Cmd instead, and in a table Cmd and an arrow go to the first or
+     last row or the row's ends, as in other Mac apps; zooming with the trackpad's pinch works; the
+     shortcuts shown in menus and the palette use the Mac symbols.
 
 ### Should Have
 

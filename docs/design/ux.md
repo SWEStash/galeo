@@ -277,7 +277,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   cursor at that point. Fixing it in edit mode and saving brings the tree back.
 - **CSV and TSV** open as a **table**: a header row that stays in view, row numbers, cells that
   keep their text on one line (the full value in the tooltip and when the cell has focus), and
-  horizontal scrolling for wide tables. Arrow keys move between cells. The separator is found
+  horizontal scrolling for wide tables. Arrow keys move between cells (on macOS Cmd+arrows jump to the
+  first or last row and the row's ends). The separator is found
   from the first lines (comma, semicolon, tab or pipe; a `.tsv` keeps tabs), and the first row is
   the header. **Table options** in the status bar (`Auto (;) · Header`) set the separator and
   whether the first row is a header for that tab, kept with it; the palette has the same commands,

@@ -87,10 +87,23 @@ interface Cell {
 
 /**
  * Where a key moves focus in the grid (UX F14): the arrows a cell, Page Up and Down a page, Home and
- * End the row's ends (the table's with Ctrl). Null for a key the grid leaves to the page. Not clamped.
+ * End the row's ends (the table's with Ctrl, or Cmd on macOS, where Cmd and an arrow also go to the
+ * first or last row or the row's ends). Null for a key the grid leaves to the page. Not clamped.
  */
-export function keyToMove(key: string, ctrl: boolean, at: Cell, { page, lastRow, lastColumn }: { page: number; lastRow: number; lastColumn: number }): Cell | null {
-  if (ctrl && key !== 'Home' && key !== 'End') return null;
+export function keyToMove(
+  key: string,
+  modifier: 'none' | 'ctrl' | 'cmd',
+  at: Cell,
+  { page, lastRow, lastColumn }: { page: number; lastRow: number; lastColumn: number },
+): Cell | null {
+  const jump = modifier !== 'none';
+  if (modifier === 'cmd') {
+    if (key === 'ArrowUp') return { row: 0, column: at.column };
+    if (key === 'ArrowDown') return { row: lastRow, column: at.column };
+    if (key === 'ArrowLeft') return { row: at.row, column: 0 };
+    if (key === 'ArrowRight') return { row: at.row, column: lastColumn };
+  }
+  if (jump && key !== 'Home' && key !== 'End') return null;
   switch (key) {
     case 'ArrowDown':
       return { row: at.row + 1, column: at.column };
@@ -105,9 +118,9 @@ export function keyToMove(key: string, ctrl: boolean, at: Cell, { page, lastRow,
     case 'PageUp':
       return { row: at.row - page, column: at.column };
     case 'Home':
-      return { row: ctrl ? 0 : at.row, column: 0 };
+      return { row: jump ? 0 : at.row, column: 0 };
     case 'End':
-      return { row: ctrl ? lastRow : at.row, column: lastColumn };
+      return { row: jump ? lastRow : at.row, column: lastColumn };
     default:
       return null;
   }

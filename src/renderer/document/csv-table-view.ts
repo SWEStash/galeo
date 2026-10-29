@@ -242,9 +242,12 @@ export function createCsvTableView({ parent, scroller, label }: { parent: HTMLEl
   }
 
   element.addEventListener('keydown', (event) => {
-    if (!table || event.altKey || event.metaKey || event.shiftKey) return;
+    // macOS jumps with Cmd (UX F14); elsewhere Cmd (the Windows key) is the system's.
+    const mac = element.ownerDocument.documentElement.dataset['platform'] === 'darwin';
+    if (!table || event.altKey || event.shiftKey || (event.metaKey && !mac)) return;
+    const modifier = mac && event.metaKey ? 'cmd' : event.ctrlKey ? 'ctrl' : 'none';
     const page = Math.max(1, Math.floor(scroller().clientHeight / TABLE_ROW_HEIGHT) - 2);
-    const move = keyToMove(event.key, event.ctrlKey, { row: focusRow, column: focusColumn }, { page, lastRow: bodyCount - 1, lastColumn: table.columns - 1 });
+    const move = keyToMove(event.key, modifier, { row: focusRow, column: focusColumn }, { page, lastRow: bodyCount - 1, lastColumn: table.columns - 1 });
     if (!move) return;
     focusCell(move.row, move.column);
     event.preventDefault();

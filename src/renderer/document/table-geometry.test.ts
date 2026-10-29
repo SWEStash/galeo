@@ -67,18 +67,27 @@ describe('keyToMove', () => {
   const bounds = { page: 10, lastRow: 99, lastColumn: 7 };
 
   it('moves a cell with the arrows, a page with Page Up and Down', () => {
-    expect(keyToMove('ArrowDown', false, at, bounds)).toEqual({ row: 6, column: 2 });
-    expect(keyToMove('ArrowLeft', false, at, bounds)).toEqual({ row: 5, column: 1 });
-    expect(keyToMove('PageUp', false, at, bounds)).toEqual({ row: -5, column: 2 });
+    expect(keyToMove('ArrowDown', 'none', at, bounds)).toEqual({ row: 6, column: 2 });
+    expect(keyToMove('ArrowLeft', 'none', at, bounds)).toEqual({ row: 5, column: 1 });
+    expect(keyToMove('PageUp', 'none', at, bounds)).toEqual({ row: -5, column: 2 });
   });
 
-  it('goes to the row ends with Home and End, and the table ends with Ctrl', () => {
-    expect(keyToMove('Home', false, at, bounds)).toEqual({ row: 5, column: 0 });
-    expect(keyToMove('End', true, at, bounds)).toEqual({ row: 99, column: 7 });
+  it('goes to the row ends with Home and End, and the table ends with Ctrl (Cmd on macOS)', () => {
+    expect(keyToMove('Home', 'none', at, bounds)).toEqual({ row: 5, column: 0 });
+    expect(keyToMove('End', 'ctrl', at, bounds)).toEqual({ row: 99, column: 7 });
+    expect(keyToMove('Home', 'cmd', at, bounds)).toEqual({ row: 0, column: 0 });
+  });
+
+  it('on macOS, Cmd and an arrow go to the first or last row, or the row ends', () => {
+    expect(keyToMove('ArrowUp', 'cmd', at, bounds)).toEqual({ row: 0, column: 2 });
+    expect(keyToMove('ArrowDown', 'cmd', at, bounds)).toEqual({ row: 99, column: 2 });
+    expect(keyToMove('ArrowLeft', 'cmd', at, bounds)).toEqual({ row: 5, column: 0 });
+    expect(keyToMove('ArrowRight', 'cmd', at, bounds)).toEqual({ row: 5, column: 7 });
   });
 
   it('leaves other keys, and Ctrl with anything but Home and End, to the page', () => {
-    expect(keyToMove('a', false, at, bounds)).toBeNull();
-    expect(keyToMove('ArrowDown', true, at, bounds)).toBeNull();
+    expect(keyToMove('a', 'none', at, bounds)).toBeNull();
+    expect(keyToMove('ArrowDown', 'ctrl', at, bounds)).toBeNull();
+    expect(keyToMove('PageDown', 'cmd', at, bounds)).toBeNull();
   });
 });

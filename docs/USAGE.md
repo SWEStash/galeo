@@ -107,7 +107,8 @@ the file into the window in front of you) when you want it here.
   values, or nested over 1,000 deep) opens as source. Find (Ctrl+F) works in the source view.
 - **CSV and TSV** open as a **table**: the header row stays in view, rows are numbered, and each
   cell shows its full value as a tooltip. Arrow keys move between cells, Home/End to a row's ends,
-  Ctrl+Home/End to the table's. The separator is found from the first lines (comma, semicolon, tab
+  Ctrl+Home/End to the table's (on macOS Cmd+Home/End, and Cmd+arrows to the first or last row and
+  the row's ends). The separator is found from the first lines (comma, semicolon, tab
   or pipe), and the first row is taken as the header: the **Table options** in the status bar (or
   the palette's *Table separator: …* and *First row is a header*) change either for that tab, and
   it keeps them; Settings has the defaults. `.psv` files open as tables, and *Show as table* in the
