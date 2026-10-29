@@ -58,9 +58,13 @@ appended line, in one run. The release records them in [VALIDATION](VALIDATION.m
 
 Run `npm run preflight` and push only when it ends with "all green". On a busy machine it may end
 with "all green except the performance smoke": push then only if its medians are close to the ones
-recorded before, since CI's runner is faster. CI runs Linux only for now: the macOS and Windows job
-is off until a stable Linux package (ADR-011). The code stays portable, and when that job comes back
-these differences have broken tests before:
+recorded before, since CI's runner is faster. A push to `main` runs CI on Linux only. macOS and Windows
+run in the *Platforms* workflow (`.github/workflows/platforms.yml`, ADR-027), whose minutes come from a
+quota: it runs when a commit is pushed to the `ci/platforms` branch (`git push --force origin
+HEAD:ci/platforms`; the branch only points at the commit under test, nothing is committed on it), when
+started by hand (one system, or only the end-to-end tests matching a title), and in the release workflow.
+Gather platform fixes into one run. The unit tests that read paths, links and keys the Windows or macOS
+way run everywhere, in `npm test`. These differences have broken tests on those systems before:
 
 - **Folders**: on macOS and Windows the state folder sits inside the config folder (`appDirs`).
   Paths use `\` on Windows; build them with `path.join`, never with `/`.

@@ -1,0 +1,104 @@
+name: Platforms
+
+# The macOS and Windows previews (ADR-027). Their minutes come from a quota, so this never runs on a
+# push to main: only on a push to ci/platforms (a pointer to the commit under test), by hand, and
+# from the release workflow, where a failure stops the release.
+on:
+  push:
+    branches: [ci/platforms]
+  workflow_dispatch:
+    inputs:
+      os:
+        description: Systems to test
+        type: choice
+        options: [all, macos, windows]
+        default: all
+      grep:
+        description: Only the end-to-end tests whose title matches (Playwright --grep); empty runs them all
+        type: string
+        default: ''
+  workflow_call:
+    inputs:
+      os:
+        type: string
+        default: all
+      grep:
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: platforms-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_call' }}
+
+env:
+  HUSKY: '0'
+
+jobs:
+  matrix:
+    name: Choose systems
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      include: ${{ steps.pick.outputs.include }}
+    steps:
+      # The end-to-end suite runs on one architecture per system; the other packages and starts
+      # the app, which catches what differs between them (the binary, fuses, native parts).
+      - id: pick
+        env:
+          OS: ${{ inputs.os }}
+        run: |
+          all='[
+            {"name": "macOS arm64", "family": "macos", "runner": "macos-15", "e2e": true},
+            {"name": "macOS x64", "family": "macos", "runner": "macos-15-intel", "e2e": false},
+            {"name": "Windows x64", "family": "windows", "runner": "windows-2025", "e2e": true},
+            {"name": "Windows arm64", "family": "windows", "runner": "windows-11-arm", "e2e": false}
+          ]'
+          echo "include=$(jq -c --arg os "${OS:-all}" '[.[] | select($os == "all" or .family == $os)]' <<< "$all")" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: ${{ matrix.name }}
+    needs: matrix
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.matrix.outputs.include) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run setup
+      - run: npm test
+      - run: npm run build
+      # A fresh runner's first app start is slow; one start here keeps it out of the per-test limits.
+      - name: Warm up the app
+        if: matrix.e2e
+        run: npx playwright test --project=warm-up
+      - name: End-to-end tests
+        if: matrix.e2e
+        shell: bash
+        env:
+          GREP: ${{ inputs.grep }}
+        run: |
+          if [ -n "$GREP" ]; then npm run test:e2e -- --grep "$GREP"; else npm run test:e2e; fi
+      - name: Package
+        run: npm run package
+      - name: Verify the package
+        run: npm run verify:package
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-report-${{ matrix.runner }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

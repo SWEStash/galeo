@@ -30,7 +30,7 @@ function packagedApp() {
       resources: path.join(app, 'Contents', 'Resources'),
     };
   }
-  const dir = path.join(RELEASE, 'win-unpacked');
+  const dir = path.join(RELEASE, process.arch === 'arm64' ? 'win-arm64-unpacked' : 'win-unpacked');
   return { fuses: path.join(dir, 'galeo.exe'), entry: path.join(dir, 'galeo.exe'), resources: path.join(dir, 'resources') };
 }
 
