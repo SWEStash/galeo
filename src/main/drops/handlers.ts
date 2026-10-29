@@ -13,7 +13,7 @@ export function dropHandlers(deps: {
   fs: Pick<FileSystem, 'stat'>;
   /** Tells the window it has a drop to place. */
   received: (window: number, drop: { token: string; count: number }) => void;
-  open: (window: number, files: readonly string[], after: string | null | undefined) => void;
+  open: (window: number, files: readonly string[], after: string | null | undefined) => Promise<void>;
   /** Quick open's next search in the window is this folder. */
   searchFolder: (window: number, folder: string) => void;
 }): Pick<Handlers, 'drops.register' | 'drops.open'> {
@@ -34,7 +34,7 @@ export function dropHandlers(deps: {
         const kind = await fs.stat(each).then((stat) => stat.kind, () => null);
         (kind === 'directory' ? folders : files).push(each);
       }
-      if (files.length > 0) open(window, files, target.after);
+      if (files.length > 0) await open(window, files, target.after);
       if (folders.length > 0) searchFolder(window, folders[0]!);
       return { folder: folders.length > 0 };
     },

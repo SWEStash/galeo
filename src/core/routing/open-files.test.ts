@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { TabRegistry } from '../tabs/registry';
-import { openFiles } from './open-files';
+import { FsError, type FileStat } from '../ports';
+import { openFiles, spelledAsOpen } from './open-files';
 
 function registry() {
   let n = 0;
@@ -82,5 +83,58 @@ describe('openFiles', () => {
     expect([tabs.chosen(a.id, 1), tabs.chosen(b.id, 1), tabs.chosen(c.id, 1)]).toEqual([true, true, false]);
     openFiles(tabs, 1, ['/d/c.md']);
     expect(tabs.chosen(c.id, 1)).toBe(false);
+  });
+});
+
+describe('spelledAsOpen', () => {
+  /** A file system where each path names the file whose id is given; others are missing. */
+  function files(ids: Record<string, string>) {
+    const stats: string[] = [];
+    return {
+      stats,
+      stat: async (path: string): Promise<FileStat> => {
+        stats.push(path);
+        const id = ids[path];
+        if (id === undefined) throw new FsError('ENOENT', path);
+        return { kind: 'file', size: 1, mtimeMs: 1, id, executable: false };
+      },
+    };
+  }
+
+  it("names a file as the window's tab does when only the case differs and it is the same file", async () => {
+    const tabs = registry();
+    tabs.open('/d/Notes.md', 1);
+    const fs = files({ '/d/Notes.md': '1:7', '/d/notes.md': '1:7' });
+    expect(await spelledAsOpen(fs, tabs, 1, ['/d/notes.md', '/d/other.md'])).toEqual(['/d/Notes.md', '/d/other.md']);
+  });
+
+  it('keeps the name when the two spellings are different files, as on a case-sensitive disk', async () => {
+    const tabs = registry();
+    tabs.open('/d/Notes.md', 1);
+    const fs = files({ '/d/Notes.md': '1:7', '/d/notes.md': '1:8' });
+    expect(await spelledAsOpen(fs, tabs, 1, ['/d/notes.md'])).toEqual(['/d/notes.md']);
+  });
+
+  it('keeps the name when either file is missing', async () => {
+    const tabs = registry();
+    tabs.open('/d/Notes.md', 1);
+    expect(await spelledAsOpen(files({ '/d/notes.md': '1:7' }), tabs, 1, ['/d/notes.md'])).toEqual(['/d/notes.md']);
+    expect(await spelledAsOpen(files({ '/d/Notes.md': '1:7' }), tabs, 1, ['/d/notes.md'])).toEqual(['/d/notes.md']);
+  });
+
+  it('reads nothing for an exact match or a name no tab has in any case', async () => {
+    const tabs = registry();
+    tabs.open('/d/Notes.md', 1);
+    tabs.open('/d/README.md', 2);
+    const fs = files({});
+    expect(await spelledAsOpen(fs, tabs, 1, ['/d/Notes.md', '/d/readme.md', '/d/new.md'])).toEqual(['/d/Notes.md', '/d/readme.md', '/d/new.md']);
+    expect(fs.stats).toEqual([]);
+  });
+
+  it('matches Windows paths whatever the case of the drive and folders', async () => {
+    const tabs = registry();
+    tabs.open('C:\\Users\\Me\\Notes.md', 1);
+    const fs = files({ 'C:\\Users\\Me\\Notes.md': '5:9', 'c:\\users\\me\\NOTES.MD': '5:9' });
+    expect(await spelledAsOpen(fs, tabs, 1, ['c:\\users\\me\\NOTES.MD'])).toEqual(['C:\\Users\\Me\\Notes.md']);
   });
 });

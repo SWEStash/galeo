@@ -80,7 +80,8 @@ flowchart TD
 
 - Flags may come before or after file names. After `--` everything is a file
   (`galeo -- -notes.md`), and an unknown option is refused before anything starts.
-- Files already open in the target window are **focused, not duplicated**.
+- Files already open in the target window are **focused, not duplicated**, also when the name differs only
+  in case and names the same file (a case-insensitive disk).
 - A path that does not exist opens a tab in the *missing* state (so typos are visible, and the tab
   recovers if the file is created — useful when an agent is about to write it).
 - `galeo` with no files: bring the target window forward (or open an empty window).

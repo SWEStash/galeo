@@ -17,16 +17,16 @@ export function recentHandlers(deps: {
   input: Pick<InputCredits, 'spend'>;
   selections: SelectionGrants;
   /** Shows the file in the window: its tab if it has one, else a new one. */
-  open: (window: number, path: string) => void;
+  open: (window: number, path: string) => Promise<void>;
 }): Pick<Handlers, 'recent.list' | 'recent.open' | 'recent.clear'> {
   const { recent, input, selections, open } = deps;
   return {
     'recent.list': (_args, event) =>
       selections.offer(event.sender.id, 'recent', (recent(event.sender.id)?.list() ?? []).slice(0, SHOWN).map((file) => file.path)),
-    'recent.open': ([id], event) => {
+    'recent.open': async ([id], event) => {
       const path = selections.choose(event.sender.id, 'recent', id);
       if (!path) throw new Error('not offered');
-      open(event.sender.id, path);
+      await open(event.sender.id, path);
     },
     'recent.clear': async (_args, event) => {
       if (!input.spend(event.sender.id)) throw new Error('no input');

@@ -17,7 +17,7 @@ import { AppState } from '../core/profiles/app-state';
 import { ProfileCatalog } from '../core/profiles/catalog';
 import { profileIdFor } from '../core/profiles/names';
 import { ThemeGate } from '../core/desktop/theme-gate';
-import { openFiles } from '../core/routing/open-files';
+import { openFiles, spelledAsOpen } from '../core/routing/open-files';
 import { editToggle } from '../core/documents/edit-toggle';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds } from '../core/session/model';
@@ -309,9 +309,14 @@ function start(initialMode: StartupMode): void {
   /** A folder dropped on the window, which its next quick open searches. */
   const droppedFolders = new Map<number, string>();
   cleanups.add((windowId) => droppedFolders.delete(windowId));
-  /** Shows files in the window: their tabs if it has them, else new ones after the shown one (or `after`). */
-  const openInWindow = (windowId: number, files: readonly string[], after?: string | null, chosen = false) => {
-    openFiles(documents, windowId, files, after, { chosen });
+  /**
+   * Shows files in the window: their tabs if it has them (whatever the case of their names, when it's
+   * the same file), else new ones after the shown one (or `after`).
+   */
+  const openInWindow = async (windowId: number, files: readonly string[], after?: string | null, chosen = false) => {
+    const named = await spelledAsOpen(fs, documents, windowId, files);
+    if (!profileOf(windowId)) return;
+    openFiles(documents, windowId, named, after, { chosen });
     // Main showed the tab itself, so the page won't report it: the warm set hears it here.
     const shown = documents.snapshot(windowId).active;
     if (files.length > 0 && shown) {
@@ -604,7 +609,7 @@ function start(initialMode: StartupMode): void {
       fresh = true;
     }
     const windowId = window.webContents.id;
-    openInWindow(windowId, files, undefined, chosen);
+    await openInWindow(windowId, files, undefined, chosen);
     // Files added behind the reader's back, maybe on another workspace: the window asks for
     // attention, and is never raised for it (ADR-005).
     if (asksForAttention({ fresh, files: files.length, focused: window.isFocused() })) requestAttention(window);
@@ -860,7 +865,7 @@ function start(initialMode: StartupMode): void {
             const profile = profileOf(windowId);
             if (!profile) return;
             if (newWindow) await enqueue(() => openRouted({ profile: profile.id, newWindow: true }, [file]));
-            else openInWindow(windowId, [file]);
+            else await openInWindow(windowId, [file]);
           },
         }),
       },

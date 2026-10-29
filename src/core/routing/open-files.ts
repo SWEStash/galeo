@@ -1,3 +1,4 @@
+import { FsError, type FileSystem } from '../ports';
 import type { TabRegistry } from '../tabs/registry';
 
 /**
@@ -18,4 +19,33 @@ export function openFiles(tabs: TabRegistry, window: number, files: readonly str
     first ??= tab.id;
   }
   if (first !== undefined) tabs.activate(first, window);
+}
+
+/**
+ * Each file as the window's tab names it, when a tab's path differs from it only in letter case and
+ * both name the same file (the same identity), as they do on macOS and Windows disks; else as given.
+ * Comparing identities, not just names, keeps two files apart on a case-sensitive disk.
+ */
+export async function spelledAsOpen(fs: Pick<FileSystem, 'stat'>, tabs: TabRegistry, window: number, files: readonly string[]): Promise<string[]> {
+  const open = tabs.list(window).filter((tab) => tab.kind !== 'settings').map((tab) => tab.path);
+  return Promise.all(
+    files.map(async (file) => {
+      if (open.includes(file)) return file;
+      const folded = file.toLowerCase();
+      for (const path of open) {
+        if (path.toLowerCase() === folded && (await sameFile(fs, path, file))) return path;
+      }
+      return file;
+    }),
+  );
+}
+
+async function sameFile(fs: Pick<FileSystem, 'stat'>, a: string, b: string): Promise<boolean> {
+  try {
+    const [first, second] = await Promise.all([fs.stat(a), fs.stat(b)]);
+    return first.id === second.id;
+  } catch (error) {
+    if (!(error instanceof FsError)) throw error;
+    return false;
+  }
 }

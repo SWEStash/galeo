@@ -16,7 +16,7 @@ async function setup(count = 3, input = true) {
   const recent = new RecentFiles({ fs, utf8, path: '/s/recent.json', parse: (data) => ({ ok: true, value: data as never }), now: () => n++ });
   for (let i = 0; i < count; i++) await recent.add(`/d/f${i}.md`);
   const tabs = new TabRegistry(() => `tab-${++n}`);
-  const handlers = recentHandlers({ recent: () => recent, input: { spend: () => input }, selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
+  const handlers = recentHandlers({ recent: () => recent, input: { spend: () => input }, selections: new SelectionGrants(() => `pick-${++n}`), open: async (window, path) => openFiles(tabs, window, [path]) });
   return { recent, tabs, handlers };
 }
 
@@ -40,8 +40,8 @@ describe('recentHandlers', () => {
   it("refuses a path, an id it didn't offer, or another window's", async () => {
     const { handlers, tabs } = await setup();
     const [first] = await handlers['recent.list']([], from(1));
-    expect(() => handlers['recent.open'](['/etc/passwd'], from(1))).toThrow();
-    expect(() => handlers['recent.open']([first!.id], from(2))).toThrow();
+    await expect(handlers['recent.open'](['/etc/passwd'], from(1))).rejects.toThrow();
+    await expect(handlers['recent.open']([first!.id], from(2))).rejects.toThrow();
     expect(tabs.list(1)).toEqual([]);
     expect(tabs.list(2)).toEqual([]);
   });
@@ -50,7 +50,7 @@ describe('recentHandlers', () => {
     const { handlers, recent } = await setup();
     const [offered] = await handlers['recent.list']([], from(2));
     await handlers['recent.clear']([], from(1));
-    expect(() => handlers['recent.open']([offered!.id], from(2))).toThrow();
+    await expect(handlers['recent.open']([offered!.id], from(2))).rejects.toThrow();
     expect(recent.list()).toEqual([]);
     expect(await handlers['recent.list']([], from(1))).toEqual([]);
   });
@@ -71,7 +71,7 @@ describe('recentHandlers', () => {
     };
     const [a, b] = [await listOf('a'), await listOf('b')];
     const tabs = new TabRegistry(() => `tab-${++n}`);
-    const handlers = recentHandlers({ recent: (window) => ({ 1: a, 2: b })[window], input: { spend: () => true }, selections: new SelectionGrants(() => `pick-${++n}`), open: (window, path) => openFiles(tabs, window, [path]) });
+    const handlers = recentHandlers({ recent: (window) => ({ 1: a, 2: b })[window], input: { spend: () => true }, selections: new SelectionGrants(() => `pick-${++n}`), open: async (window, path) => openFiles(tabs, window, [path]) });
     expect((await handlers['recent.list']([], from(2))).map((file) => file.path)).toEqual(['/d/b.md']);
     await handlers['recent.clear']([], from(1));
     expect(a.list()).toEqual([]);

@@ -16,7 +16,7 @@ function setup() {
     drops: new DropGrants(() => `drop-${++n}`),
     fs,
     received: (window, drop) => sent.push([window, drop]),
-    open: (window, files, after) => opened.push([window, files, after]),
+    open: async (window, files, after) => void opened.push([window, files, after]),
     searchFolder: (window, folder) => scoped.push([window, folder]),
   });
   return { handlers, sent, opened, scoped };

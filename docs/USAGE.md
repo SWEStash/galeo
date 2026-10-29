@@ -76,7 +76,8 @@ gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo
   Enter opens the file; Ctrl+Enter opens it in a new window. Tab (or the ⇥ icon at the end of a row)
   fills in the highlighted file's path instead, to edit it or go on into its folder.
 
-A file already open in the window gets focused, not opened twice. A path that doesn't exist opens
+A file already open in the window gets focused, not opened twice, also when its name is typed in
+another case on a disk that ignores case (macOS and Windows usually do). A path that doesn't exist opens
 as a *missing* tab, which fills in by itself once the file is written.
 
 ### Which window a file goes to
