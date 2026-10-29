@@ -253,7 +253,10 @@ session only.
 **SR-05 — Never execute files.** "Open with default app" (`shell.openPath`) is offered only for
 non-executable, non-launcher files: not `.desktop`, `.AppImage`, `.sh` or `.run`, not packages
 (`.deb`, `.rpm`), not Java, Python or Flatpak apps (`.jar`, `.jnlp`, `.py`, `.pyz`, `.flatpakref`,
-`.flatpakrepo`), and not the other platforms' launchers, judged by the name and, through
+`.flatpakrepo`), not what Windows runs or installs when it is opened (programs and installers, `.bat`,
+`.cmd`, `.ps1`, the Windows Script Host's `.js`, `.vbs` and `.wsf`, `.hta`, `.scr`, shortcuts, `.reg`, `.cpl`,
+`.msc`), and not what macOS does (`.app`, `.command`, `.terminal`, `.pkg`, AppleScript, Automator
+workflows, disk images, `.webloc`); one list on every system, judged by the name and, through
 symlinks, by the file pointed to; not files with the executable bit, not directories, and only when the user chooses it in a **native context
 menu built by main**. Otherwise only "Reveal in Files" is offered. Links to local
 files always open inside galeo.

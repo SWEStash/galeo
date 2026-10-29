@@ -1,11 +1,16 @@
 import { extensionOf } from '../../shared/paths';
 import type { EntryKind } from '../ports';
 
-// Files that run or install something when "opened" (SR-05): Linux launchers and packages, Java,
-// Python and Flatpak apps, and the other platforms' own.
+// Files that run or install something when "opened" (SR-05), on any system: one list, since a folder
+// read on Linux may hold files from the others.
 const LAUNCHERS = new Set([
+  // Linux launchers and packages; Java, Python and Flatpak apps.
   '.desktop', '.appimage', '.sh', '.run', '.deb', '.rpm', '.py', '.pyz', '.jar', '.jnlp', '.flatpakref', '.flatpakrepo',
-  '.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.lnk', '.app', '.command',
+  // Windows programs, installers, scripts (Windows Script Host runs .js and .vbs), shortcuts and settings.
+  '.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.lnk', '.js', '.jse', '.vbs', '.vbe', '.wsf', '.wsh', '.hta', '.scr',
+  '.reg', '.cpl', '.msc', '.pif', '.url', '.appref-ms',
+  // macOS apps, scripts, installers and disk images.
+  '.app', '.command', '.terminal', '.pkg', '.mpkg', '.scpt', '.scptd', '.workflow', '.dmg', '.webloc',
 ]);
 
 /**

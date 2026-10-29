@@ -25,6 +25,20 @@ describe('canOpenWithDefaultApp (SR-05)', () => {
     },
   );
 
+  it.each([
+    '/d/x.js', '/d/x.jse', '/d/x.vbs', '/d/x.vbe', '/d/x.wsf', '/d/x.wsh', '/d/x.hta', '/d/x.scr', '/d/x.reg', '/d/x.cpl',
+    '/d/x.msc', '/d/x.pif', '/d/x.url', '/d/x.appref-ms', 'C:\\Users\\me\\Downloads\\Invoice.JS',
+  ])('refuses %s, which Windows runs when it is opened', (path) => {
+    expect(canOpenWithDefaultApp(named(path))).toBe(false);
+  });
+
+  it.each(['/d/x.terminal', '/d/x.pkg', '/d/x.mpkg', '/d/x.scpt', '/d/x.scptd', '/d/x.workflow', '/d/x.dmg', '/d/x.webloc'])(
+    'refuses %s, which macOS runs or installs when it is opened',
+    (path) => {
+      expect(canOpenWithDefaultApp(named(path))).toBe(false);
+    },
+  );
+
   it.each(['/d/tool.jar', '/d/start.jnlp', '/d/app.flatpakref', '/d/repo.flatpakrepo', '/d/pkg.deb', '/d/pkg.rpm', '/d/run.py', '/d/app.pyz'])('refuses %s, which installs or runs an app', (path) => {
     expect(canOpenWithDefaultApp(named(path))).toBe(false);
   });
