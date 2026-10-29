@@ -2,6 +2,7 @@ import { constants, type Dirent, type Stats } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { access, chmod, lstat, mkdir, open, opendir, readdir, realpath, rename, rm, stat, unlink, utimes, type FileHandle } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
+import { renameOver } from './rename-over';
 import { FsError, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from '../../core/ports';
 
 const CODES: Record<string, FsErrorCode> = {
@@ -205,7 +206,7 @@ export class NodeFileSystem implements FileSystem {
         throw error;
       }
       await writeAndSync(handle, data);
-      await rename(temp, path);
+      await renameOver(temp, path);
       await syncDirectory(dirname(path));
       await sweepStaleTemps(path);
       return true;
@@ -226,7 +227,7 @@ export class NodeFileSystem implements FileSystem {
       } finally {
         await handle.close();
       }
-      await rename(temp, path);
+      await renameOver(temp, path);
       await syncDirectory(dirname(path));
     } catch (error) {
       await rm(temp, { force: true });
