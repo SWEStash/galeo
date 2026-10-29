@@ -32,6 +32,22 @@ describe('findGitRoot', () => {
     expect(await findGitRoot(fs, '/r/wt')).toBe('/r/wt');
     expect(await findGitRoot(fs, '/r/loose')).toBeNull();
   });
+
+  it('climbs a Windows path up to its drive root, and no further', async () => {
+    const checked: string[] = [];
+    const fs = {
+      stat: async (path: string) => {
+        checked.push(path);
+        if (path === 'C:\\.git') return { kind: 'directory' as const, size: 0, mtimeMs: 0, id: '1:1', executable: false };
+        throw new FsError('ENOENT', path);
+      },
+    };
+    expect(await findGitRoot(fs, 'C:\\src\\app')).toBe('C:\\');
+    expect(checked).toEqual(['C:\\src\\app\\.git', 'C:\\src\\.git', 'C:\\.git']);
+    checked.length = 0;
+    expect(await findGitRoot({ stat: async (path) => (checked.push(path), Promise.reject(new FsError('ENOENT', path))) }, 'D:\\x')).toBeNull();
+    expect(checked).toEqual(['D:\\x\\.git', 'D:\\.git']);
+  });
 });
 
 describe('walk', () => {

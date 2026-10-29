@@ -21,10 +21,12 @@ export function extensionOf(path: string): string {
  */
 export function joinPath(dir: string, ...names: string[]): string {
   const separator = dir.includes('\\') && !dir.includes('/') ? '\\' : '/';
-  return [dir, ...names].join(separator);
+  // A root (`/`, `C:\`) already ends with its separator.
+  return [dir.replace(/[\\/]$/, ''), ...names].join(separator);
 }
 
-/** A path as the reader sees it: `~/…` under the home folder, `~` for it, other paths whole. */
+/** A path as the reader sees it: `~/…` (`~\\…` on Windows) under the home folder, `~` for it, other paths whole. */
 export function shownPath(path: string, home: string): string {
-  return path === home ? '~' : path.startsWith(`${home}/`) ? `~${path.slice(home.length)}` : path;
+  if (path === home) return '~';
+  return path.startsWith(`${home}/`) || path.startsWith(`${home}\\`) ? `~${path.slice(home.length)}` : path;
 }

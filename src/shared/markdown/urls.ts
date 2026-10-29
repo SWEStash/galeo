@@ -5,9 +5,13 @@ export function compactUrl(url: string): string {
   return url.replace(/[\u0000- ]/g, '');
 }
 
-/** The URL names its own scheme (`https:`, `javascript:`, …). */
+/**
+ * The URL names its own scheme (`https:`, `javascript:`, …). A drive letter and a slash (`C:\…`,
+ * `C:/…`) is a Windows path instead, which a link may point at like any other local path.
+ */
 export function hasScheme(url: string): boolean {
-  return /^[a-z][a-z0-9+.-]*:/i.test(compactUrl(url));
+  const compact = compactUrl(url);
+  return /^[a-z][a-z0-9+.-]*:/i.test(compact) && !/^[a-z]:[\\/]/i.test(compact);
 }
 
 /** `//host/path` (or with backslashes, which browsers treat as slashes): another host. */

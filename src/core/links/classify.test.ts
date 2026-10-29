@@ -63,7 +63,7 @@ describe('classifyLink', () => {
     'vbscript:x',
     'galeo://app/index.html',
     'vscode://file/etc/passwd',
-    'C:\\Windows\\system32\\calc.exe',
+    'C:Windows\\system32\\calc.exe',
     'ftp://example.org/x',
   ])('refuses the scheme of %j', (href) => {
     expect(classify(href)).toEqual({ kind: 'refused', reason: 'scheme' });

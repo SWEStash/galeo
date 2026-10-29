@@ -6,6 +6,11 @@ describe('joinPath', () => {
     expect(joinPath('/home/me/.config/galeo', 'profiles', 'default')).toBe('/home/me/.config/galeo/profiles/default');
     expect(joinPath('C:\\Users\\me\\AppData\\galeo', 'settings.json')).toBe('C:\\Users\\me\\AppData\\galeo\\settings.json');
   });
+
+  it('adds no second separator to a root', () => {
+    expect(joinPath('/', '.git')).toBe('/.git');
+    expect(joinPath('C:\\', '.git')).toBe('C:\\.git');
+  });
 });
 
 describe('folderOf', () => {
@@ -21,5 +26,11 @@ describe('shownPath', () => {
     expect(shownPath('/home/me', '/home/me')).toBe('~');
     expect(shownPath('/home/meg/x.md', '/home/me')).toBe('/home/meg/x.md');
     expect(shownPath('/srv/x.md', '/home/me')).toBe('/srv/x.md');
+  });
+
+  it('does the same with Windows paths', () => {
+    expect(shownPath('C:\\Users\\me\\notes\\today.md', 'C:\\Users\\me')).toBe('~\\notes\\today.md');
+    expect(shownPath('C:\\Users\\me', 'C:\\Users\\me')).toBe('~');
+    expect(shownPath('C:\\Users\\meg\\x.md', 'C:\\Users\\me')).toBe('C:\\Users\\meg\\x.md');
   });
 });
