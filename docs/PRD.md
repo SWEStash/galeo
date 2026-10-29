@@ -57,9 +57,9 @@ must not obstruct (plain files only, no sidecar metadata).
 - No accounts, sync, telemetry, cloud features, AI features, or automatic update checks.
 - The app itself makes **no network requests** (external links open in the system browser).
 - Not a replacement for `astro dev`: MDX components are shown as placeholders, not executed.
-- macOS/Windows are not *officially* supported in v0.1–v0.4. The code is portable by design;
-  CI on macOS/Windows and unsigned **preview** builds are deferred until a stable Linux package
-  (ADR-011); support for both is planned for v0.5 (owner, 2026-10-21).
+- macOS and Windows are not officially supported. From v0.5 they get unsigned **preview** builds,
+  tested automatically on each system but with no manual checks
+  ([ADR-027](decisions/ADR-027-macos-windows-previews.md)); in v0.1–v0.4 they had none (ADR-011).
 - No sidecar files next to user documents; galeo never writes into user folders except when
   the user explicitly saves an edit (v0.2).
 
@@ -348,6 +348,69 @@ must not obstruct (plain files only, no sidecar metadata).
 - Drag between windows checked on X11: the owner's desktop has no X11 session; Wayland stays the
   checked platform.
 
+## User Stories — v0.5 "platforms"
+
+macOS and Windows return as **previews**: unsigned, unsupported builds from the same release as the
+Linux packages ([ADR-027](decisions/ADR-027-macos-windows-previews.md)). Linux stays the official
+platform. The stories below say "a user" where the owner, on Linux, can't check them by hand: automated
+tests on each system check them.
+
+### Must Have
+
+1. **Install a preview.** As a user on macOS or Windows, I want to download and install galeo from
+   its release page, so that I can use it outside Linux.
+   - AC: Each release offers a macOS `.dmg` and `.zip` (Intel and Apple silicon) and a Windows
+     installer and portable build (x64 and Arm), listed in `SHA256SUMS` and attested like the Linux
+     packages.
+   - AC: The release notes and the usage guide label them *preview* and give the steps past the
+     first-launch warning (macOS Gatekeeper, Windows SmartScreen).
+2. **Open files from the desktop.** As a user on macOS or Windows, I want to open Markdown and the
+   other supported files from Finder or Explorer, so that galeo works like it does on Linux.
+   - AC: Double-clicking a file galeo is set to open, "Open With → galeo", and dropping a file on
+     the app's icon open it in a tab of the running galeo; galeo never makes itself the default app.
+   - AC: The Windows installer can put `galeo` on `PATH`; on macOS, Settings can install a `galeo`
+     command, and remove it again.
+3. **Same safety on every system.** As a user, I want galeo never to hand a file that would run as a
+   program to my system's default app, so that a link in a document can't start one.
+   - AC: "Open with default app" isn't offered for the types Windows runs or installs when they are
+     opened (such as `.exe`, `.msi`, `.bat`, `.cmd`, `.ps1`, `.js`, `.vbs`, `.wsf`, `.hta`, `.scr`,
+     `.reg`) or that macOS does (such as `.app`, `.command`, `.terminal`, `.pkg`, `.scpt`,
+     `.workflow`), as it isn't for Linux launchers and packages.
+4. **One tab per file.** As a user on macOS or Windows, I want a file to open in one tab however I
+   type its name, so that `Notes.md` and `notes.md` don't become two tabs of the same file.
+   - AC: Given `Notes.md` is open, opening `notes.md` shows that tab; edits and saves go to the
+     same file. On Linux, where the two names are two files, they stay two tabs.
+5. **macOS keys.** As a user on macOS, I want galeo's shortcuts on Cmd, so that it behaves like
+   other Mac apps.
+   - AC: Every Ctrl shortcut is on Cmd instead, zooming included (Cmd and the mouse wheel), and
+     the table's jumps to its first and last row; the shortcuts shown in menus and the palette use
+     the Mac symbols.
+
+### Should Have
+
+- **First start without a GPU.** galeo's first start on a machine without a GPU takes no longer
+  than a start with one, or the cause is recorded.
+- **JSON tree and table no slower than 0.3.0.** Opening the JSON tree and the CSV table is timed
+  against 0.3.0; a slowdown is fixed, or its cause recorded.
+- **Find in all tabs never holds up other windows.** A search over large files doesn't hold up
+  other windows' work while it reads them.
+
+### Could Have
+
+- **Mouse paths review.** A review lists, for every command, how a mouse user reaches it today
+  and whether it needs a button or menu entry; the changes it proposes come in a later release.
+
+### Won't Have (v0.5)
+
+- Signed and notarised builds, official macOS and Windows support, and manual release checks on
+  those systems (ADR-027).
+- A list of the fonts installed on macOS and Windows: the pickers there offer the bundled fonts,
+  and any family can still be typed by name.
+- Following a large log without re-reading the whole file on each change.
+- Optional Vim keybindings, spell check in edit mode, ticking task-list checkboxes in the rendered
+  view, and more diagram engines: a later release.
+- Drag between windows checked on X11.
+
 ## User Experience
 
 A browser-like window: a tab bar with the profile name/colour at the left, the document below,
@@ -390,7 +453,8 @@ live in the [UX specification](design/ux.md).
   (official; installs the AppArmor profile Chromium's sandbox needs on Ubuntu 24.04+), `galeo` on `PATH`,
   `.desktop` file with MIME associations. AppImage as a secondary portable build for
   distributions without user-namespace restrictions (on Ubuntu 24.04+ it runs only if the user opts in to unsandboxed mode, with a warning). Previews
-  (unsigned, unsupported): macOS `.dmg`/`.zip` (x64, arm64), Windows NSIS installer. No npm
+  (unsigned, unsupported, from v0.5, ADR-027): macOS `.dmg`/`.zip` (x64, arm64), Windows NSIS installer and
+  portable build (x64, arm64). No npm
   package in v0.1 (it could not offer desktop integration or the hardened binary).
 - **Accessibility**: full keyboard operation; visible focus; ARIA roles for tabs; bundled themes
   WCAG 2.2 AA contrast; honours reduced-motion.
