@@ -14,6 +14,24 @@ describe('profileIdFor', () => {
     expect(profileIdFor('Café Ñandú 2', [])).toBe('cafe-nandu-2');
   });
 
+  it.each([
+    ['CON', 'con-2'],
+    ['nul', 'nul-2'],
+    ['Aux', 'aux-2'],
+    ['PRN', 'prn-2'],
+    ['COM1', 'com1-2'],
+    ['lpt9', 'lpt9-2'],
+  ])('never names the folder after a Windows device: %s → %s', (name, id) => {
+    expect(profileIdFor(name, [])).toBe(id);
+  });
+
+  it('numbers past a taken id after a device name, and leaves names that only start like one', () => {
+    expect(profileIdFor('con', ['con-2'])).toBe('con-3');
+    expect(profileIdFor('Console', [])).toBe('console');
+    expect(profileIdFor('com10', [])).toBe('com10');
+    expect(profileIdFor('con 1', [])).toBe('con-1');
+  });
+
   it('falls back to "profile" when nothing usable is left', () => {
     expect(profileIdFor('日本語', [])).toBe('profile');
     expect(profileIdFor('../..', [])).toBe('profile');

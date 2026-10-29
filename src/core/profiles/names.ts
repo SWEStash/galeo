@@ -14,6 +14,8 @@ type Resolved =
 const ID_MAX = 32;
 const NAME_MAX = 64;
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+// Names Windows keeps for devices, which can't be folders there; avoided everywhere, so a profile can move.
+const WINDOWS_DEVICE = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/;
 // Control characters and the bidi overrides that could make a name read as something else.
 const UNSAFE = /[\p{Cc}\u202a-\u202e\u2066-\u2069]/u;
 
@@ -33,11 +35,12 @@ export function validateName(value: string): { ok: true; name: string } | { ok: 
 /** A fresh id for a new profile named `name`: its ASCII slug, numbered when `taken` has it. */
 export function profileIdFor(name: string, taken: readonly string[]): string {
   const base = slug(name) || 'profile';
-  if (!taken.includes(base)) return base;
+  const free = (id: string) => !taken.includes(id) && !WINDOWS_DEVICE.test(id);
+  if (free(base)) return base;
   for (let n = 2; ; n++) {
     const suffix = `-${n}`;
     const id = `${trimDashes(base.slice(0, ID_MAX - suffix.length))}${suffix}`;
-    if (!taken.includes(id)) return id;
+    if (free(id)) return id;
   }
 }
 
