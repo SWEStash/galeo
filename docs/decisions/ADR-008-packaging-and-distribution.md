@@ -2,7 +2,8 @@
 
 - Status: Accepted (2026-09-26, with review amendments; amended 2026-09-26: opt-in unsandboxed
   mode, see "Sandbox"; one clause superseded by [ADR-009](ADR-009-sandbox-unavailable-launcher.md);
-  amended 2026-10-09: the MDX file type moves to v0.3, see "Desktop entry")
+  amended 2026-10-09: the MDX file type moves to v0.3, see "Desktop entry"; the macOS and Windows
+  previews bullet superseded by [ADR-027](ADR-027-macos-windows-previews.md), 2026-10-29)
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [ADR-001](ADR-001-app-shell-stack.md), [ADR-004](ADR-004-security-and-zero-network.md),

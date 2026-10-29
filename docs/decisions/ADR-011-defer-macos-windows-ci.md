@@ -1,6 +1,6 @@
 # ADR-011 — macOS and Windows CI and previews deferred until a stable Linux package
 
-- Status: Accepted (2026-10-06)
+- Status: Superseded by [ADR-027](ADR-027-macos-windows-previews.md) (2026-10-29); accepted 2026-10-06
 - Date: 2026-10-06
 - Deciders: project owner
 - Supersedes: in [ADR-008](ADR-008-packaging-and-distribution.md), the macOS and Windows previews
