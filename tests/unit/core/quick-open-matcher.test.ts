@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { indexPaths, matchPath, topMatches } from '../../../src/core/quick-open/matcher';
+import { indexPaths, matchPath, reachesName, topMatches } from '../../../src/core/quick-open/matcher';
 
 const ranked = (query: string, paths: string[]) => topMatches(query, paths, 10).map((match) => match.path);
 
@@ -64,5 +64,21 @@ describe('topMatches', () => {
     times.sort((a, b) => a - b);
     // The median of five queries (the target is ~50 ms).
     expect(times[2]).toBeLessThan(250);
+  });
+});
+
+describe('reachesName', () => {
+  it('needs the query to end in the file name: letters spread over folders alone are not enough', () => {
+    expect(reachesName('notes', 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temps\\README.md')).toBe(false);
+    expect(reachesName('rme', 'C:\\Users\\RUNNER~1\\AppData\\Local\\Temps\\README.md')).toBe(true);
+  });
+
+  it('lets folder letters start the query', () => {
+    expect(reachesName('docs/no', '~/acme/docs/notes.md')).toBe(true);
+    expect(reachesName('acme rea', '~/git/acme/README.md')).toBe(true);
+  });
+
+  it('is false when the query does not match at all', () => {
+    expect(reachesName('zz', '~/acme/notes.md')).toBe(false);
   });
 });

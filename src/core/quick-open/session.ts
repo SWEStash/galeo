@@ -3,7 +3,7 @@ import { fileName, folderOf, joinPath, shownPath } from '../../shared/paths';
 import type { SelectionGrants } from '../documents/selections';
 import { FsError, type Clock, type FileSystem } from '../ports';
 import { findGitRoot } from './git-root';
-import { indexPaths, matchPath, topMatches, type PathIndex } from './matcher';
+import { indexPaths, matchPath, reachesName, topMatches, type PathIndex } from './matcher';
 import { walk } from './walker';
 
 /** A result before main offers it: files carry the path main opens, which the page never gets. */
@@ -149,7 +149,9 @@ export class QuickOpen {
     const pick = (paths: readonly string[], limit: number) => {
       if (!query) return paths.slice(0, limit);
       const byShown = new Map(paths.map((path) => [this.shown(path), path]));
-      return topMatches(query, [...byShown.keys()], limit).map((match) => byShown.get(match.path)!);
+      // Only files the query reaches the name of: a long folder path spells most short queries.
+      const reaching = [...byShown.keys()].filter((shown) => reachesName(query, shown));
+      return topMatches(query, reaching, limit).map((match) => byShown.get(match.path)!);
     };
     const sections: ListedSection[] = [
       { kind: 'tabs', title: 'Open tabs', entries: pick(tabs, SHOWN.tabs).map((path) => this.fileEntry(path)) },

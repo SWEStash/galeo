@@ -176,6 +176,10 @@ placement is not restorable on Wayland).
 ```
 
 - Opens instantly with open tabs + recent files; repo results stream in (no blocking scan).
+- Matching: the query's letters in order (file-name letters, letters in a row and word starts rank first).
+  An open tab or recent file is listed only when the query's last letter can fall in its file name
+  (typing docs/no finds a tab showing docs/notes.md), since a long folder path spells most short queries; the
+  repository's files match on their whole path below the root.
 - Scope = git root of the active tab (else its folder); shown in the section header. Includes
   git-ignored files and dot-folders. Skips folders and files named `.git`, `node_modules`, `dist`,
   `build`, `out`, `target`, `coverage`, `.venv`, `venv`, `__pycache__`, `.next` or `.cache`,

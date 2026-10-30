@@ -72,6 +72,15 @@ describe('QuickOpen', () => {
     ]);
   });
 
+  it('lists a tab or recent file only when the query reaches its name, not for letters spread over its folders', async () => {
+    const { quickOpen, start } = setup();
+    const scattered = '/srv/RUNNER/Local/Temps/README.md';
+    const { token } = await start({ tabs: [scattered, `${HOME}/git/acme/docs/plan-old.md`], recent: [] });
+    expect(names(await quickOpen.query(1, token, 'notes'), 'tabs')).toEqual([]);
+    expect(names(await quickOpen.query(1, token, 'rme'), 'tabs')).toEqual(['README.md']);
+    expect(names(await quickOpen.query(1, token, 'docs/old'), 'tabs')).toEqual(['plan-old.md']);
+  });
+
   it('skips the settings’ extra names as well as the built-in ones', async () => {
     const { quickOpen, start } = setup({ [`${HOME}/git/acme/vendor/plan.md`]: '' }, ['vendor']);
     const { token } = await start();

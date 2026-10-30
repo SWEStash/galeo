@@ -122,6 +122,25 @@ export function indexPaths(paths: readonly string[]): PathIndex {
 }
 
 /** The match of `query` in `path`, or null when its letters aren't all there in order. */
+/**
+ * Whether `query` can match `path` with its last letter in the file name: the earlier letters as early
+ * as they go, the last one in the name after them. Letters spread over the folders alone say little
+ * about a file, as a long folder path holds most short words.
+ */
+export function reachesName(query: string, path: string): boolean {
+  const needle = normalize(query);
+  if (!needle) return true;
+  const lower = path.toLowerCase();
+  const nameStart = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\')) + 1;
+  let at = 0;
+  for (let i = 0; i < needle.length - 1; i++) {
+    at = lower.indexOf(needle[i]!, at);
+    if (at === -1) return false;
+    at++;
+  }
+  return lower.indexOf(needle[needle.length - 1]!, Math.max(at, nameStart)) !== -1;
+}
+
 export function matchPath(query: string, path: string): PathMatch | null {
   const needle = normalize(query);
   if (!needle) return { path, score: 0, positions: [] };
