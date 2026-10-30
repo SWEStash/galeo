@@ -439,7 +439,7 @@ flowchart TD
   eb -- "preview, unsigned, ADR-027" --> mac[x64 and arm64 .dmg / .zip · macOS preview]
   eb -- "preview, unsigned, ADR-027" --> win[galeo-#lt;v#gt;-#lt;arch#gt;-setup.exe and -portable.exe, x64 and arm64 · Windows preview]
   eb --> ci["CI: Linux on every push; macOS and Windows on ci/platforms and by hand (platforms.yml, ADR-027)<br/>tests · package, fuse and Open With read-back · no-network harness · performance"]
-  ci -- "tag v#lt;version#gt;" --> release[release workflow: build, verify, SHA256SUMS, attestations]
+  ci -- "tag v#lt;version#gt;" --> release["release workflow: Linux build + Platforms on macOS and Windows, verify each,<br/>then (all green) SHA256SUMS, attestations over the ten packages"]
   release --> draft[draft GitHub Release · docs/RELEASING.md, ADR-017]
 ```
 

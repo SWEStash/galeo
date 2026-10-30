@@ -22,9 +22,19 @@ auto-update: a new release is how fixes, Electron's included, reach users.
 
 A tag starts the release workflow (`.github/workflows/release.yml`,
 [ADR-017](decisions/ADR-017-release-workflow-with-attestations.md)). It builds the `.deb` and the
-AppImage in CI, runs `verify:package` on them, writes `SHA256SUMS`, attests both packages, and
-drafts a GitHub Release. Nothing built on a workstation is published. The version commit comes
-first, so every check below runs on the exact commit that gets tagged:
+AppImage in CI, and, through the Platforms workflow, the macOS and Windows previews (`.dmg` and
+`.zip`, setup and portable `.exe`, each for x64 and arm64;
+[ADR-027](decisions/ADR-027-macos-windows-previews.md)) with their tests. It runs
+`verify:package` on every package, and only when every job passed writes `SHA256SUMS`, attests all
+ten packages and drafts a GitHub Release. Nothing built on a workstation is published.
+
+Before the version commit, run the Platforms workflow once on the release candidate (push it to
+`ci/platforms`, or `gh workflow run platforms.yml --ref main`), so the tag finds nothing new on
+macOS or Windows. Its minutes come from a quota (macOS ~10×, Windows ~2×): one run per fix batch,
+and `rerun_of=<run id>` runs only the end-to-end tests that failed. The previews get no manual
+checks.
+
+The version commit comes first, so every check below runs on the exact commit that gets tagged:
 
 1. **Version**: semver from the commits since the last tag (`fix` → patch, `feat` → minor,
    a breaking change → major). Set it with `npm version <version> --no-git-tag-version` (it updates
@@ -39,7 +49,8 @@ first, so every check below runs on the exact commit that gets tagged:
 5. **Security review** against the threat model's SR requirements for anything that changed since
    the last release.
 6. **Dry run** (optional, recommended after a workflow change): run the release workflow by hand
-   from the Actions tab (*Run workflow* on `main`). It builds and attests, and drafts nothing.
+   from the Actions tab (*Run workflow* on `main`). It builds, tests and attests on every system,
+   and drafts nothing; it costs a full Platforms run's minutes.
 
 If a check fails, fix it in a new commit (`main` takes no force-push, so the version commit
 stays) and start again from step 2 on the fix: that commit is now the one that gets tagged.
@@ -51,7 +62,8 @@ Then cut it:
 8. **Tag**: `v<version>` on the checked commit, then push the tag. The workflow refuses a tag that
    doesn't match `package.json` or isn't on `main`.
 9. **Publish**: when the workflow is green, download the assets from the draft release and check
-   them: `sha256sum -c SHA256SUMS` and
+   them: `sha256sum -c SHA256SUMS` (all ten packages) and
    `gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo` (GitHub CLI 2.49 or
-   later; the same for the AppImage). Edit the draft's notes (a list of commit subjects to start from) for readers, then
+   later; the same for the AppImage and for one macOS and one Windows file). The notes end with the
+   previews' Gatekeeper and SmartScreen steps. Edit the draft's notes (a list of commit subjects to start from) for readers, then
    publish it.
