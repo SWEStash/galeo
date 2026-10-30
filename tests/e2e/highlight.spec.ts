@@ -50,7 +50,7 @@ for (const [theme, keyword] of [['light', 'rgb(207, 34, 46)'], ['dark', 'rgb(255
           await expect(shownDocument(window).locator('[role=tree]')).toBeVisible();
           const tree = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="tab-panel"][data-active="true"]').analyze();
           expect(tree.violations, 'data.json tree').toEqual([]);
-          await window.keyboard.press('Control+u');
+          await window.keyboard.press('ControlOrMeta+u');
         }
         await expect.poll(() => colourOf(window, token), { message: `${name}: ${token} is highlighted` }).not.toBeNull();
         await expect(shownDocument(window).locator('.cm-foldGutter')).toBeAttached();
@@ -73,19 +73,21 @@ test('Ctrl+Shift+[ folds the block at the cursor and Ctrl+Shift+] unfolds it; ed
     await expect.poll(() => colourOf(window, 'function')).not.toBeNull();
     const lines = await visibleLines(window);
     await shownDocument(window).locator('.cm-line').nth(1).click();
-    await window.keyboard.press('Control+Shift+BracketLeft');
+    // CodeMirror's fold keys: Ctrl+Shift+[ and ], on macOS Cmd+Alt+[ and ].
+    const fold = process.platform === 'darwin' ? 'Meta+Alt' : 'Control+Shift';
+    await window.keyboard.press(`${fold}+BracketLeft`);
     await expect.poll(() => visibleLines(window)).toBeLessThan(lines);
-    await window.keyboard.press('Control+Shift+BracketRight');
+    await window.keyboard.press(`${fold}+BracketRight`);
     await expect.poll(() => visibleLines(window)).toBe(lines);
 
     await pressInMain(app, window, 'E');
     await expect(window.getByTestId('status-mode')).toHaveText('Editing');
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('const answer = 42;');
     await expect.poll(() => colourOf(window, 'const')).toBe('rgb(207, 34, 46)');
     await expect.poll(() => colourOf(window, '42')).toBe('rgb(5, 80, 174)');
     // Saved, so closing doesn't stop at the unsaved-changes question.
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
   } finally {
     await close();

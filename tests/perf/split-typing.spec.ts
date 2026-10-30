@@ -57,7 +57,7 @@ test('typing in a 5,000-word article in split updates the preview within the bud
     await expect(document.locator('.cm-editor')).toBeVisible();
     await pressInMain(app, window, 'E');
     await expect(document.locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await document.evaluate((host) => {
       const state = { lastKey: 0, word: '', ms: null as number | null };
       (globalThis as { __typing?: typeof state }).__typing = state;

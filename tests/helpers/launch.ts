@@ -37,9 +37,18 @@ export function appDirs(home: string): { config: string; state: string; cache: s
   return { config, state: path.join(config, 'State'), cache };
 }
 
-/** Removes a test home; on Windows, a killed app's child processes can hold its files for a moment. */
+/**
+ * Removes a test home. On Windows a killed app's child processes can hold its files for a while
+ * after it exits; when they still do after the retries, the folder is left in the temp folder with
+ * a warning rather than failing a test whose own checks passed.
+ */
 export function removeTempHome(home: string): void {
-  rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
+  try {
+    rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
+  } catch (error) {
+    if (process.platform !== 'win32' || (error as NodeJS.ErrnoException).code !== 'EPERM') throw error;
+    console.warn(`left ${home}: ${(error as Error).message}`);
+  }
 }
 
 /** A fresh isolated home, for tests that write config first or restart the app on the same one. */
@@ -79,7 +88,11 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
     home,
     close: async () => {
       try {
-        await app.close();
+        // A test that killed the app only waits for it to go: closing a killed app can wait for
+        // the test's whole time on Windows.
+        const process = app.process();
+        if (!process.killed) await app.close();
+        else if (process.exitCode === null && process.signalCode === null) await new Promise((exited) => process.once('exit', exited));
       } finally {
         removeHome();
       }

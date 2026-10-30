@@ -125,7 +125,7 @@ test('a tab with unsaved changes moves with them, in edit mode, and a clean one 
     await pressInMain(app, window, 'E');
     await expect(window.getByTestId('status-mode')).toHaveText('Editing');
     await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('Mine.');
     await expect(indicator(window, 'unsaved changes')).toBeAttached();
     // At once: main has the last keys before the tab leaves.

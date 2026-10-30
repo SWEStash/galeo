@@ -366,7 +366,7 @@ test('typing in split updates the preview once typing pauses', async () => {
     await window.keyboard.press('ControlOrMeta+Backslash');
     await pressInMain(app, window, 'E');
     await expect(document.locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('\n## Typed heading');
     await expect(document.locator('h2')).toHaveText('Typed heading');
     // Unsaved: the preview shows the editor's text, the file is as it was.
@@ -402,7 +402,7 @@ test('a paragraph typed in split leaves drawn diagrams as they are', async () =>
     });
     await pressInMain(app, window, 'E');
     await expect(document.locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type(' More words.');
     await expect(document.locator('article p').last()).toHaveText('A paragraph. More words.');
     await expect(document.locator('.galeo-diagram[data-state="rendered"]')).toBeVisible();

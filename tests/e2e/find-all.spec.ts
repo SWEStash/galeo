@@ -110,13 +110,13 @@ test('a tab with unsaved changes is searched as it is on screen', async () => {
     await pressInMain(app, window, 'E');
     await expect(window.getByTestId('status-mode')).toHaveText('Editing');
     await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('\nAn unsavedword.');
     await search(window, 'unsavedword');
     await expect(group(window, /^notes\.md .* · 1 match$/).getByRole('option')).toHaveCount(1);
     // Saved, so the window closes without asking about unsaved changes.
     await window.keyboard.press('Escape');
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
   });
 });

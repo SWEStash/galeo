@@ -80,11 +80,11 @@ test('an MDX syntax error shows the source with the line; fixing and saving it r
     await pressInMain(app, window, 'E');
     const editor = shownDocument(window).locator('.cm-content');
     await expect(editor).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.press('Shift+ArrowUp');
     await window.keyboard.press('Shift+Home');
     await window.keyboard.type('Fixed.\n');
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
     expect(readFileSync(file, 'utf8')).toBe('# Broken\n\nFixed.\n');
     await pressInMain(app, window, 'E');
@@ -108,7 +108,7 @@ test('split view previews MDX while typing, and a syntax error pauses the previe
     await expect(document.locator('.cm-editor')).toBeVisible();
     await pressInMain(app, window, 'E');
     await expect(document.locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('\n<Tip>Typed</Tip>\n');
     await expect(document.locator('[data-galeo-mdx="Tip"]')).toContainText('Typed');
     await window.keyboard.type('Then a stray <');
@@ -116,7 +116,7 @@ test('split view previews MDX while typing, and a syntax error pauses the previe
     // The last good preview stays.
     await expect(document.locator('[data-galeo-mdx="Tip"]')).toContainText('Typed');
     // Saved, the window closes without asking about unsaved changes.
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
   } finally {
     await close();

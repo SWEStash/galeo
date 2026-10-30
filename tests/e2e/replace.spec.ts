@@ -120,7 +120,8 @@ test('Ctrl+D and Ctrl+Shift+L add the next and every match as cursors; Esc goes 
     const selectFirstWord = async (text: string) => {
       await editor.locator('.cm-line', { hasText: text }).click();
       await window.keyboard.press('Home');
-      await window.keyboard.press('Shift+ControlOrMeta+ArrowRight');
+      // A word: Ctrl+Shift+→, on macOS Alt+Shift+→ (Cmd+Shift+→ goes to the line's end there).
+      await window.keyboard.press(process.platform === 'darwin' ? 'Shift+Alt+ArrowRight' : 'Shift+Control+ArrowRight');
     };
     await selectFirstWord('cat cat cat');
     await window.keyboard.press('ControlOrMeta+D');

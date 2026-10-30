@@ -22,10 +22,10 @@ test('Ctrl+E edits the shown file, Ctrl+S saves it with its own line endings, an
     const editor = shownDocument(window).locator('.cm-content');
     await expect(editor).toBeFocused();
 
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('Second line.');
     await expect(indicator(window, 'unsaved changes')).toBeAttached();
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
     await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
     expect(readFileSync(file, 'utf8')).toBe('# Notes\r\n\r\nFirst line.\r\nSecond line.');
@@ -48,9 +48,9 @@ test('after a save, the rendered view shows the saved text', async () => {
     await expect(shownDocument(window).locator('h1')).toHaveText('Notes');
     await pressInMain(app, window, 'E');
     await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('\nSaved words.');
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
     await pressInMain(app, window, 'E');
     await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
@@ -72,7 +72,7 @@ async function dirtyEdit(text = '# Draft\n', { open = (file: string) => file, en
   await expect(shownDocument(window).locator('h1')).toHaveText('Draft');
   await pressInMain(app, window, 'E');
   await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
-  await window.keyboard.press('Control+End');
+  await window.keyboard.press('ControlOrMeta+End');
   await window.keyboard.type('More.');
   await expect(indicator(window, 'unsaved changes')).toBeAttached();
   return { ...launched, dir, file };
@@ -222,14 +222,14 @@ test('a change on disk while edits are unsaved is never overwritten: the bar ask
     await expect(diskBar(window, 'changed')).toContainText('File changed on disk');
     await expect(shownDocument(window).locator('.cm-content')).toContainText('More.');
 
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(message(window)).toHaveText('Not saved: the file changed on disk. Keep mine or load theirs first');
     expect(readFileSync(file, 'utf8')).toBe('# Theirs\n');
     await expect(indicator(window, 'unsaved changes')).toBeAttached();
 
     await diskBar(window, 'changed').getByRole('button', { name: 'Keep mine' }).click();
     await expect(diskBar(window, 'changed')).toHaveCount(0);
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(message(window)).toHaveText('Saved');
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
     await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
@@ -293,7 +293,7 @@ test('Show diff puts mine beside theirs, read-only and accessible; Esc goes back
     await expect(diff).toHaveCount(0);
     await expect(diskBar(window, 'changed')).toHaveCount(0);
     await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(message(window)).toHaveText('Saved');
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
   } finally {
@@ -447,7 +447,7 @@ test('saving a symlinked file writes its target and keeps the link', async () =>
     },
   });
   try {
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(message(window)).toHaveText('Saved');
     expect(lstatSync(link).isSymbolicLink()).toBe(true);
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
@@ -464,7 +464,7 @@ test.describe(() => {
     const { app, window, home, dir, file } = await dirtyEdit();
     try {
       chmodSync(file, 0o444);
-      await window.keyboard.press('Control+s');
+      await window.keyboard.press('ControlOrMeta+s');
       await expect(message(window)).toHaveText('Not saved: no permission to write this file');
       expect(readFileSync(file, 'utf8')).toBe('# Draft\n');
       await expect(indicator(window, 'unsaved changes')).toBeAttached();

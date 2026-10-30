@@ -85,10 +85,10 @@ test('Ctrl+U goes between the tree and the source, keeping the place', async () 
     await rows(window).first().click();
     await window.keyboard.press('End');
     await expect(rows(window).filter({ hasText: /^\s*1999$/ })).toBeVisible();
-    await window.keyboard.press('Control+u');
+    await window.keyboard.press('ControlOrMeta+u');
     await expect(window.getByTestId('status-view')).toHaveText('Source');
     await expect(shownDocument(window).locator('.cm-line', { hasText: /^ 1999$/ })).toBeVisible();
-    await window.keyboard.press('Control+u');
+    await window.keyboard.press('ControlOrMeta+u');
     await expect(window.getByTestId('status-view')).toHaveText('Tree');
     await expect(rows(window).filter({ hasText: /^\s*1999$/ })).toBeVisible();
   } finally {
@@ -106,14 +106,14 @@ test('invalid JSON opens as source with where it breaks; fixed and saved, its tr
     await expect(window.getByTestId('status-view')).toHaveText('Source');
     await pressInMain(app, window, 'E');
     await expect(window.getByTestId('status-mode')).toHaveText('Editing');
-    await window.keyboard.press('Control+a');
+    await window.keyboard.press('ControlOrMeta+a');
     await window.keyboard.type('{"a": 1}');
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
     await pressInMain(app, window, 'E');
     // Edit mode refuses the tree until main has taken it back.
     await expect(window.getByTestId('status-mode')).not.toHaveText('Editing');
-    await window.keyboard.press('Control+u');
+    await window.keyboard.press('ControlOrMeta+u');
     await expect(rows(window)).toHaveText([/\{1 key\}$/, /a: 1$/]);
     await expect(banner(window)).toHaveCount(0);
   } finally {
@@ -133,7 +133,7 @@ test('JSON over 10 MB opens as source, with no Render anyway; Ctrl+F in the tree
     await window.getByRole('tab').nth(1).click();
     await expect(rows(window)).toHaveCount(2);
     await rows(window).first().click();
-    await window.keyboard.press('Control+f');
+    await window.keyboard.press('ControlOrMeta+f');
     await expect(window.getByTestId('status-message')).toHaveText('Find works in the source view (Ctrl+U)');
   } finally {
     await close();

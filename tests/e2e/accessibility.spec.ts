@@ -112,7 +112,7 @@ for (const scheme of SCHEMES) {
         await expect(shownPanel(window).locator('h1')).toHaveText('Draft');
         await pressInMain(app, window, 'E');
         await expect(shownPanel(window).locator('.cm-content')).toBeFocused();
-        await window.keyboard.press('Control+End');
+        await window.keyboard.press('ControlOrMeta+End');
         await window.keyboard.type('More.');
         await expect(window.locator('.tab-indicator[data-indicator="unsaved changes"]')).toBeAttached();
         expect(await violations(window, panel), 'editor').toEqual([]);
@@ -125,7 +125,7 @@ for (const scheme of SCHEMES) {
 
         if (process.platform !== 'win32' && process.getuid?.() !== 0) {
           chmodSync(file, 0o444);
-          await window.keyboard.press('Control+s');
+          await window.keyboard.press('ControlOrMeta+s');
           await expect(window.getByTestId('status-message')).toHaveText('Not saved: no permission to write this file');
           expect(await violations(window, '.status-bar'), 'refused save').toEqual([]);
           chmodSync(file, 0o644);

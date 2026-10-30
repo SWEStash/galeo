@@ -57,7 +57,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(shownDocument(window).locator('h1')).toBeVisible();
       await expect(window.getByTestId('tab-bar').and(window.locator(':not([data-testid="title-bar"])'))).toHaveCount(0);
       expect(await names(window)).toEqual(['basic.md', 'gfm.md']);
-      await expect(rows(window).first().locator('.tab-folder')).toContainText('fixtures/docs');
+      await expect(rows(window).first().locator('.tab-folder')).toContainText(/fixtures[\\/]docs/);
       await expect(window.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
       const title = window.getByTestId('title-bar-text');
       await expect(title).toHaveText(/^basic\.md — .*fixtures\/docs$/);

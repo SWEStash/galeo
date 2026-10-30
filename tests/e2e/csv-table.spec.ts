@@ -72,12 +72,12 @@ test('Ctrl+U goes between the table and the source, keeping the place', async ()
   const { window, close } = await launchApp(['--', files['long.csv']!], { home });
   try {
     await bodyRows(window).first().locator('[role=gridcell]').click();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await expect(grid(window).locator('[role=gridcell]', { hasText: 'row 4999' })).toBeVisible();
-    await window.keyboard.press('Control+u');
+    await window.keyboard.press('ControlOrMeta+u');
     await expect(window.getByTestId('status-view')).toHaveText('Source');
     await expect(shownDocument(window).locator('.cm-line', { hasText: /^row 4999$/ })).toBeVisible();
-    await window.keyboard.press('Control+u');
+    await window.keyboard.press('ControlOrMeta+u');
     await expect(window.getByTestId('status-view')).toHaveText('Table');
     await expect(grid(window).locator('[role=gridcell]', { hasText: 'row 4999' })).toBeVisible();
   } finally {
@@ -93,16 +93,16 @@ test('split puts the table beside its source, and the table follows typing', asy
     await expect(bodyRows(window)).toHaveCount(1);
     await pressInMain(app, window, 'E');
     await expect(window.getByTestId('status-mode')).toHaveText('Editing');
-    await window.keyboard.press('Control+\\');
+    await window.keyboard.press('ControlOrMeta+\\');
     await expect(window.getByTestId('status-view')).toHaveText('Split');
     await expect(grid(window)).toBeVisible();
     // Keys go to the editor once it has the focus back after the split opened.
     await expect(shownDocument(window).locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('Control+End');
+    await window.keyboard.press('ControlOrMeta+End');
     await window.keyboard.type('3,4\n');
     await expect(bodyRows(window)).toHaveCount(2);
     await expect(bodyRows(window).nth(1).locator('[role=gridcell]')).toHaveText(['3', '4']);
-    await window.keyboard.press('Control+s');
+    await window.keyboard.press('ControlOrMeta+s');
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
   } finally {
     await close();
@@ -116,7 +116,7 @@ test('in split, scrolling the table brings the source to the same row', async ()
   const { window, close } = await launchApp(['--', files['long.csv']!], { home });
   try {
     await expect(bodyRows(window).first()).toBeVisible();
-    await window.keyboard.press('Control+\\');
+    await window.keyboard.press('ControlOrMeta+\\');
     await expect(window.getByTestId('status-view')).toHaveText('Split');
     // At once, as a reader may: a scroll right after split opens still leads, and the source's first
     // alignment, a frame later, doesn't take the table back.
@@ -231,7 +231,7 @@ test('a .psv opens as a table, and Show as table shows other text as one (ADR-02
     await window.keyboard.press('Enter');
     await expect(headers(window)).toHaveText(['#', 'x', 'y', 'z']);
     await expect(window.getByTestId('status-view')).toHaveText('Table');
-    await window.keyboard.press('Control+u');
+    await window.keyboard.press('ControlOrMeta+u');
     await expect(window.getByTestId('status-view')).toHaveText('Source');
   } finally {
     await close();
