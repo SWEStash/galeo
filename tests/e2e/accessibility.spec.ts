@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
-import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { killApp, launchApp, tempHome, removeTempHome } from '../helpers/launch';
 import { saveFile } from '../helpers/save';
 
 // axe on the surfaces the other suites don't check, in both colour schemes. The tab bar,
@@ -143,7 +143,7 @@ for (const scheme of SCHEMES) {
         await expect(window.getByRole('alertdialog')).toBeVisible();
         expect(await violations(window, '[role="alertdialog"]'), 'unsaved question').toEqual([]);
       } finally {
-        app.process().kill('SIGKILL');
+        killApp(app);
         removeTempHome(dir);
       }
     });

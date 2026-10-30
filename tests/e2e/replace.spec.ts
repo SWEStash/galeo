@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
-import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { killApp, launchApp, tempHome, removeTempHome } from '../helpers/launch';
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const status = (window: Page) => window.locator('.find-bar [role="status"]');
@@ -25,7 +25,7 @@ async function editing(text: string, name = 'notes.md') {
     editor,
     // The edits are left unsaved: a normal close would ask to save them.
     close: async () => {
-      launched.app.process().kill('SIGKILL');
+      killApp(launched.app);
       removeTempHome(dir);
     },
   };

@@ -1,4 +1,4 @@
-import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
+import { spawnSync, type ChildProcess, type SpawnSyncReturns } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -101,16 +101,19 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
       try {
         // A test that killed the app only waits for it to go: closing a killed app can wait for
         // the test's whole time on Windows.
-        const process = child;
-        if (process.killed) {
-          if (process.exitCode === null && process.signalCode === null) await new Promise((exited) => process.once('exit', exited));
+        const gone = () => child.exitCode !== null || child.signalCode !== null;
+        if (killed.has(child) || child.killed) {
+          if (!gone()) await new Promise((exited) => child.once('exit', exited));
           return;
         }
         const quit = app.close().then(() => true);
         quit.catch(() => {});
         if (!(await Promise.race([quit, new Promise<false>((late) => setTimeout(() => late(false), QUIT_MS))]))) {
-          process.kill('SIGKILL');
-          throw new Error(`the app did not quit within ${QUIT_MS / 1000} s; its last output:\n${output}`);
+          killProcess(child);
+          // Node says so when the main process's JavaScript has ended: the app quit, and only its process
+          // stayed, waiting on Playwright's debugger connection (seen on Windows).
+          if (output.includes('Debugger ending')) console.warn(`the app quit, but its process stayed ${QUIT_MS / 1000} s: killed`);
+          else throw new Error(`the app did not quit within ${QUIT_MS / 1000} s; its last output:\n${output}`);
         }
       } finally {
         // On Windows the app's child processes can keep its output pipes open after it exits, and an
@@ -123,6 +126,25 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
       }
     },
   };
+}
+
+/** Apps a test ended with killApp: close() then only waits for them to go. */
+const killed = new WeakSet<ChildProcess>();
+
+/**
+ * Ends the app at once, as a crash would. On Windows killing main alone leaves its child processes
+ * running, holding the test home's files and keeping the test worker from finishing, so the whole
+ * tree goes (only while main is still alive: its process id could be reused once it has gone).
+ */
+export function killApp(app: ElectronApplication): void {
+  killProcess(app.process());
+}
+
+function killProcess(child: ChildProcess): void {
+  killed.add(child);
+  if (child.exitCode !== null || child.signalCode !== null) return;
+  if (process.platform === 'win32' && child.pid !== undefined) spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore' });
+  else child.kill('SIGKILL');
 }
 
 /**

@@ -3,7 +3,7 @@ import { copyFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
-import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { killApp, launchApp, tempHome, removeTempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
@@ -372,7 +372,7 @@ test('typing in split updates the preview once typing pauses', async () => {
     // Unsaved: the preview shows the editor's text, the file is as it was.
     await expect(window.locator('.tab-indicator[data-indicator="unsaved changes"]')).toBeAttached();
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     await close().catch(() => {});
     removeTempHome(dir);
   }
@@ -408,7 +408,7 @@ test('a paragraph typed in split leaves drawn diagrams as they are', async () =>
     await expect(document.locator('.galeo-diagram[data-state="rendered"]')).toBeVisible();
     expect(await window.evaluate(() => (globalThis as { __pending?: string[] }).__pending)).toEqual([]);
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     await close().catch(() => {});
     removeTempHome(dir);
   }

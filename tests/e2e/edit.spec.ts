@@ -4,7 +4,7 @@ import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
 import { saveFile } from '../helpers/save';
-import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
+import { appDirs, killApp, launchApp, launchSecond, tempHome, removeTempHome } from '../helpers/launch';
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const indicator = (window: Page, words: string) => window.locator(`.tab-indicator[data-indicator="${words}"]`);
@@ -101,7 +101,7 @@ test('closing the window with unsaved changes asks: Cancel keeps it, Save writes
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
   } finally {
     if (!closed) {
-      app.process().kill('SIGKILL');
+      killApp(app);
       await close().catch(() => {});
     } else if (process.platform === 'darwin') {
       await close();
@@ -123,7 +123,7 @@ test("closing again while the window is still asking puts main's own question, w
     expect(readFileSync(file, 'utf8')).toBe('# Draft\n');
   } finally {
     if (!closed) {
-      app.process().kill('SIGKILL');
+      killApp(app);
       await close().catch(() => {});
     } else if (process.platform === 'darwin') {
       await close();
@@ -149,7 +149,7 @@ test("quitting with unsaved changes asks: Cancel keeps the app, Don't save quits
     expect(readFileSync(file, 'utf8')).toBe('# Draft\n');
   } finally {
     if (!quit) {
-      app.process().kill('SIGKILL');
+      killApp(app);
       await close().catch(() => {});
     }
     removeTempHome(dir);
@@ -210,7 +210,7 @@ test('unsaved text never reaches a state file, while main holds it for a crash',
     const state = path.join(appDirs(home).state, 'profiles', 'default');
     for (const name of readdirSync(state)) expect(readFileSync(path.join(state, name), 'utf8')).not.toContain('not saved yet');
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     removeTempHome(home);
     removeTempHome(dir);
   }
@@ -240,7 +240,7 @@ test('a change on disk while edits are unsaved is never overwritten: the bar ask
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
     await expect(indicator(window, 'unsaved changes')).toHaveCount(0);
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     removeTempHome(home);
     removeTempHome(dir);
   }
@@ -269,7 +269,7 @@ test('the unsaved question and the disk bar give focus back to the editor when t
     await expect(message(window)).toHaveText('Saved');
     await expect(editor).toBeFocused();
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     removeTempHome(home);
     removeTempHome(dir);
   }
@@ -303,7 +303,7 @@ test('Show diff puts mine beside theirs, read-only and accessible; Esc goes back
     await expect(message(window)).toHaveText('Saved');
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     removeTempHome(home);
     removeTempHome(dir);
   }
@@ -319,7 +319,7 @@ test('Load theirs replaces the unsaved text with the file on disk and writes not
     await expect(window.getByTestId('status-mode')).toHaveText('Editing');
     expect(readFileSync(file, 'utf8')).toBe('# Theirs\n');
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     removeTempHome(home);
     removeTempHome(dir);
   }
@@ -342,7 +342,7 @@ test('a file deleted under unsaved edits keeps them, and Save again writes it ba
     await expect(diskBar(window, 'deleted')).toHaveCount(0);
     await expect(diskBar(window, 'changed')).toHaveCount(0);
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     removeTempHome(home);
     removeTempHome(dir);
   }
@@ -458,7 +458,7 @@ test('saving a symlinked file writes its target and keeps the link', async () =>
     expect(lstatSync(link).isSymbolicLink()).toBe(true);
     expect(readFileSync(file, 'utf8')).toBe('# Draft\nMore.');
   } finally {
-    app.process().kill('SIGKILL');
+    killApp(app);
     removeTempHome(home);
     removeTempHome(dir);
   }
@@ -475,7 +475,7 @@ test.describe(() => {
       expect(readFileSync(file, 'utf8')).toBe('# Draft\n');
       await expect(indicator(window, 'unsaved changes')).toBeAttached();
     } finally {
-      app.process().kill('SIGKILL');
+      killApp(app);
       chmodSync(file, 0o644);
       removeTempHome(home);
       removeTempHome(dir);

@@ -1,9 +1,8 @@
-import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
-import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
+import { appDirs, killApp, launchApp, launchSecond, tempHome, removeTempHome } from '../helpers/launch';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
@@ -183,8 +182,7 @@ test('after kill -9 the session is the last one saved, whole', async () => {
     const exited = new Promise((resolve) => first.app.process().once('exit', resolve));
     // No save on quit: the whole app dies at once. On Windows, killing main alone leaves its child
     // processes running (holding the test home's files), so the tree goes.
-    if (process.platform === 'win32') spawnSync('taskkill', ['/pid', String(first.app.process().pid), '/T', '/F']);
-    else first.app.process().kill('SIGKILL');
+    killApp(first.app);
     await exited;
     const second = await launchApp([], { home });
     try {
