@@ -2,6 +2,8 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   timeout: 30_000,
+  // One temp folder per run, removed at its end (tests/global-setup.ts).
+  globalSetup: './tests/global-setup.ts',
   forbidOnly: Boolean(process.env['CI']),
   retries: 0,
   workers: 1,

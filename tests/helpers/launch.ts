@@ -89,8 +89,10 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
   const keep = (chunk: Buffer) => {
     output = (output + chunk.toString()).slice(-4000);
   };
-  app.process().stdout?.on('data', keep);
-  app.process().stderr?.on('data', keep);
+  // Kept from the start: Playwright's app.process() throws once the app is closed.
+  const child = app.process();
+  child.stdout?.on('data', keep);
+  child.stderr?.on('data', keep);
   return {
     app,
     window,
@@ -99,7 +101,7 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
       try {
         // A test that killed the app only waits for it to go: closing a killed app can wait for
         // the test's whole time on Windows.
-        const process = app.process();
+        const process = child;
         if (process.killed) {
           if (process.exitCode === null && process.signalCode === null) await new Promise((exited) => process.once('exit', exited));
           return;
@@ -111,6 +113,12 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
           throw new Error(`the app did not quit within ${QUIT_MS / 1000} s; its last output:\n${output}`);
         }
       } finally {
+        // On Windows the app's child processes can keep its output pipes open after it exits, and an
+        // open pipe would keep the test worker from finishing: stop listening and stop waiting on them.
+        for (const pipe of [child.stdout, child.stderr]) {
+          pipe?.off('data', keep);
+          (pipe as { unref?: () => void } | null)?.unref?.();
+        }
         removeHome();
       }
     },
@@ -132,5 +140,7 @@ function homeEnv(home: string): Record<string, string> {
     XDG_STATE_HOME: path.join(home, 'state'),
     XDG_CACHE_HOME: path.join(home, 'cache'),
     GALEO_TEST_HOME: home,
+    // Chromium's own log on stderr, so a Windows app that won't quit says what it was doing (close()).
+    ...(process.platform === 'win32' ? { ELECTRON_ENABLE_LOGGING: '1' } : {}),
   };
 }
