@@ -5,6 +5,7 @@ import { expect, test, type ElectronApplication, type Page } from '@playwright/t
 import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
 import { saveFile } from '../helpers/save';
 import { crossEdge, dropFiles, dropTab, endDrag, endDragOutside, startDragging } from '../helpers/tab-drag';
+import { windowControlsOverlap } from '../helpers/window-controls';
 
 // Tabs on the left (ADR-023, UX F18): the side panel, its divider and its collapsed strip.
 
@@ -72,6 +73,31 @@ for (const theme of ['light', 'dark'] as const) {
     }
   });
 }
+
+test("the title bar's buttons and the panel's rows stay clear of the window controls, expanded and collapsed", async () => {
+  const home = leftHome();
+  const { window, close } = await launchApp(['--', basic, gfm], { home });
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    const clear = async () => {
+      for (const element of [
+        window.getByTestId('panel-toggle'),
+        window.getByTestId('tab-new'),
+        window.getByTestId('tab-overview-button'),
+        rows(window).first(),
+      ]) {
+        expect(await windowControlsOverlap(window, element)).toBeNull();
+      }
+    };
+    await clear();
+    await window.getByTestId('panel-toggle').click();
+    await expect(window.getByTestId('panel-toggle')).toHaveAttribute('aria-expanded', 'false');
+    await clear();
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
 
 test('↑/↓ and Enter show a tab from the list, and Ctrl+Shift+PgDn moves it down', async () => {
   const home = leftHome();
