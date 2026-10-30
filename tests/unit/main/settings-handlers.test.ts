@@ -66,7 +66,8 @@ describe('settingsHandlers', () => {
     expect(changes).toEqual([]);
   });
 
-  it("creates a missing custom.css with a note of what it is for, in the scope's folder, then opens it", async () => {
+  // The fake file system names folders with `/`; main joins with the system's separator.
+  it.runIf(process.platform !== 'win32')("creates a missing custom.css with a note of what it is for, in the scope's folder, then opens it", async () => {
     const { handlers, fs, shell } = setup();
     await handlers['settings.openCustomCss'](['profile'], from(1));
     const created = `${CONFIG}/profiles/work/custom.css`;

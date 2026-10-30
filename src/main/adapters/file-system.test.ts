@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { chmodSync, linkSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, linkSync, lstatSync, lutimesSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
@@ -428,7 +428,8 @@ describe('NodeFileSystem: temp files a crashed save left behind', () => {
     await fs.saveFile(target, new TextEncoder().encode('newer'));
 
     expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(`galeo: removed a temp file a crashed save left: ${path.join(dir, stale)}`);
+    // The save writes through to the real file, so it names the real folder (macOS: /private/var/…).
+    expect(warn).toHaveBeenCalledWith(`galeo: removed a temp file a crashed save left: ${path.join(realpathSync(dir), stale)}`);
     warn.mockRestore();
   });
 
@@ -444,7 +445,7 @@ describe('NodeFileSystem: temp files a crashed save left behind', () => {
     ];
     const link = `.a.md.${uuid.replace('3f', '5f')}.tmp`;
     symlinkSync(file(dir, 'elsewhere', 'keep me'), path.join(dir, link));
-    execFileSync('touch', ['-h', '-d', '2 hours ago', path.join(dir, link)]);
+    lutimesSync(path.join(dir, link), hoursAgo(2), hoursAgo(2));
 
     await fs.saveFile(target, new TextEncoder().encode('new'));
 

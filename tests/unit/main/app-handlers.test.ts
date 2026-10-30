@@ -34,6 +34,9 @@ function setup({ appImage = APPIMAGE as string | null, env = {} as Record<string
   return { handlers, fs, input, refreshed, sandbox, withdraw: () => (offered = false) };
 }
 
+// The command-line launcher is the Linux AppImage's; its folders are POSIX paths.
+const posix = process.platform !== 'win32';
+
 describe('appImagePath', () => {
   it('is the absolute APPIMAGE of a packaged run only', () => {
     expect(appImagePath(true, { APPIMAGE })).toBe(APPIMAGE);
@@ -49,7 +52,7 @@ describe('appHandlers', () => {
     expect(await handlers['app.info']([], from(2))).toEqual({ name: 'galeo', crashLoop: true });
   });
 
-  it('installs the launcher into ~/.local and the XDG data home, on real input only', async () => {
+  it.runIf(posix)('installs the launcher into ~/.local and the XDG data home, on real input only', async () => {
     const { handlers, fs, input, refreshed } = setup({ env: { XDG_DATA_HOME: '/home/me/data' } });
     await expect(async () => handlers['app.installLauncher']([], from(1))).rejects.toThrow('no input');
     input.received(1);
@@ -59,7 +62,7 @@ describe('appHandlers', () => {
     expect(refreshed).toEqual(['/home/me/data/mime']);
   });
 
-  it('ignores a relative XDG_DATA_HOME, and leaves the command to an installed package', async () => {
+  it.runIf(posix)('ignores a relative XDG_DATA_HOME, and leaves the command to an installed package', async () => {
     const plain = setup({ env: { XDG_DATA_HOME: 'data' } });
     plain.input.received(1);
     await plain.handlers['app.installLauncher']([], from(1));
@@ -69,7 +72,7 @@ describe('appHandlers', () => {
     expect(await packaged.handlers['app.installLauncher']([], from(1))).toEqual({ ok: false, reason: expect.stringContaining('package') });
   });
 
-  it('uninstalls the launcher from the same folders install used, on real input only', async () => {
+  it.runIf(posix)('uninstalls the launcher from the same folders install used, on real input only', async () => {
     const { handlers, fs, input, refreshed } = setup({ env: { XDG_DATA_HOME: '/home/me/data' } });
     input.received(1);
     await handlers['app.installLauncher']([], from(1));
