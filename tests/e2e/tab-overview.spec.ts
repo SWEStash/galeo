@@ -134,14 +134,16 @@ test('Delete on a card with unsaved changes asks first; Cancel keeps the tab and
 const shownScrolls = (window: Page) =>
   window.locator('[data-testid="tab-panel"][data-active="true"]').evaluate((panel) => {
     const tops: number[] = [];
+    const names: string[] = [];
     const walk = (root: Element | ShadowRoot) => {
       for (const element of root.querySelectorAll('*')) {
         if (element.scrollHeight > element.clientHeight + 10 && getComputedStyle(element).overflowY !== 'visible') tops.push(element.scrollTop);
+        if (element.scrollHeight > element.clientHeight + 10 && getComputedStyle(element).overflowY !== 'visible') names.push(`${element.tagName.toLowerCase()}.${[...element.classList].join('.')}`);
         if (element.shadowRoot) walk(element.shadowRoot);
       }
     };
     walk(panel);
-    return tops;
+    return { tops, names };
   });
 
 const scrollShown = (window: Page) =>
@@ -173,7 +175,7 @@ for (const mode of ['reading', 'editing', 'split'] as const) {
         await expect(view.locator('.cm-content')).toBeFocused();
       }
       await scrollShown(window);
-      const left = await shownScrolls(window);
+      const { tops: left, names } = await shownScrolls(window);
       expect(left.filter((top) => top > 0)).toHaveLength(mode === 'split' ? 2 : 1);
 
       await openOverview(window);
@@ -185,9 +187,9 @@ for (const mode of ['reading', 'editing', 'split'] as const) {
       await expect(overview(window)).toHaveCount(0);
 
       await expect(selected(window)).toContainText('plan-50k.md');
-      const now = await shownScrolls(window);
+      const { tops: now } = await shownScrolls(window);
       expect(now).toHaveLength(left.length);
-      now.forEach((top, index) => expect(Math.abs(top - left[index]!)).toBeLessThanOrEqual(2));
+      now.forEach((top, index) => expect(Math.abs(top - left[index]!), `${names[index]} was at ${left[index]}, now ${top} (all: ${left} → ${now})`).toBeLessThanOrEqual(2));
     } finally {
       await close();
       removeTempHome(home);
