@@ -60,13 +60,17 @@ export default {
     // "Open With" for documents and data, never as their default app.
     fileAssociations: MAC_FILE_ASSOCIATIONS,
   },
-  win: { target: ['nsis'], icon: 'packaging/icons/png/1024x1024.png' },
+  // The installer and the portable build for the runner's own architecture: CI builds x64 and arm64
+  // on their own runners (both arches here would make one installer carrying the two).
+  win: { target: ['nsis', 'portable'], icon: 'packaging/icons/png/1024x1024.png' },
   nsis: {
     oneClick: false,
     perMachine: false,
+    artifactName: '${productName}-${version}-${arch}-setup.${ext}',
     // "Open with" for documents and data. electron-builder's own fileAssociations would make galeo the
     // types' default app and pass the file without `--` (SR-13), so the include registers them instead.
     include: 'packaging/windows/associations.nsh',
   },
+  portable: { artifactName: '${productName}-${version}-${arch}-portable.${ext}' },
   publish: null,
 };
