@@ -488,7 +488,7 @@ the native menu on the active tab.
 | Tab overview (v0.4) | Ctrl+Shift+E | F17 |
 | Collapse / expand the side tab panel (v0.4) | Ctrl+Shift+B | F18; only with tabs on the left |
 | Find in all tabs (v0.4) | Ctrl+Shift+F | F19 |
-| Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
+| Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] (macOS: Cmd+Alt+[ / Cmd+Alt+]) | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
 On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply
 (Cmd+Q quits, Cmd+, opens settings). Shortcuts are customisable in a later release; v0.1 ships
