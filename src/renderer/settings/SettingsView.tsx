@@ -379,7 +379,6 @@ function uninstalled({ removed, kept }: { removed: string[]; kept: string[] }): 
   return kept.length > 0 ? `Nothing removed.${keptNote}` : 'Nothing removed: the launcher is not installed.';
 }
 
-/** Adds galeo to ~/.local/bin and to the applications menu, for the AppImage it runs from, or takes it out again. */
 /** What "Install command-line launcher" adds, per system. */
 const LAUNCHER_HINTS: Readonly<Record<Platform, string>> = {
   linux: 'Adds galeo to ~/.local/bin and to your applications, for this AppImage, or removes it again.',
@@ -387,6 +386,7 @@ const LAUNCHER_HINTS: Readonly<Record<Platform, string>> = {
   win32: 'Adds a galeo command for this app, or removes it again.',
 };
 
+/** Installs galeo's command-line launcher for this run, or takes it out again. */
 function LauncherSection({ platform }: { platform: Platform }) {
   const [launcher, setLauncher] = useState<string | null>(null);
   return (
