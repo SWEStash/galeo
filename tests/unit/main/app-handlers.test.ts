@@ -34,7 +34,8 @@ function setup({ target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTa
   return { handlers, fs, input, refreshed, sandbox, withdraw: () => (offered = false) };
 }
 
-// The command-line launcher is the Linux AppImage's; its folders are POSIX paths.
+// The AppImage's and macOS's launchers read and write POSIX paths, which the handler joins with the
+// system's own separator.
 const posix = process.platform !== 'win32';
 
 describe('launcherTarget', () => {
@@ -114,7 +115,7 @@ describe('appHandlers', () => {
     await expect(async () => handlers['app.installLauncher']([], from(1))).rejects.toThrow('no launcher for this run');
   });
 
-  it("installs the macOS command from the app's own gal, then uninstalls it, on real input only", async () => {
+  it.runIf(posix)("installs the macOS command from the app's own gal, then uninstalls it, on real input only", async () => {
     const exe = '/Applications/galeo.app/Contents/MacOS/galeo';
     const { handlers, fs, input, refreshed } = setup({
       target: { kind: 'app', platform: 'darwin', exe, binDir: '/Users/me/.local/bin' },
