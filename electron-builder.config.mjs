@@ -1,4 +1,5 @@
 // Packaging (ADR-008): .deb (official) and AppImage on Linux, unsigned macOS and Windows previews.
+import { MAC_FILE_ASSOCIATIONS } from './scripts/lib/associations.mjs';
 import { MIME_TYPES } from './scripts/lib/desktop-entry.mjs';
 
 /** @type {import('electron-builder').Configuration} */
@@ -56,8 +57,16 @@ export default {
     category: 'public.app-category.developer-tools',
     icon: 'packaging/icons/png/1024x1024.png',
     identity: null,
+    // "Open With" for documents and data, never as their default app.
+    fileAssociations: MAC_FILE_ASSOCIATIONS,
   },
   win: { target: ['nsis'], icon: 'packaging/icons/png/1024x1024.png' },
-  nsis: { oneClick: false, perMachine: false },
+  nsis: {
+    oneClick: false,
+    perMachine: false,
+    // "Open with" for documents and data. electron-builder's own fileAssociations would make galeo the
+    // types' default app and pass the file without `--` (SR-13), so the include registers them instead.
+    include: 'packaging/windows/associations.nsh',
+  },
   publish: null,
 };
