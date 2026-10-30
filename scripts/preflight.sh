@@ -28,6 +28,9 @@ npm run check:exports
 step 'docs references'
 npm run check:docs
 
+step 'tests portable to macOS and Windows'
+npm run check:portable
+
 step 'unit and renderer tests'
 npm test
 

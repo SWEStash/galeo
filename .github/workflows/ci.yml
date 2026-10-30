@@ -36,6 +36,7 @@ jobs:
       - run: npm run boundaries
       - run: npm run check:exports
       - run: npm run check:docs
+      - run: npm run check:portable
       - run: npm test
       - run: npm run build
       - run: npm run check:bundle
