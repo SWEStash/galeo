@@ -129,7 +129,10 @@ export class NodeFileSystem implements FileSystem {
     try {
       await unlink(path);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw toFsError(error, path);
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+      // macOS and Windows refuse a folder as a permission error; say what it is, as Linux does.
+      if (await lstat(path).then((info) => info.isDirectory(), () => false)) throw new FsError('EISDIR', path);
+      throw toFsError(error, path);
     }
   }
 
