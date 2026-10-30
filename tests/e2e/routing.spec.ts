@@ -42,6 +42,23 @@ test('a later launch adds its files to the running window as tabs, shows the fir
   }
 });
 
+test('a file opened from Finder (open-file) is added to the running window as a tab and shown', async () => {
+  test.skip(process.platform !== 'darwin', 'Finder hands files over as open-file events on macOS only; Explorer uses a launch, tested above');
+  const home = tempHome();
+  const { app, window, close } = await launchApp(['--', basic], { home });
+  try {
+    await expect.poll(() => paths(window)).toEqual([basic]);
+    // What macOS sends for "Open With" or a double-click while galeo runs: an event, with no argv.
+    await app.evaluate(({ app: electronApp }, file) => void electronApp.emit('open-file', { preventDefault() {} }, file), gfm);
+    await expect.poll(() => paths(window)).toEqual([basic, gfm]);
+    await expect.poll(() => shownPath(window)).toBe(gfm);
+    expect(app.windows()).toHaveLength(1);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
 test('a launch without --profile adds to the window focused last, whichever profile it belongs to', async () => {
   const home = tempHome();
   const { app, window, close } = await launchApp(['--', basic], { home });
