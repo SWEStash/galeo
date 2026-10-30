@@ -60,7 +60,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(rows(window).first().locator('.tab-folder')).toContainText(/fixtures[\\/]docs/);
       await expect(window.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
       const title = window.getByTestId('title-bar-text');
-      await expect(title).toHaveText(/^basic\.md — .*fixtures\/docs$/);
+      await expect(title).toHaveText(/^basic\.md — .*fixtures[\\/]docs$/);
       expect(await title.evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('drag');
       expect(await window.getByTestId('window-grip').evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('drag');
       expect((await panel(window).boundingBox())!.width).toBe(220);

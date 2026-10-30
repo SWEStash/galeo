@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
 import { saveFile } from '../helpers/save';
 import { appDirs, launchApp, launchSecond, removeTempHome, tempHome } from '../helpers/launch';
@@ -79,6 +79,8 @@ async function dirtyEdit(text = '# Draft\n', { open = (file: string) => file, en
 }
 
 const unsavedDialog = (window: Page) => window.getByRole('alertdialog', { name: 'Save changes to draft.md?' });
+/** Closing the last window ends the app, except on macOS, where the app keeps running: there, the window. */
+const closedLast = (app: ElectronApplication, window: Page) => (process.platform === 'darwin' ? window.waitForEvent('close') : app.waitForEvent('close'));
 
 test('closing the window with unsaved changes asks: Cancel keeps it, Save writes the file and closes it', async () => {
   const { app, window, close, dir, file } = await dirtyEdit();
@@ -91,7 +93,7 @@ test('closing the window with unsaved changes asks: Cancel keeps it, Save writes
     await expect(unsavedDialog(window)).toHaveCount(0);
     expect(app.windows()).toHaveLength(1);
 
-    const exited = app.waitForEvent('close');
+    const exited = closedLast(app, window);
     await pressInMain(app, window, 'W', true);
     await unsavedDialog(window).getByRole('button', { name: 'Save', exact: true }).click();
     await exited;
@@ -101,6 +103,8 @@ test('closing the window with unsaved changes asks: Cancel keeps it, Save writes
     if (!closed) {
       app.process().kill('SIGKILL');
       await close().catch(() => {});
+    } else if (process.platform === 'darwin') {
+      await close();
     }
     removeTempHome(dir);
   }
@@ -112,7 +116,7 @@ test("closing again while the window is still asking puts main's own question, w
   try {
     await pressInMain(app, window, 'W', true);
     await expect(unsavedDialog(window)).toBeVisible();
-    const exited = app.waitForEvent('close');
+    const exited = closedLast(app, window);
     await pressInMain(app, window, 'W', true);
     await exited;
     closed = true;
@@ -121,6 +125,8 @@ test("closing again while the window is still asking puts main's own question, w
     if (!closed) {
       app.process().kill('SIGKILL');
       await close().catch(() => {});
+    } else if (process.platform === 'darwin') {
+      await close();
     }
     removeTempHome(dir);
   }

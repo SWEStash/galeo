@@ -6,6 +6,8 @@ import { _electron as electron, type ElectronApplication, type Page } from '@pla
 import electronBinary from 'electron';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
+/** How long the app may take to quit when a test closes it. */
+const QUIT_MS = 10_000;
 
 export interface LaunchedApp {
   app: ElectronApplication;
@@ -82,6 +84,13 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
     removeHome();
     throw error;
   }
+  // The end of the app's own output, to say what it was doing if it won't quit.
+  let output = '';
+  const keep = (chunk: Buffer) => {
+    output = (output + chunk.toString()).slice(-4000);
+  };
+  app.process().stdout?.on('data', keep);
+  app.process().stderr?.on('data', keep);
   return {
     app,
     window,
@@ -91,8 +100,16 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
         // A test that killed the app only waits for it to go: closing a killed app can wait for
         // the test's whole time on Windows.
         const process = app.process();
-        if (!process.killed) await app.close();
-        else if (process.exitCode === null && process.signalCode === null) await new Promise((exited) => process.once('exit', exited));
+        if (process.killed) {
+          if (process.exitCode === null && process.signalCode === null) await new Promise((exited) => process.once('exit', exited));
+          return;
+        }
+        const quit = app.close().then(() => true);
+        quit.catch(() => {});
+        if (!(await Promise.race([quit, new Promise<false>((late) => setTimeout(() => late(false), QUIT_MS))]))) {
+          process.kill('SIGKILL');
+          throw new Error(`the app did not quit within ${QUIT_MS / 1000} s; its last output:\n${output}`);
+        }
       } finally {
         removeHome();
       }
