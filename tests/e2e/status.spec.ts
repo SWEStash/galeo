@@ -136,6 +136,7 @@ test('Ctrl and the wheel zoom the shown tab: up zooms in, down zooms out, over t
       await window.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     };
     await over('[data-testid="document"]');
+    // portable: Ctrl and the wheel zoom on macOS too (the trackpad's pinch sends Ctrl).
     await window.keyboard.down('Control');
     await window.mouse.wheel(0, -120);
     await expect(window.getByTestId('status-zoom')).toHaveText('110%');
@@ -144,7 +145,7 @@ test('Ctrl and the wheel zoom the shown tab: up zooms in, down zooms out, over t
     await over('[role="tab"]');
     await window.mouse.wheel(0, 120);
     await expect(window.getByTestId('status-zoom')).toHaveText('110%');
-    await window.keyboard.up('Control');
+    await window.keyboard.up('Control'); // portable: see above
     await expect(shownDocument(window)).toHaveCSS('zoom', '1.1');
   } finally {
     await close();

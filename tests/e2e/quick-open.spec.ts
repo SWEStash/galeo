@@ -266,8 +266,8 @@ test('a choice main refuses says so in the status bar, and opens nothing', async
       await expect(shownDocument(page).locator('h1')).toHaveText('Acme');
       await page.keyboard.press('ControlOrMeta+P');
       await field(page).fill('notes');
-      // Chosen, not only listed: a slow machine may still show the unfiltered list first.
-      await expect(option(page, /notes\.md/)).toHaveAttribute('data-focused', 'true');
+      // First, the one Enter opens, not only listed: a slow machine may still show the unfiltered list.
+      await expect(quickOpen(page).getByRole('option').first()).toHaveAccessibleName(/notes\.md/);
       // Another session for this window ends the one on screen: main no longer offers its results (the race).
       await page.evaluate(async () => {
         const { token } = await window.galeo.quickOpen.start();
