@@ -2,7 +2,15 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { detectFormat } from '../../src/core/formats/registry';
-import { ASSOCIATED_EXTENSIONS, FILE_ASSOCIATIONS, MAC_FILE_ASSOCIATIONS, WINDOWS_PROG_ID, windowsAssociationsNsh } from './associations.mjs';
+import {
+  ASSOCIATED_EXTENSIONS,
+  FILE_ASSOCIATIONS,
+  MAC_FILE_ASSOCIATIONS,
+  macDocumentTypeProblems,
+  regValue,
+  WINDOWS_PROG_ID,
+  windowsAssociationsNsh,
+} from './associations.mjs';
 
 const NSH = path.resolve(import.meta.dirname, '../../packaging/windows/associations.nsh');
 
@@ -60,5 +68,50 @@ describe('file associations (ADR-008)', () => {
       `  DeleteRegKey SHELL_CONTEXT "Software\\Classes\\${WINDOWS_PROG_ID}"`,
       '  DeleteRegKey SHELL_CONTEXT "Software\\Classes\\Applications\\galeo.exe"',
     ]);
+  });
+});
+
+describe('macDocumentTypeProblems (verify:package on macOS)', () => {
+  const plistOf = (types) => ({
+    CFBundleDocumentTypes: types.map(({ name, ext, role, rank }) => ({
+      CFBundleTypeExtensions: ext,
+      CFBundleTypeName: name,
+      CFBundleTypeRole: role,
+      LSHandlerRank: rank,
+      CFBundleTypeIconFile: 'icon.icns',
+    })),
+  });
+
+  it('accepts the document types the package should carry', () => {
+    expect(macDocumentTypeProblems(plistOf(MAC_FILE_ASSOCIATIONS))).toEqual([]);
+  });
+
+  it('names a missing extension, and one galeo would be the default for', () => {
+    const types = MAC_FILE_ASSOCIATIONS.map((type) => (type.name === 'Markdown' ? { ...type, ext: ['md'], rank: 'Default' } : type));
+    expect(macDocumentTypeProblems(plistOf(types))).toEqual(['.md is Viewer/Default, expected Viewer/Alternate', 'no document type for .markdown']);
+  });
+
+  it('reports every extension when the plist has no document types', () => {
+    expect(macDocumentTypeProblems({})).toHaveLength(ASSOCIATED_EXTENSIONS.length);
+  });
+});
+
+describe('regValue (verify:package on Windows)', () => {
+  const OUTPUT = [
+    '',
+    'HKEY_CURRENT_USER\\Software\\Classes\\galeo.document\\shell\\open\\command',
+    '    (Default)    REG_SZ    "C:\\Users\\u\\AppData\\Local\\Programs\\galeo\\galeo.exe" -- "%1"',
+    '    galeo.document    REG_NONE    ',
+    '',
+  ].join('\r\n');
+
+  it('reads a named value, the default value, and a value with no data', () => {
+    expect(regValue(OUTPUT, '(Default)')).toBe('"C:\\Users\\u\\AppData\\Local\\Programs\\galeo\\galeo.exe" -- "%1"');
+    expect(regValue(OUTPUT, 'galeo.document')).toBe('');
+  });
+
+  it('is null for a value that is not listed', () => {
+    expect(regValue(OUTPUT, 'other')).toBeNull();
+    expect(regValue('', '(Default)')).toBeNull();
   });
 });

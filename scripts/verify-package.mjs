@@ -7,6 +7,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, sta
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FUSES } from '../packaging/fuses.mjs';
+import { ASSOCIATED_EXTENSIONS, macDocumentTypeProblems, regValue, WINDOWS_PROG_ID } from './lib/associations.mjs';
 import { desktopEntryProblems } from './lib/desktop-entry.mjs';
 import { fuseMismatches } from './lib/fuses.mjs';
 
@@ -111,6 +112,57 @@ if (process.platform === 'linux') {
     else if (!script('postrm').includes(`rm -f '${target}'`)) failures.push(`mime: postrm doesn't remove ${target}`);
     else console.log('mime: the MDX type in resources, installed and removed by the .deb');
   }
+}
+
+// macOS "Open With": the document types galeo views, never as their default app.
+if (process.platform === 'darwin') {
+  const plist = spawnSync('plutil', ['-convert', 'json', '-o', '-', path.join(fuses, 'Contents', 'Info.plist')], { encoding: 'utf8' });
+  const problems = plist.status === 0 ? macDocumentTypeProblems(JSON.parse(plist.stdout)) : [`Info.plist not readable (${plist.stderr.trim()})`];
+  if (problems.length) failures.push(...problems.map((problem) => `associations: ${problem}`));
+  else console.log(`associations: ${ASSOCIATED_EXTENSIONS.length} extensions, as a viewer, never the default`);
+}
+
+// Windows: the installer and the portable build for this architecture; on CI, the installer's
+// "Open with" entries, read back from the registry after a silent per-user install and gone after
+// the uninstall. Elsewhere that part is skipped: it would install galeo for whoever runs the check.
+if (process.platform === 'win32') {
+  const { version } = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../package.json'), 'utf8'));
+  const setup = path.join(RELEASE, `galeo-${version}-${process.arch}-setup.exe`);
+  const portable = path.join(RELEASE, `galeo-${version}-${process.arch}-portable.exe`);
+  const missing = [setup, portable].filter((file) => !existsSync(file));
+  if (missing.length) failures.push(...missing.map((file) => `windows: no ${path.basename(file)} in release/`));
+  else console.log(`windows: ${path.basename(setup)} and ${path.basename(portable)}`);
+  if (!missing.includes(setup)) {
+    if (process.env.CI) failures.push(...windowsAssociationProblems(setup).map((problem) => `associations: ${problem}`));
+    else console.log('associations: skipped outside CI (the check installs galeo for this user)');
+  }
+}
+
+/** Installs galeo silently for this user, checks its "Open with" entries, uninstalls it and checks they're gone. */
+function windowsAssociationProblems(setup) {
+  const classes = 'HKCU\\Software\\Classes';
+  const query = (key, ...args) => spawnSync('reg', ['query', key, ...args], { encoding: 'utf8' });
+  const listed = (ext) => regValue(query(`${classes}\\.${ext}\\OpenWithProgids`).stdout, WINDOWS_PROG_ID) !== null;
+  const problems = [];
+  const install = spawnSync(setup, ['/S'], { timeout: 180_000 });
+  if (install.status !== 0) return [`the silent install failed (${install.status ?? install.error?.message})`];
+  const command = regValue(query(`${classes}\\${WINDOWS_PROG_ID}\\shell\\open\\command`, '/ve').stdout, '(Default)');
+  const exe = /^"([^"]+\\galeo\.exe)" -- "%1"$/.exec(command ?? '')?.[1];
+  if (!exe) problems.push(`${WINDOWS_PROG_ID} must open "<galeo.exe>" -- "%1", got ${command}`);
+  for (const ext of ASSOCIATED_EXTENSIONS) {
+    if (!listed(ext)) problems.push(`.${ext} doesn't list ${WINDOWS_PROG_ID} in OpenWithProgids`);
+    if (regValue(query(`${classes}\\.${ext}`, '/ve').stdout, '(Default)') === WINDOWS_PROG_ID) problems.push(`galeo is the default app for .${ext}`);
+  }
+  if (!problems.length) console.log(`associations: ${ASSOCIATED_EXTENSIONS.length} extensions in "Open with", files after --, never the default`);
+  if (!exe) return problems;
+  // The uninstaller hands over to a copy of itself and returns at once: wait for the entries to go.
+  spawnSync(path.win32.join(path.win32.dirname(exe), 'Uninstall galeo.exe'), ['/S'], { timeout: 180_000 });
+  const deadline = Date.now() + 120_000;
+  while (query(`${classes}\\${WINDOWS_PROG_ID}`).status === 0 && Date.now() < deadline) spawnSync('ping', ['-n', '2', '127.0.0.1']);
+  const left = [query(`${classes}\\${WINDOWS_PROG_ID}`).status === 0 && WINDOWS_PROG_ID, ...ASSOCIATED_EXTENSIONS.filter(listed).map((ext) => `.${ext}`)].filter(Boolean);
+  if (left.length) problems.push(`the uninstall left ${left.join(', ')}`);
+  else console.log('associations: the uninstall removed them');
+  return problems;
 }
 
 const mismatches = fuseMismatches(await getCurrentFuseWire(fuses), FUSES);

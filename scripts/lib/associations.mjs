@@ -63,3 +63,29 @@ export function windowsAssociationsNsh() {
     '',
   ].join('\n');
 }
+
+/** What is wrong with a macOS app's document types (its Info.plist as JSON), as sentences; empty when nothing is. */
+export function macDocumentTypeProblems(plist) {
+  const problems = [];
+  const types = Array.isArray(plist?.CFBundleDocumentTypes) ? plist.CFBundleDocumentTypes : [];
+  for (const ext of ASSOCIATED_EXTENSIONS) {
+    const type = types.find((entry) => entry.CFBundleTypeExtensions?.includes(ext));
+    if (!type) problems.push(`no document type for .${ext}`);
+    else if (type.CFBundleTypeRole !== 'Viewer' || type.LSHandlerRank !== 'Alternate') {
+      problems.push(`.${ext} is ${type.CFBundleTypeRole}/${type.LSHandlerRank}, expected Viewer/Alternate`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * A value's data from `reg query` output, or null when the value isn't listed. The key's unnamed
+ * (default) value is `(Default)` in English Windows, as on the CI runners.
+ */
+export function regValue(output, name) {
+  for (const line of output.split(/\r?\n/)) {
+    const match = /^ {4}(.+?) {4}REG_[A-Z_]+(?: {4}(.*))?$/.exec(line.trimEnd());
+    if (match && match[1] === name) return match[2] ?? '';
+  }
+  return null;
+}

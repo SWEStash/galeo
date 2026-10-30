@@ -18,3 +18,9 @@ export const WINDOWS_PROG_ID: string;
 
 /** The NSIS include behind `packaging/windows/associations.nsh`. */
 export function windowsAssociationsNsh(): string;
+
+/** What is wrong with a macOS app's document types (its Info.plist as JSON), as sentences; empty when nothing is. */
+export function macDocumentTypeProblems(plist: unknown): string[];
+
+/** A value's data from `reg query` output, or null when the value isn't listed. */
+export function regValue(output: string, name: string): string | null;
