@@ -49,11 +49,10 @@ export default {
     appArmorProfile: 'packaging/linux/apparmor-profile.tpl',
   },
 
+  // The runner's own architecture, as on Windows: CI builds arm64 and x64 on their own runners.
   mac: {
-    target: [
-      { target: 'dmg', arch: ['x64', 'arm64'] },
-      { target: 'zip', arch: ['x64', 'arm64'] },
-    ],
+    target: ['dmg', 'zip'],
+    artifactName: '${productName}-${version}-${arch}.${ext}',
     category: 'public.app-category.developer-tools',
     icon: 'packaging/icons/png/1024x1024.png',
     identity: null,

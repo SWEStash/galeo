@@ -122,6 +122,10 @@ if (process.platform === 'darwin') {
   else console.log(`associations: ${ASSOCIATED_EXTENSIONS.length} extensions, as a viewer, never the default`);
 }
 if (process.platform === 'darwin') {
+  const { version } = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../package.json'), 'utf8'));
+  const missing = ['dmg', 'zip'].map((ext) => `galeo-${version}-${process.arch}.${ext}`).filter((file) => !existsSync(path.join(RELEASE, file)));
+  if (missing.length) failures.push(...missing.map((file) => `macos: no ${file} in release/`));
+  else console.log(`macos: galeo-${version}-${process.arch}.dmg and .zip`);
   if (existsSync(path.join(resources, 'gal'))) console.log('launcher: gal in Resources, for the galeo command');
   else failures.push('launcher: no gal in Resources (Settings → Install command-line launcher needs it)');
 }
