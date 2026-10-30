@@ -7,7 +7,9 @@ name: Platforms
 # One run shows everything: packaging jobs (unit tests, build, package, package checks) for all four
 # builds, and the end-to-end suite split across three jobs on one architecture per system; a failed
 # step doesn't hide the ones after it, and a test is tried twice, so a flake shows as flaky. A run by
-# hand with `rerun_of` set runs only the end-to-end tests that failed in that run.
+# hand with `rerun_of` set runs only the end-to-end tests that failed in that run. Called by the
+# release workflow with `release`, its package jobs build from the lockfile alone (no npm cache) and
+# hand their packages over for the release.
 on:
   push:
     branches: [ci/platforms]
@@ -34,6 +36,9 @@ on:
       grep:
         type: string
         default: ''
+      release:
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -96,9 +101,12 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-          cache: npm
+          cache: ${{ !inputs.release && 'npm' || '' }}
       - run: npm ci
       - run: npm run setup
+      - name: Typecheck
+        if: matrix.kind == 'package'
+        run: npm run typecheck
       - name: Unit tests
         if: matrix.kind == 'package'
         run: npm test
@@ -159,6 +167,19 @@ jobs:
       - name: Verify the package
         if: ${{ !cancelled() && matrix.kind == 'package' }}
         run: npm run verify:package
+      # For the release: only from a job whose every step passed.
+      - name: Hand the packages to the release
+        if: ${{ success() && inputs.release && matrix.kind == 'package' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages-${{ matrix.runner }}
+          path: |
+            release/galeo-*.dmg
+            release/galeo-*.zip
+            release/galeo-*-setup.exe
+            release/galeo-*-portable.exe
+          if-no-files-found: error
+          retention-days: 30
 
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
