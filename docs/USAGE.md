@@ -2,8 +2,8 @@
 
 galeo reads and edits Markdown, plain text and log files: the plans, notes and logs that coding
 agents write. It never connects to the network. This guide covers installation and everyday use on
-Linux (Ubuntu 26.04, GNOME); the full keyboard map is in the
-[UX specification](design/ux.md#5-keyboard-map).
+Linux (Ubuntu 26.04, GNOME), with notes where the macOS and Windows previews differ; the full
+keyboard map is in the [UX specification](design/ux.md#5-keyboard-map).
 
 ## Installation
 
@@ -38,6 +38,31 @@ profile only the `.deb` provides. galeo then shows why and offers **Quit** or
 **Run without sandbox**; a window running without it says *Unsandboxed* for as long as it runs.
 Prefer the `.deb` there.
 
+### macOS and Windows previews
+
+From galeo 0.5, releases also carry macOS and Windows builds. They are previews: checked by CI, but
+unsigned and unsupported. Only the Linux packages are official.
+
+- **macOS** (x64 and Apple silicon): a `.dmg` and a `.zip`. Drag galeo to Applications. Being
+  unsigned, the first start is refused: open **System Settings → Privacy & Security** and choose
+  **Open Anyway** under the message about galeo.
+- **Windows** (x64 and Arm): `galeo-<version>-<arch>-setup.exe` installs galeo for your user
+  only, and `galeo-<version>-<arch>-portable.exe` runs without installing. SmartScreen warns about
+  an unknown publisher: choose **More info → Run anyway**.
+
+Both add galeo to *Open With* (*Open with* in Explorer) for Markdown, MDX, text, log, JSON, YAML,
+TOML, CSV and TSV files, never as their default app; the portable build adds nothing. For the
+`galeo` command, choose **Install command-line launcher** in Settings (Ctrl+, or Cmd+,):
+
+- on macOS it writes `~/.local/bin/galeo`, which macOS doesn't put on your `PATH` by itself; add
+  `export PATH="$HOME/.local/bin:$PATH"` to `~/.zshrc` if the shell doesn't find it. Start galeo
+  from Applications first: from the disk image or Downloads it runs from a temporary copy, and
+  Settings says so;
+- on Windows it writes `galeo.cmd` to `%LOCALAPPDATA%\Microsoft\WindowsApps`, which is on your
+  `PATH` already. For the portable build the command runs the `.exe` where you keep it.
+
+**Uninstall command-line launcher** removes the command again.
+
 ### Checking a download
 
 Each release has a `SHA256SUMS` file. In the folder you downloaded to:
@@ -68,7 +93,8 @@ gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo
   `galeo` with no files brings the last window used forward (or opens an empty one).
   The `.deb` also installs `gal`, a shorter name for the same command.
 - **From Files**: double-click, or *Open With → galeo*. galeo can be the default app for
-  Markdown, MDX, text, log, JSON, YAML, TOML, CSV and TSV files and source code.
+  Markdown, MDX, text, log, JSON, YAML, TOML, CSV and TSV files and source code. In Finder and
+  Explorer, *Open With* offers it for the same types except source code.
 - **Drag and drop**: drop files from Files onto the document (they open after the tab shown) or
   onto the tab bar (they open where the caret is). Dropping a folder opens quick open on it.
 - **Quick open** (Ctrl+P, or the `+` in the tab bar): type part of a file name to search the open

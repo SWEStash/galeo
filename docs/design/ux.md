@@ -532,7 +532,10 @@ this map only.
   change to a file left invalid by a hand edit is refused and names the file. The AppImage adds
   "Install command-line launcher" (`galeo` in `~/.local/bin`, and a desktop entry for that AppImage
   with its icon). It installs nothing while the galeo package is installed: that one already
-  provides `galeo`, and a user entry with the same id would hide it. Beside it, "Uninstall
+  provides `galeo`, and a user entry with the same id would hide it. The macOS and Windows previews
+  (v0.5) add it too, for the command only: `~/.local/bin/galeo` on macOS (the hint says to add that
+  folder to `PATH`; it refuses while the app runs from its disk image or Downloads), and `galeo.cmd`
+  in `%LOCALAPPDATA%\Microsoft\WindowsApps` on Windows. Beside it, "Uninstall
   command-line launcher" (v0.4) removes what it wrote and says what it removed, and names any file
   it kept because galeo didn't write it.
 

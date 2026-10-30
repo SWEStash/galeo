@@ -436,9 +436,9 @@ flowchart TD
   vite --> eb[electron-builder · fuses set]
   eb --> deb[galeo_#lt;v#gt;_amd64.deb · official]
   eb --> appimage[galeo-#lt;v#gt;.AppImage · secondary; on Ubuntu 24.04+ unsandboxed, by opt-in]
-  eb -. deferred, ADR-011 .-> mac[galeo-#lt;v#gt;-x64 and -arm64 .dmg / .zip · macOS preview]
-  eb -. deferred, ADR-011 .-> win[Windows NSIS installer · preview]
-  eb --> ci["CI on Linux (macOS and Windows deferred, ADR-011)<br/>tests · package and fuse read-back · no-network harness · performance"]
+  eb -- "preview, unsigned, ADR-027" --> mac[x64 and arm64 .dmg / .zip · macOS preview]
+  eb -- "preview, unsigned, ADR-027" --> win[galeo-#lt;v#gt;-#lt;arch#gt;-setup.exe and -portable.exe, x64 and arm64 · Windows preview]
+  eb --> ci["CI: Linux on every push; macOS and Windows on ci/platforms and by hand (platforms.yml, ADR-027)<br/>tests · package, fuse and Open With read-back · no-network harness · performance"]
   ci -- "tag v#lt;version#gt;" --> release[release workflow: build, verify, SHA256SUMS, attestations]
   release --> draft[draft GitHub Release · docs/RELEASING.md, ADR-017]
 ```
@@ -450,6 +450,12 @@ Chromium's sandbox on Ubuntu 24.04+), `/usr/bin/gal` (Launcher),
 `/usr/share/mime/packages/galeo.xml` (the `text/mdx` type, copied there by the post-install
 script), `/usr/share/icons/hicolor/*/apps/galeo.png`. Per-user data lives only in the Config, State and
 Cache stores.
+
+The previews register galeo for *Open With* only, never as a default app
+(`scripts/lib/associations.mjs`): on macOS as a viewer in `Info.plist`, on Windows through
+`packaging/windows/associations.nsh`, which the per-user installer runs and its uninstaller undoes.
+The `galeo` command there is optional: Settings writes it (`~/.local/bin/galeo`, a copy of `gal`, or
+`galeo.cmd` in `%LOCALAPPDATA%\Microsoft\WindowsApps`).
 
 ## 9. Source layout (ADR-007)
 
