@@ -3,6 +3,11 @@ name: Platforms
 # The macOS and Windows previews (ADR-027). Their minutes come from a quota, so this never runs on a
 # push to main: only on a push to ci/platforms (a pointer to the commit under test), by hand, and
 # from the release workflow, where a failure stops the release.
+#
+# One run shows everything: packaging jobs (unit tests, build, package, package checks) for all four
+# builds, and the end-to-end suite split across three jobs on one architecture per system; a failed
+# step doesn't hide the ones after it, and a test is tried twice, so a flake shows as flaky. A run by
+# hand with `rerun_of` set runs only the end-to-end tests that failed in that run.
 on:
   push:
     branches: [ci/platforms]
@@ -17,6 +22,10 @@ on:
         description: Only the end-to-end tests whose title matches (Playwright --grep); empty runs them all
         type: string
         default: ''
+      rerun_of:
+        description: A Platforms run id; runs only the end-to-end tests that failed in it
+        type: string
+        default: ''
   workflow_call:
     inputs:
       os:
@@ -28,6 +37,8 @@ on:
 
 permissions:
   contents: read
+  # Reading an earlier run's list of failed tests (rerun_of).
+  actions: read
 
 concurrency:
   group: platforms-${{ github.ref }}
@@ -38,24 +49,35 @@ env:
 
 jobs:
   matrix:
-    name: Choose systems
+    name: Choose jobs
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     outputs:
       include: ${{ steps.pick.outputs.include }}
     steps:
-      # The end-to-end suite runs on one architecture per system; the other packages and starts
-      # the app, which catches what differs between them (the binary, fuses, native parts).
       - id: pick
         env:
           OS: ${{ inputs.os }}
+          RERUN: ${{ inputs.rerun_of }}
         run: |
-          all='[
-            {"name": "macOS arm64", "family": "macos", "runner": "macos-15", "e2e": true},
-            {"name": "macOS x64", "family": "macos", "runner": "macos-15-intel", "e2e": false},
-            {"name": "Windows x64", "family": "windows", "runner": "windows-2025", "e2e": true},
-            {"name": "Windows arm64", "family": "windows", "runner": "windows-11-arm", "e2e": false}
+          package='[
+            {"name": "macOS arm64 · package", "family": "macos", "runner": "macos-15", "kind": "package"},
+            {"name": "macOS x64 · package", "family": "macos", "runner": "macos-15-intel", "kind": "package"},
+            {"name": "Windows x64 · package", "family": "windows", "runner": "windows-2025", "kind": "package"},
+            {"name": "Windows arm64 · package", "family": "windows", "runner": "windows-11-arm", "kind": "package"}
           ]'
+          e2e='[]'
+          for shard in 1 2 3; do
+            e2e=$(jq -c --arg s "$shard" '. + [
+              {"name": "macOS arm64 · e2e \($s)/3", "family": "macos", "runner": "macos-15", "kind": "e2e", "shard": "\($s)/3", "slot": $s},
+              {"name": "Windows x64 · e2e \($s)/3", "family": "windows", "runner": "windows-2025", "kind": "e2e", "shard": "\($s)/3", "slot": $s}
+            ]' <<< "$e2e")
+          done
+          rerun='[
+            {"name": "macOS arm64 · failed e2e", "family": "macos", "runner": "macos-15", "kind": "rerun", "slot": "rerun"},
+            {"name": "Windows x64 · failed e2e", "family": "windows", "runner": "windows-2025", "kind": "rerun", "slot": "rerun"}
+          ]'
+          if [ -n "$RERUN" ]; then all="$rerun"; else all=$(jq -c -s 'add' <<< "$package $e2e"); fi
           echo "include=$(jq -c --arg os "${OS:-all}" '[.[] | select($os == "all" or .family == $os)]' <<< "$all")" >> "$GITHUB_OUTPUT"
 
   test:
@@ -77,27 +99,71 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run setup
-      - run: npm test
-      - run: npm run build
-      # A fresh runner's first app start is slow; one start here keeps it out of the per-test limits.
+      - name: Unit tests
+        if: matrix.kind == 'package'
+        run: npm test
+      - name: Build
+        if: ${{ !cancelled() }}
+        run: npm run build
+
+      # End-to-end: a fresh runner's first app start is slow; one start keeps it out of the per-test limits.
       - name: Warm up the app
-        if: matrix.e2e
+        if: ${{ !cancelled() && matrix.kind != 'package' }}
         run: npx playwright test --project=warm-up
+      - name: The failed tests' list from the earlier run
+        if: ${{ !cancelled() && matrix.kind == 'rerun' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: last-run-${{ matrix.family }}-*
+          path: last-runs
+          run-id: ${{ inputs.rerun_of }}
+          github-token: ${{ github.token }}
       - name: End-to-end tests
-        if: matrix.e2e
+        id: e2e
+        if: ${{ !cancelled() && matrix.kind != 'package' }}
         shell: bash
         env:
           GREP: ${{ inputs.grep }}
+          SHARD: ${{ matrix.shard }}
+          KIND: ${{ matrix.kind }}
         run: |
-          if [ -n "$GREP" ]; then npm run test:e2e -- --grep "$GREP"; else npm run test:e2e; fi
+          args=(--retries=1)
+          if [ "$KIND" = rerun ]; then
+            # Playwright's --last-failed reads test-results/.last-run.json: the shards' failures, merged.
+            failed=$(node scripts/merge-last-runs.mjs last-runs test-results/.last-run.json)
+            if [ "$failed" = 0 ]; then echo "No failed tests in that run."; exit 0; fi
+            args+=(--last-failed)
+          else
+            args+=("--shard=$SHARD")
+          fi
+          if [ -n "$GREP" ]; then args+=(--grep "$GREP"); fi
+          npm run test:e2e -- "${args[@]}"
+      - name: Keep the failed tests' list
+        if: ${{ !cancelled() && matrix.kind == 'e2e' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: last-run-${{ matrix.family }}-${{ matrix.slot }}
+          path: test-results/.last-run.json
+          include-hidden-files: true
+          if-no-files-found: ignore
+          retention-days: 14
+
+      # Packaging. Spotlight indexing a new disk image can keep it busy ("Resource busy" from hdiutil).
+      - name: Stop Spotlight indexing
+        if: ${{ !cancelled() && matrix.kind == 'package' && runner.os == 'macOS' }}
+        run: sudo mdutil -a -i off
       - name: Package
-        run: npm run package
+        if: ${{ !cancelled() && matrix.kind == 'package' }}
+        shell: bash
+        run: npm run package || { echo "Packaging failed; trying once more."; npm run package; }
       - name: Verify the package
+        if: ${{ !cancelled() && matrix.kind == 'package' }}
         run: npm run verify:package
+
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: playwright-report-${{ matrix.runner }}
+          name: playwright-report-${{ matrix.runner }}-${{ matrix.kind }}-${{ matrix.slot || 'package' }}
           path: |
             playwright-report/
             test-results/

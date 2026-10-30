@@ -26,6 +26,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run check:bundle` | After `npm run build`: what the window and the render worker load up front, failing if KaTeX, Shiki, CodeMirror, Mermaid, DOMPurify or the MDX parser is among it (they load with the first document that needs them) |
 | `npm run check:exports` | Fail on an export in `src/` that no other file imports: drop the `export`, or the code if nothing uses it; exports only tests import are allowed (`scripts/check-exports.mjs`) |
 | `npm run check:docs` | Check the docs' relative links and `#anchors`, ADR and SR ids, and repository paths in code spans (`scripts/check-docs.mjs`; web links are never fetched) |
+| `npm run check:portable` | Fail on test lines that pass on Linux but not on macOS or Windows: Ctrl where macOS uses Cmd, Cmd+←/→ (by line on macOS), fixture paths expected with `/`, GNU-only tools; `portable: <reason>` in a comment keeps one (`scripts/check-portable-tests.mjs`) |
 | `npm run check` | Typecheck, boundaries, the exports and docs checks, and tests: run it before every commit |
 | `npm run preflight` | CI's Linux job on this machine (audit, check, build and bundle check, e2e, no-network, perf, package, verify), then the e2e specs changed since the last push, 5 times each: run it before every push |
 | `sh scripts/render-icons.sh` | Render the app icon PNGs from `packaging/icons/*.svg` after changing them (needs `rsvg-convert`: `librsvg2-bin`) |
@@ -62,9 +63,15 @@ recorded before, since CI's runner is faster. A push to `main` runs CI on Linux 
 run in the *Platforms* workflow (`.github/workflows/platforms.yml`, ADR-027), whose minutes come from a
 quota: it runs when a commit is pushed to the `ci/platforms` branch (`git push --force origin
 HEAD:ci/platforms`; the branch only points at the commit under test, nothing is committed on it), when
-started by hand (one system, or only the end-to-end tests matching a title), and in the release workflow.
-Gather platform fixes into one run. The unit tests that read paths, links and keys the Windows or macOS
-way run everywhere, in `npm test`. These differences have broken tests on those systems before:
+started by hand, and in the release workflow. One run shows every failure: packaging jobs for the four
+builds, and the end-to-end suite split across three jobs per system, each test tried twice so a flake shows
+as flaky. After fixing, run it by hand with `rerun_of` set to that run's id: it runs only the end-to-end
+tests that failed there (`grep` narrows it to a title instead). Gather platform fixes into one run.
+
+Before any of that, two checks run on Linux in `npm run check` and the preflight: the unit tests that read
+paths, links and keys the Windows or macOS way, and `npm run check:portable`, which flags tests that would
+fail there (keys pressed as Ctrl where macOS uses Cmd, fixture paths expected with `/`, GNU-only tools).
+These differences have broken tests on those systems before:
 
 - **Folders**: on macOS and Windows the state folder sits inside the config folder (`appDirs`).
   Paths use `\` on Windows; build them with `path.join`, never with `/`.
