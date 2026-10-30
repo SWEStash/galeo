@@ -2,6 +2,8 @@ name: Release
 
 # ADR-017: a `v*` tag builds the packages in CI, writes SHA256SUMS, attests them and drafts the
 # GitHub Release. Run it by hand (workflow_dispatch) for a dry run: build and attest, no release.
+# The macOS and Windows previews (ADR-027) come from the Platforms workflow, whose every job must
+# pass before anything is checksummed: a red macOS or Windows job stops the release.
 on:
   push:
     tags: ['v*']
@@ -15,12 +17,34 @@ concurrency:
 
 env:
   HUSKY: '0'
+  # Every package a release carries, as shell globs.
+  ASSETS: galeo_*_amd64.deb galeo-*.AppImage galeo-*.dmg galeo-*.zip galeo-*-setup.exe galeo-*-portable.exe
 
 jobs:
+  # First, so a wrong tag spends no macOS or Windows minutes.
+  tag:
+    name: Check the tag
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: The tag names package.json's version and a commit on main
+        if: github.event_name == 'push'
+        run: |
+          version=$(node -p "require('./package.json').version")
+          test "$GITHUB_REF_NAME" = "v$version" || { echo "tag $GITHUB_REF_NAME, package.json $version" >&2; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$GITHUB_SHA is not on main" >&2; exit 1; }
+
   # Read-only: dependencies' install and build scripts run here, so this job holds no token that
   # can write or sign anything.
   build:
-    name: Build and verify the packages
+    name: Build and verify the Linux packages
+    needs: tag
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -34,12 +58,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      - name: The tag names package.json's version and a commit on main
-        if: github.event_name == 'push'
-        run: |
-          version=$(node -p "require('./package.json').version")
-          test "$GITHUB_REF_NAME" = "v$version" || { echo "tag $GITHUB_REF_NAME, package.json $version" >&2; exit 1; }
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "$GITHUB_SHA is not on main" >&2; exit 1; }
       - run: npm ci
       - run: npm run setup
       - name: Audit dependencies (fails on high severity)
@@ -53,31 +71,74 @@ jobs:
         run: sudo scripts/dev-sandbox-setup.sh
       - name: Verify the package
         run: npm run headless -- npm run verify:package
-      - name: Checksums
-        working-directory: release
-        run: |
-          sha256sum galeo_*_amd64.deb galeo-*.AppImage > SHA256SUMS
-          cat SHA256SUMS
-      - name: Release notes from the commit subjects since the last tag
+      - name: Release notes from the commit subjects since the last tag, then the previews' steps
         run: |
           previous=$(git describe --tags --abbrev=0 "$GITHUB_SHA^" 2>/dev/null || true)
           git log --no-merges --format='- %s' ${previous:+"$previous.."}"$GITHUB_SHA" > release/NOTES.md
+          { echo; cat packaging/release-notes-previews.md; } >> release/NOTES.md
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: packages
+          name: packages-linux
           path: |
             release/galeo_*_amd64.deb
             release/galeo-*.AppImage
-            release/SHA256SUMS
             release/NOTES.md
           if-no-files-found: error
           retention-days: 30
 
-  # Signs provenance for the exact files the build job made. Attestations need a public repository
+  # The macOS and Windows previews: tests, packages and package checks on every system, each package
+  # job handing its files over.
+  platforms:
+    name: Platforms
+    needs: tag
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/platforms.yml
+    with:
+      release: true
+
+  # The gate: runs only when every Linux, macOS and Windows job passed. Read-only.
+  collect:
+    name: Collect the packages
+    needs: [build, platforms]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: packages-*
+          merge-multiple: true
+      - name: Every package, then checksums
+        run: |
+          ls -l
+          # .deb and AppImage; .dmg and .zip for macOS x64 and arm64; setup and portable for Windows x64 and arm64.
+          count=$(ls $ASSETS | wc -l)
+          test "$count" = 10 || { echo "expected 10 packages, found $count" >&2; exit 1; }
+          sha256sum $ASSETS > SHA256SUMS
+          cat SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-assets
+          path: |
+            galeo_*_amd64.deb
+            galeo-*.AppImage
+            galeo-*.dmg
+            galeo-*.zip
+            galeo-*-setup.exe
+            galeo-*-portable.exe
+            SHA256SUMS
+            NOTES.md
+          if-no-files-found: error
+          retention-days: 30
+
+  # Signs provenance for the exact files the build jobs made. Attestations need a public repository
   # on GitHub's free plans, so a dry run in a private one stops after the build.
   attest:
     name: Attest build provenance
-    needs: build
+    needs: collect
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -88,7 +149,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: packages
+          name: release-assets
       - name: Check the files against SHA256SUMS
         run: sha256sum -c SHA256SUMS
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -96,6 +157,10 @@ jobs:
           subject-path: |
             galeo_*_amd64.deb
             galeo-*.AppImage
+            galeo-*.dmg
+            galeo-*.zip
+            galeo-*-setup.exe
+            galeo-*-portable.exe
 
   # Only for a tag, and only once the packages are attested. The release stays a draft: the
   # maintainer edits the notes and publishes it.
@@ -110,7 +175,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: packages
+          name: release-assets
       - name: Check the files against SHA256SUMS
         run: sha256sum -c SHA256SUMS
       - name: Draft the release
@@ -120,4 +185,4 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
             --title "galeo ${GITHUB_REF_NAME#v}" --notes-file NOTES.md \
-            galeo_*_amd64.deb galeo-*.AppImage SHA256SUMS
+            $ASSETS SHA256SUMS
