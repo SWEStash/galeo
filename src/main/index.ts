@@ -50,7 +50,7 @@ import { runFile } from './adapters/run-file';
 import { decodeWithPlatform } from './adapters/text-decoder';
 import { sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
-import { appHandlers, appImagePath } from './app/handlers';
+import { appHandlers, launcherTarget } from './app/handlers';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { sendEvent } from './ipc/send';
@@ -216,7 +216,7 @@ function start(initialMode: StartupMode): void {
   const focusOrder = new FocusOrder();
   cleanups.add((windowId) => focusOrder.remove(windowId));
   let quitting = false;
-  const appImage = appImagePath(app.isPackaged, process.env);
+  const launcher = launcherTarget({ packaged: app.isPackaged, platform: process.platform, env: process.env, execPath: process.execPath, home: app.getPath('home') });
   /** What a window's page needs to paint, handed over when the window is created (and in `app.info`). */
   const startInfo = (): StartInfo => ({
     name: app.getName(),
@@ -224,7 +224,7 @@ function start(initialMode: StartupMode): void {
     platform: keymapPlatform(process.platform),
     sandboxed,
     sandboxUnavailable: mode.kind === 'sandbox-unavailable' ? mode.cause : null,
-    appImage: appImage !== null,
+    commandLauncher: launcher !== null,
   });
   // Open once the desktop's theme settings have arrived (set when the app is ready).
   let themeSettled: Promise<void> = Promise.resolve();
@@ -750,7 +750,7 @@ function start(initialMode: StartupMode): void {
             input,
             fs,
             utf8,
-            appImage,
+            target: launcher,
             home: app.getPath('home'),
             execDir: path.dirname(process.execPath),
             resourcesDir: process.resourcesPath,

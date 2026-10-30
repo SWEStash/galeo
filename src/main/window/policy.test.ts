@@ -41,7 +41,7 @@ describe('ownArgs', () => {
 });
 
 describe('hardenedWebPreferences', () => {
-  const startInfo = { name: 'galeo', version: '0.4.0', platform: 'linux', sandboxed: true, sandboxUnavailable: null, appImage: false } as const;
+  const startInfo = { name: 'galeo', version: '0.4.0', platform: 'linux', sandboxed: true, sandboxUnavailable: null, commandLauncher: false } as const;
 
   it('isolates and sandboxes every renderer (SR-01)', () => {
     expect(hardenedWebPreferences({ preload: '/app/preload.cjs', isPackaged: true, startInfo })).toEqual({

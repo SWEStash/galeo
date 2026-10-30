@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { appImageLauncher, installLauncher, launcherPaths, uninstallLauncher } from '../../core/desktop/launcher';
+import { appCommand, appCommandPath, appImageLauncher, installAppCommand, installLauncher, launcherPaths, uninstallAppCommand, uninstallLauncher } from '../../core/desktop/launcher';
 import type { InputCredits } from '../../core/documents/input-credits';
 import type { FileSystem } from '../../core/ports';
 import type { Utf8 } from '../../core/settings/json-file';
@@ -10,10 +10,30 @@ type AppChannels = 'app.info' | 'app.installLauncher' | 'app.uninstallLauncher' 
 
 type Env = Readonly<Record<string, string | undefined>>;
 
-/** The AppImage a packaged run came from (its runtime sets `APPIMAGE`), or null. */
-export function appImagePath(packaged: boolean, env: Env): string | null {
-  const appImage = packaged ? env['APPIMAGE'] : undefined;
-  return appImage && path.isAbsolute(appImage) ? appImage : null;
+/** What "Install command-line launcher" installs for: an AppImage on Linux, the app on macOS and Windows. */
+export type LauncherTarget =
+  | { kind: 'appimage'; appImage: string }
+  | { kind: 'app'; platform: 'darwin' | 'win32'; exe: string; binDir: string };
+
+/**
+ * The launcher a packaged run can install, or null (a dev run, the .deb, which ships `galeo` itself).
+ * Linux: the AppImage it came from (its runtime sets `APPIMAGE`). macOS: `~/.local/bin`. Windows:
+ * `%LOCALAPPDATA%\Microsoft\WindowsApps`, on the user's PATH by default; the portable build runs
+ * from a temporary copy, so its command points at the file the user has (`PORTABLE_EXECUTABLE_FILE`).
+ */
+export function launcherTarget(run: { packaged: boolean; platform: NodeJS.Platform; env: Env; execPath: string; home: string }): LauncherTarget | null {
+  const { packaged, platform, env, execPath, home } = run;
+  if (!packaged) return null;
+  if (platform === 'darwin') return { kind: 'app', platform, exe: execPath, binDir: path.posix.join(home, '.local', 'bin') };
+  if (platform === 'win32') {
+    const localAppData = env['LOCALAPPDATA'];
+    if (!localAppData || !path.win32.isAbsolute(localAppData)) return null;
+    const portable = env['PORTABLE_EXECUTABLE_FILE'];
+    const exe = portable && path.win32.isAbsolute(portable) ? portable : execPath;
+    return { kind: 'app', platform, exe, binDir: path.win32.join(localAppData, 'Microsoft', 'WindowsApps') };
+  }
+  const appImage = env['APPIMAGE'];
+  return appImage && path.posix.isAbsolute(appImage) ? { kind: 'appimage', appImage } : null;
 }
 
 /** `$XDG_DATA_DIRS`, keeping only absolute entries, else the XDG spec's default. */
@@ -29,8 +49,7 @@ function xdgDataHome(home: string, env: Env): string {
 }
 
 /**
- * The app-level channels: start info, the sandbox choice, and installing the command-line launcher
- * for an AppImage. Changes beyond the page (a launcher) happen only on the reader's input (T6).
+ * The app-level channels: start info, the sandbox choice, and installing the command-line launcher. Changes beyond the page (a launcher) happen only on the reader's input (T6).
  */
 export function appHandlers(deps: {
   info: (window: number) => AppInfo;
@@ -44,11 +63,11 @@ export function appHandlers(deps: {
     input: Pick<InputCredits, 'spend'>;
     fs: FileSystem;
     utf8: Utf8;
-    appImage: string | null;
+    target: LauncherTarget | null;
     home: string;
-    /** The folder of the running executable, where `gal` ships. */
+    /** The folder of the running executable, where `gal` ships on Linux. */
     execDir: string;
-    /** The packaged app's resources: `icon.png` and `mime.xml`. */
+    /** The packaged app's resources: `icon.png` and `mime.xml` on Linux, `gal` on macOS. */
     resourcesDir: string;
     env: Env;
     refreshMime: (database: string) => Promise<void>;
@@ -68,11 +87,17 @@ export function appHandlers(deps: {
   return {
     'app.info': (_args, event) => info(event.sender.id),
     'app.installLauncher': async (_args, event) => {
-      const { input, fs, utf8, appImage, execDir, resourcesDir, env, refreshMime } = launcher;
+      const { input, fs, utf8, target, execDir, resourcesDir, env, refreshMime } = launcher;
       if (!input.spend(event.sender.id)) throw new Error('no input');
-      if (!appImage) throw new Error('not an AppImage');
-      const script = utf8.decode(await fs.readFile(path.join(execDir, 'gal'), { maxBytes: 64 * 1024 }));
-      const files = appImageLauncher(appImage, launcherDirs(), script);
+      if (!target) throw new Error('no launcher for this run');
+      const gal = async (dir: string) => utf8.decode(await fs.readFile(path.join(dir, 'gal'), { maxBytes: 64 * 1024 }));
+      if (target.kind === 'app') {
+        const command = appCommand(target.platform, target.exe, target.binDir, target.platform === 'darwin' ? await gal(resourcesDir) : null);
+        if (!command.ok) return command;
+        const installed = await installAppCommand({ fs, utf8 }, command);
+        return installed.ok ? { ok: true, bin: command.path } : installed;
+      }
+      const files = appImageLauncher(target.appImage, launcherDirs(), await gal(execDir));
       if (!files.ok) return files;
       const icon = await bundledIcon();
       const mime = await fs.readFile(path.join(resourcesDir, 'mime.xml'), { maxBytes: 64 * 1024 }).catch(() => null);
@@ -81,9 +106,10 @@ export function appHandlers(deps: {
       return installed.ok ? { ok: true, bin: files.bin.path } : installed;
     },
     'app.uninstallLauncher': async (_args, event) => {
-      const { input, fs, utf8, appImage, refreshMime } = launcher;
+      const { input, fs, utf8, target, refreshMime } = launcher;
       if (!input.spend(event.sender.id)) throw new Error('no input');
-      if (!appImage) throw new Error('not an AppImage');
+      if (!target) throw new Error('no launcher for this run');
+      if (target.kind === 'app') return uninstallAppCommand({ fs, utf8 }, appCommandPath(target.platform, target.binDir));
       return uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(launcherDirs()), await bundledIcon());
     },
     'app.resolveSandboxUnavailable': ([choice]) => {

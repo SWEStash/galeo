@@ -25,7 +25,7 @@ describe('buildApi', () => {
   });
 
   it("carries the window's start info as a value, not a channel", () => {
-    const info = { name: 'galeo', version: '0.4.0', platform: 'linux', sandboxed: true, sandboxUnavailable: null, appImage: false } as const;
+    const info = { name: 'galeo', version: '0.4.0', platform: 'linux', sandboxed: true, sandboxUnavailable: null, commandLauncher: false } as const;
     const invoke = vi.fn();
     const api = buildApi(invoke, noSubscribe, info);
 

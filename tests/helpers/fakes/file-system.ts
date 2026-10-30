@@ -5,6 +5,7 @@ import {
   type FileSystem,
   type FsErrorCode,
 } from '../../../src/core/ports';
+import { folderOf } from '../../../src/shared/paths';
 
 /**
  * An in-memory tree built from `{ '/abs/path': content }`; parent directories are implied.
@@ -89,7 +90,7 @@ export class FakeFileSystem implements FileSystem {
   async mkdir(path: string, { mode }: { mode: number }): Promise<void> {
     this.throwIfFailing(path);
     if (this.files.has(path)) throw new FsError('ENOTDIR', path);
-    for (let dir = path; dir !== '/' && dir !== ''; dir = dir.slice(0, dir.lastIndexOf('/'))) {
+    for (let dir = path; dir !== '/' && dir !== ''; dir = folderOf(dir)) {
       if (!this.directories.has(dir)) this.modes.set(dir, mode);
       this.directories.add(dir);
     }
@@ -109,7 +110,7 @@ export class FakeFileSystem implements FileSystem {
 
   async writeFileAtomic(path: string, data: Uint8Array, { mode }: { mode: number }): Promise<void> {
     this.throwIfFailing(path);
-    const parent = path.slice(0, path.lastIndexOf('/'));
+    const parent = folderOf(path);
     if (parent && !this.isDirectory(parent)) throw new FsError('ENOENT', path);
     if (this.isDirectory(path)) throw new FsError('EISDIR', path);
     this.files.set(path, data.slice());

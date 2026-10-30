@@ -2,8 +2,10 @@ import { folderOf, joinPath } from '../../shared/paths';
 import type { FileSystem } from '../ports';
 import { kindOf, type Utf8 } from '../settings/json-file';
 
-/** The line every installed launcher carries, so galeo only ever replaces its own. */
-export const LAUNCHER_MARK = '# Installed by galeo: the command-line launcher for its AppImage.';
+/** What every installed `galeo` command carries, on every system, so galeo only ever replaces its own. */
+const COMMAND_MARK = 'Installed by galeo: the command-line launcher';
+/** The line the AppImage's launcher carries. */
+export const LAUNCHER_MARK = `# ${COMMAND_MARK} for its AppImage.`;
 /** The same, for the desktop entry. */
 const ENTRY_MARK = 'X-galeo-Launcher=true';
 /** The same, for the MDX type (`packaging/linux/galeo-mime.xml` carries it in a comment). */
@@ -62,6 +64,14 @@ function shellQuote(value: string): string {
   return `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
+/** A copy of `gal` that runs `target`, with `mark` under its shebang. */
+function galPointedAt(launcherScript: string, target: string, mark: string): string {
+  const [shebang, ...rest] = launcherScript.split('\n');
+  const script = rest.join('\n');
+  if (!/^GALEO_BIN=.*$/m.test(script)) throw new Error('gal has no GALEO_BIN line');
+  return [shebang, mark, script.replace(/^GALEO_BIN=.*$/m, () => `GALEO_BIN=${shellQuote(target)}`)].join('\n');
+}
+
 /**
  * What "Install command-line launcher" writes for an AppImage (ADR-008): a copy of `gal`, installed as `galeo`, pointed
  * at the AppImage, a desktop entry that opens files with it, after `--` (SR-13), and the icon
@@ -74,10 +84,7 @@ export function appImageLauncher(
 ): LauncherFiles {
   if (/\p{Cc}/u.test(appImage)) return { ok: false, reason: 'the AppImage path has a control character' };
   if (!appImage.startsWith('/')) return { ok: false, reason: 'the AppImage path is not absolute' };
-  const [shebang, ...rest] = launcherScript.split('\n');
-  const script = rest.join('\n');
-  if (!/^GALEO_BIN=.*$/m.test(script)) throw new Error('gal has no GALEO_BIN line');
-  const bin = [shebang, LAUNCHER_MARK, script.replace(/^GALEO_BIN=.*$/m, () => `GALEO_BIN=${shellQuote(appImage)}`)].join('\n');
+  const bin = galPointedAt(launcherScript, appImage, LAUNCHER_MARK);
   const exec = execArgument(appImage);
   const desktop = [
     '[Desktop Entry]',
@@ -103,6 +110,57 @@ export function appImageLauncher(
   return { ok: true, bin: { path: paths.bin, content: bin }, desktop: { path: paths.desktop, content: desktop }, icon: paths.icon, mime: paths.mime };
 }
 
+type AppCommand = { ok: true; path: string; content: string } | { ok: false; reason: string };
+
+/** Where the macOS and Windows `galeo` command goes in `binDir`. */
+export function appCommandPath(platform: 'darwin' | 'win32', binDir: string): string {
+  return joinPath(binDir, platform === 'win32' ? 'galeo.cmd' : 'galeo');
+}
+
+/**
+ * What "Install command-line launcher" writes on macOS and Windows (ADR-008): only the `galeo`
+ * command, in `binDir`, running the app at `exe`; the system's own "Open With" covers the rest.
+ * macOS gets a copy of `gal`, so flags and files are read as on Linux (files after `--`, SR-13).
+ * Windows gets a `galeo.cmd` that hands its arguments to galeo, whose own parsing does the same.
+ */
+export function appCommand(platform: 'darwin' | 'win32', exe: string, binDir: string, launcherScript: string | null): AppCommand {
+  if (/\p{Cc}/u.test(exe)) return { ok: false, reason: "galeo's path has a control character" };
+  if (platform === 'darwin') {
+    if (!exe.startsWith('/')) return { ok: false, reason: "galeo's path is not absolute" };
+    // Gatekeeper runs a downloaded unsigned app from a random read-only copy until it's moved.
+    if (exe.startsWith('/Volumes/') || exe.includes('/AppTranslocation/')) {
+      return { ok: false, reason: 'galeo is running from its disk image or Downloads; move it to Applications and open it from there first' };
+    }
+    if (launcherScript === null) throw new Error('no gal to install');
+    return { ok: true, path: appCommandPath(platform, binDir), content: galPointedAt(launcherScript, exe, `# ${COMMAND_MARK} for its app.`) };
+  }
+  if (!/^[A-Za-z]:\\/.test(exe) || exe.includes('"')) return { ok: false, reason: "galeo's path is not absolute" };
+  // `%` is the only character cmd expands inside quotes.
+  const content = ['@echo off', `rem ${COMMAND_MARK} for its app.`, `"${exe.replaceAll('%', '%%')}" %*`, ''].join('\r\n');
+  return { ok: true, path: appCommandPath(platform, binDir), content };
+}
+
+/** Writes the `galeo` command `appCommand` made, runnable, unless one that isn't galeo's is there. */
+export async function installAppCommand(
+  deps: { fs: FileSystem; utf8: Utf8 },
+  command: Extract<AppCommand, { ok: true }>,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const { fs, utf8 } = deps;
+  if (!(await ownedOrAbsent(deps, command.path, COMMAND_MARK))) return { ok: false, reason: `${command.path} exists and is not galeo's` };
+  const dir = folderOf(command.path);
+  if ((await kindOf(fs, dir)) !== 'directory') await fs.mkdir(dir, { mode: 0o755 });
+  await fs.writeFileAtomic(command.path, utf8.encode(command.content), { mode: 0o755 });
+  return { ok: true };
+}
+
+/** Removes the `galeo` command at `path` while it carries galeo's mark; anything else there is kept. */
+export async function uninstallAppCommand(deps: { fs: FileSystem; utf8: Utf8 }, path: string): Promise<{ removed: string[]; kept: string[] }> {
+  if ((await kindOf(deps.fs, path)) === null) return { removed: [], kept: [] };
+  if (!(await marked(deps, path, COMMAND_MARK))) return { removed: [], kept: [path] };
+  await deps.fs.removeFile(path);
+  return { removed: [path], kept: [] };
+}
+
 /**
  * Writes the launcher files: `galeo` runnable, the desktop entry and the `icon` readable. A `galeo` command
  * that isn't this app's stays as it is; folders that exist keep their modes. The icon is only looks: one
@@ -122,7 +180,7 @@ export async function installLauncher(
     if ((await kindOf(fs, entry)) !== null) return { ok: false, reason: 'the galeo package is installed and already provides the galeo command' };
   }
   for (const [file, mark] of [
-    [files.bin, LAUNCHER_MARK],
+    [files.bin, COMMAND_MARK],
     [files.desktop, ENTRY_MARK],
   ] as const) {
     if (!(await ownedOrAbsent(deps, file.path, mark))) return { ok: false, reason: `${file.path} exists and is not galeo's` };
@@ -175,7 +233,7 @@ export async function uninstallLauncher(
     removed.push(path);
     return true;
   };
-  await sort(paths.bin, () => marked(deps, paths.bin, LAUNCHER_MARK));
+  await sort(paths.bin, () => marked(deps, paths.bin, COMMAND_MARK));
   await sort(paths.desktop, () => marked(deps, paths.desktop, ENTRY_MARK));
   if (await sort(paths.icon.path, async () => icon !== null && (await sameBytes(fs, paths.icon.path, icon)))) await fs.touch(paths.icon.theme);
   if (await sort(paths.mime.path, () => marked(deps, paths.mime.path, MIME_MARK))) await deps.refreshMime(paths.mime.database).catch(() => undefined);

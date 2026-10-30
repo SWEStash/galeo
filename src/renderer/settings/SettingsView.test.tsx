@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ACCENTS } from '../../shared/accents';
 import type { ProfileView, SettingsState } from '../../shared/contracts';
+import type { Platform } from '../../shared/keymap';
 import { DEFAULT_SETTINGS as DEFAULTS } from '../../shared/settings';
 import { SettingsView } from './SettingsView';
 
@@ -56,13 +57,13 @@ function stubBridge() {
   return { settings, profiles, app };
 }
 
-async function render(state: SettingsState = STATE, appImage = false, onAbout: () => void = () => {}) {
+async function render(state: SettingsState = STATE, launcher: Platform | null = null, onAbout: () => void = () => {}) {
   const container = document.createElement('div');
   document.body.append(container);
   const root = createRoot(container);
   roots.push(root);
-  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} say={say} />));
-  const update = (next: SettingsState) => act(async () => root.render(<SettingsView state={next} profile={PROFILE} appImage={appImage} version="0.3.0" onAbout={onAbout} say={say} />));
+  await act(async () => root.render(<SettingsView state={state} profile={PROFILE} launcher={launcher} version="0.3.0" onAbout={onAbout} say={say} />));
+  const update = (next: SettingsState) => act(async () => root.render(<SettingsView state={next} profile={PROFILE} launcher={launcher} version="0.3.0" onAbout={onAbout} say={say} />));
   return Object.assign(container, { update });
 }
 
@@ -225,7 +226,7 @@ describe('SettingsView (UX §6)', () => {
   it('shows the version, with a way to About galeo', async () => {
     stubBridge();
     const onAbout = vi.fn();
-    const container = await render(STATE, false, onAbout);
+    const container = await render(STATE, null, onAbout);
     const about = container.querySelector<HTMLElement>('[data-setting="about"]')!;
     expect(about.textContent).toContain('galeo 0.3.0');
     await act(async () => button(about, 'About galeo').click());
@@ -274,20 +275,30 @@ describe('SettingsView (UX §6)', () => {
     expect(settings.openCustomCss.mock.calls).toEqual([['profile'], ['global']]);
   });
 
-  it('offers the command-line launcher to an AppImage only, and says where the command went', async () => {
+  it('offers the command-line launcher only to a run that can install one, and says where the command went', async () => {
     const { app } = stubBridge();
     const plain = await render();
     expect(button(plain, 'Install command-line launcher')).toBeUndefined();
-    const container = await render(STATE, true);
+    const container = await render(STATE, 'linux');
     await act(async () => button(container, 'Install command-line launcher').click());
     expect(app.installLauncher).toHaveBeenCalled();
     await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('/home/u/.local/bin/galeo'));
   });
 
+  it("says what the launcher adds on each system, and on macOS how to reach ~/.local/bin", async () => {
+    stubBridge();
+    const hint = async (platform: Platform) => (await render(STATE, platform)).textContent ?? '';
+    expect(await hint('linux')).toContain('Adds galeo to ~/.local/bin and to your applications, for this AppImage');
+    expect(await hint('darwin')).toContain('add ~/.local/bin to your PATH');
+    const windows = await hint('win32');
+    expect(windows).toContain('Adds a galeo command for this app');
+    expect(windows).not.toContain('~/.local/bin');
+  });
+
   it('says why the launcher was not installed', async () => {
     const { app } = stubBridge();
     app.installLauncher.mockResolvedValue({ ok: false, reason: "/home/u/.local/bin/galeo exists and is not galeo's" });
-    const container = await render(STATE, true);
+    const container = await render(STATE, 'linux');
     await act(async () => button(container, 'Install command-line launcher').click());
     await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('is not galeo'));
   });
@@ -295,15 +306,15 @@ describe('SettingsView (UX §6)', () => {
   it('says the launcher was not installed when installing failed outright', async () => {
     const { app } = stubBridge();
     app.installLauncher.mockRejectedValue(new Error('EACCES'));
-    const container = await render(STATE, true);
+    const container = await render(STATE, 'linux');
     await act(async () => button(container, 'Install command-line launcher').click());
     await vi.waitFor(() => expect(container.querySelector('[data-testid="launcher-result"]')?.textContent).toContain('Not installed'));
   });
 
-  it('uninstalls the launcher from an AppImage only, and says what it removed and what it kept', async () => {
+  it('uninstalls the launcher only from a run that can install one, and says what it removed and what it kept', async () => {
     const { app } = stubBridge();
     expect(button(await render(), 'Uninstall command-line launcher')).toBeUndefined();
-    const container = await render(STATE, true);
+    const container = await render(STATE, 'linux');
     const result = () => container.querySelector('[data-testid="launcher-result"]')?.textContent;
     await act(async () => button(container, 'Uninstall command-line launcher').click());
     expect(app.uninstallLauncher).toHaveBeenCalled();

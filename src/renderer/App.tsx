@@ -81,7 +81,7 @@ export function App() {
     <CommandsProvider platform={shown.platform}>
       <OutlineProvider>
         <UnsavedPrompt>
-          <MainView sandboxed={shown.sandboxed} platform={shown.platform} appImage={shown.appImage} version={shown.version} />
+          <MainView sandboxed={shown.sandboxed} platform={shown.platform} commandLauncher={shown.commandLauncher} version={shown.version} />
         </UnsavedPrompt>
       </OutlineProvider>
     </CommandsProvider>
@@ -96,7 +96,7 @@ function reloaded(): boolean {
 /** Status-bar messages go away on their own. */
 const MESSAGE_MS = 4000;
 
-function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boolean; platform: Platform; appImage: boolean; version: string }) {
+function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed: boolean; platform: Platform; commandLauncher: boolean; version: string }) {
   const [workerReady, setWorkerReady] = useState(false);
   const [client, setClient] = useState<RenderClient | null>(null);
   const { view, store } = useTabs();
@@ -247,7 +247,7 @@ function MainView({ sandboxed, platform, appImage, version }: { sandboxed: boole
                       settings &&
                       profile && (
                         <Suspense fallback={null}>
-                          <SettingsView state={settings} profile={profile} appImage={appImage} version={version} onAbout={() => openAbout()} say={setMessage} />
+                          <SettingsView state={settings} profile={profile} launcher={commandLauncher ? platform : null} version={version} onAbout={() => openAbout()} say={setMessage} />
                         </Suspense>
                       )
                     ) : (

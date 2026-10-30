@@ -328,7 +328,9 @@ Quick open lists a typed folder (`~/…`, `/…`), and opens any selection, only
 credit of real input to that window: each key press, click or tap main observes (`input-event`)
 earns one, for a second, at most five held. Following a link the document has spends one too,
 whether it opens a file, moves to an anchor or opens the browser, and so do deleting the
-window's profile, clearing recent files and installing or uninstalling the AppImage launcher.
+window's profile, clearing recent files and installing or uninstalling the command-line launcher
+(on macOS and Windows only the `galeo` command: `~/.local/bin/galeo`, or `galeo.cmd` in
+`%LOCALAPPDATA%\Microsoft\WindowsApps`).
 Uninstalling removes, in the user's own folders, only the files that still carry galeo's mark,
 and the icon only while it has galeo's bytes, one file at a time (never a folder); anything else
 there stays. A compromised page
@@ -377,7 +379,10 @@ before the `--` separator, at first launch (SR-01). `second-instance` data is tr
 files to open and the few documented flags, nothing else (a forwarded `--no-sandbox` is ignored).
 Chromium itself acts on switches anywhere before `--`, so on Linux every entry point (desktop
 entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument handling
-(ADR-009). At first launch, main refuses to start when a switch follows a file name without `--`.
+(ADR-009). macOS's `galeo` command is a copy of `gal` too; Finder hands files over as `open-file`
+events, never argv. Windows has no wrapper: Explorer's "Open with" runs `galeo.exe -- "%1"`, and
+`galeo.cmd` passes the arguments as typed. Windows shells don't expand wildcards for a program, so
+a hostile file name reaches argv only if the user types it (A7 needs a glob). At first launch, main refuses to start when a switch follows a file name without `--`.
 *AC*: tests with switch-like file names (`--inspect`, `--gpu-launcher=…`, `--no-sandbox`) after
 `--` open them as files.
 The one program main runs itself (v0.3) is fontconfig's `fc-list`, for the font pickers: found on

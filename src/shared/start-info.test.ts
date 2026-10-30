@@ -8,7 +8,7 @@ const info: StartInfo = {
   platform: 'linux',
   sandboxed: true,
   sandboxUnavailable: null,
-  appImage: false,
+  commandLauncher: false,
 };
 
 describe('start info', () => {

@@ -24,6 +24,7 @@ import type { ProfileView, SettingsResult, SettingsScope, SettingsState } from '
 import type { SeparatorChoice } from '../../shared/csv';
 import { TAB_PANEL_MAX, TAB_PANEL_MIN, type Settings, type SettingsOverrides, type TabsPosition, type ThemeMode } from '../../shared/settings';
 import type { SystemFont } from '../../shared/fonts';
+import type { Platform } from '../../shared/keymap';
 import type { ReaderWidth } from '../../shared/tabs';
 import { fontStack } from './tokens';
 import { NumberSetting, RadioSetting, SwitchSetting, useDraft } from './fields';
@@ -58,14 +59,15 @@ const TABS_CHOICES: readonly [TabsPosition, string][] = [
 export function SettingsView({
   state,
   profile,
-  appImage = false,
+  launcher = null,
   version,
   onAbout,
   say,
 }: {
   state: SettingsState;
   profile: ProfileView;
-  appImage?: boolean;
+  /** The system whose command-line launcher this run can install; null: none (UX §6). */
+  launcher?: Platform | null;
   /** galeo's version, and the About dialog it opens (version, licence, notices). */
   version: string;
   onAbout: () => void;
@@ -173,7 +175,7 @@ export function SettingsView({
         <Button onPress={() => void window.galeo.settings.openCustomCss('global').catch(reportFailure(say, "Couldn't open the CSS file"))}>Open CSS for all profiles</Button>
       </div>
 
-      {appImage && <LauncherSection />}
+      {launcher && <LauncherSection platform={launcher} />}
 
       <h2>About</h2>
       <div className="setting settings-about" data-setting="about">
@@ -378,12 +380,19 @@ function uninstalled({ removed, kept }: { removed: string[]; kept: string[] }): 
 }
 
 /** Adds galeo to ~/.local/bin and to the applications menu, for the AppImage it runs from, or takes it out again. */
-function LauncherSection() {
+/** What "Install command-line launcher" adds, per system. */
+const LAUNCHER_HINTS: Readonly<Record<Platform, string>> = {
+  linux: 'Adds galeo to ~/.local/bin and to your applications, for this AppImage, or removes it again.',
+  darwin: "Adds a galeo command to ~/.local/bin, for this app, or removes it again. If your shell doesn't find it, add ~/.local/bin to your PATH.",
+  win32: 'Adds a galeo command for this app, or removes it again.',
+};
+
+function LauncherSection({ platform }: { platform: Platform }) {
   const [launcher, setLauncher] = useState<string | null>(null);
   return (
     <>
       <h2>Command line</h2>
-      <p className="field-hint">Adds galeo to ~/.local/bin and to your applications, for this AppImage, or removes it again.</p>
+      <p className="field-hint">{LAUNCHER_HINTS[platform]}</p>
       <div className="settings-buttons">
         <Button
           onPress={() =>

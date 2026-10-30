@@ -88,8 +88,8 @@ export interface AppInfo {
   sandboxed: boolean;
   /** Set while the app shows only the sandbox-unavailable choice (ADR-009). */
   sandboxUnavailable: SandboxCause | null;
-  /** Running as an AppImage, which can install its own command-line launcher (ADR-008). */
-  appImage: boolean;
+  /** This run can install a command-line launcher: the AppImage, or the macOS or Windows app (ADR-008). */
+  commandLauncher: boolean;
   /** This window's renderer crashed repeatedly: it shows the crash-loop message, not its tabs (UX §4). */
   crashLoop: boolean;
 }

@@ -1,6 +1,16 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { appImageLauncher, installLauncher, launcherPaths, LAUNCHER_MARK, MIME_MARK, uninstallLauncher } from '../../../src/core/desktop/launcher';
+import {
+  appCommand,
+  appImageLauncher,
+  installAppCommand,
+  installLauncher,
+  launcherPaths,
+  LAUNCHER_MARK,
+  MIME_MARK,
+  uninstallAppCommand,
+  uninstallLauncher,
+} from '../../../src/core/desktop/launcher';
 import { utf8 } from '../../../src/main/adapters/utf8';
 import { FakeFileSystem } from '../../helpers/fakes';
 // The same check the packages' desktop entry passes (verify:package).
@@ -226,5 +236,68 @@ describe('uninstallLauncher ("Uninstall command-line launcher")', () => {
       throw new Error('update-mime-database: not found');
     };
     expect((await uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(DIRS), PNG)).removed).toContain(MIME_FILE);
+  });
+});
+
+describe('appCommand ("Install command-line launcher" on macOS and Windows, ADR-008)', () => {
+  const MAC_EXE = '/Applications/galeo.app/Contents/MacOS/galeo';
+  const WIN_EXE = 'C:\\Users\\me\\AppData\\Local\\Programs\\galeo\\galeo.exe';
+  const WINDOWS_APPS = 'C:\\Users\\me\\AppData\\Local\\Microsoft\\WindowsApps';
+
+  it("on macOS is a copy of gal in the bin folder, marked as galeo's, pointed at the app", () => {
+    const command = appCommand('darwin', MAC_EXE, '/Users/me/.local/bin', LAUNCHER_SCRIPT);
+    if (!command.ok) throw new Error(command.reason);
+    expect(command.path).toBe('/Users/me/.local/bin/galeo');
+    const lines = command.content.split('\n');
+    expect(lines[0]).toBe('#!/bin/sh');
+    expect(lines[1]).toBe('# Installed by galeo: the command-line launcher for its app.');
+    expect(command.content).toContain(`GALEO_BIN='${MAC_EXE}'`);
+    expect(command.content.endsWith('exec "$GALEO_BIN" "$@"\n')).toBe(true);
+  });
+
+  it('on macOS refuses an app still in its disk image or translocated from Downloads, and a relative path', () => {
+    const refused = (exe: string) => appCommand('darwin', exe, '/Users/me/.local/bin', LAUNCHER_SCRIPT);
+    expect(refused('/Volumes/galeo/galeo.app/Contents/MacOS/galeo')).toEqual({ ok: false, reason: expect.stringContaining('move it to Applications') });
+    expect(refused('/private/var/folders/x/T/AppTranslocation/1A2B/d/galeo.app/Contents/MacOS/galeo')).toEqual({ ok: false, reason: expect.stringContaining('move it to Applications') });
+    expect(refused('galeo.app/Contents/MacOS/galeo')).toEqual({ ok: false, reason: "galeo's path is not absolute" });
+    expect(refused('/Applications/ga\nleo.app/Contents/MacOS/galeo')).toEqual({ ok: false, reason: "galeo's path has a control character" });
+  });
+
+  it('on Windows is a galeo.cmd in WindowsApps that hands every argument to galeo.exe', () => {
+    const command = appCommand('win32', WIN_EXE, WINDOWS_APPS, null);
+    if (!command.ok) throw new Error(command.reason);
+    expect(command.path).toBe(`${WINDOWS_APPS}\\galeo.cmd`);
+    expect(command.content).toBe(['@echo off', 'rem Installed by galeo: the command-line launcher for its app.', `"${WIN_EXE}" %*`, ''].join('\r\n'));
+  });
+
+  it("on Windows doubles a % in galeo's path, so cmd doesn't expand it, and refuses a path that isn't a drive's", () => {
+    const command = appCommand('win32', 'D:\\100%\\galeo.exe', WINDOWS_APPS, null);
+    expect(command.ok && command.content).toContain('"D:\\100%%\\galeo.exe" %*');
+    expect(appCommand('win32', 'galeo.exe', WINDOWS_APPS, null)).toEqual({ ok: false, reason: "galeo's path is not absolute" });
+    expect(appCommand('win32', '\\\\server\\share\\galeo.exe', WINDOWS_APPS, null)).toEqual({ ok: false, reason: "galeo's path is not absolute" });
+  });
+
+  it("replaces its own command, never one that isn't galeo's, and uninstalls only its own", async () => {
+    const made = appCommand('darwin', MAC_EXE, '/Users/me/.local/bin', LAUNCHER_SCRIPT);
+    if (!made.ok) throw new Error(made.reason);
+    const fs = new FakeFileSystem({ '/Users/me/.local/bin/galeo': `#!/bin/sh\n${LAUNCHER_MARK}\nold` });
+    expect(await installAppCommand({ fs, utf8 }, made)).toEqual({ ok: true });
+    expect(new TextDecoder().decode(await fs.readFile(made.path, { maxBytes: 1e6 }))).toBe(made.content);
+    expect(fs.modeOf(made.path)).toBe(0o755);
+    expect(await uninstallAppCommand({ fs, utf8 }, made.path)).toEqual({ removed: [made.path], kept: [] });
+    expect(await uninstallAppCommand({ fs, utf8 }, made.path)).toEqual({ removed: [], kept: [] });
+
+    const foreign = new FakeFileSystem({ '/Users/me/.local/bin/galeo': '#!/bin/sh\necho mine' });
+    expect(await installAppCommand({ fs: foreign, utf8 }, made)).toEqual({ ok: false, reason: "/Users/me/.local/bin/galeo exists and is not galeo's" });
+    expect(await uninstallAppCommand({ fs: foreign, utf8 }, made.path)).toEqual({ removed: [], kept: [made.path] });
+    expect(new TextDecoder().decode(await foreign.readFile(made.path, { maxBytes: 1e6 }))).toBe('#!/bin/sh\necho mine');
+  });
+
+  it('makes the bin folder when there is none', async () => {
+    const made = appCommand('win32', WIN_EXE, WINDOWS_APPS, null);
+    if (!made.ok) throw new Error(made.reason);
+    const fs = new FakeFileSystem({});
+    expect(await installAppCommand({ fs, utf8 }, made)).toEqual({ ok: true });
+    expect(fs.modeOf(WINDOWS_APPS)).toBe(0o755);
   });
 });

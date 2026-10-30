@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InputCredits } from '../../../src/core/documents/input-credits';
-import { appHandlers, appImagePath } from '../../../src/main/app/handlers';
+import { appHandlers, launcherTarget, type LauncherTarget } from '../../../src/main/app/handlers';
 import { utf8 } from '../../../src/main/adapters/utf8';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
 import type { AppInfo } from '../../../src/shared/contracts';
@@ -10,7 +10,7 @@ const from = (id: number) => ({ sender: { id } }) as WindowIpcEvent;
 const GAL = ['#!/bin/sh', 'GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"', 'exec "$GALEO_BIN" "$@"', ''].join('\n');
 const APPIMAGE = '/home/me/Apps/galeo.AppImage';
 
-function setup({ appImage = APPIMAGE as string | null, env = {} as Record<string, string>, files = {} as Record<string, string> } = {}) {
+function setup({ target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTarget | null, env = {} as Record<string, string>, files = {} as Record<string, string> } = {}) {
   const fs = new FakeFileSystem({ '/opt/galeo/gal': GAL, '/opt/galeo/resources/mime.xml': '<!-- The MDX type, installed by galeo. --><mime/>', ...files });
   const input = new InputCredits(() => 0);
   const refreshed: string[] = [];
@@ -23,7 +23,7 @@ function setup({ appImage = APPIMAGE as string | null, env = {} as Record<string
       input,
       fs,
       utf8,
-      appImage,
+      target,
       home: '/home/me',
       execDir: '/opt/galeo',
       resourcesDir: '/opt/galeo/resources',
@@ -37,12 +37,31 @@ function setup({ appImage = APPIMAGE as string | null, env = {} as Record<string
 // The command-line launcher is the Linux AppImage's; its folders are POSIX paths.
 const posix = process.platform !== 'win32';
 
-describe('appImagePath', () => {
-  it('is the absolute APPIMAGE of a packaged run only', () => {
-    expect(appImagePath(true, { APPIMAGE })).toBe(APPIMAGE);
-    expect(appImagePath(false, { APPIMAGE })).toBeNull();
-    expect(appImagePath(true, { APPIMAGE: 'galeo.AppImage' })).toBeNull();
-    expect(appImagePath(true, {})).toBeNull();
+describe('launcherTarget', () => {
+  const run = { packaged: true, platform: 'linux' as NodeJS.Platform, env: {}, execPath: '/opt/galeo/galeo-bin', home: '/home/me' };
+
+  it('is the absolute APPIMAGE of a packaged Linux run only', () => {
+    expect(launcherTarget({ ...run, env: { APPIMAGE } })).toEqual({ kind: 'appimage', appImage: APPIMAGE });
+    expect(launcherTarget({ ...run, packaged: false, env: { APPIMAGE } })).toBeNull();
+    expect(launcherTarget({ ...run, env: { APPIMAGE: 'galeo.AppImage' } })).toBeNull();
+    // The .deb ships its own galeo command.
+    expect(launcherTarget(run)).toBeNull();
+  });
+
+  it("is the macOS app's binary, with the command in ~/.local/bin", () => {
+    const exe = '/Applications/galeo.app/Contents/MacOS/galeo';
+    expect(launcherTarget({ ...run, platform: 'darwin', execPath: exe, home: '/Users/me' })).toEqual({ kind: 'app', platform: 'darwin', exe, binDir: '/Users/me/.local/bin' });
+    expect(launcherTarget({ ...run, platform: 'darwin', packaged: false, execPath: exe })).toBeNull();
+  });
+
+  it('is the Windows app, with the command in WindowsApps, and the portable build the file the user has', () => {
+    const windows = { ...run, platform: 'win32' as NodeJS.Platform, execPath: 'C:\\Users\\me\\AppData\\Local\\Programs\\galeo\\galeo.exe', home: 'C:\\Users\\me' };
+    const binDir = 'C:\\Users\\me\\AppData\\Local\\Microsoft\\WindowsApps';
+    expect(launcherTarget({ ...windows, env: { LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local' } })).toEqual({ kind: 'app', platform: 'win32', exe: windows.execPath, binDir });
+    const portable = 'D:\\Tools\\galeo-0.5.0-x64-portable.exe';
+    expect(launcherTarget({ ...windows, env: { LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local', PORTABLE_EXECUTABLE_FILE: portable } })).toMatchObject({ exe: portable });
+    expect(launcherTarget({ ...windows, env: { LOCALAPPDATA: 'AppData' } })).toBeNull();
+    expect(launcherTarget(windows)).toBeNull();
   });
 });
 
@@ -87,16 +106,37 @@ describe('appHandlers', () => {
     expect(refreshed).toEqual(['/home/me/data/mime']);
   });
 
-  it('refuses to install or uninstall outside an AppImage', async () => {
-    const { handlers, input } = setup({ appImage: null });
+  it('refuses to install or uninstall when the run has no launcher', async () => {
+    const { handlers, input } = setup({ target: null });
     input.received(1);
-    await expect(async () => handlers['app.uninstallLauncher']([], from(1))).rejects.toThrow('not an AppImage');
+    await expect(async () => handlers['app.uninstallLauncher']([], from(1))).rejects.toThrow('no launcher for this run');
+    input.received(1);
+    await expect(async () => handlers['app.installLauncher']([], from(1))).rejects.toThrow('no launcher for this run');
   });
 
-  it('refuses to install outside an AppImage', async () => {
-    const { handlers, input } = setup({ appImage: null });
+  it("installs the macOS command from the app's own gal, then uninstalls it, on real input only", async () => {
+    const exe = '/Applications/galeo.app/Contents/MacOS/galeo';
+    const { handlers, fs, input, refreshed } = setup({
+      target: { kind: 'app', platform: 'darwin', exe, binDir: '/Users/me/.local/bin' },
+      files: { '/opt/galeo/resources/gal': GAL },
+    });
+    await expect(async () => handlers['app.installLauncher']([], from(1))).rejects.toThrow('no input');
     input.received(1);
-    await expect(async () => handlers['app.installLauncher']([], from(1))).rejects.toThrow('not an AppImage');
+    expect(await handlers['app.installLauncher']([], from(1))).toEqual({ ok: true, bin: '/Users/me/.local/bin/galeo' });
+    expect(utf8.decode(await fs.readFile('/Users/me/.local/bin/galeo', { maxBytes: 4096 }))).toContain(`GALEO_BIN='${exe}'`);
+    input.received(1);
+    expect(await handlers['app.uninstallLauncher']([], from(1))).toEqual({ removed: ['/Users/me/.local/bin/galeo'], kept: [] });
+    expect(refreshed).toEqual([]);
+  });
+
+  it('installs and uninstalls the Windows galeo.cmd in WindowsApps', async () => {
+    const binDir = 'C:\\Users\\me\\AppData\\Local\\Microsoft\\WindowsApps';
+    const { handlers, fs, input } = setup({ target: { kind: 'app', platform: 'win32', exe: 'C:\\Programs\\galeo\\galeo.exe', binDir } });
+    input.received(1);
+    expect(await handlers['app.installLauncher']([], from(1))).toEqual({ ok: true, bin: `${binDir}\\galeo.cmd` });
+    expect(utf8.decode(await fs.readFile(`${binDir}\\galeo.cmd`, { maxBytes: 4096 }))).toContain('"C:\\Programs\\galeo\\galeo.exe" %*');
+    input.received(1);
+    expect(await handlers['app.uninstallLauncher']([], from(1))).toEqual({ removed: [`${binDir}\\galeo.cmd`], kept: [] });
   });
 
   it('takes the sandbox choice only while it is offered', async () => {

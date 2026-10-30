@@ -121,6 +121,10 @@ if (process.platform === 'darwin') {
   if (problems.length) failures.push(...problems.map((problem) => `associations: ${problem}`));
   else console.log(`associations: ${ASSOCIATED_EXTENSIONS.length} extensions, as a viewer, never the default`);
 }
+if (process.platform === 'darwin') {
+  if (existsSync(path.join(resources, 'gal'))) console.log('launcher: gal in Resources, for the galeo command');
+  else failures.push('launcher: no gal in Resources (Settings → Install command-line launcher needs it)');
+}
 
 // Windows: the installer and the portable build for this architecture; on CI, the installer's
 // "Open with" entries, read back from the registry after a silent per-user install and gone after

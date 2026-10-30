@@ -57,6 +57,8 @@ export default {
     category: 'public.app-category.developer-tools',
     icon: 'packaging/icons/png/1024x1024.png',
     identity: null,
+    // `gal`, which "Install command-line launcher" copies to ~/.local/bin/galeo.
+    extraResources: [{ from: 'bin/gal', to: 'gal' }],
     // "Open With" for documents and data, never as their default app.
     fileAssociations: MAC_FILE_ASSOCIATIONS,
   },

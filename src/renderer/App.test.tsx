@@ -45,7 +45,7 @@ const baseInfo: AppInfo = {
   platform: 'linux',
   sandboxed: true,
   sandboxUnavailable: null,
-  appImage: false,
+  commandLauncher: false,
   crashLoop: false,
 };
 
