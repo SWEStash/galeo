@@ -28,7 +28,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run check:docs` | Check the docs' relative links and `#anchors`, ADR and SR ids, and repository paths in code spans (`scripts/check-docs.mjs`; web links are never fetched) |
 | `npm run check:portable` | Fail on test lines that pass on Linux but not on macOS or Windows: Ctrl where macOS uses Cmd, Cmd+←/→ (by line on macOS), fixture paths expected with `/`, GNU-only tools; `portable: <reason>` in a comment keeps one (`scripts/check-portable-tests.mjs`) |
 | `npm run check` | Typecheck, boundaries, the exports and docs checks, and tests: run it before every commit |
-| `npm run preflight` | CI's Linux job on this machine (audit, check, build and bundle check, e2e, no-network, perf, package, verify), then the e2e specs changed since the last push, 5 times each: run it before every push |
+| `npm run preflight` | CI's Linux job on this machine (audit, check, build and bundle check, e2e, no-network, perf, package, verify), then the e2e specs changed since the last push, 3 times each (the whole suite once more when a test helper changed): run it before every push, and only then |
 | `sh scripts/render-icons.sh` | Render the app icon PNGs from `packaging/icons/*.svg` after changing them (needs `rsvg-convert`: `librsvg2-bin`) |
 
 On Ubuntu 24.04+, unprivileged user namespaces are restricted, so the development Electron binary

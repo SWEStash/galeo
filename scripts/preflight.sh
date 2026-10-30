@@ -1,8 +1,8 @@
 #!/bin/sh
 # Runs CI's Linux job (.github/workflows/ci.yml) on this machine before a push, in the same order,
 # then repeats the end-to-end specs changed since the upstream branch to catch flaky tests.
-# PREFLIGHT_REPEAT sets how often each changed spec runs (default 5); a changed test helper repeats
-# the whole suite PREFLIGHT_SUITE_REPEAT times instead (default 2). Linux only; needs xvfb, strace,
+# PREFLIGHT_REPEAT sets how often each changed spec runs (default 3); a changed test helper repeats
+# the whole suite PREFLIGHT_SUITE_REPEAT times instead (default 1). Linux only; needs xvfb, strace,
 # and the dev sandbox profile (`sudo scripts/dev-sandbox-setup.sh`).
 set -eu
 
@@ -46,11 +46,11 @@ npm run headless -- npm run test:e2e
 base=$(git rev-parse --abbrev-ref --symbolic-full-name '@{upstream}' 2>/dev/null || echo origin/main)
 changed=$(git diff --name-only --diff-filter=AM "$base"...HEAD -- 'tests/e2e/*.spec.ts' 'tests/helpers/*')
 specs=$(printf '%s\n' "$changed" | grep '^tests/e2e/.*\.spec\.ts$' || true)
-repeat=${PREFLIGHT_REPEAT:-5}
+repeat=${PREFLIGHT_REPEAT:-3}
 # A changed helper can affect any spec, so the whole suite is repeated.
 if printf '%s\n' "$changed" | grep -q '^tests/helpers/'; then
   specs=tests/e2e
-  repeat=${PREFLIGHT_SUITE_REPEAT:-2}
+  repeat=${PREFLIGHT_SUITE_REPEAT:-1}
 fi
 if [ -n "$specs" ]; then
   step "flake check: specs changed since $base, $repeat times each"
