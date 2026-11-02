@@ -96,6 +96,14 @@ describe('WorkerThreadTaskRunner', () => {
     expect(echoed).toEqual({ ok: true, value: 'survives' });
   });
 
+  it('hands transferred buffers to the worker without a copy: the sender keeps none', async () => {
+    const tasks = runner();
+    const bytes = new Uint8Array([1, 2, 3]);
+    const echoed = await tasks.run<Uint8Array>('echo', { bytes }, { timeoutMs: 5000, transfer: [bytes.buffer] });
+    expect(echoed).toMatchObject({ ok: true, value: { bytes: new Uint8Array([1, 2, 3]) } });
+    expect(bytes.byteLength).toBe(0);
+  });
+
   describe('a worker slow to start (a loaded machine)', () => {
     /** A worker that comes online only when told, and echoes once it is. */
     class SlowWorker extends EventEmitter {

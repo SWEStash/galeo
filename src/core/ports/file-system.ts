@@ -37,7 +37,10 @@ export interface DirEntry {
 /** Local file access. Paths are absolute; all failures reject with `FsError`. */
 export interface FileSystem {
   stat(path: string): Promise<FileStat>;
-  /** Reads a regular file (following symlinks), refusing (`ETOOBIG`) anything over `maxBytes`. */
+  /**
+   * Reads a regular file (following symlinks), refusing (`ETOOBIG`) anything over `maxBytes`. The
+   * bytes are a fresh buffer the caller owns: it may hand that buffer to a worker.
+   */
   readFile(path: string, options: { maxBytes: number }): Promise<Uint8Array>;
   realpath(path: string): Promise<string>;
   /** Streams one directory's entries without following symlinks; callers bound the walk. */

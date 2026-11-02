@@ -5,6 +5,8 @@ type Task = (input: unknown) => unknown;
 /** Runs tasks inline; `hang` makes a task behave as if it overran its time budget. */
 export class FakeTaskRunner implements TaskRunner {
   private readonly hanging = new Set<string>();
+  /** Every task run, with the buffers it handed over. */
+  readonly calls: { task: string; input: unknown; transfer: ArrayBuffer[] }[] = [];
 
   constructor(private readonly tasks: Record<string, Task>) {}
 
@@ -12,7 +14,8 @@ export class FakeTaskRunner implements TaskRunner {
     this.hanging.add(task);
   }
 
-  async run<T>(task: string, input: unknown, _options?: { timeoutMs: number }): Promise<TaskResult<T>> {
+  async run<T>(task: string, input: unknown, options?: { timeoutMs: number; transfer?: ArrayBuffer[] }): Promise<TaskResult<T>> {
+    this.calls.push({ task, input, transfer: options?.transfer ?? [] });
     const fn = this.tasks[task];
     if (!fn) throw new Error(`FakeTaskRunner: unknown task ${task}`);
     if (this.hanging.has(task)) return { ok: false, reason: 'timeout' };

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { EditGrants } from '../../../src/core/documents/edit-grants';
-import { TabSearches } from '../../../src/core/documents/find-all';
+import { TabSearches, findInBytesTask } from '../../../src/core/documents/find-all';
 import { ImageGrants } from '../../../src/core/documents/images';
 import { DocumentLinks } from '../../../src/core/documents/links';
 import { ReadIdentities } from '../../../src/core/documents/identities';
@@ -70,7 +70,7 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
     input,
     unsaved: { answer: (window, answer) => void answers.push(`${window}:${answer}`) },
     opened: (path, window) => opened.push(`${window}:${path}`),
-    searches: new TabSearches({ records, grants, fs, decode, tasks: new FakeTaskRunner({ findInText: findInTextTask }) }),
+    searches: new TabSearches({ records, grants, fs, tasks: new FakeTaskRunner({ findInText: findInTextTask, findInBytes: (input) => findInBytesTask(input, decode) }) }),
     menus: {
       path: async (id, window) => void menus.push(`path ${id} ${window}`),
       document: async (id, window) => void menus.push(`document ${id} ${window}`),

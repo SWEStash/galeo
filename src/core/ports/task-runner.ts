@@ -5,5 +5,6 @@ export type TaskResult<T> =
 
 /** Runs a named core task off the main thread; overruns are terminated, never awaited. */
 export interface TaskRunner {
-  run<T>(task: string, input: unknown, options: { timeoutMs: number }): Promise<TaskResult<T>>;
+  /** `transfer`: buffers in `input` handed to the worker without a copy; the caller can't use them after. */
+  run<T>(task: string, input: unknown, options: { timeoutMs: number; transfer?: ArrayBuffer[] }): Promise<TaskResult<T>>;
 }

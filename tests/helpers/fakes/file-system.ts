@@ -61,7 +61,7 @@ export class FakeFileSystem implements FileSystem {
     const content = this.files.get(resolved);
     if (!content) throw new FsError(this.isDirectory(resolved) ? 'EISDIR' : 'ENOENT', path);
     if (content.byteLength > maxBytes) throw new FsError('ETOOBIG', path);
-    return content;
+    return content.slice();
   }
 
   async realpath(path: string): Promise<string> {

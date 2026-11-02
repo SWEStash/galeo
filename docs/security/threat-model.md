@@ -413,10 +413,10 @@ font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens
 - `fc-list` (the font pickers' list) gets 5 s and 4 MB of output; past either it is stopped and the
   pickers offer the bundled fonts only. A list is kept for the app's life, so it runs once; a
   failure is logged and stands for a minute before `fc-list` runs again.
-- Find in all tabs (ADR-024) runs each tab's search in main's task worker under a 5 s budget,
-  enforced the same way; a tab past it is listed as not searched. Counts stop at 10,000 per tab,
-  with 20 snippets of at most 40 characters either side of a match. A newer query from the window
-  stops the older search before its next tab.
+- Find in all tabs (ADR-024) decodes and searches each tab's file in main's task worker under a
+  5 s budget, enforced the same way; a tab past it is listed as not searched. Counts stop at 10,000
+  per tab, with 20 snippets of at most 40 characters either side of a match. A newer query from the
+  window stops the older search before its next tab.
 - The quick-open walker is bounded (file count, depth, time), does not follow symlinks out of the
   root, and detects loops.
 - Before inserting a document, the renderer sends main a "rendering tab X" breadcrumb. If a

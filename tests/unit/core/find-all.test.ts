@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EditGrants } from '../../../src/core/documents/edit-grants';
-import { TabSearches } from '../../../src/core/documents/find-all';
+import { TabSearches, findInBytesTask } from '../../../src/core/documents/find-all';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import type { Decode } from '../../../src/core/text/decode';
 import { findInTextTask } from '../../../src/shared/find';
@@ -35,10 +35,10 @@ class SlowFileSystem extends FakeFileSystem {
 function setup(files: Record<string, string | Uint8Array>) {
   const fs = new SlowFileSystem(files);
   const grants = new EditGrants();
-  const tasks = new FakeTaskRunner({ findInText: findInTextTask });
+  const tasks = new FakeTaskRunner({ findInText: findInTextTask, findInBytes: (input) => findInBytesTask(input, decode) });
   let n = 0;
   const records = new TabRegistry(() => `id-${++n}`);
-  const searches = new TabSearches({ records, grants, fs, decode, tasks });
+  const searches = new TabSearches({ records, grants, fs, tasks });
   return { fs, grants, tasks, records, searches };
 }
 
@@ -79,6 +79,35 @@ describe('TabSearches', () => {
     expect(counts(await searches.search(1, 'café', ANY_CASE))).toEqual([`${id}:1`]);
   });
 
+  it("hands a file tab's bytes to the worker without a copy, in the tab's chosen encoding", async () => {
+    const { tasks, records, searches } = setup({ '/d/a.txt': 'a needle', '/d/b.md': 'needle' });
+    const { id } = records.open('/d/a.txt', 1);
+    records.open('/d/b.md', 1);
+    records.setEncoding(id, 1, 'windows-1252');
+    await searches.search(1, 'needle', ANY_CASE);
+    expect(tasks.calls.map(({ task, input }) => [task, (input as { encoding: unknown }).encoding])).toEqual([
+      ['findInBytes', 'windows-1252'],
+      ['findInBytes', null],
+    ]);
+    for (const { input, transfer } of tasks.calls) {
+      expect(transfer).toHaveLength(1);
+      expect(transfer[0]).toBe((input as { bytes: Uint8Array }).bytes.buffer);
+    }
+  });
+
+  it('hands over a read that is a view into a larger buffer as it is, never copying it on main', async () => {
+    const read = new TextEncoder().encode('a needle!');
+    const view = read.subarray(0, 8);
+    const { fs, tasks, records, searches } = setup({});
+    fs.readFile = async () => view;
+    records.open('/d/a.md', 1);
+    expect(counts(await searches.search(1, 'needle', ANY_CASE))).toEqual(['id-1:1']);
+    const [call] = tasks.calls;
+    expect((call!.input as { bytes: Uint8Array }).bytes).toBe(view);
+    expect(call!.transfer).toHaveLength(1);
+    expect(call!.transfer[0]).toBe(read.buffer);
+  });
+
   it('lists a tab it could not search, with the reason', async () => {
     const { fs, records, searches } = setup({ '/d/bin': new Uint8Array([0, 1, 2]), '/d/locked.md': 'x' });
     for (const file of ['/d/gone.md', '/d/bin', '/d/locked.md']) records.open(file, 1);
@@ -89,7 +118,7 @@ describe('TabSearches', () => {
   it('lists a tab whose search overran its budget as too slow', async () => {
     const { tasks, records, searches } = setup({ '/d/a.md': 'needle' });
     records.open('/d/a.md', 1);
-    tasks.hang('findInText');
+    tasks.hang('findInBytes');
     expect(counts(await searches.search(1, 'needle', ANY_CASE))).toEqual(['id-1:too-slow']);
   });
 
@@ -152,6 +181,28 @@ describe('findInTextTask', () => {
     expect(findInTextTask({ text: 'a needle', query: 'needle', caseSensitive: false })).toMatchObject({ count: 1 });
     for (const bad of [null, {}, { text: 1, query: 'x', caseSensitive: false }, { text: '', query: 'xx', caseSensitive: 'no' }]) {
       expect(() => findInTextTask(bad)).toThrow(/findInText: bad input/);
+    }
+  });
+});
+
+describe('findInBytesTask', () => {
+  const bytesOf = (text: string) => new TextEncoder().encode(text);
+
+  it("decodes a file's bytes as a tab would read them, then matches", () => {
+    expect(findInBytesTask({ bytes: bytesOf('a needle, a NEEDLE'), encoding: null, query: 'needle', caseSensitive: false }, decode)).toMatchObject({ count: 2 });
+    const cafe = new Uint8Array([0x63, 0x61, 0x66, 0xe9]);
+    expect(findInBytesTask({ bytes: cafe, encoding: null, query: 'café', caseSensitive: false }, decode)).toMatchObject({ count: 1 });
+    expect(findInBytesTask({ bytes: cafe, encoding: 'windows-1252', query: 'café', caseSensitive: true }, decode)).toMatchObject({ count: 1 });
+  });
+
+  it('answers binary for a file a tab would show as binary', () => {
+    expect(findInBytesTask({ bytes: new Uint8Array([0, 1, 2]), encoding: null, query: 'xx', caseSensitive: false }, decode)).toEqual({ binary: true });
+  });
+
+  it('refuses input that is not bytes, an encoding or none, a query and a case flag', () => {
+    const good = { bytes: bytesOf('x'), encoding: null, query: 'xx', caseSensitive: false };
+    for (const bad of [null, {}, { ...good, bytes: 'x' }, { ...good, encoding: 1 }, { ...good, query: 1 }, { ...good, caseSensitive: 'no' }]) {
+      expect(() => findInBytesTask(bad, decode)).toThrow(/findInBytes: bad input/);
     }
   });
 });

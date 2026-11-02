@@ -188,7 +188,7 @@ function start(initialMode: StartupMode): void {
   cleanups.add((windowId) => input.closeWindow(windowId));
   // One worker for main's parsing and searches; it starts on the first task, not at launch.
   const tasks = new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js'));
-  const searches = new TabSearches({ records: documents, grants, fs, decode: decodeWithPlatform, tasks });
+  const searches = new TabSearches({ records: documents, grants, fs, tasks });
   cleanups.add((windowId) => searches.closeWindow(windowId));
   const links = new DocumentLinks({
     records: documents,

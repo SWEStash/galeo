@@ -2,6 +2,7 @@
 
 - Status: Accepted (2026-10-22, owner)
 - Date: 2026-10-22
+- Amended: 2026-11-02 (owner, in place): the task worker decodes each file, not main (decision 2).
 - Deciders: project owner
 - Builds on: [ADR-004](ADR-004-security-and-zero-network.md) (main's task worker, capability-scoped reads),
   [ADR-002](ADR-002-window-and-tab-model.md) (tabs belong to one window, windows to one profile),
@@ -38,19 +39,23 @@ A measurement with 10 tabs of 10 MB each, on a loaded machine, gave:
 1. **Main searches, one tab at a time, in its task worker.**
    - The page sends the query: `documents.findAll(query, { caseSensitive })`.
    - Main lists the sender window's open tabs, in tab order, except the Settings tab.
-   - For each tab it gets the text, then runs a `findInText` job on the existing task worker (ADR-004).
+   - For each tab it gets the file's bytes or the kept text, then runs a `findInBytes` or `findInText`
+     job on the existing task worker (ADR-004).
    - When every tab is done, it answers once with the results.
    - Nothing runs at start: the job is registered in the worker, which starts on first use.
 2. **Where each tab's text comes from:**
    - A tab with unsaved changes is searched in the text main keeps for it. Before sending a query, the page
      flushes its editors' unsaved text (`keepNow`), so the search sees what is on screen.
    - Every other tab is read from disk by main, through its file-system port, under the 256 MiB read cap.
-     The tab's chosen encoding is used if it has one; otherwise the usual detection applies. The text is not
-     hashed.
+     Main hands the bytes to the worker without a copy (a transfer), and the worker decodes them: in the
+     tab's chosen encoding if it has one, otherwise with the usual detection. The text is not hashed.
    - A tab whose file is missing, unreadable, binary or too large is listed as *not searched*, with the
      reason. Its text is never guessed.
-   - The worker gets the decoded text. The text is not cached between queries; the system's file cache
-     already makes a second read cheap.
+   - Main never decodes a file's text or copies it. The text is not cached between queries; the system's
+     file cache already makes a second read cheap.
+   - *Amended 2026-11-02:* main used to decode each file and send the worker its text. With three 100 MB
+     tabs, that held main for up to ~540 ms at a time per query, and every window waited; decoding in the
+     worker brought it to 12–22 ms (`tests/perf/find-all.spec.ts`).
 3. **Matching is literal, on the source text.**
    - The search matches case-insensitively by default, with a *Match case* option, like the find bar.
    - Queries shorter than 2 characters return nothing.
@@ -105,7 +110,8 @@ A measurement with 10 tabs of 10 MB each, on a loaded machine, gave:
 
 - One new channel, `documents.findAll`, with a zod schema and handler tests: malformed input, a foreign
   sender, and another window's tabs never searched.
-- The task worker gains `findInText`, a pure core function with unit tests.
+- The task worker gains `findInText`, a pure core function with unit tests, and (2026-11-02) `findInBytes`,
+  which decodes a file's bytes first.
 - The find bar can be opened with a query, a case option and a line, through `DocumentHandle`.
 - Ctrl+Shift+F and a palette entry open the overlay. UX gains a row for it, and the keyboard map lists it.
 - VALIDATION gains a manual Orca row for the overlay.

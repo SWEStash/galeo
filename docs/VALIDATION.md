@@ -93,6 +93,7 @@ Electron and Mermaid updates (1257 → 1377 MB).
 | Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB | 1004 MB |
 | Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — | 16.7 ms (p95 33.4) |
 | A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — | 1567 ms (p95 1947) |
+| Find in all tabs over three 100 MB tabs: the longest main is busy at once (v0.5) | 100 ms (2026-11-02) | — | — | — | — | — |
 
 The v0.3 rows were first measured on 2026-10-16 during development (headless, Electron 44.8.0, the
 machine under a load average of 2–3, so not release figures): the JSON tree opened in 1550–1986 ms and
@@ -115,6 +116,13 @@ before log lines had colour: 16.7 ms per frame paging (p95 16.8–33.3), 1609–
 line, nearly all of it reading the whole file again. With colour, under a load average of 2.5–4.5
 (another project's tests running): 16.7 ms and 1502–1714 ms in three runs, 33.3 ms and 2278 ms in
 one. Colouring a line costs about 4 µs, about 0.3 ms for a screen of 80 lines.
+
+The find-in-all-tabs row was first measured on 2026-11-02 during development (headless, not release
+figures), with three never-shown 100 MB tabs (ASCII, multibyte UTF-8 and Windows-1252) and a second
+window calling main throughout. While main decoded each file and copied its text to the task worker,
+main stayed busy for up to 463–600 ms at once (medians of three runs), and the other window waited as
+long. With the bytes handed to the worker undecoded and uncopied: 12–22 ms, and 10–12 ms for the
+other window; a query took 1.3–1.9 s instead of 2.0–2.1 s.
 
 The first strict run of the 0.2.0 candidate measured 913 ms for a blank window: its first
 launches after a fresh build, with the operating system's file cache cold. A run straight after

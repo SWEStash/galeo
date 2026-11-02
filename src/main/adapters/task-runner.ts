@@ -8,6 +8,7 @@ interface Job {
   task: string;
   input: unknown;
   timeoutMs: number;
+  transfer: ArrayBuffer[];
   resolve: (result: TaskResult<unknown>) => void;
 }
 
@@ -32,9 +33,9 @@ export class WorkerThreadTaskRunner implements TaskRunner {
     private readonly createWorker: (script: string) => Worker = (path) => new Worker(path),
   ) {}
 
-  run<T>(task: string, input: unknown, { timeoutMs }: { timeoutMs: number }): Promise<TaskResult<T>> {
+  run<T>(task: string, input: unknown, { timeoutMs, transfer = [] }: { timeoutMs: number; transfer?: ArrayBuffer[] }): Promise<TaskResult<T>> {
     return new Promise((resolve) => {
-      this.queue.push({ id: ++this.nextId, task, input, timeoutMs, resolve: resolve as Job['resolve'] });
+      this.queue.push({ id: ++this.nextId, task, input, timeoutMs, transfer, resolve: resolve as Job['resolve'] });
       this.dispatch();
     });
   }
@@ -52,7 +53,7 @@ export class WorkerThreadTaskRunner implements TaskRunner {
     const worker = this.ensureWorker();
     this.running = { job, timer: null };
     if (this.online) this.startBudget(worker);
-    worker.postMessage({ id: job.id, task: job.task, input: job.input });
+    worker.postMessage({ id: job.id, task: job.task, input: job.input }, job.transfer);
   }
 
   /** The running task's budget starts now, on `worker`. */
