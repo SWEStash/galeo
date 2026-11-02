@@ -115,10 +115,6 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run build
 
-      # End-to-end: a fresh runner's first app start is slow; one start keeps it out of the per-test limits.
-      - name: Warm up the app
-        if: ${{ !cancelled() && matrix.kind != 'package' }}
-        run: npx playwright test --project=warm-up
       - name: The failed tests' list from the earlier run
         if: ${{ !cancelled() && matrix.kind == 'rerun' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
