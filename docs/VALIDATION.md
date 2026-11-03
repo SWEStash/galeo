@@ -198,3 +198,19 @@ these.
 | Diagrams in real articles: sized to the column (a wide one scrolls sideways), ⤢ opens the viewer, one with its own colours sits on a light panel in dark mode; a pie's slices all show in dark mode | Pass (2026-10-07) |
 | A document with math and diagrams draws both; a document's images open in the viewer | Pass (2026-10-07) |
 | Links open on a click; Delete profile and Clear recent still work (they need real input, SR-12) | Pass (2026-10-07) |
+
+## macOS and Windows previews (CI evidence)
+
+The previews ([ADR-027](decisions/ADR-027-macos-windows-previews.md)) get no manual checks. Their
+evidence is the Platforms workflow (`.github/workflows/platforms.yml`), run on the release candidate
+and again by the release workflow on the tag. A package job runs the typecheck, the unit tests, the
+build, `npm run package` and `npm run verify:package` (the fuses, ASAR integrity among them, read back from the binary; the
+*Open With* types read back from the package; and a start of the packaged app that parses its
+arguments). The end-to-end suite
+runs in three shards on macOS arm64 and Windows x64 only, to save the minutes quota.
+
+| Run | macOS arm64 (`macos-15`): package, e2e | macOS x64 (`macos-15-intel`): package | Windows x64 (`windows-2025`): package, e2e | Windows arm64 (`windows-11-arm`): package |
+|---|---|---|---|---|
+| Release dry run 41143442494 (2026-10-30, `b7b1c9b`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
+| 0.5.0 candidate | Not run | Not run | Not run | Not run |
+| Release 0.5.0 (tag) | Not run | Not run | Not run | Not run |
