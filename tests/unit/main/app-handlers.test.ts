@@ -144,7 +144,7 @@ describe('appHandlers', () => {
     const { handlers, fs, input } = setup({ target: { kind: 'app', platform: 'win32', exe: 'C:\\Programs\\galeo\\galeo.exe', binDir } });
     input.received(1);
     expect(await handlers['app.installLauncher']([], from(1))).toEqual({ ok: true, bin: `${binDir}\\galeo.cmd` });
-    expect(utf8.decode(await fs.readFile(`${binDir}\\galeo.cmd`, { maxBytes: 4096 }))).toContain('"C:\\Programs\\galeo\\galeo.exe" %*');
+    expect(utf8.decode(await fs.readFile(`${binDir}\\galeo.cmd`, { maxBytes: 4096 }))).toContain('"C:\\Programs\\galeo\\galeo.exe" --galeo-command -- %*');
     input.received(1);
     expect(await handlers['app.uninstallLauncher']([], from(1))).toEqual({ removed: [`${binDir}\\galeo.cmd`], kept: [] });
   });

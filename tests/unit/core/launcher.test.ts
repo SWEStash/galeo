@@ -263,16 +263,16 @@ describe('appCommand ("Install command-line launcher" on macOS and Windows, ADR-
     expect(refused('/Applications/ga\nleo.app/Contents/MacOS/galeo')).toEqual({ ok: false, reason: "galeo's path has a control character" });
   });
 
-  it('on Windows is a galeo.cmd in WindowsApps that hands every argument to galeo.exe', () => {
+  it('on Windows is a galeo.cmd in WindowsApps that hands every argument to galeo.exe after --', () => {
     const command = appCommand('win32', WIN_EXE, WINDOWS_APPS, null);
     if (!command.ok) throw new Error(command.reason);
     expect(command.path).toBe(`${WINDOWS_APPS}\\galeo.cmd`);
-    expect(command.content).toBe(['@echo off', 'rem Installed by galeo: the command-line launcher for its app.', `"${WIN_EXE}" %*`, ''].join('\r\n'));
+    expect(command.content).toBe(['@echo off', 'rem Installed by galeo: the command-line launcher for its app.', `"${WIN_EXE}" --galeo-command -- %*`, ''].join('\r\n'));
   });
 
   it("on Windows doubles a % in galeo's path, so cmd doesn't expand it, and refuses a path that isn't a drive's", () => {
     const command = appCommand('win32', 'D:\\100%\\galeo.exe', WINDOWS_APPS, null);
-    expect(command.ok && command.content).toContain('"D:\\100%%\\galeo.exe" %*');
+    expect(command.ok && command.content).toContain('"D:\\100%%\\galeo.exe" --galeo-command -- %*');
     expect(appCommand('win32', 'galeo.exe', WINDOWS_APPS, null)).toEqual({ ok: false, reason: "galeo's path is not absolute" });
     expect(appCommand('win32', '\\\\server\\share\\galeo.exe', WINDOWS_APPS, null)).toEqual({ ok: false, reason: "galeo's path is not absolute" });
   });

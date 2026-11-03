@@ -1,3 +1,4 @@
+import { COMMAND_MARKER } from '../argv';
 import { folderOf, joinPath } from '../../shared/paths';
 import type { FileSystem } from '../ports';
 import { kindOf, type Utf8 } from '../settings/json-file';
@@ -121,7 +122,8 @@ export function appCommandPath(platform: 'darwin' | 'win32', binDir: string): st
  * What "Install command-line launcher" writes on macOS and Windows (ADR-008): only the `galeo`
  * command, in `binDir`, running the app at `exe`; the system's own "Open With" covers the rest.
  * macOS gets a copy of `gal`, so flags and files are read as on Linux (files after `--`, SR-13).
- * Windows gets a `galeo.cmd` that hands its arguments to galeo, whose own parsing does the same.
+ * Windows gets a `galeo.cmd` that hands its arguments to galeo after `--`, where Chromium reads no
+ * switch, and a marker; galeo then reads them as `gal` would (`parseArgv`).
  */
 export function appCommand(platform: 'darwin' | 'win32', exe: string, binDir: string, launcherScript: string | null): AppCommand {
   if (/\p{Cc}/u.test(exe)) return { ok: false, reason: "galeo's path has a control character" };
@@ -136,7 +138,7 @@ export function appCommand(platform: 'darwin' | 'win32', exe: string, binDir: st
   }
   if (!/^[A-Za-z]:\\/.test(exe) || exe.includes('"')) return { ok: false, reason: "galeo's path is not absolute" };
   // `%` is the only character cmd expands inside quotes.
-  const content = ['@echo off', `rem ${COMMAND_MARK} for its app.`, `"${exe.replaceAll('%', '%%')}" %*`, ''].join('\r\n');
+  const content = ['@echo off', `rem ${COMMAND_MARK} for its app.`, `"${exe.replaceAll('%', '%%')}" ${COMMAND_MARKER} -- %*`, ''].join('\r\n');
   return { ok: true, path: appCommandPath(platform, binDir), content };
 }
 

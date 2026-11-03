@@ -455,7 +455,8 @@ The previews register galeo for *Open With* only, never as a default app
 (`scripts/lib/associations.mjs`): on macOS as a viewer in `Info.plist`, on Windows through
 `packaging/windows/associations.nsh`, which the per-user installer runs and its uninstaller undoes.
 The `galeo` command there is optional: Settings writes it (`~/.local/bin/galeo`, a copy of `gal`, or
-`galeo.cmd` in `%LOCALAPPDATA%\Microsoft\WindowsApps`).
+`galeo.cmd` in `%LOCALAPPDATA%\Microsoft\WindowsApps`, which hands its arguments over after `--` for
+main to read as `gal` would).
 
 ## 9. Source layout (ADR-007)
 

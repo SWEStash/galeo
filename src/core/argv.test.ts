@@ -115,3 +115,38 @@ describe('parseArgv', () => {
     });
   });
 });
+
+describe('parseArgv, from the Windows galeo command', () => {
+  // galeo.cmd runs `galeo.exe --galeo-command -- %*`: Chromium reads no switch after `--`.
+  const command = (args: string[], forwarded = false) => parse(['--galeo-command', '--', ...args], forwarded);
+
+  it('reads the flags anywhere before a second separator, as gal does, and the rest as files', () => {
+    expect(command(['--profile', 'acme', 'a.md', '--new-window', 'b.md'])).toEqual({
+      ok: true,
+      args: { ...defaults, profile: 'acme', newWindow: true, files: ['/work/a.md', '/work/b.md'] },
+    });
+    expect(command(['--profile=acme', '--', '--new-window', '-'], true)).toEqual({
+      ok: true,
+      args: { ...defaults, profile: 'acme', files: ['/work/--new-window', '/work/-'] },
+    });
+    expect(command([])).toEqual({ ok: true, args: defaults });
+  });
+
+  it.each(['--browser-subprocess-path=x.exe.md', '--no-sandbox', '--galeo-sandbox-unavailable=unknown', '-x'])(
+    'refuses %s, an option galeo.cmd has no use for (a glob may have expanded it)',
+    (option) => {
+      expect(command(['a.md', option])).toEqual({ ok: false, error: `unknown option: ${option}` });
+    },
+  );
+
+  it('checks --profile as before', () => {
+    expect(command(['--profile'])).toEqual({ ok: false, error: '--profile needs a value' });
+    expect(command(['--profile', '--new-window'])).toEqual({ ok: false, error: '--profile needs a value' });
+    expect(command(['--profile=a', '--profile=b'])).toEqual({ ok: false, error: '--profile given twice' });
+  });
+
+  it('takes the marker only first and followed by the separator', () => {
+    expect(parse(['--galeo-command', 'a.md'])).toEqual({ ok: false, error: 'unknown option: --galeo-command' });
+    expect(parse(['--', '--galeo-command', '--', 'a.md'])).toMatchObject({ ok: true, args: { files: ['/work/--galeo-command', '/work/--', '/work/a.md'] } });
+  });
+});

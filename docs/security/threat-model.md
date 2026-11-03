@@ -383,8 +383,10 @@ Chromium itself acts on switches anywhere before `--`, so on Linux every entry p
 entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument handling
 (ADR-009). macOS's `galeo` command is a copy of `gal` too; Finder hands files over as `open-file`
 events, never argv. Windows has no wrapper: Explorer's "Open with" runs `galeo.exe -- "%1"`, and
-`galeo.cmd` passes the arguments as typed. Windows shells don't expand wildcards for a program, so
-a hostile file name reaches argv only if the user types it (A7 needs a glob). At first launch, main refuses to start when a switch follows a file name without `--`.
+`galeo.cmd` runs `galeo.exe --galeo-command -- %*`, so every argument it is given comes after `--`,
+where Chromium reads no switch, and main reads them as `gal` does: galeo's flags, any other option
+refused, files. cmd and PowerShell don't expand wildcards for a program, but Git Bash, MSYS2 and
+Cygwin do (A7), which is why `galeo.cmd` keeps nothing before `--`. At first launch, main refuses to start when a switch follows a file name without `--`.
 *AC*: tests with switch-like file names (`--inspect`, `--gpu-launcher=…`, `--no-sandbox`) after
 `--` open them as files.
 The one program main runs itself (v0.3) is fontconfig's `fc-list`, for the font pickers: found on
