@@ -1,7 +1,8 @@
 # ADR-004 — Security posture: layered content isolation, verified capabilities, enforced zero network
 
 - Status: Accepted (2026-09-25, with review amendments; the Trusted Types clause superseded by
-  [ADR-010](ADR-010-trusted-types-enforcement.md))
+  [ADR-010](ADR-010-trusted-types-enforcement.md); on macOS and Windows, the "Open with default app" row's
+  rule superseded by [ADR-028](ADR-028-default-app-known-types-on-macos-windows.md), 2026-11-03)
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [Threat model](../security/threat-model.md) (SR-01…SR-17), [ADR-002](ADR-002-window-and-tab-model.md),
