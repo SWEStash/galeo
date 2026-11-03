@@ -28,7 +28,9 @@ export function launcherTarget(run: { packaged: boolean; platform: NodeJS.Platfo
   if (platform === 'win32') {
     const localAppData = env['LOCALAPPDATA'];
     if (!localAppData || !path.win32.isAbsolute(localAppData)) return null;
-    const portable = env['PORTABLE_EXECUTABLE_FILE'];
+    // Child processes inherit these, so an installed galeo that another portable app started sees
+    // that app's file: take it only when the portable launcher is galeo's own.
+    const portable = env['PORTABLE_EXECUTABLE_APP_FILENAME'] === 'galeo' ? env['PORTABLE_EXECUTABLE_FILE'] : undefined;
     const exe = portable && path.win32.isAbsolute(portable) ? portable : execPath;
     return { kind: 'app', platform, exe, binDir: path.win32.join(localAppData, 'Microsoft', 'WindowsApps') };
   }

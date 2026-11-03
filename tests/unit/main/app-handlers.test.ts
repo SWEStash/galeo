@@ -60,9 +60,18 @@ describe('launcherTarget', () => {
     const binDir = 'C:\\Users\\me\\AppData\\Local\\Microsoft\\WindowsApps';
     expect(launcherTarget({ ...windows, env: { LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local' } })).toEqual({ kind: 'app', platform: 'win32', exe: windows.execPath, binDir });
     const portable = 'D:\\Tools\\galeo-0.5.0-x64-portable.exe';
-    expect(launcherTarget({ ...windows, env: { LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local', PORTABLE_EXECUTABLE_FILE: portable } })).toMatchObject({ exe: portable });
+    expect(
+      launcherTarget({ ...windows, env: { LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local', PORTABLE_EXECUTABLE_FILE: portable, PORTABLE_EXECUTABLE_APP_FILENAME: 'galeo' } }),
+    ).toMatchObject({ exe: portable });
     expect(launcherTarget({ ...windows, env: { LOCALAPPDATA: 'AppData' } })).toBeNull();
     expect(launcherTarget(windows)).toBeNull();
+  });
+
+  it("ignores another portable app's file, which an installed galeo it starts inherits", () => {
+    const windows = { ...run, platform: 'win32' as NodeJS.Platform, execPath: 'C:\\Users\\me\\AppData\\Local\\Programs\\galeo\\galeo.exe', home: 'C:\\Users\\me' };
+    const env = { LOCALAPPDATA: 'C:\\Users\\me\\AppData\\Local', PORTABLE_EXECUTABLE_FILE: 'D:\\Tools\\Terminal-portable.exe' };
+    expect(launcherTarget({ ...windows, env: { ...env, PORTABLE_EXECUTABLE_APP_FILENAME: 'Terminal' } })).toMatchObject({ exe: windows.execPath });
+    expect(launcherTarget({ ...windows, env })).toMatchObject({ exe: windows.execPath });
   });
 });
 
