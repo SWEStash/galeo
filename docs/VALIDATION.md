@@ -39,7 +39,7 @@ Record the date, the build and the result of each row.
 
 | Check | How | Result |
 |---|---|---|
-| Open, read and close documents without a mouse | `galeo` a file; Ctrl+P, type, Enter; Ctrl+Tab between tabs; Ctrl+W | Pass (2026-10-06, `.deb`; 0.2.0 `.deb`, 2026-10-15; 0.4.0 `.deb`, 2026-10-28) |
+| Open, read and close documents without a mouse | `galeo` a file; Ctrl+P, type, Enter; Ctrl+Tab between tabs; Ctrl+W | Pass (2026-10-06, `.deb`; 0.2.0 `.deb`, 2026-10-15; 0.4.0 `.deb`, 2026-10-28; 0.5.0 `.deb`, 2026-11-03) |
 | Every overlay traps focus and gives it back | Ctrl+P, Ctrl+Shift+P, Ctrl+F, Ctrl+Shift+O, About, Settings (Ctrl+,), profile menu (Ctrl+Shift+M): Tab stays inside, Esc returns to the document | Pass (2026-10-06, `.deb`) |
 | Focus is always visible | Tab through the tab bar, status bar, Settings and dialogs in light and dark | Pass (2026-10-06, `.deb`) |
 | Source and log views scroll by keyboard | Ctrl+U, then Tab into the text; arrows, PgUp/PgDn, Home/End; End follows a log | Pass (2026-10-06, `.deb`) |
@@ -48,16 +48,16 @@ Record the date, the build and the result of each row.
 | Orca: overlays | Ctrl+P: Orca says "Quick open", then the result count ("3 results"); arrows read each result. Ctrl+Shift+P reads each command with its keys. Ctrl+F, type: it says "n of m". Esc: focus is back on the document | Pass (2026-10-06, `.deb`) |
 | Orca: status messages | Save a shown file from an editor: it says "Reloaded". In the palette, choose "Toggle edit mode": it says "Press Ctrl+E" | Pass (2026-10-06, `.deb`) |
 | Zoom 200 % | Ctrl++ to 200 % on a long document: no clipped text in the chrome | Pass (2026-10-06, `.deb`) |
-| Edit and save without a mouse (v0.2) | Ctrl+E, type, Ctrl+S; Ctrl+E again reads. Ctrl+W, Ctrl+Shift+W, Ctrl+Q and deleting the profile with unsaved changes each ask; Tab moves between Cancel, Don't save and Save; Esc cancels and the caret is back in the editor | Pass (2026-10-15, `.deb` 0.2.0; 0.4.0 `.deb`, 2026-10-28) |
+| Edit and save without a mouse (v0.2) | Ctrl+E, type, Ctrl+S; Ctrl+E again reads. Ctrl+W, Ctrl+Shift+W, Ctrl+Q and deleting the profile with unsaved changes each ask; Tab moves between Cancel, Don't save and Save; Esc cancels and the caret is back in the editor | Pass (2026-10-15, `.deb` 0.2.0; 0.4.0 `.deb`, 2026-10-28; 0.5.0 `.deb`, 2026-11-03) |
 | File changed on disk, by keyboard (v0.2) | With unsaved changes, change the file in another editor: Shift+Tab from the editor reaches Load theirs, Keep mine and Show diff; each choice puts the caret back in the editor. Show diff: Esc returns to its button. With unsaved changes again, delete the file: "File deleted on disk", and Save again writes it back (with nothing unsaved, the tab shows "File not found" and comes back with the file) | Pass (2026-10-15, `.deb` 0.2.0) |
 | Split and editor basics by keyboard (v0.2) | Ctrl+\; Tab to the divider, ←/→ move it, Home resets it. Ctrl+H, type, Enter replaces one, Replace all, Ctrl+Z undoes it all. Ctrl+D twice, Shift+Alt+↓, then type at every cursor; Esc leaves one | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: editing (v0.2) | Ctrl+E then Ctrl+Tab away and back: the tab reads "…, edit mode", and once typed in "…, unsaved changes". Ctrl+S: "Saved". A refused save reads its reason. The changed-on-disk bar reads "File changed on disk"; the unsaved question reads "Save changes to <name>?" and each button | Pass (2026-10-15, `.deb` 0.2.0) |
 | Orca: diff, split and replace (v0.2) | Show diff reads "Changes: mine \| theirs", then "Mine (unsaved)" and "Theirs (on disk)" as read-only text. The divider reads "Resize source and preview" with its value as it moves. Replace all reads "Replaced N" once (not twice with the editor's own message). Several cursors: typing reads as usual | Pass (2026-10-15, `.deb` 0.2.0) |
-| Orca: search tabs and filling quick open (v0.4) | Close two tabs, Ctrl+Shift+A: Orca says "Search tabs", the count ("4 tabs") and each row's name and folder under "Open tabs" and "Recently closed"; Enter on a closed one brings it back where it was. Ctrl+P, arrow to a result: Orca reads its name and folder, then "Tab fills in its path"; Tab: "Filled ~/…". Home/End move the caret in both fields | Pass (2026-10-28, `.deb` 0.4.0) |
+| Orca: search tabs and filling quick open (v0.4) | Close two tabs, Ctrl+Shift+A: Orca says "Search tabs", the count ("4 tabs") and each row's name and folder under "Open tabs" and "Recently closed"; Enter on a closed one brings it back where it was. Ctrl+P, arrow to a result: Orca reads its name and folder, then "Tab fills in its path"; Tab: "Filled ~/…". Home/End move the caret in both fields | Pass (2026-10-28, `.deb` 0.4.0; quick open again, 0.5.0 `.deb`, 2026-11-03) |
 | Orca: tabs on the left (v0.4) | With *Tabs: Left*: Orca reads the list as vertical tabs ("Open documents") and each row's name, folder and marks; ↑/↓ move between rows. Ctrl+Shift+B: Orca hears "Tab panel collapsed", and the markers still read the full name and folder. The panel button says "Collapse tab panel" / "Expand tab panel" and whether it is expanded; the divider says "Resize tab panel, 220 pixels" and its arrows change the number | Pass (2026-10-28, `.deb` 0.4.0) |
 | Orca: tab overview (v0.4) | Ctrl+Shift+E: Orca says "Tab overview" and the shown tab's card: its name, folder, marks ("unsaved changes"), format, "shown now" and its position ("2 of 5"); the arrows read each card; Delete on an edited card asks first and Cancel goes back to the card; Esc returns to the document | Pass (2026-10-28, `.deb` 0.4.0) |
 | JSON tree and log colours, then Orca (v0.4) | Open a JSON file and a service log, in light and then dark: the tree's keys, numbers, booleans and null in one colour, strings in another, previews muted; the log's timestamps muted, level words in their level's colour, `key=value` keys in colour, error and warning lines faintly tinted. Orca reads each tree row and log line as before ("name: \"galeo\"", the whole line) | Pass (2026-10-28, `.deb` 0.4.0) |
-| Orca: find in all tabs (v0.4) | Ctrl+Shift+F, type a word in three tabs: Orca says "Find in all tabs", then "Searching…" and the total ("6 matches in 3 tabs"); ↓ reads each match with its line and the tab group's name and count; Match case reads as a toggle; Enter shows the tab and Orca reads the find bar with the word and "2 of 3"; Esc returns to the document | Pass (2026-10-28, `.deb` 0.4.0) |
+| Orca: find in all tabs (v0.4) | Ctrl+Shift+F, type a word in three tabs: Orca says "Find in all tabs", then "Searching…" and the total ("6 matches in 3 tabs"); ↓ reads each match with its line and the tab group's name and count; Match case reads as a toggle; Enter shows the tab and Orca reads the find bar with the word and "2 of 3"; Esc returns to the document | Pass (2026-10-28, `.deb` 0.4.0; 0.5.0 `.deb`, 2026-11-03) |
 | Data views by keyboard, then Orca (v0.3) | In a CSV table the arrows move cell to cell and Orca reads each cell; in a JSON tree the arrows expand and collapse items and Orca reads each one | Pass (2026-10-20, `.deb` 0.3.0) |
 
 ## Performance
@@ -71,6 +71,7 @@ Reference machine: Intel i7-8565U laptop, 45 GB, Ubuntu 26.04, on AC, performanc
 Mermaid 12.1.0, headless), with a new 50 KB reference document of the same size and structure;
 0.3.0 on 2026-10-20 (Electron 44.9.2, Mermaid 12.2.0, headless, load average 0.1 before the run).
 0.4.0 on 2026-10-28 (Electron 45.1.0, Mermaid 12.2.0, headless, load average 0.6 before the run).
+0.5.0 on 2026-11-03 (Electron 45.2.1, Mermaid 12.2.0, headless, load average 0.15 before the run).
 A first 0.4.0 run, under a load average of 1.6, measured 1253 ms (p95 1402) for the 50 KB document,
 over its budget, and 593 ms for the window; the run above, an hour later on a quiet machine, is the
 record. The JSON tree (1825 and 2102 ms) and CSV table (3063 and 3232 ms) opened slower than in 0.3.0
@@ -78,22 +79,22 @@ in both runs, within their budgets; these are medians of 3.
 The memory baseline (1377 MB) was set by the owner on 2026-10-06, on Electron 44.5.1, after the
 Electron and Mermaid updates (1257 → 1377 MB).
 
-| Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 | 0.3.0 | 0.4.0 |
-|---|---|---|---|---|---|---|
-| Cold start → window painted | 650 ms (2026-10-21; 850 ms until then; PRD target 500 ms) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) | 811 ms (p95 841) | 569 ms (p95 657) |
-| Cold start → 50 KB document painted | 1250 ms (2026-10-21; 1300 ms until then; PRD target 500 ms) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) | 1264 ms (p95 1306) | 1148 ms (p95 1279) |
-| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) | 16.3 ms (p95 17.7) | 14.9 ms (p95 15.9) |
-| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) | 54 ms (p95 84) | 86 ms (p95 97) |
-| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 1 of 432 frames over 34 ms |
-| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB | 1426 MB | 1435 MB (+4.2 %) | 1395 MB (+1.3 %) |
-| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) | 275 ms (p95 319) | 265 ms (p95 300) | 281 ms (p95 358) |
-| Open a 10 MB / 200,000-node JSON as a tree: launch → first row painted (v0.3) | 3000 ms (starting value) | — | — | — | 1462 ms | 2102 ms |
-| Open a 99 MB CSV as a table: launch → first row painted (v0.3) | 5000 ms (ADR-020) | — | — | — | 2722 ms | 3232 ms |
-| Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.7) both |
-| Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB | 1004 MB |
-| Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — | 16.7 ms (p95 33.4) |
-| A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — | 1567 ms (p95 1947) |
-| Find in all tabs over three 100 MB tabs: the longest main is busy at once (v0.5) | 100 ms (2026-11-02) | — | — | — | — | — |
+| Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 | 0.3.0 | 0.4.0 | 0.5.0 |
+|---|---|---|---|---|---|---|---|
+| Cold start → window painted | 650 ms (2026-10-21; 850 ms until then; PRD target 500 ms) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) | 811 ms (p95 841) | 569 ms (p95 657) | 525 ms (p95 905) |
+| Cold start → 50 KB document painted | 1250 ms (2026-10-21; 1300 ms until then; PRD target 500 ms) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) | 1264 ms (p95 1306) | 1148 ms (p95 1279) | 935 ms (p95 997) |
+| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) | 16.3 ms (p95 17.7) | 14.9 ms (p95 15.9) | 15.9 ms (p95 16.7) |
+| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) | 54 ms (p95 84) | 86 ms (p95 97) | 34 ms (p95 79) |
+| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 1 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
+| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB | 1426 MB | 1435 MB (+4.2 %) | 1395 MB (+1.3 %) | 1429 MB (+3.8 %) |
+| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) | 275 ms (p95 319) | 265 ms (p95 300) | 281 ms (p95 358) | 268 ms (p95 299) |
+| Open a 10 MB / 200,000-node JSON as a tree: launch → first row painted (v0.3) | 3000 ms (starting value) | — | — | — | 1462 ms | 2102 ms | 1446 ms |
+| Open a 99 MB CSV as a table: launch → first row painted (v0.3) | 5000 ms (ADR-020) | — | — | — | 2722 ms | 3232 ms | 2588 ms |
+| Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.8) both |
+| Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB | 1004 MB | 1220 MB |
+| Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — | 16.7 ms (p95 33.4) | 16.7 ms (p95 33.3) |
+| A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — | 1567 ms (p95 1947) | 1358 ms (p95 1401) |
+| Find in all tabs over three 100 MB tabs: the longest main is busy at once (v0.5) | 100 ms (2026-11-02) | — | — | — | — | — | 19 ms; the other window 8 ms; a query 1830 ms |
 
 The v0.3 rows were first measured on 2026-10-16 during development (headless, Electron 44.8.0, the
 machine under a load average of 2–3, so not release figures): the JSON tree opened in 1550–1986 ms and
@@ -164,9 +165,13 @@ these.
 
 | Check | Result |
 |---|---|
-| Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log`; a `.markdown` opens too | Pass (2026-10-06; again after removing and reinstalling the `.deb`, 2026-10-07) |
-| `galeo file.md` and `gal file.md` from a terminal (the `.deb`'s `/usr/bin/galeo` and `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06; `.deb` again on 2026-10-07; as `galeo`/`gal`, `.deb` 0.2.0, 2026-10-15) |
-| Uninstall the AppImage's launcher (v0.4): after *Install command-line launcher*, *Uninstall command-line launcher* names what it removed; `galeo` is no longer found in a new terminal, galeo is gone from the applications grid, and an `.mdx` file is no longer *MDX document* in Files. A hand-written `~/.local/bin/galeo` stays, and the message names it | Pass (2026-10-28, AppImage 0.4.0) |
+| Double-click a `.md` in Files; *Open With → galeo*; set galeo as the default for `.md`, `.txt`, `.log`; a `.markdown` opens too | Pass (2026-10-06; again after removing and reinstalling the `.deb`, 2026-10-07; a double-click and *Open With* again, 0.5.0 `.deb`, 2026-11-03) |
+| `galeo file.md` and `gal file.md` from a terminal (the `.deb`'s `/usr/bin/galeo` and `/usr/bin/gal`); the AppImage's "Install command-line launcher" then `galeo` | Pass (2026-10-06; `.deb` again on 2026-10-07; as `galeo`/`gal`, `.deb` 0.2.0, 2026-10-15; 0.5.0 `.deb`, 2026-11-03) |
+| Uninstall the AppImage's launcher (v0.4): after *Install command-line launcher*, *Uninstall command-line launcher* names what it removed; `galeo` is no longer found in a new terminal, galeo is gone from the applications grid, and an `.mdx` file is no longer *MDX document* in Files. A hand-written `~/.local/bin/galeo` stays, and the message names it | Pass (2026-10-28, AppImage 0.4.0; install and uninstall, AppImage 0.5.0, 2026-11-03) |
+| Terminal arguments (v0.5): `galeo --profile acme a.md` opens in an *acme* window; `galeo b.md --new-window` opens a new window (the command reads flags anywhere); `galeo --bogus` refuses with "unknown option: --bogus" | Pass (2026-11-03, `.deb` 0.5.0) |
+| Default app (v0.5): a document's links to `script.js`, `photo.png` and `archive.zip` each open in a tab; on the script's tab the document menu's *Open with default app* is greyed out; on the image and the archive it is offered and opens the system's viewer and archive manager | Pass (2026-11-03, `.deb` 0.5.0) |
+| Quick open (v0.5): with three tabs open from a folder outside a git repository, a query only the folder spells (`samples`) lists none of them; one that reaches the name (`samples/al`) lists it | Pass (2026-11-03, `.deb` 0.5.0) |
+| Find in all tabs over three 100 MB logs (v0.5): while it searches, the tab bar, scrolling the shown log and Esc respond at once; it ends with a total | Pass (2026-11-03, `.deb` 0.5.0) |
 | Two profiles' windows open: `galeo --profile acme a.md`, a double-click in Files, a drop from Files and a plain `galeo` each land in the right window (a plain one in the window focused last) | Pass (2026-10-07; 0.2.0 `.deb`, 2026-10-15) |
 | Drop files from Files onto the document area: they open after the shown tab, the first one shown | Pass (2026-10-05) |
 | Drop onto a tab (the caret between tabs): they open at the caret | Pass (2026-10-05) |
