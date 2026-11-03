@@ -63,6 +63,12 @@ the [decision records](../decisions/)).
 
 **Window title** (used by GNOME's overview and Alt+Tab): `<file name> — <profile> — galeo`.
 
+*Planned (the [mouse paths review](mouse-paths.md), not yet built):* a `⌕` Search tabs button and a
+`⋯` Commands button (it opens the command palette) after `+` and `▦`, in the tab bar or, with tabs
+on the left, the title bar; Settings and New window in the profile menu; in the status bar, the view
+name as a menu (views, wrap, outline), a Follow toggle for logs, and a click on the zoom or reader
+width resetting it.
+
 ## 3. Flows
 
 ### F1 — Open from the terminal
@@ -111,6 +117,9 @@ profile. Multiple selected files open as tabs in selection order.
 - (v0.4) Search tabs finds an open or recently closed tab by name (F16); the tab overview shows
   them all at once (F17); a profile can put its tabs in a list on the left (F18); find in all tabs
   searches their text (F19).
+- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* a right-click menu on a tab,
+  a side-panel row or a collapsed marker: Close tab, Reopen closed tab, Move to new window, Move to
+  window…, Copy path, Reveal in Files.
 - Hibernation is invisible except that a hibernated tab's label is slightly dimmed. Waking must
   land at the saved scroll position before first paint (no jump).
 - Tabs with duplicate file names show the shortest distinguishing parent (`acme/plan.md`,
@@ -221,14 +230,20 @@ mode closes the replace row and keeps find open.
   (ERROR/WARN/INFO/DEBUG, also as text badges; error and warning lines tinted), and in colour (v0.4)
   the timestamp (muted), the level word (its level's colour) and the keys of `key=value` pairs and
   JSON lines (the key colour), the text unchanged; follow-end mode:
-  pressing End (or clicking `⇣`) enables it; scrolling up disables it.
+  pressing End enables it; scrolling up disables it.
 - Alt+Z toggles line wrapping in source/log views.
+- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* the status bar's view name
+  opens a menu of the views (rendered, source, split), wrap and the outline, each where it applies;
+  logs get a Follow toggle there.
 
 ### F11 — Links and navigation
 
 - Click a relative link to a supported file → navigates **in the same tab**, with per-tab
   back/forward (Alt+← / Alt+→), like a browser. Ctrl+click or middle-click → new background tab.
 - `#anchor` links scroll within the document and are part of back/forward history.
+- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* the document's right-click
+  menu, which main builds, gains Back and Forward (when there is history), Find…, Reload, Edit and
+  Save, and in a JSON tree Expand all, Collapse all and Copy JSON path.
 - `http(s)`/`mailto` links → open in the system browser/mail client. First time per profile, a
   one-line hint appears in the status bar ("External links open in your browser"); no dialog.
   Only links actually present in the document can be opened (ADR-004). **Burst guard**: if one
@@ -328,6 +343,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 - Unlike quick open (F8), it never lists files that aren't tabs: it answers "where is that tab",
   not "open a file". Closed windows stay with Ctrl+Shift+T.
 - The list holds only tabs of this window, so of one profile.
+- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* a `⌕` button after `+` and
+  `▦` opens it.
 
 ### F17 — Tab overview (v0.4)
 
@@ -363,6 +380,9 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   - the overview button;
   - the shown tab's name and folder, dimmed, on the area that drags the window;
   - the window controls.
+
+  *Planned (the [mouse paths review](mouse-paths.md), not yet built):* the `⌕` and `⋯` buttons after
+  the overview button, so the panel, collapsed or not, keeps its width.
 
   See [ADR-023](../decisions/ADR-023-window-layout-with-tabs-on-the-left.md).
 - A divider between the panel and the document sets the panel's width, from 140 to 480 px. The
