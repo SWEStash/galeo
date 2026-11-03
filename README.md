@@ -7,6 +7,7 @@
 [![Release](https://img.shields.io/github/v/release/SWEStash/galeo)](https://github.com/SWEStash/galeo/releases/latest)
 [![Licence: MIT](https://img.shields.io/github/license/SWEStash/galeo)](LICENSE)
 ![Platform: Linux](https://img.shields.io/badge/platform-Linux-lightgrey)
+![Preview: macOS, Windows](https://img.shields.io/badge/preview-macOS%20%7C%20Windows-lightgrey)
 
 </div>
 
@@ -26,6 +27,11 @@ galeo README.md
 galeo is now also in *Open With* for Markdown, MDX, text, log, JSON, YAML, TOML, CSV and TSV files
 and source code. An AppImage is available too; see [installation](docs/USAGE.md#installation) for
 it and for checking a download.
+
+Releases also carry macOS (`.dmg`, `.zip`) and Windows (setup and portable `.exe`) builds for x64
+and Arm. They are **previews**: checked by CI, but unsigned and unsupported. Gatekeeper and
+SmartScreen warn on the first start; [installing the previews](docs/USAGE.md#macos-and-windows-previews)
+shows how to get past them.
 
 ## Features
 
