@@ -182,6 +182,7 @@ function start(initialMode: StartupMode): void {
     shell,
     clipboard,
     showMenu: (windowId, items) => showNativeMenu(windowId, items, app.isPackaged),
+    platform: process.platform,
   });
   // Real input per window: what lets a request reach beyond the window's own grants (T6).
   const input = new InputCredits(Date.now);
@@ -789,7 +790,7 @@ function start(initialMode: StartupMode): void {
           crashes,
           reload: ({ window }) => windowCrash.reload(window, { activate: true }),
         }),
-        ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8 } }),
+        ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8, platform: process.platform } }),
         ...documentHandlers({
           records: documents,
           links,

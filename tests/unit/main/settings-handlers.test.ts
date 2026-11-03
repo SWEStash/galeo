@@ -32,7 +32,7 @@ function setup(answer: SettingsNotice | null = null) {
     profileOf: (window) => (window === 1 ? profile : undefined),
     fonts: { list: async () => [{ family: 'Inter', mono: false }] },
     configDir: CONFIG,
-    files: { fs, shell, utf8 },
+    files: { fs, shell, utf8, platform: 'linux' },
   });
   return { handlers, fs, shell, changes };
 }

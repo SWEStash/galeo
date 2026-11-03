@@ -10,6 +10,8 @@ interface DocumentMenusDeps {
   clipboard: Clipboard;
   /** Shows a native menu in the window; resolves with the chosen item id, or null. */
   showMenu: (window: number, items: readonly MenuItem[]) => Promise<string | null>;
+  /** `process.platform`: which rule decides what goes to the default app (ADR-028). */
+  platform: string;
 }
 
 /**
@@ -57,7 +59,7 @@ export class DocumentMenus {
   private async openable(path: string): Promise<boolean> {
     try {
       const stat = await this.deps.fs.stat(path);
-      return canOpenWithDefaultApp({ path, target: await this.deps.fs.realpath(path), kind: stat.kind, executable: stat.executable });
+      return canOpenWithDefaultApp({ path, target: await this.deps.fs.realpath(path), kind: stat.kind, executable: stat.executable }, this.deps.platform);
     } catch {
       return false;
     }

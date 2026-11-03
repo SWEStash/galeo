@@ -455,7 +455,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 | **Empty file** | 0 bytes | Muted "This file is empty" + path; auto-updates when content arrives | — |
 | **Missing** | Path gone (deleted, renamed, not yet created) | Path, "File not found", last-seen time; tab label struck | Close tab · Reveal folder · Retries automatically |
 | **No permission** | EACCES | "galeo can't read this file (permission denied)" | Close tab |
-| **Can't display** | Binary / unsupported | "This looks like a binary file" + size + type | Open with default app (native menu; **not offered** for executables or launchers: `.desktop`, `.sh`, `.run`, AppImage, Java and Flatpak apps, executable bit, or a symlink to one) · Reveal in Files |
+| **Can't display** | Binary / unsupported | "This looks like a binary file" + size + type | Open with default app (native menu; **not offered** for executables or launchers: `.desktop`, `.sh`, `.run`, AppImage, Java and Flatpak apps, executable bit, or a symlink to one; on macOS and Windows only for known document types: images, PDF, office documents without macros, audio and video, and the text formats galeo reads, ADR-028) · Reveal in Files |
 | **Too large to render** | Markdown > threshold (5 MB); (v0.3) JSON or CSV over its limit | Source view + banner "Large file shown as source" | Render anyway (Markdown) · Show as table (CSV/TSV, up to the 256 MB read cap; ADR-020) |
 | **Not valid JSON** (v0.3) | `.json` that doesn't parse | Source view + banner "Not valid JSON: line L, column C"; cursor at the error | Edit (Ctrl+E) |
 | **Rows not shown** (v0.3) | CSV/TSV with more rows than the table shows | Table + notice "Showing N of M rows" | Show source (Ctrl+U) |

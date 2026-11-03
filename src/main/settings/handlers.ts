@@ -54,7 +54,7 @@ export function settingsHandlers(deps: {
   profileOf: (window: number) => SettingsProfile | undefined;
   fonts: FontCatalog;
   configDir: string;
-  files: { fs: FileSystem; shell: OsShell; utf8: Utf8 };
+  files: { fs: FileSystem; shell: OsShell; utf8: Utf8; platform: string };
 }): Pick<Handlers, SettingsChannels> {
   const { profileOf, fonts, configDir, files } = deps;
   const own = (window: number) => {

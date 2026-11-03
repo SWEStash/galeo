@@ -259,7 +259,10 @@ non-executable, non-launcher files: not `.desktop`, `.AppImage`, `.sh` or `.run`
 it mounts, `.rdp`, and themes, `.scf`, search and library files that can point at a remote share), and not
 what macOS does (`.app`, `.command`, `.terminal`, `.pkg`, AppleScript, Automator workflows, disk images,
 `.webloc`, `.inetloc` and `.fileloc`, configuration profiles); one list on every system, judged by the name and, through
-symlinks, by the file pointed to; not files with the executable bit, not directories, and only when the user chooses it in a **native context
+symlinks, by the file pointed to; not files with the executable bit, not directories. On macOS and
+Windows, where no executable bit backs that list, both the name and the file pointed to must also be a
+known document type: images, PDF, office documents without macros, audio and video, and the text formats
+galeo reads ([ADR-028](../decisions/ADR-028-default-app-known-types-on-macos-windows.md)). And only when the user chooses it in a **native context
 menu built by main**. Otherwise only "Reveal in Files" is offered. Links to local
 files always open inside galeo.
 One clarification: galeo's own config files may also be opened from a page control, namely

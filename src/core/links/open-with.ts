@@ -19,12 +19,28 @@ const LAUNCHERS = new Set([
   '.mobileconfig',
 ]);
 
+// On macOS and Windows, no executable bit backs the list above, so only these types are handed over
+// (ADR-028): documents whose usual default app shows them and runs nothing.
+const DOCUMENTS = new Set([
+  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tif', '.tiff', '.heic', '.heif', '.avif', '.ico',
+  '.pdf',
+  // Office documents that can't carry macros.
+  '.docx', '.xlsx', '.pptx', '.odt', '.ods', '.odp',
+  '.mp3', '.m4a', '.aac', '.wav', '.flac', '.ogg', '.opus', '.mp4', '.m4v', '.mov', '.mkv', '.webm', '.avi',
+  // What galeo reads, and its own custom.css and settings files.
+  '.md', '.markdown', '.mdx', '.txt', '.log', '.json', '.yaml', '.yml', '.toml', '.csv', '.tsv', '.css',
+]);
+
 /**
  * Whether "Open with default app" may be offered for a file: a regular, non-executable file that
- * isn't a launcher type, by its name or, through symlinks, by the file it points to (`target`).
- * Main still requires the user to choose it in its own native menu.
+ * isn't a launcher type, by its name or, through symlinks, by the file it points to (`target`); on
+ * macOS and Windows, both must also be a known document type. Main still requires the user to
+ * choose it in its own native menu.
  */
-export function canOpenWithDefaultApp(file: { path: string; target: string; kind: EntryKind; executable: boolean }): boolean {
+export function canOpenWithDefaultApp(file: { path: string; target: string; kind: EntryKind; executable: boolean }, platform: string): boolean {
   if (file.kind !== 'file' || file.executable) return false;
-  return !LAUNCHERS.has(extensionOf(file.path)) && !LAUNCHERS.has(extensionOf(file.target));
+  const types = [extensionOf(file.path), extensionOf(file.target)];
+  if (types.some((type) => LAUNCHERS.has(type))) return false;
+  if (platform !== 'darwin' && platform !== 'win32') return true;
+  return types.every((type) => DOCUMENTS.has(type));
 }

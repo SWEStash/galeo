@@ -10,14 +10,14 @@ describe('openConfigFile ("Open custom CSS", a notice\'s "Open file")', () => {
   it('opens an existing file in its default app', async () => {
     const fs = new FakeFileSystem({ [CSS]: 'p {}' });
     const shell = new FakeOsShell();
-    await openConfigFile({ fs, shell, utf8 }, CSS);
+    await openConfigFile({ fs, shell, utf8, platform: 'linux' }, CSS);
     expect(opened(shell)).toEqual([CSS]);
   });
 
   it('creates a missing file first from its template, owner-only, then opens it', async () => {
     const fs = new FakeFileSystem();
     const shell = new FakeOsShell();
-    await openConfigFile({ fs, shell, utf8 }, CSS, '/* galeo */\n');
+    await openConfigFile({ fs, shell, utf8, platform: 'linux' }, CSS, '/* galeo */\n');
     expect(new TextDecoder().decode(await fs.readFile(CSS, { maxBytes: 1e6 }))).toBe('/* galeo */\n');
     expect(fs.modeOf(CSS)).toBe(0o600);
     expect(fs.modeOf('/cfg/profiles/acme')).toBe(0o700);
@@ -26,7 +26,7 @@ describe('openConfigFile ("Open custom CSS", a notice\'s "Open file")', () => {
 
   it('never replaces a file that exists', async () => {
     const fs = new FakeFileSystem({ [CSS]: 'mine' });
-    await openConfigFile({ fs, shell: new FakeOsShell(), utf8 }, CSS, 'template');
+    await openConfigFile({ fs, shell: new FakeOsShell(), utf8, platform: 'linux' }, CSS, 'template');
     expect(new TextDecoder().decode(await fs.readFile(CSS, { maxBytes: 1e6 }))).toBe('mine');
   });
 
@@ -34,9 +34,17 @@ describe('openConfigFile ("Open custom CSS", a notice\'s "Open file")', () => {
     const fs = new FakeFileSystem({ [CSS]: 'p {}', '/cfg/settings.json/x': '' });
     fs.makeExecutable(CSS);
     const shell = new FakeOsShell();
-    await expect(openConfigFile({ fs, shell, utf8 }, CSS)).rejects.toThrow(/not opened/);
-    await expect(openConfigFile({ fs, shell, utf8 }, '/cfg/settings.json')).rejects.toThrow(/not opened/);
-    await expect(openConfigFile({ fs, shell, utf8 }, '/cfg/missing.json')).rejects.toThrow();
+    await expect(openConfigFile({ fs, shell, utf8, platform: 'linux' }, CSS)).rejects.toThrow(/not opened/);
+    await expect(openConfigFile({ fs, shell, utf8, platform: 'linux' }, '/cfg/settings.json')).rejects.toThrow(/not opened/);
+    await expect(openConfigFile({ fs, shell, utf8, platform: 'linux' }, '/cfg/missing.json')).rejects.toThrow();
     expect(opened(shell)).toEqual([]);
+  });
+
+  it.each(['darwin', 'win32'])('opens custom.css and the settings files on %s too, whose default app gets known types only', async (platform) => {
+    const fs = new FakeFileSystem({ [CSS]: 'p {}', '/cfg/settings.json': '{}' });
+    const shell = new FakeOsShell();
+    await openConfigFile({ fs, shell, utf8, platform }, CSS);
+    await openConfigFile({ fs, shell, utf8, platform }, '/cfg/settings.json');
+    expect(opened(shell)).toEqual([CSS, '/cfg/settings.json']);
   });
 });
