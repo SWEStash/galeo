@@ -1,8 +1,8 @@
 # Releasing galeo
 
 galeo ships as a `.deb` (official) and an AppImage on GitHub Releases
-([ADR-008](decisions/ADR-008-packaging-and-distribution.md)); macOS and Windows previews are
-deferred until a stable Linux package ([ADR-011](decisions/ADR-011-defer-macos-windows-ci.md)). There is no
+([ADR-008](decisions/ADR-008-packaging-and-distribution.md)), with unsigned macOS and Windows
+previews beside them ([ADR-027](decisions/ADR-027-macos-windows-previews.md)). There is no
 auto-update: a new release is how fixes, Electron's included, reach users.
 
 ## Keeping Electron and dependencies current
@@ -14,7 +14,7 @@ auto-update: a new release is how fixes, Electron's included, reach users.
   electron-builder and `@electron/*` come as one grouped PR with no waiting period; other updates
   wait 3 days after publication (a compromised release is usually caught by then), and development
   tooling is grouped. Runtime updates are committed as `fix(deps)`, tooling as `build(deps-dev)`.
-- A PR is merged once CI is green (Linux only for now, ADR-011). Mermaid, KaTeX, DOMPurify and the sanitizer stay on
+- A PR is merged once CI is green (Linux on `main`; macOS and Windows run in the Platforms workflow, ADR-027). Mermaid, KaTeX, DOMPurify and the sanitizer stay on
   exact versions; read their changelogs before taking an update
   ([dependencies](dependencies.md)).
 
