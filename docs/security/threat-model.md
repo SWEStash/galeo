@@ -458,7 +458,9 @@ the middle of a save has no automated test: the atomic path writes the whole tem
 the rename that replaces the old one.
 
 **SR-16 — Local metadata hygiene.** Config and state directories are created `0700` and files
-`0600`. Session files, their rotated snapshots, and recent files store paths, view state and
+`0600`. On Windows those modes do nothing: config and state live in `%APPDATA%\galeo` and the cache in
+`%LOCALAPPDATA%\galeo`, inside the user's profile, whose inherited ACLs admit only the user, SYSTEM and
+administrators; Chromium's data (`State\chromium`) is there too, in the roaming part. Session files, their rotated snapshots, and recent files store paths, view state and
 scroll positions only, never document content. Recent files are capped at 200 per profile, and
 there is a "Clear recent files" command per profile. Crash dumps stay local, and the crash
 reporter is not enabled for upload. A tab's unsaved text stays in main's memory, also when the tab
