@@ -9,8 +9,14 @@ const LAUNCHERS = new Set([
   // Windows programs, installers, scripts (Windows Script Host runs .js and .vbs), shortcuts and settings.
   '.exe', '.bat', '.cmd', '.com', '.msi', '.ps1', '.lnk', '.js', '.jse', '.vbs', '.vbe', '.wsf', '.wsh', '.hta', '.scr',
   '.reg', '.cpl', '.msc', '.pif', '.url', '.appref-ms',
-  // macOS apps, scripts, installers and disk images.
-  '.app', '.command', '.terminal', '.pkg', '.mpkg', '.scpt', '.scptd', '.workflow', '.dmg', '.webloc',
+  // Windows help with scripts, app and patch installers, disk images it mounts, remote connections, and
+  // files that fetch from or point at a remote share (themes, shell links, search and library files).
+  '.chm', '.application', '.appinstaller', '.msix', '.msixbundle', '.appx', '.appxbundle', '.msp', '.iso', '.img', '.vhd',
+  '.vhdx', '.rdp', '.theme', '.themepack', '.deskthemepack', '.scf', '.library-ms', '.search-ms', '.searchconnector-ms',
+  '.settingcontent-ms', '.diagcab', '.wsc', '.sct',
+  // macOS apps, scripts, installers, disk images, links it follows and configuration profiles.
+  '.app', '.command', '.terminal', '.pkg', '.mpkg', '.scpt', '.scptd', '.workflow', '.dmg', '.webloc', '.fileloc', '.inetloc',
+  '.mobileconfig',
 ]);
 
 /**

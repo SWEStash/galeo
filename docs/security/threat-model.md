@@ -255,8 +255,10 @@ non-executable, non-launcher files: not `.desktop`, `.AppImage`, `.sh` or `.run`
 (`.deb`, `.rpm`), not Java, Python or Flatpak apps (`.jar`, `.jnlp`, `.py`, `.pyz`, `.flatpakref`,
 `.flatpakrepo`), not what Windows runs or installs when it is opened (programs and installers, `.bat`,
 `.cmd`, `.ps1`, the Windows Script Host's `.js`, `.vbs` and `.wsf`, `.hta`, `.scr`, shortcuts, `.reg`, `.cpl`,
-`.msc`), and not what macOS does (`.app`, `.command`, `.terminal`, `.pkg`, AppleScript, Automator
-workflows, disk images, `.webloc`); one list on every system, judged by the name and, through
+`.msc`, HTML Help `.chm`, app and patch installers such as `.msix`, `.application` and `.msp`, disk images
+it mounts, `.rdp`, and themes, `.scf`, search and library files that can point at a remote share), and not
+what macOS does (`.app`, `.command`, `.terminal`, `.pkg`, AppleScript, Automator workflows, disk images,
+`.webloc`, `.inetloc` and `.fileloc`, configuration profiles); one list on every system, judged by the name and, through
 symlinks, by the file pointed to; not files with the executable bit, not directories, and only when the user chooses it in a **native context
 menu built by main**. Otherwise only "Reveal in Files" is offered. Links to local
 files always open inside galeo.

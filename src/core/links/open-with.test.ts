@@ -39,6 +39,22 @@ describe('canOpenWithDefaultApp (SR-05)', () => {
     },
   );
 
+  it.each([
+    '/d/manual.chm', '/d/x.application', '/d/x.appinstaller', '/d/x.msix', '/d/x.msixbundle', '/d/x.appx', '/d/x.appxbundle',
+    '/d/x.msp', '/d/x.iso', '/d/x.img', '/d/x.vhd', '/d/x.vhdx', '/d/x.rdp', '/d/x.theme', '/d/x.themepack',
+    '/d/x.deskthemepack', '/d/x.scf', '/d/x.library-ms', '/d/x.search-ms', '/d/x.searchconnector-ms',
+    '/d/x.settingcontent-ms', '/d/x.diagcab', '/d/x.wsc', '/d/x.sct',
+  ])('refuses %s, which Windows runs, installs, mounts or connects with when it is opened', (path) => {
+    expect(canOpenWithDefaultApp(named(path))).toBe(false);
+  });
+
+  it.each(['/d/x.fileloc', '/d/x.inetloc', '/d/x.mobileconfig'])(
+    'refuses %s, which macOS follows or installs when it is opened',
+    (path) => {
+      expect(canOpenWithDefaultApp(named(path))).toBe(false);
+    },
+  );
+
   it.each(['/d/tool.jar', '/d/start.jnlp', '/d/app.flatpakref', '/d/repo.flatpakrepo', '/d/pkg.deb', '/d/pkg.rpm', '/d/run.py', '/d/app.pyz'])('refuses %s, which installs or runs an app', (path) => {
     expect(canOpenWithDefaultApp(named(path))).toBe(false);
   });
