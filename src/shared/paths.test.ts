@@ -33,4 +33,9 @@ describe('shownPath', () => {
     expect(shownPath('C:\\Users\\me', 'C:\\Users\\me')).toBe('~');
     expect(shownPath('C:\\Users\\meg\\x.md', 'C:\\Users\\me')).toBe('C:\\Users\\meg\\x.md');
   });
+
+  it('reads \\ as a separator only when the home folder is a Windows path', () => {
+    // On Linux and macOS `\` is a character of a name: `/home/me\notes.md` is a file in /home.
+    expect(shownPath('/home/me\\notes.md', '/home/me')).toBe('/home/me\\notes.md');
+  });
 });

@@ -25,8 +25,12 @@ export function joinPath(dir: string, ...names: string[]): string {
   return [dir.replace(/[\\/]$/, ''), ...names].join(separator);
 }
 
-/** A path as the reader sees it: `~/…` (`~\\…` on Windows) under the home folder, `~` for it, other paths whole. */
+/**
+ * A path as the reader sees it: `~/…` (`~\\…` on Windows) under the home folder, `~` for it, other paths
+ * whole. `\\` separates only when the home folder is a Windows path; elsewhere it can be part of a name.
+ */
 export function shownPath(path: string, home: string): string {
   if (path === home) return '~';
-  return path.startsWith(`${home}/`) || path.startsWith(`${home}\\`) ? `~${path.slice(home.length)}` : path;
+  const under = path.startsWith(`${home}/`) || (home.includes('\\') && path.startsWith(`${home}\\`));
+  return under ? `~${path.slice(home.length)}` : path;
 }
