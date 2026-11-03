@@ -212,5 +212,5 @@ runs in three shards on macOS arm64 and Windows x64 only, to save the minutes qu
 | Run | macOS arm64 (`macos-15`): package, e2e | macOS x64 (`macos-15-intel`): package | Windows x64 (`windows-2025`): package, e2e | Windows arm64 (`windows-11-arm`): package |
 |---|---|---|---|---|
 | Release dry run 41143442494 (2026-10-30, `b7b1c9b`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
-| 0.5.0 candidate | Not run | Not run | Not run | Not run |
+| 0.5.0 candidate: Platforms 41673935169 (2026-11-03, `65f4481`) | Pass, Pass | Pass | Pass, Pass | Pass |
 | Release 0.5.0 (tag) | Not run | Not run | Not run | Not run |
