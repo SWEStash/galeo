@@ -218,4 +218,4 @@ runs in three shards on macOS arm64 and Windows x64 only, to save the minutes qu
 |---|---|---|---|---|
 | Release dry run 41143442494 (2026-10-30, `b7b1c9b`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
 | 0.5.0 candidate: Platforms 41673935169 (2026-11-03, `65f4481`) | Pass, Pass | Pass | Pass, Pass | Pass |
-| Release 0.5.0 (tag) | Not run | Not run | Not run | Not run |
+| Release 0.5.0: release workflow 41723206000 (2026-11-03, tag `v0.5.0` on `e9c2800`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
