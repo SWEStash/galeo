@@ -44,7 +44,9 @@ What shapes the choice:
    `apt-get download` against it. A third job deploys.
 5. **The key.** An ed25519 OpenPGP key used only for this repository. Its primary key and revocation
    certificate stay **offline with the owner**. CI holds only a **signing subkey**, as a secret of the
-   `github-pages` environment, which only `main` may deploy from.
+   `github-pages` environment, which only `main` may deploy from. A second, **standby signing subkey** is in
+   the published key from the start but stays offline: if the CI subkey must be replaced, the release that
+   carries the new key is signed with the standby, which users already trust.
 6. **The key ships in the `.deb`.** The package installs the public key as
    `/opt/galeo/resources/galeo-archive-keyring.asc`, a file dpkg owns, and the user's sources entry names it in
    `Signed-By`. Because apt trusts only the key file on disk and never refreshes it, this is how a new subkey or

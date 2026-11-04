@@ -39,6 +39,8 @@ function deb(name, { pkg = 'galeo', arch = 'amd64', version = '1.2.3', withKey =
 /** A new ed25519 key in its own keyring, with a signing subkey like the real one; returns its armoured public key file. */
 function newKey(home, name) {
   mkdirSync(home, { recursive: true, mode: 0o700 });
+  // Never a passphrase window on the developer's desktop.
+  writeFileSync(path.join(home, 'gpg-agent.conf'), 'pinentry-program /bin/false\n');
   const gpg = (...args) => {
     const r = spawnSync('gpg', ['--batch', '--passphrase', '', ...args], { encoding: 'utf8', env: { ...process.env, GNUPGHOME: home } });
     expect(r.status, r.stderr).toBe(0);
