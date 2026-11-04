@@ -57,6 +57,12 @@ test('coming back to a tab marks what changed since you left it; F7 walks the ma
     await expect(document.locator('.cm-line.galeo-changed').filter({ hasText: /\S/ })).toHaveText(['Step 3, rewritten.', 'Step 13, new.']);
     await window.keyboard.press('ControlOrMeta+U');
 
+    // Split view marks both panes.
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('.cm-line.galeo-changed').filter({ hasText: /\S/ })).toHaveText(['Step 3, rewritten.', 'Step 13, new.']);
+    await expect(document.locator('p.galeo-changed')).toHaveText(['Step 3, rewritten.', 'Step 13, new.']);
+    await window.keyboard.press('ControlOrMeta+Backslash');
+
     await window.keyboard.press('ControlOrMeta+Shift+P');
     await window.keyboard.type('Clear change marks');
     await window.keyboard.press('Enter');
