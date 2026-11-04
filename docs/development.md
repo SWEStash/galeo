@@ -61,8 +61,10 @@ release records them in [VALIDATION](VALIDATION.md#performance).
 
 `site/` is the project's website, <https://swestash.github.io/galeo/>: one static page, its
 stylesheet and the screenshots, with no build step and no script. The Pages workflow
-(`.github/workflows/pages.yml`) publishes it when `site/` changes on `main`, or when started by
-hand. To retake the screenshots after a UI change:
+(`.github/workflows/pages.yml`) publishes it when `site/` changes on `main`, when a release is
+published, or when started by hand. Each run also rebuilds the signed apt repository under `/apt/`
+from the latest release's `.deb` (`scripts/apt-repo.sh`, ADR-029; key procedures in
+[Releasing](RELEASING.md)). To retake the screenshots after a UI change:
 
 ```sh
 npm run build

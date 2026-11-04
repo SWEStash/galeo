@@ -430,7 +430,7 @@ The pre-release security audits check these layers against the code:
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
 
-## 8. Build, packaging and deployment (ADR-008, ADR-017)
+## 8. Build, packaging and deployment (ADR-008, ADR-017, ADR-029)
 
 ```mermaid
 flowchart TD
@@ -443,6 +443,8 @@ flowchart TD
   eb --> ci["CI: Linux on every push; macOS and Windows on ci/platforms and by hand (platforms.yml, ADR-027)<br/>tests · package, fuse and Open With read-back · no-network harness · performance"]
   ci -- "tag v#lt;version#gt;" --> release["release workflow: Linux build + Platforms on macOS and Windows, verify each,<br/>then (all green) SHA256SUMS, attestations over the ten packages"]
   release --> draft[draft GitHub Release · docs/RELEASING.md, ADR-017]
+  draft -- "published by the owner" --> pages["Pages workflow: check the .deb's checksum and attestation,<br/>build the apt repository, sign it (the only job with the key), check it with apt"]
+  pages --> apt[swestash.github.io/galeo/apt/ · suite stable, the latest .deb only, ADR-029]
 ```
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`
@@ -451,7 +453,9 @@ Chromium's sandbox on Ubuntu 24.04+), `/usr/bin/galeo` (to the wrapper, through
 `update-alternatives`) and `/usr/bin/gal` (Launcher),
 `/usr/share/applications/galeo.desktop` (`Exec=/opt/galeo/galeo -- %F`, MIME types),
 `/usr/share/mime/packages/galeo.xml` (the `text/mdx` type, copied there by the post-install
-script), `/usr/share/icons/hicolor/*/apps/galeo.png`. Per-user data lives only in the Config, State and
+script), `/usr/share/icons/hicolor/*/apps/galeo.png`. From the first release that ships it, the apt
+repository's public key is `/opt/galeo/resources/galeo-archive-keyring.asc`, which a user's sources entry
+names in `Signed-By` (ADR-029). Per-user data lives only in the Config, State and
 Cache stores.
 
 The previews register galeo for *Open With* only, never as a default app
