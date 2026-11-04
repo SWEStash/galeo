@@ -237,6 +237,22 @@ describe('createSourceView editing', () => {
     source.destroy();
   });
 
+  it('marks changed lines and the line after removed ones, with words for screen readers, and clears them', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a\nb\nc\nd\n', language: null, wrap: false });
+    expect(source.markChanges({ changed: [[2, 3]], removedAt: [4, 9] })).toEqual([2, 3, 4, 5]);
+    const lines = [...parent.querySelectorAll('.cm-line')];
+    expect(lines.map((line) => line.classList.contains('galeo-changed'))).toEqual([false, true, true, false, false]);
+    expect(lines[1]!.getAttribute('aria-description')).toBe('changed');
+    expect(lines[3]!.classList.contains('galeo-removed-before')).toBe(true);
+    // Removed past the end: the last line says so.
+    expect(lines[4]!.classList.contains('galeo-removed-after')).toBe(true);
+    expect(parent.querySelectorAll('.cm-lineNumbers .galeo-changed-gutter')).toHaveLength(4);
+    expect(source.markChanges(null)).toEqual([]);
+    expect(parent.querySelector('.galeo-changed, .galeo-removed-before, [aria-description]')).toBeNull();
+    source.destroy();
+  });
+
   describe('Tab and Shift+Tab in edit mode', () => {
     const press = (source: ReturnType<typeof createSourceView>, shiftKey = false) =>
       runScopeHandlers(source.view, new KeyboardEvent('keydown', { key: 'Tab', shiftKey }), 'editor');

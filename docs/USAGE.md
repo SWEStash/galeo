@@ -122,6 +122,11 @@ the file into the window in front of you) when you want it here.
 - **Live reload**: a file that changes on disk updates in place and keeps your place; the tab
   shows `↻` for a moment. A tab whose file changes while you read another one shows a blue `•`
   until you show it. F5 or Ctrl+R reloads by hand.
+- **What changed**: when you come back to a tab, what changed in its file since you left it is
+  marked with an amber bar (blocks in rendered Markdown, lines in the source view), and the status
+  bar counts the changes. While you watch a tab, the marks add up. **F7** and **Shift+F7** go to
+  the next and previous change; *Clear change marks* in the palette starts again from what is
+  shown. Your own edits are never marked, and nothing is kept after galeo quits.
 - **Views**: Ctrl+U switches a Markdown or JSON file between rendered (or tree) and source; Alt+Z toggles wrapping;
   logs open in source view, and End follows the end of a growing log. A log line shows its level
   as a badge (ERR, WRN, INF, DBG), its timestamp muted, its level word in the level's colour and

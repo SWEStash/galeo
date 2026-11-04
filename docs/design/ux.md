@@ -438,6 +438,27 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 - Only this window's tabs, so one profile's. See
   [ADR-024](../decisions/ADR-024-find-in-all-tabs.md).
 
+### F20 — Changes since you last looked (v0.6)
+
+- Coming back to a tab marks what changed in its file since you left it; while a tab is shown,
+  changes keep adding up against the version you found when you arrived. The first time a tab is
+  shown in a window there is nothing to compare with, so nothing is marked.
+- Rendered Markdown marks each block a change touched (the innermost one: a list item's
+  paragraph, a table row); the source view marks lines. A mark is an amber bar beside the block
+  (on the line number in the source view) and a light tint; where text was removed, a line above
+  the block that followed it (below the last block, for text removed at the end). A screen reader
+  hears "changed" or "text removed before this" on the block. Logs, the JSON tree and the table
+  get no marks.
+- The status bar says "3 changes" (counted in the view showing). F7 / Shift+F7 go to the next /
+  previous mark, wrapping round, and the status says "Change 2 of 5" (or "No changes since you
+  last looked"). **Clear change marks** (palette) takes what is shown as the new starting point.
+- Edit mode shows no marks, and your own edits are never marked: leaving edit mode, like leaving
+  the tab, starts again from what is shown. Reading the file in another encoding starts again too.
+- When over half of a document of ten blocks or more changed, nothing is marked and the status bar
+  says "Most of this document changed"; a file over 2 M characters says "Too large to mark
+  changes" once it changes. Marks are kept in memory only: quitting, a renderer crash or moving
+  the tab to another window forgets them. See [ADR-030](../decisions/ADR-030-change-marks.md).
+
 ## 4. States
 
 ### Window-level
@@ -506,6 +527,7 @@ the native menu on the active tab.
 | Save (v0.2) | Ctrl+S | |
 | Split view (v0.2; CSV/TSV v0.3) | Ctrl+\ | Source left, rendered right; edit mode keeps it; Ctrl+U leaves it |
 | Find & replace (v0.2) | Ctrl+H | Edit mode only |
+| Next / previous change (v0.6) | F7 / Shift+F7 | Change marks (F20); *Clear change marks* is in the palette |
 | Add the next match / every match as cursors (v0.2) | Ctrl+D / Ctrl+Shift+L | Edit mode |
 | Add a cursor above / below (v0.2) | Shift+Alt+↑ / Shift+Alt+↓ | Edit mode. Ctrl+Alt+↑/↓ is GNOME's (workspaces); these keys were CodeMirror's copy line up/down, which is left out |
 | Add a cursor / a column of cursors (v0.2) | Ctrl+click / Alt+drag | Edit mode; Esc goes back to one cursor |

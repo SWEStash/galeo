@@ -64,6 +64,9 @@ const BASE = {
   /** Saves the tab in edit mode. */
   save: ['CmdOrCtrl+S'],
   /** The JSON tree (ADR-018): palette commands, no keys of their own (UX F14). */
+  nextChange: ['F7'],
+  previousChange: ['Shift+F7'],
+  clearChangeMarks: [],
   expandAll: [],
   collapseAll: [],
   copyJsonPath: [],

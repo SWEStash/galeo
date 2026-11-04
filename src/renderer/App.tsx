@@ -12,6 +12,7 @@ import { useTabsPosition } from './app/useTabsPosition';
 import { useTransientMessage } from './app/useTransientMessage';
 import { useUnsavedGuards } from './app/useUnsavedGuards';
 import { CommandsProvider, useCommands } from './commands/useCommands';
+import { baselines } from './document/change-marks';
 import { setCustomCss } from './document/host';
 import type { FindRequest } from './document/requests';
 import { useColorScheme } from './document/theme';
@@ -106,6 +107,8 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
     const byId = new Map(view.tabs.map((tab) => [tab.id, tab]));
     return panelIds.current.map((id) => byId.get(id)!);
   }, [view.tabs]);
+  // Change marks keep what each open tab last showed; a closed or moved-away tab's goes (ADR-030).
+  useEffect(() => baselines.retain(new Set(view.tabs.map((tab) => tab.id))), [view.tabs]);
   const settings = useSettings();
   const scheme = useColorScheme(settings?.settings.themeMode ?? 'system');
   const tableSeparator = settings?.settings.tableSeparator ?? 'auto';

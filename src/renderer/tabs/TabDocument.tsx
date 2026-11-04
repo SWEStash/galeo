@@ -209,6 +209,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
   return (
     <DocumentPane
       key={`${id}:${document.navigation}`}
+      tabId={id}
       content={document.content}
       client={client}
       scheme={scheme}

@@ -1,4 +1,6 @@
 import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from 'react';
+import { clearBlockMarks, markBlocks } from './change-blocks';
+import type { ChangedRanges } from './change-ranges';
 import { useLatest } from './useLatest';
 import type { ImageResult } from '../../shared/documents';
 import { offerZoom, type ImageExpand } from './images';
@@ -77,6 +79,10 @@ export interface DocumentViewProps {
   pendingFind?: FindRequest | null;
   /** Where `pendingFind` landed. */
   onPendingFind?: ((result: FindResult) => void) | undefined;
+  /** What changed since the reader last looked (ADR-030), to mark; null for none. */
+  changes?: ChangedRanges | null;
+  /** How many marks the view showing has, or that most of the document changed. */
+  onChangeMarks?: ((marks: { count: number; mostChanged: boolean }) => void) | undefined;
   /** Find in whichever view is showing, scroll to anchors, and focus the document area. */
   ref?: Ref<DocumentHandle>;
 }
@@ -123,6 +129,8 @@ export interface DocumentHandle extends Finder {
   replaceAll(text: string): number;
   /** The JSON tree shown, or null. */
   tree(): JsonTreeView | null;
+  /** Goes to the next (1) or previous (-1) change mark, wrapping round; null when there is none. */
+  stepChange(direction: 1 | -1): { index: number; count: number } | null;
 }
 
 /** The source line at the top of the rendered view. */
@@ -177,6 +185,8 @@ export function DocumentView({
   onNarrow,
   pendingFind = null,
   onPendingFind,
+  changes = null,
+  onChangeMarks,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -226,6 +236,25 @@ export function DocumentView({
       replace: (text) => host().source?.replace(text) ?? NO_MATCHES,
       replaceAll: (text) => host().source?.replaceAll(text) ?? 0,
       tree: () => host().tree,
+      stepChange: (direction) => {
+        const marks = changeMarks.current;
+        const inSource = view === 'source';
+        const count = inSource ? marks.lines.length : marks.blocks.length;
+        if (count === 0) return null;
+        marks.at = marks.at < 0 && direction < 0 ? count - 1 : (marks.at + direction + count) % count;
+        if (inSource) {
+          const line = marks.lines[marks.at]!;
+          host().source?.scrollToLine(line);
+          host().source?.select(line, 1);
+        } else {
+          const block = marks.blocks[marks.at]!;
+          block.scrollIntoView({ block: 'center' });
+          // Focus, so a screen reader reads the block and its "changed" description.
+          block.tabIndex = -1;
+          block.focus({ preventScroll: true });
+        }
+        return { index: marks.at + 1, count };
+      },
       scrollToAnchor: (anchor) => {
         if (!anchor) {
           host().renderedScroller.scrollTop = 0;
@@ -313,6 +342,7 @@ export function DocumentView({
     if (sync.current) sync.current.controller.refresh(sync.current.rendered);
     if (showsRendered(view)) markDocumentPaint();
   }, [rendered]);
+
 
   // Local images wait for main: the page never names a file to load itself (ADR-004).
   useEffect(() => {
@@ -436,6 +466,27 @@ export function DocumentView({
     sourceView.setEditable(editable);
     if (editable && showsSource(view)) sourceView.view.focus();
   }, [editable, sourceReady, view]);
+
+  // Change marks (ADR-030): on the rendered blocks after each render, and on the source's lines.
+  const changeMarks = useRef<{ blocks: HTMLElement[]; lines: number[]; mostChanged: boolean; at: number }>({ blocks: [], lines: [], mostChanged: false, at: -1 });
+  const changeMarksListener = useLatest(onChangeMarks);
+  useLayoutEffect(() => {
+    const marks = changeMarks.current;
+    const article = host().article;
+    if (rendered && 'html' in rendered && changes) {
+      const found = markBlocks(article, changes);
+      marks.blocks = found.marks;
+      marks.mostChanged = found.mostChanged;
+    } else {
+      clearBlockMarks(article);
+      marks.blocks = [];
+      marks.mostChanged = false;
+    }
+    marks.lines = host().source?.markChanges(changes) ?? [];
+    marks.at = -1;
+    const count = view === 'source' ? marks.lines.length : marks.blocks.length;
+    changeMarksListener.current?.({ count, mostChanged: marks.mostChanged });
+  }, [rendered, changes, view, sourceReady]);
   useEffect(() => {
     const sourceView = host().source;
     if (!sourceReady || !sourceView) return;

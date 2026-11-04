@@ -24,6 +24,8 @@ import { sourceOutline } from './source-outline';
 import { clamp, clamp01 } from '../../shared/math';
 import type { FindResult } from '../../shared/find';
 import { sourceHighlight, sourceTheme } from './source-theme';
+import { changeLines, markLines } from './change-lines';
+import type { ChangedRanges } from './change-ranges';
 import { indentUnitOf } from './indent';
 import { diffSpan } from './text-diff';
 
@@ -81,6 +83,8 @@ export interface SourceView {
   onOutline(listener: (entries: OutlineEntry[]) => void): () => void;
   /** Calls `listener` when the view scrolls up (the user leaving the end of a log). */
   onScrollUp(listener: () => void): () => void;
+  /** Marks the lines changed since the reader last looked (ADR-030; null: none); returns them, for F7. */
+  markChanges(ranges: ChangedRanges | null): number[];
   destroy(): void;
 }
 
@@ -216,6 +220,7 @@ export function createSourceView(options: {
       doc: options.text,
       extensions: [
         mode.of(reading()),
+        changeLines,
         EditorView.updateListener.of((update) => {
           if (update.docChanged && update.transactions.some((transaction) => transaction.docChanged && !transaction.annotation(fromFile))) {
             for (const listener of editListeners) listener();
@@ -402,6 +407,9 @@ export function createSourceView(options: {
       };
       view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
       return () => view.scrollDOM.removeEventListener('scroll', onScroll);
+    },
+    markChanges(ranges) {
+      return markLines(view, ranges);
     },
     destroy() {
       open = false;

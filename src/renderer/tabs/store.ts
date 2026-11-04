@@ -24,6 +24,8 @@ export interface TabStatus {
   editing: boolean;
   /** Edited, with changes not saved yet. */
   dirty: boolean;
+  /** What changed since the reader last looked (ADR-030): "3 changes", or why nothing is marked. */
+  changes?: string | null;
   /** While a table shows: its separator choice, the one the reader found (Auto's pick), its header (ADR-021). */
   table?: { separator: SeparatorChoice; found: Separator | null; header: boolean } | null;
 }

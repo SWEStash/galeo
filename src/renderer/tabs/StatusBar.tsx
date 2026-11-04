@@ -56,6 +56,7 @@ export function StatusBar({ view, store, say, children }: { view: TabsView; stor
       )}
       {status?.table && <TableOptionsMenu className="status-table" options={status.table} onCommand={(command) => dispatcher.run(command)} />}
       {metrics && <span data-testid="status-metrics">{metrics}</span>}
+      {status?.changes && <span data-testid="status-changes">{status.changes}</span>}
       {zoom !== 1 && <span data-testid="status-zoom">{Math.round(zoom * 100)}%</span>}
       {/* Only while the tab differs from the measure setting, as zoom shows only away from 100 %. */}
       {width && <span data-testid="status-width">{widthLabel(width)}</span>}

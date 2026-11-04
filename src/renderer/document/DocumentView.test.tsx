@@ -73,6 +73,33 @@ describe('DocumentView', () => {
     expect(shadow.querySelector('article')?.innerHTML).toBe('<p>once</p>');
   });
 
+  it('marks the changed blocks, says how many, and steps through them with focus, wrapping round', async () => {
+    const handle = { current: null as DocumentHandle | null };
+    const onChangeMarks = vi.fn();
+    const html = '<p data-src-line="1" data-src-end="1">a</p><p data-src-line="3" data-src-end="3">b</p><p data-src-line="5" data-src-end="5">c</p>';
+    const container = await render(
+      <DocumentView {...props} rendered={{ html }} changes={{ changed: [[1, 1], [5, 5]], removedAt: [] }} onChangeMarks={onChangeMarks} scheme="light" ref={(value) => void (handle.current = value)} />,
+    );
+    const shadow = shadowOf(container);
+    const stepped = (direction: 1 | -1) => {
+      let result: ReturnType<DocumentHandle['stepChange']> = null;
+      act(() => void (result = handle.current!.stepChange(direction)));
+      return result;
+    };
+    expect([...shadow.querySelectorAll('.galeo-changed')].map((element) => element.textContent)).toEqual(['a', 'c']);
+    expect(onChangeMarks).toHaveBeenLastCalledWith({ count: 2, mostChanged: false });
+    expect(stepped(1)).toEqual({ index: 1, count: 2 });
+    expect(shadow.activeElement?.textContent).toBe('a');
+    expect(stepped(1)).toEqual({ index: 2, count: 2 });
+    expect(stepped(1)).toEqual({ index: 1, count: 2 });
+    expect(stepped(-1)).toEqual({ index: 2, count: 2 });
+
+    await act(async () => root!.render(<DocumentView {...props} rendered={{ html }} changes={null} onChangeMarks={onChangeMarks} scheme="light" ref={(value) => void (handle.current = value)} />));
+    expect(shadow.querySelector('.galeo-changed')).toBeNull();
+    expect(onChangeMarks).toHaveBeenLastCalledWith({ count: 0, mostChanged: false });
+    expect(handle.current!.stepChange(1)).toBeNull();
+  });
+
   it('updates the content and the scheme in place', async () => {
     const container = await render(<DocumentView {...props} rendered={{ html: '<p>a</p>' }} scheme="light" />);
     const shadow = shadowOf(container);

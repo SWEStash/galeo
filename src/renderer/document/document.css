@@ -231,6 +231,46 @@ blockquote {
   border-left: 0.25em solid var(--galeo-color-border);
 }
 
+/* Change marks (ADR-030): a bar in the margin, a light tint, and a line where text was removed.
+   Box shadows draw outside the block, so nothing moves and a scrolling code block doesn't clip them;
+   the page-coloured shadow is the gap between the bar and the text. */
+.galeo-changed {
+  --galeo-mark-bar: -6px 0 0 0 var(--galeo-color-bg), -9px 0 0 0 var(--galeo-color-changed);
+  background-color: color-mix(in srgb, var(--galeo-color-changed) 8%, transparent);
+}
+.galeo-removed-before {
+  --galeo-mark-top: 0 -3px 0 -1px var(--galeo-color-changed);
+}
+.galeo-removed-after {
+  --galeo-mark-bottom: 0 3px 0 -1px var(--galeo-color-changed);
+}
+.galeo-changed,
+.galeo-removed-before,
+.galeo-removed-after {
+  box-shadow: var(--galeo-mark-top, 0 0 transparent), var(--galeo-mark-bottom, 0 0 transparent), var(--galeo-mark-bar, 0 0 transparent);
+}
+/* A list item's bar goes left of its number or bullet, not between it and the text. */
+li.galeo-changed {
+  --galeo-mark-bar: -1.75em 0 0 0 var(--galeo-color-bg), calc(-1.75em - 3px) 0 0 0 var(--galeo-color-changed);
+}
+/* Chromium draws no shadow on a table row, and a table scrolls (clipping what is drawn outside it):
+   the cells carry the marks, the bar inside the first one. */
+tr.galeo-changed > *,
+tr.galeo-removed-before > *,
+tr.galeo-removed-after > * {
+  box-shadow: var(--galeo-mark-top, 0 0 transparent), var(--galeo-mark-bottom, 0 0 transparent);
+}
+tr.galeo-changed > :first-child {
+  box-shadow: var(--galeo-mark-top, 0 0 transparent), var(--galeo-mark-bottom, 0 0 transparent), inset 3px 0 0 var(--galeo-color-changed);
+}
+/* The source view: the bar on the line number, as the text fills the line. */
+.cm-line.galeo-changed {
+  --galeo-mark-bar: 0 0 transparent;
+}
+.galeo-changed-gutter {
+  box-shadow: inset 3px 0 0 var(--galeo-color-changed);
+}
+
 /* GitHub-style callouts: the type's colour on the border, icon and title; the body reads as text.
    The icons are masks, so they take the title's colour; a screen reader reads the title only. */
 .galeo-callout {

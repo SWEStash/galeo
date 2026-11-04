@@ -20,7 +20,7 @@ import type { ColorScheme } from './host';
 import { FORMAT_NAMES, sourceLanguage } from './formats';
 import { useDelayed } from './useDelayed';
 import { useLatest } from './useLatest';
-import { countWords } from '../../shared/words';
+import { countWords, plural } from '../../shared/words';
 import { ZoomViewer } from './ZoomViewer';
 import { pauseOrMax } from './pause-or-max';
 import { settleFocus } from './settle-focus';
@@ -30,6 +30,7 @@ import { useRenderedHtml } from './useRenderedHtml';
 import { afterToggleSource, afterToggleSplit, shownView, viewForEditing, type SingleView, type ViewToggle } from './view-modes';
 import type { EditRequest, FindRequest } from './requests';
 import { countLines, DISK_UNSAVED, formatView, notSaved } from './pane-model';
+import { useChangeMarks } from './useChangeMarks';
 import { useFind } from './useFind';
 import { useZoomViewer } from './useZoomViewer';
 import { DocumentBanners } from './DocumentBanners';
@@ -43,6 +44,8 @@ const CANCEL_AFTER_MS = 5000;
 
 
 export interface DocumentPaneProps {
+  /** The tab the pane shows a document in: change marks keep what it last showed (ADR-030). */
+  tabId: string;
   content: DocumentContent;
   client: RenderClient | null;
   scheme: ColorScheme;
@@ -112,6 +115,7 @@ const PREVIEW_TIMING = { pauseMs: 150, maxMs: 1000 };
  * new version of the same file arrives as new `content` and keeps them.
  */
 export function DocumentPane({
+  tabId,
   content,
   client,
   scheme,
@@ -234,6 +238,10 @@ export function DocumentPane({
   // Edit mode (ADR-013). While the text has unsaved changes, the editor keeps it: a new read of
   // the file (it changed on disk) neither replaces it nor becomes the version a save names.
   const [editing, setEditing] = useState(false);
+  // What changed since the reader last looked (ADR-030): rendered Markdown and the source view, not logs.
+  const changeMarks = useChangeMarks({ tabId, path: ready?.path ?? '', text: ready?.text ?? null, active, editing, encoding: ready?.encoding ?? null });
+  const shownChanges = ready && ready.format !== 'log' ? changeMarks.ranges : null;
+  const [changeCount, setChangeCount] = useState({ count: 0, mostChanged: false });
   // A split in a window too narrow for it shows one view; the toggles still act on the split.
   const view = shownView(layout, { narrow, editing });
   const live = editing && view === 'split' && splittable;
@@ -471,6 +479,13 @@ export function DocumentPane({
     stepFind(direction);
     return true;
   };
+  // F7 / Shift+F7: the next or previous change mark, said aloud through the status bar (ADR-030).
+  const goToChange = (direction: 1 | -1) => () => {
+    if (!ready) return false;
+    const at = documentHandle.current?.stepChange(direction);
+    onMessage(at ? `Change ${at.index} of ${at.count}` : 'No changes since you last looked');
+    return true;
+  };
   // Table options (ADR-021): from the palette, or the status bar's Table options menu, which runs
   // these commands. A new separator reads the table again; the header only redraws it.
   const separatorCommand = (separator: SeparatorChoice) => () => {
@@ -540,6 +555,13 @@ export function DocumentPane({
       },
       findNext: step(1),
       findPrevious: step(-1),
+      nextChange: goToChange(1),
+      previousChange: goToChange(-1),
+      clearChangeMarks: () => {
+        if (!ready) return false;
+        changeMarks.clear();
+        return true;
+      },
       back: history('back'),
       forward: history('forward'),
       save: () => {
@@ -637,6 +659,13 @@ export function DocumentPane({
   // An article's prose is counted by the worker as it renders; reader text is all prose.
   const textWords = useMemo(() => (ready && reader ? countWords(ready.text) : null), [ready, reader]);
   const words = article ? render.words : textWords;
+  const changesNote = changeCount.mostChanged
+    ? 'Most of this document changed'
+    : changeMarks.tooLarge
+      ? 'Too large to mark changes'
+      : shownChanges && changeCount.count > 0
+        ? plural(changeCount.count, 'change', 'changes')
+        : null;
   useEffect(() => {
     onStatus({
       state: ready ? 'ready' : content.state,
@@ -648,10 +677,11 @@ export function DocumentPane({
       follow,
       editing,
       dirty,
+      changes: changesNote,
       // The status bar's Table options read these while a table shows (ADR-021).
       table: tabular && view !== 'source' ? { separator: separatorChoice, found: shownTable?.table?.separator ?? null, header } : null,
     });
-  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, tabular, separatorChoice, shownTable?.table, header]);
+  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, tabular, separatorChoice, shownTable?.table, header]);
 
   // Ready content is always shown: no document means the content is a state of its own.
   if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={onContextMenu} />;
@@ -689,6 +719,8 @@ export function DocumentPane({
       <div className="document-body">
         <DocumentView
           ref={documentHandle}
+          changes={shownChanges}
+          onChangeMarks={setChangeCount}
           rendered={rendered}
           source={{ text: dirty ? pinnedText : ready.text, language: sourceLanguage(ready.format, ready.path) }}
           editable={editing}
