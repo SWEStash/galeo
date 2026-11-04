@@ -101,10 +101,16 @@ jobs:
         if: needs.assemble.outputs.apt == 'true'
         env:
           APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+          # Set only while the standby subkey, which keeps its passphrase, signs a key rotation (RELEASING).
+          APT_SIGNING_PASSPHRASE: ${{ secrets.APT_SIGNING_PASSPHRASE }}
         run: |
           export GNUPGHOME="$RUNNER_TEMP/gnupg"
           mkdir -m 700 "$GNUPGHOME"
           trap 'gpgconf --kill all; rm -rf "$GNUPGHOME"' EXIT
+          if [ -n "$APT_SIGNING_PASSPHRASE" ]; then
+            printf '%s' "$APT_SIGNING_PASSPHRASE" > "$GNUPGHOME/passphrase"
+            printf 'pinentry-mode loopback\npassphrase-file %s\n' "$GNUPGHOME/passphrase" > "$GNUPGHOME/gpg.conf"
+          fi
           printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
           scripts/apt-repo.sh sign "$RUNNER_TEMP/pages/apt"
       - name: Check that apt accepts it
