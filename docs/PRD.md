@@ -413,6 +413,79 @@ tests on each system check them.
   view, and more diagram engines: a later release.
 - Drag between windows checked on X11.
 
+## User Stories — v0.6 "agent companion"
+
+v0.6 is about following the documents an agent writes while it writes them: what changed, which
+tabs changed, and how far a plan has got. Reading stays read-only except where a story says
+otherwise, and nothing leaves the machine.
+
+### Must Have
+
+1. **Changes since I last looked.** As the owner, I want galeo to mark what changed in a document
+   since I last looked at it, so that I can review an agent's edits without reading the whole file
+   again.
+   - AC: Given a Markdown tab I left, when its file changes on disk once or several times and I come
+     back, then each block whose lines changed or were added is marked, and a thin mark shows where
+     text was removed. While a tab is shown, its changes add up against the version I found when I
+     arrived.
+   - AC: F7 and Shift+F7 go to the next and previous change, the status bar shows how many there
+     are, and *Clear change marks* removes them. The source view marks changed lines the same way.
+   - AC: My own saves are never marked. Marks live in memory only: quitting galeo or moving the tab
+     to another window forgets them. For a very large file, or when most of a document was
+     rewritten, galeo says so instead of marking every block.
+   - AC: A mark is never colour alone: it has a bar in the margin, a screen reader hears "changed",
+     and F7 announces which change it is ("change 2 of 5").
+2. **Updated tabs.** As the owner, I want to see which tabs' files changed while I was reading
+   another one, so that I know where an agent has been working.
+   - AC: Given tab B isn't shown, when B's file changes on disk, then B shows a dot in the tab bar
+     or tab list, in tab search and in the tab overview, and a screen reader hears "updated".
+     Showing B clears it.
+   - AC: A tab galeo hasn't read since it started (restored without being shown) gets no dot until
+     it has been shown once: before that, galeo has nothing to compare with.
+3. **Task progress.** As the owner, I want to see how many of a plan's tasks are done, so that I can
+   follow an agent's progress at a glance.
+   - AC: Given a Markdown file with task items (`- [ ]`, `- [x]`), the status bar shows "7 of 12
+     tasks", and each heading in the outline shows the count of the tasks under it, up to the next
+     heading. A file without tasks shows no count.
+   - AC: The counts follow the file when it changes on disk, and a screen reader reads them with
+     their heading.
+4. **Callouts.** As a reader, I want GitHub-style callouts (`> [!NOTE]`, `> [!TIP]`,
+   `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`) shown as callouts, so that the notes in agents'
+   documents and READMEs stand out as they do on GitHub.
+   - AC: Each of the five types shows with its icon and its title as text, light and dark, every
+     colour at 4.5:1. Any other type stays a quote with its text unchanged.
+   - AC: A callout adds no link, image or script: what a document can reach is the same with or
+     without it.
+
+### Should Have
+
+- **Front matter as a header.** A document's front matter shows as a short list of its keys and
+  values above the text, so that a post's title and date or an ADR's status are easy to read.
+  - AC: Simple `key: value` lines show as the list; anything else (nested values, lists, text over
+    several lines, TOML) shows as today, as highlighted source. Its words aren't counted.
+- **Broken links.** A link to a file that doesn't exist is marked, so that a renamed or missing
+  file shows before I follow it.
+  - AC: A relative link whose file doesn't exist is marked, with "file not found" as a tooltip and
+    for screen readers; the marks follow the document when it changes. galeo checks only the files
+    the document links to.
+
+### Could Have
+
+- **Tick task boxes in the rendered view.** Decided by its own ADR before anything is built: ticking
+  in place through galeo's edit capability, a click that opens edit mode at that line, or neither.
+  Whatever is chosen, a saved file keeps its encoding and line endings, and a click galeo didn't see
+  the reader make can't write to a file.
+
+### Won't Have (v0.6)
+
+- A new look for the interface, and the buttons and menus the mouse paths review proposed: a later
+  release.
+- Change marks in the JSON tree, the table and logs, and change marks that survive a restart.
+- Following a large log without re-reading the whole file on each change.
+- Optional Vim keybindings, spell check in edit mode and more diagram engines.
+- Watching a folder for new files.
+- Drag between windows checked on X11.
+
 ## User Experience
 
 A browser-like window: a tab bar with the profile name/colour at the left, the document below,
@@ -491,8 +564,8 @@ live in the [UX specification](design/ux.md).
       dependencies, build output), skipped wherever they appear, plus names from the
       `quickOpenExclude` setting; no ignore file and no globs in v0.1 (owner, 2026-09-29).
 - [x] **Log level patterns**: a fixed set in v0.1 (level words, `key=value` and JSON level fields, one-letter tags, syslog priorities), decided with the log view (2026-09-27). User-configurable patterns can come later.
-- [ ] **Obsidian syntax** priority (Could → Should?): GitHub-style alerts / callouts are noted on
-      the ADR-003 roadmap; decide after v0.1.
+- [x] **Obsidian syntax** priority: GitHub-style callouts, the five types GitHub shows, are a v0.6
+      Must Have (owner, 2026-11-04). No other Obsidian syntax has a story.
 
 ## References
 
