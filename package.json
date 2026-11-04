@@ -1,6 +1,6 @@
 {
   "name": "galeo",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "private": true,
   "description": "A fast, private desktop app to read and edit Markdown, text, logs, JSON, CSV and source code",
   "license": "MIT",
