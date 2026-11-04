@@ -224,6 +224,9 @@ mode closes the replace row and keeps find open.
 - Markdown opens **rendered**; Ctrl+U toggles **source** (read-only, line numbers, wrap).
   YAML frontmatter appears at the top as a collapsible, highlighted YAML block (shown, never
   interpreted).
+  (v0.6) A top-level quote whose first line is `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or
+  `[!CAUTION]` shows as a callout: an icon and the type's title in its colour, as on GitHub; other
+  types stay quotes.
   The toggle keeps the reading position (rendered block ⇄ source line).
 - `.txt` opens in the **reader** view: proportional font, reading column, preserved line breaks.
 - `.log` opens in the **log** view: monospace, line numbers, level highlighting

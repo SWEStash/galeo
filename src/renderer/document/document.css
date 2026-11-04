@@ -231,6 +231,53 @@ blockquote {
   border-left: 0.25em solid var(--galeo-color-border);
 }
 
+/* GitHub-style callouts: the type's colour on the border, icon and title; the body reads as text.
+   The icons are masks, so they take the title's colour; a screen reader reads the title only. */
+.galeo-callout {
+  padding: 0.5em 1em;
+  color: var(--galeo-color-fg);
+  border-left-color: var(--galeo-callout-color);
+}
+.galeo-callout > :last-child {
+  margin-bottom: 0;
+}
+.galeo-callout-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin-bottom: 0.5em;
+  color: var(--galeo-callout-color);
+  font-weight: 600;
+}
+.galeo-callout-title::before {
+  content: '';
+  flex: none;
+  width: 1em;
+  height: 1em;
+  background: currentColor;
+  mask: var(--galeo-callout-icon) center / contain no-repeat;
+}
+.galeo-callout-note {
+  --galeo-callout-color: var(--galeo-color-callout-note);
+  --galeo-callout-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1Zm-1 6h2v5H7Zm0-3h2v2H7Z'/></svg>");
+}
+.galeo-callout-tip {
+  --galeo-callout-color: var(--galeo-color-callout-tip);
+  --galeo-callout-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 1a5 5 0 0 0-3 9v2h6v-2a5 5 0 0 0-3-9Zm-2 12h4v2H6Z'/></svg>");
+}
+.galeo-callout-important {
+  --galeo-callout-color: var(--galeo-color-callout-important);
+  --galeo-callout-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M2 2h12v9H8l-4 3v-3H2Zm5 1v4h2V3Zm0 5v2h2V8Z'/></svg>");
+}
+.galeo-callout-warning {
+  --galeo-callout-color: var(--galeo-color-callout-warning);
+  --galeo-callout-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M8 1l7 13H1Zm-1 5v4h2V6Zm0 5v2h2v-2Z'/></svg>");
+}
+.galeo-callout-caution {
+  --galeo-callout-color: var(--galeo-color-callout-caution);
+  --galeo-callout-icon: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill-rule='evenodd' d='M5 1h6l4 4v6l-4 4H5l-4-4V5Zm2 3v5h2V4Zm0 6v2h2v-2Z'/></svg>");
+}
+
 hr {
   height: 0;
   border: 0;

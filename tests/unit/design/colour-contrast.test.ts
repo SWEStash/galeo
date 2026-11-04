@@ -24,7 +24,10 @@ const SCHEMES = { light, dark: { ...light, ...colours(":root[data-scheme='dark']
 const SURFACES = ['bg', 'code-bg'] as const;
 
 describe.each(Object.entries(SCHEMES))('the %s theme (UX §6, WCAG 2.1 AA)', (_scheme, tokens) => {
-  it.each(['fg', 'muted', 'link', 'log-error', 'log-warn', 'log-info'])('%s text reads at 4.5:1 or more', (token) => {
+  it.each([
+    'fg', 'muted', 'link', 'log-error', 'log-warn', 'log-info',
+    'callout-note', 'callout-tip', 'callout-important', 'callout-warning', 'callout-caution',
+  ])('%s text reads at 4.5:1 or more', (token) => {
     for (const surface of SURFACES) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(4.5);
   });
 

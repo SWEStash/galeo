@@ -31,6 +31,12 @@
   --galeo-color-log-error: #d1242f;
   --galeo-color-log-warn: #9a6700;
   --galeo-color-log-info: #0969da;
+  /* GitHub-style callouts: the border, icon and title of each type; each 4.5:1 on bg and code-bg. */
+  --galeo-color-callout-note: #0969da;
+  --galeo-color-callout-tip: #1a7f37;
+  --galeo-color-callout-important: #8250df;
+  --galeo-color-callout-warning: #9a6700;
+  --galeo-color-callout-caution: #d1242f;
   /* Source highlighting: GitHub's palette, as in fenced code blocks; each 4.5:1 on bg and code-bg. */
   --galeo-syntax-keyword: #cf222e;
   --galeo-syntax-string: #0a3069;
@@ -57,6 +63,11 @@
   --galeo-color-log-error: #f85149;
   --galeo-color-log-warn: #d29922;
   --galeo-color-log-info: #4493f8;
+  --galeo-color-callout-note: #4493f8;
+  --galeo-color-callout-tip: #3fb950;
+  --galeo-color-callout-important: #ab7df8;
+  --galeo-color-callout-warning: #d29922;
+  --galeo-color-callout-caution: #f85149;
   --galeo-syntax-keyword: #ff7b72;
   --galeo-syntax-string: #a5d6ff;
   --galeo-syntax-constant: #79c0ff;

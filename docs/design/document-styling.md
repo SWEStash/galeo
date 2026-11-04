@@ -47,6 +47,11 @@ Defined on `:root`; the dark values apply when the root element has `data-scheme
 | `--galeo-color-log-error` | `#d1242f` / `#f85149` | Log error badges, level words and line tint (9 %) |
 | `--galeo-color-log-warn` | `#9a6700` / `#d29922` | Log warning badges, level words and line tint (6 %) |
 | `--galeo-color-log-info` | `#0969da` / `#4493f8` | Log info badges and level words |
+| `--galeo-color-callout-note` | `#0969da` / `#4493f8` | Note callouts (`> [!NOTE]`): border, icon and title |
+| `--galeo-color-callout-tip` | `#1a7f37` / `#3fb950` | Tip callouts (`> [!TIP]`): border, icon and title |
+| `--galeo-color-callout-important` | `#8250df` / `#ab7df8` | Important callouts (`> [!IMPORTANT]`): border, icon and title |
+| `--galeo-color-callout-warning` | `#9a6700` / `#d29922` | Warning callouts (`> [!WARNING]`): border, icon and title |
+| `--galeo-color-callout-caution` | `#d1242f` / `#f85149` | Caution callouts (`> [!CAUTION]`): border, icon and title |
 | `--galeo-syntax-keyword` | `#cf222e` / `#ff7b72` | Source highlighting: keywords |
 | `--galeo-syntax-string` | `#0a3069` / `#a5d6ff` | Strings, also in the JSON tree |
 | `--galeo-syntax-constant` | `#0550ae` / `#79c0ff` | Numbers, booleans, null, property names (JSON keys), also in the JSON tree; the keys of `key=value` pairs and JSON lines in logs |
@@ -65,6 +70,7 @@ The fonts ship with the app (no web fonts), each with a system fallback.
 | `.galeo-document` | The document's reading column (inside the shadow root) |
 | `:host([data-scheme='dark'])` | The document while the app is dark; code highlighting switches on it |
 | `.galeo-frontmatter` | The collapsible frontmatter block |
+| `.galeo-callout` | A GitHub-style callout: the `blockquote`, with `.galeo-callout-note`, `-tip`, `-important`, `-warning` or `-caution`; its first child is the `.galeo-callout-title` paragraph |
 | `.galeo-remote-image` | Placeholder for a blocked remote image (`data-host`, `data-url`) |
 | `.galeo-text-reader` | The `.txt` reader view (paragraphs keep their line breaks) |
 | `.galeo-image` | A document image that opens in the viewer (larger than an icon), with its `.galeo-image-expand` button |

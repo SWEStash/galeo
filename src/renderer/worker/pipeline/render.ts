@@ -4,6 +4,7 @@ import rehypeSlug from 'rehype-slug';
 import rehypeStringify from 'rehype-stringify';
 import { unified } from 'unified';
 import { classesOf, eachElement, textOf } from '../../../shared/markdown/hast';
+import { callouts } from './callouts';
 import type { Highlighter } from './highlighter';
 import { ID_PREFIX } from '../../../shared/markdown/ids';
 import { articleParser } from '../../../shared/markdown/parser';
@@ -328,6 +329,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
     const mdx = format === 'mdx' ? await (remarkMdx ??= loadMdx()) : null;
     const parse = articleParser({ mdx, mdast: [liftFrontmatter(collected)] })
       .use(rehypeSlug, { prefix: ID_PREFIX })
+      .use(callouts)
       .use(annotate(collected))
       .use(diagramPlaceholders);
     const tree = (await parse.run(parse.parse(text))) as Root;
