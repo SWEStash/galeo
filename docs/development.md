@@ -19,6 +19,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run test:e2e` | Playwright end-to-end tests against the built app (`npm run build` first) |
 | `npm run test:no-network` | Zero-network proof on Linux: the built app runs under `strace` and must make no network `connect()` (needs `strace`) |
 | `npm run test:perf` | Timings for cold start, tabs, diagrams, data views, a 100 MB log, find in all tabs, typing in split view, and memory (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the budgets, see [performance runs](#performance-runs) |
+| `npm run site:screenshots` | The [website](#website)'s screenshots from the built app, into `site/screenshots/` (`npm run build` first; run it through `npm run headless`) |
 | `npm run package` | Build, then package for the current OS into `release/` (Linux: `.deb` and AppImage; macOS: `.dmg` and `.zip`; Windows: setup and portable `.exe`) |
 | `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon, the licence notices |
 | `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop: wrap the Playwright commands and `verify:package` in it |
@@ -55,6 +56,21 @@ Timings are medians: of 10 runs for cold start, tabs and typing, of 3 for the da
 memory, and per frame while scrolling for diagrams; for the log, per frame while paging and per
 appended line, in one run; for find in all tabs, main's longest busy spell, of 3 queries. The
 release records them in [VALIDATION](VALIDATION.md#performance).
+
+## Website
+
+`site/` is the project's website, <https://swestash.github.io/galeo/>: one static page, its
+stylesheet and the screenshots, with no build step and no script. The Pages workflow
+(`.github/workflows/pages.yml`) publishes it when `site/` changes on `main`, or when started by
+hand. To retake the screenshots after a UI change:
+
+```sh
+npm run build
+npm run headless -- npm run site:screenshots
+```
+
+They open the documents in `tests/screenshots/showcase/` at 1280×800 on an emulated 2× display.
+Look at each one before committing it.
 
 ## Before pushing
 

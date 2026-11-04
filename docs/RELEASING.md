@@ -67,3 +67,5 @@ Then cut it:
    later; the same for the AppImage and for one macOS and one Windows file). The notes end with the
    previews' Gatekeeper and SmartScreen steps. Edit the draft's notes (a list of commit subjects to start from) for readers, then
    publish it.
+10. **Website**: if the UI changed visibly, retake the [website's screenshots](development.md#website)
+    and commit them; the page links to the latest release, so nothing else changes.
