@@ -69,7 +69,7 @@ The fonts ship with the app (no web fonts), each with a system fallback.
 |---|---|
 | `.galeo-document` | The document's reading column (inside the shadow root) |
 | `:host([data-scheme='dark'])` | The document while the app is dark; code highlighting switches on it |
-| `.galeo-frontmatter` | The collapsible frontmatter block |
+| `.galeo-frontmatter` | The collapsible frontmatter block: a `dl` of its fields when it is only `key: value` lines (open), else its highlighted source (collapsed) |
 | `.galeo-callout` | A GitHub-style callout: the `blockquote`, with `.galeo-callout-note`, `-tip`, `-important`, `-warning` or `-caution`; its first child is the `.galeo-callout-title` paragraph |
 | `.galeo-remote-image` | Placeholder for a blocked remote image (`data-host`, `data-url`) |
 | `.galeo-text-reader` | The `.txt` reader view (paragraphs keep their line breaks) |

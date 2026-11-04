@@ -356,6 +356,24 @@ details > summary {
 .galeo-frontmatter > pre {
   margin: 0.5em 0 0;
 }
+/* Flat front matter: its fields as a compact two-column list. */
+.galeo-frontmatter > dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.15em 1em;
+  margin: 0.5em 0 0;
+  padding: 0.6em 0.9em;
+  border-radius: var(--galeo-radius);
+  background: var(--galeo-color-code-bg);
+  font-size: 0.9em;
+}
+.galeo-frontmatter dt {
+  color: var(--galeo-color-muted);
+}
+.galeo-frontmatter dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 
 /* MDX components: a dashed box labelled with the tag, its props, then its content. */
 div[data-galeo-mdx] {

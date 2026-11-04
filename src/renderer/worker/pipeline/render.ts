@@ -5,6 +5,7 @@ import rehypeStringify from 'rehype-stringify';
 import { unified } from 'unified';
 import { classesOf, eachElement, textOf } from '../../../shared/markdown/hast';
 import { callouts } from './callouts';
+import { frontmatterBlock } from './frontmatter';
 import type { Highlighter } from './highlighter';
 import { ID_PREFIX } from '../../../shared/markdown/ids';
 import { articleParser } from '../../../shared/markdown/parser';
@@ -135,30 +136,6 @@ function unhighlightIfHuge(pre: Element): void {
   const code = pre.children[0];
   if (code?.type !== 'element' || textOf(code).length <= SHIKI_MAX_BLOCK_CHARS) return;
   code.properties['className'] = classesOf(code).filter((name) => !name.startsWith('language-'));
-}
-
-function frontmatterBlock({ value, lang, end }: { value: string; lang: string; end: number }): Element {
-  return {
-    type: 'element',
-    tagName: 'details',
-    properties: { className: ['galeo-frontmatter'], dataSrcLine: 1, dataSrcEnd: end },
-    children: [
-      { type: 'element', tagName: 'summary', properties: {}, children: [{ type: 'text', value: 'Frontmatter' }] },
-      {
-        type: 'element',
-        tagName: 'pre',
-        properties: {},
-        children: [
-          {
-            type: 'element',
-            tagName: 'code',
-            properties: { className: [`language-${lang}`] },
-            children: [{ type: 'text', value: `${value}\n` }],
-          },
-        ],
-      },
-    ],
-  };
 }
 
 /**

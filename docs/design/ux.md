@@ -223,7 +223,9 @@ mode closes the replace row and keeps find open.
 
 - Markdown opens **rendered**; Ctrl+U toggles **source** (read-only, line numbers, wrap).
   YAML frontmatter appears at the top as a collapsible, highlighted YAML block (shown, never
-  interpreted).
+  interpreted). (v0.6) Front matter made only of `key: value` lines shows instead as an open list of
+  its fields, the values as written (one pair of outer quotes removed); anything else (nesting,
+  lists, multi-line values, TOML) keeps the collapsed source block.
   (v0.6) A top-level quote whose first line is `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or
   `[!CAUTION]` shows as a callout: an icon and the type's title in its colour, as on GitHub; other
   types stay quotes.

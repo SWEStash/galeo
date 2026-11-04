@@ -114,13 +114,11 @@ describe('Markdown pipeline', () => {
     ]);
   });
 
-  it('shows frontmatter as a collapsed, highlighted block of escaped text, outside the outline', async () => {
+  it('shows frontmatter as escaped text, outside the outline', async () => {
     const { html, outline } = await render.markdown(fixture('frontmatter.md'));
     const doc = dom(html);
     const block = doc.querySelector('details.galeo-frontmatter');
-    expect(block?.hasAttribute('open')).toBe(false);
-    expect(block?.querySelector('pre.shiki')).not.toBeNull();
-    expect(block?.textContent).toContain('title: "Plan <script>alert(1)</script>"');
+    expect(block?.querySelector('dd')?.textContent).toBe('Plan <script>alert(1)</script>');
     expect(doc.querySelector('script')).toBeNull();
     expect(block?.getAttribute('data-src-line')).toBe('1');
     expect(outline.map((entry) => entry.text)).toEqual(['After the frontmatter']);
