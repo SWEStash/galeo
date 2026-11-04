@@ -324,7 +324,9 @@ ship an Electron major that is out of support.
   release's `.deb`, signed only after its checksum and attestation verify. Its signing subkey is a secret of the
   `github-pages` environment, read only by the signing job. That job runs no npm packages and no Actions besides
   GitHub's own, pinned, and holds the key in one step that deletes the keyring when done. The primary key and
-  its revocation certificate are kept offline by the owner. The public key ships in the `.deb`.
+  its revocation certificate are kept offline by the owner. The public key ships in the `.deb`, whose
+  post-install script keeps `/usr/share/keyrings/galeo-archive-keyring.asc` current; users' first copy is downloaded
+  over HTTPS from the same site, and the usage guide shows its fingerprint.
 *AC*: CI configuration reviewed against this list before v0.1; the Pages workflow against the apt bullet when
 it first publishes the repository.
 

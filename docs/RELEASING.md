@@ -84,8 +84,9 @@ The repository is signed by an ed25519 key made only for it
 `7161 D5E2 348F 3879 A762 784E 8D6C 14A4 7CC8 1C1B`, standby `1A6B F2CF BFDE 0021 55C1 6CC3 2422 FDA4 EBD5 5664`. Its primary key, a **standby** signing
 subkey and the revocation certificate are on the owner's offline media; CI holds only the **CI** signing
 subkey, as the `APT_SIGNING_KEY` secret of the `github-pages` environment. The public key is
-`packaging/linux/galeo-archive-keyring.asc`: the `.deb` installs it, and users' sources entries name it, so a
-change to it reaches them with the next upgrade.
+`packaging/linux/galeo-archive-keyring.asc`: the Pages site serves it as `/apt/galeo.asc` for first setup, and
+the `.deb` installs it as `/usr/share/keyrings/galeo-archive-keyring.asc`, the file users' sources entries name,
+so a change to it reaches them with the next upgrade.
 
 To work with the offline key: `export GNUPGHOME=<media>/galeo-apt-gnupg`.
 
@@ -106,5 +107,5 @@ To work with the offline key: `export GNUPGHOME=<media>/galeo-apt-gnupg`.
 
 **If the primary key or both signing subkeys are lost or leak:** delete the secret, publish the revocation
 certificate (`gpg --import <media>/galeo-apt-gnupg/openpgp-revocs.d/<fingerprint>.rev`, then export the public
-key), and tell users in the release notes and on the website to remove the repository. A new key needs users
-to install a `.deb` by hand again, as on first setup.
+key), and tell users in the release notes and on the website to remove the repository. A new key needs every
+user to download it again, as on first setup.

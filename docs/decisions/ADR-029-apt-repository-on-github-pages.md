@@ -49,14 +49,19 @@ What shapes the choice:
    `github-pages` environment, which only `main` may deploy from. A second, **standby signing subkey** is in
    the published key from the start but stays offline: if the CI subkey must be replaced, the release that
    carries the new key is signed with the standby, which users already trust.
-6. **The key ships in the `.deb`.** The package installs the public key as
-   `/opt/galeo/resources/galeo-archive-keyring.asc`, a file dpkg owns, and the user's sources entry names it in
-   `Signed-By`. Because apt trusts only the key file on disk and never refreshes it, this is how a new subkey or
-   a revocation reaches users: with the next upgrade. The repository is published only for a release whose
-   `.deb` contains the key.
-7. **Opt-in.** Users add the repository themselves: install a verified `.deb` once, then add one deb822
-   `.sources` file. The package never adds the repository on its own: editing the system's sources from a
-   post-install script is a trust decision the user should make. Users who don't add it see no change.
+6. **The package keeps the key current.** The `.deb` carries the public key, and its post-install script copies
+   it to `/usr/share/keyrings/galeo-archive-keyring.asc`, the file the user's sources entry names in `Signed-By`;
+   removing galeo deletes it (an upgrade doesn't). Because apt trusts only the key file on disk and never
+   refreshes it, this is how a new subkey or a revocation reaches users: with the next upgrade. This is the
+   vendor-keyring pattern (Debian's `debian-archive-keyring`, Brave's `brave-keyring`), without a separate
+   package. The repository is published only for a release whose `.deb` contains the key.
+7. **Opt-in, repository first** (owner, 2026-11-04), as Docker, the GitHub CLI and most third-party repositories
+   set up. Users download the key from `https://swestash.github.io/galeo/apt/galeo.asc` into that path, add one
+   deb822 `.sources` file, then `apt install galeo`; installing replaces the downloaded key with the packaged one.
+   The usage guide shows the fingerprint to compare. Installing a downloaded `.deb` first (checked against its
+   checksum and attestation) still works: then only the sources file is needed. The package never adds the
+   repository on its own: editing the system's sources from a post-install script is a trust decision the user
+   should make. Users who don't add it see no change.
 8. **Integrity details.** `Acquire-By-Hash: yes`, so a cached `InRelease` can never be paired with a newer
    `Packages`. No `Valid-Until`: it would need a scheduled re-sign, and the replay it guards against is
    accepted (T21).
@@ -72,7 +77,9 @@ What shapes the choice:
 | Ubuntu PPA | Native to Ubuntu; Launchpad signs | Builds from source on Launchpad with no network: an Electron app with ~1,000 npm packages can't build there without vendoring everything | Rejected |
 | Debian / Ubuntu archive | Discoverable; no setup for users | The same source-build rules, plus a sponsor and a policy-compliant source package; a long path for one maintainer | Rejected |
 | A separate repository just for the apt files | Keeps big binaries out of the site's deploys | A second repository, a cross-repository token, two Pages setups | Rejected: revisit if the site's size limit is reached |
-| Key downloaded by the user into `/etc/apt/keyrings` | No packaging change | apt never refreshes it, so every rotation or revocation needs every user to act | Rejected (owner, 2026-11-04) |
+| Key downloaded by the user only, never maintained by a package | No packaging change | apt never refreshes it, so every rotation or revocation needs every user to act | Rejected (owner, 2026-11-04) |
+| `.deb` first, then the sources file (the key only from the package) | Trust starts from a checked download (checksum, attestation) | Two manual steps; the least common setup | Kept as the alternative route; repository first leads (owner, 2026-11-04) |
+| The package adds the repository itself (as Chrome and VS Code do) | No setup at all | Changes the system's sources without the user deciding | Rejected |
 | Keep downloads only | Nothing new | Updates reach only users who watch releases; SR-09 stays half-delivered | Rejected |
 
 ## Consequences
@@ -86,6 +93,8 @@ What shapes the choice:
 ### Negative
 - A new secret to guard, and a key ceremony for the owner (generation, offline backup, revocation certificate).
 - Users can set up the repository only from the first release whose `.deb` ships the key.
+- The first key download trusts HTTPS to GitHub Pages, as other vendors' setups do; the fingerprint in the usage
+  guide and the `.deb`-first route are there for users who want more.
 - Each Pages deploy downloads and re-signs the latest `.deb`, so site-only changes take a little longer.
 - Removing galeo removes the key, so a sources file left behind makes `apt update` report a missing key until
   the user deletes it. The usage guide says so.

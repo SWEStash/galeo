@@ -454,8 +454,8 @@ Chromium's sandbox on Ubuntu 24.04+), `/usr/bin/galeo` (to the wrapper, through
 `/usr/share/applications/galeo.desktop` (`Exec=/opt/galeo/galeo -- %F`, MIME types),
 `/usr/share/mime/packages/galeo.xml` (the `text/mdx` type, copied there by the post-install
 script), `/usr/share/icons/hicolor/*/apps/galeo.png`. From the first release that ships it, the apt
-repository's public key is `/opt/galeo/resources/galeo-archive-keyring.asc`, which a user's sources entry
-names in `Signed-By` (ADR-029). Per-user data lives only in the Config, State and
+repository's public key is `/usr/share/keyrings/galeo-archive-keyring.asc` (copied there by the post-install
+script, removed with galeo), which a user's sources entry names in `Signed-By` (ADR-029). Per-user data lives only in the Config, State and
 Cache stores.
 
 The previews register galeo for *Open With* only, never as a default app
