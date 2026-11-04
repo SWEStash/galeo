@@ -1,7 +1,7 @@
 # Using galeo
 
-galeo reads and edits Markdown, plain text and log files: the plans, notes and logs that coding
-agents write. It never connects to the network. This guide covers installation and everyday use on
+galeo reads and edits Markdown, plain text and logs, and shows JSON, CSV, YAML, TOML, MDX and
+source code: the plans, notes, logs and data that coding agents write. It never connects to the network. This guide covers installation and everyday use on
 Linux (Ubuntu 26.04, GNOME), with notes where the macOS and Windows previews differ; the full
 keyboard map is in the [UX specification](design/ux.md#5-keyboard-map).
 
@@ -50,8 +50,8 @@ unsigned and unsupported. Only the Linux packages are official.
   only, and `galeo-<version>-<arch>-portable.exe` runs without installing. SmartScreen warns about
   an unknown publisher: choose **More info → Run anyway**.
 
-Both add galeo to *Open With* (*Open with* in Explorer) for Markdown, MDX, text, log, JSON, YAML,
-TOML, CSV and TSV files, never as their default app; the portable build adds nothing. For the
+Both add galeo to *Open With* (*Open with* in Explorer) for Markdown, MDX, text, log, JSON (and
+JSON Lines), YAML, TOML, CSV, PSV and TSV files, never as their default app; the portable build adds nothing. For the
 `galeo` command, choose **Install command-line launcher** in Settings (Ctrl+, or Cmd+,):
 
 - on macOS it writes `~/.local/bin/galeo`, which macOS doesn't put on your `PATH` by itself; add
@@ -81,7 +81,7 @@ gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo
 
 ## Opening files
 
-- **From a terminal**: `galeo file.md`, or several files at once. Flags can come before the files:
+- **From a terminal**: `galeo file.md`, or several files at once. Flags can go anywhere before `--`; an unknown one is refused:
 
   ```sh
   galeo notes.md plan.md
@@ -144,7 +144,8 @@ the file into the window in front of you) when you want it here.
   source with **Show as table** (up to 256 MB); a big table may take a few seconds. Find (Ctrl+F)
   works in the source view.
 - **Code and data files**: YAML, TOML and source code (TypeScript, Python, Rust, Go, shell,
-  C and many more) open in the source view, highlighted, and so does JSON's source. Ctrl+Shift+[ folds the block at the
+  C and many more) open in the source view, highlighted, and so do JSON's source and JSON Lines
+  (`.jsonl`, `.ndjson`). Ctrl+Shift+[ folds the block at the
   cursor and Ctrl+Shift+] unfolds it (on macOS Cmd+Alt+[ and Cmd+Alt+]), or use the markers in the gutter. The outline of a YAML or
   TOML file lists its top-level keys (and TOML's tables).
 - **Split view** (Markdown, MDX, CSV and TSV): Ctrl+\ shows the source on the left and the rendered view on the
@@ -162,6 +163,9 @@ the file into the window in front of you) when you want it here.
 - **Status bar**: the path (click to copy it or reveal it in Files), the view, the encoding, the
   line count (in the source view) and, for Markdown and `.txt`, the word count and reading time.
   Markdown counts its prose only: code blocks, math, diagrams and front matter aren't words.
+- **Open with default app** (in the palette) hands the file to the app your system uses for it. It
+  isn't offered for programs and launchers, and on macOS and Windows only for known document types:
+  images, PDF, office documents, audio and video, and the text formats galeo reads.
 - **Diagrams and math**: math is typeset with the document (KaTeX); Mermaid diagrams draw as you
   scroll towards them. A diagram that can't be drawn (a syntax error, or over 200 edges) shows its
   error and its source. A diagram too wide for the column scrolls sideways; its ⤢ button (shown
@@ -227,7 +231,7 @@ window's tabs, unsaved ones as they are on screen: each tab with matches lists i
 their line, and Enter shows that tab with its find bar on the match. It searches the files' source
 text, so a rendered page can count differently.
 
-A profile can put its tabs on the left instead (Settings → **Tabs** → Left, or *Put tabs on the left*
+A profile can put its tabs on the left instead (Settings → **Window** → Tabs: Left, or *Put tabs on the left*
 in the palette): one row per tab, with its folder underneath, and the shown tab's name in the title
 bar. Drag the divider to set the panel's width (140 to 480 px, kept for the profile; a double-click
 resets it). ◧ in the title bar, or Ctrl+Shift+B, collapses the panel to a strip of letters that still
@@ -236,7 +240,7 @@ the tab bar does works in the list: ↑/↓ between tabs, dragging to reorder, d
 rows, and dragging a tab to another window or out to a new one.
 
 Closing a profile's last window, or quitting
-(Ctrl+Shift+Q), keeps its session: next time its windows and tabs come back where you left them.
+(Ctrl+Shift+Q, Cmd+Q on macOS), keeps its session: next time its windows and tabs come back where you left them.
 "Restore previous session" (palette or profile menu) goes back to one of the last three.
 
 To move a tab to another window, drag it onto that window's tab bar, anywhere on it, even a window
@@ -274,6 +278,10 @@ palette. galeo keeps its files in the usual places:
 | A profile's own settings and custom CSS | `~/.config/galeo/profiles/<id>/profile.json`, `custom.css` |
 | Sessions and recent files | `~/.local/state/galeo/` |
 | Caches | `~/.cache/galeo/` |
+
+On macOS the config folder is `~/Library/Application Support/galeo/`, sessions are in its `State`
+folder and caches in `~/Library/Caches/galeo/`; on Windows they are `%APPDATA%\galeo\`, its
+`State` folder and `%LOCALAPPDATA%\galeo\Cache\`.
 
 Hand edits to these files apply at once. A file left invalid is not overwritten: galeo keeps
 using the last valid settings and says which file is wrong. [Document styling](design/document-styling.md)
