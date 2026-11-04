@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { launchApp } from '../helpers/launch';
 
 const plan = path.resolve(import.meta.dirname, '../fixtures/docs/plan-50k.md');
+const companion = path.resolve(import.meta.dirname, '../fixtures/docs/companion.md');
 
 /** The line number at the top of the source view, read from its gutter. */
 function sourceTopLine(page: Page): Promise<number> {
@@ -23,6 +24,24 @@ function renderedTopLine(page: Page): Promise<number> {
     return Number(blocks.find((block) => block.getBoundingClientRect().bottom > top + 1)?.dataset['srcLine']);
   });
 }
+
+test('a callout shows with its title, and simple front matter as its fields', async () => {
+  const { window, close } = await launchApp(['--', companion]);
+  try {
+    const document = window.getByTestId('document');
+    const callout = document.locator('blockquote.galeo-callout-warning');
+    await expect(callout.locator('.galeo-callout-title')).toHaveText('Warning');
+    await expect(callout).toContainText('Back up the data first.');
+    await expect(callout).not.toContainText('[!WARNING]');
+    await expect(document.locator('blockquote:not(.galeo-callout)')).toHaveText('A plain quote.');
+
+    const fields = document.locator('details.galeo-frontmatter[open] dl');
+    await expect(fields.locator('dt')).toHaveText(['title', 'status']);
+    await expect(fields.locator('dd')).toHaveText(['Release plan', 'Draft']);
+  } finally {
+    await close();
+  }
+});
 
 test('Ctrl+U switches to the source at the same place, and back', async () => {
   const { window, close } = await launchApp(['--', plan]);
