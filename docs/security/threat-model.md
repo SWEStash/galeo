@@ -2,10 +2,10 @@
 
 - **Status**: Approved (2026-09-26; design-time — to be verified against the built app by a
   security audit before each release)
-- **Date**: 2026-09-25 (updated 2026-09-26)
-- **Scope**: v0.1 "reader" and v0.2 "editor"
+- **Date**: 2026-09-25 (updated 2026-09-26; requirements added per release since, last 2026-11-03)
+- **Scope**: v0.1 "reader" to v0.5 "platforms" (the macOS and Windows previews included)
 - **Related**: [PRD](../PRD.md) · [UX specification](../design/ux.md) ·
-  ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[008](../decisions/ADR-008-packaging-and-distribution.md), notably
+  ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[028](../decisions/ADR-028-default-app-known-types-on-macos-windows.md), notably
   [ADR-004](../decisions/ADR-004-security-and-zero-network.md) (security & zero network),
   [ADR-005](../decisions/ADR-005-profiles-and-session-persistence.md) (profiles & sessions),
   [ADR-007](../decisions/ADR-007-platform-seam.md) (platform seam),
@@ -27,11 +27,11 @@ client documents).
 ```mermaid
 flowchart TB
   subgraph machine[Same user, same machine]
-    term[Terminal] -- argv --> launcher[gal / galeo launcher]
-    filesapp[Files app]
+    term[Terminal] -- argv --> launcher[gal / galeo launcher<br/>galeo.cmd on Windows]
+    filesapp[Files app · Finder · Explorer]
     other[Any same-user process]
     subgraph mainp[Main process · Node, full user privileges]
-      main[single-instance lock · argv routing · profiles and sessions<br/>file read and write · watcher · quick-open walker · settings<br/>galeo:// protocol · shell.openExternal / openPath]
+      main[single-instance lock · argv routing · profiles and sessions<br/>file read and write · watcher · quick-open walker · settings<br/>galeo:// protocol · shell.openExternal / openPath<br/>task worker: link checks, find in all tabs]
     end
     subgraph rend[Renderer per window · Chromium, sandboxed]
       renderer[app UI · Markdown pipeline · Shiki · KaTeX · Mermaid<br/>CodeMirror · user custom CSS]
@@ -39,7 +39,7 @@ flowchart TB
     disk[(User files, ~/.config,<br/>~/.local/state)]
     os[OS URL and file handlers]
   end
-  content[/Untrusted file content<br/>md, mdx, txt, log, images, raw HTML/]
+  content[/Untrusted file content<br/>md, mdx, txt, log, JSON, JSONL, CSV, YAML, TOML,<br/>source code, images, raw HTML/]
   net((Internet / LAN))
 
   launcher -- "B1 · argv" --> main
@@ -54,7 +54,7 @@ flowchart TB
   main -- "B7 · openExternal / openPath" --> os
 
   subgraph build[Build and release]
-    registry[(npm registry)] == B8 ==> ci[CI · GitHub Actions] ==> pkg[.deb / AppImage] ==> install[user install]
+    registry[(npm registry)] == B8 ==> ci[CI · GitHub Actions] ==> pkg[.deb / AppImage<br/>macOS and Windows previews] ==> install[user install]
   end
 ```
 
@@ -497,8 +497,9 @@ Revisit this model when any of these arrive:
 - new rendered formats that execute or embed content (HTML files, SVG as documents, PlantUML via
   a local Java process, Graphviz via WASM);
 - any network feature (update checks, sync);
-- Flatpak packaging (changes B4 and B7), or macOS/Windows becoming official (new entry points:
-  macOS `open-file` events, Windows registry file associations; signing changes B8);
+- Flatpak packaging (changes B4 and B7), or macOS/Windows becoming official: their entry points
+  (macOS `open-file` events, Windows registry file associations) already ship in the previews and
+  are covered by SR-13, but signing changes B8;
 - an npm distribution channel (generic Electron binary: SR-08 does not hold for it);
 - a change of shell (ADR-001 revisit triggers).
 
