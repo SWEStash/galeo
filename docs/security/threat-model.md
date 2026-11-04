@@ -181,7 +181,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T14 | Mitigate | SR-17 |
 | T18 | Mitigate (v0.3 audit L3: only absolute `PATH` entries) | SR-13 |
 | T19 | Mitigate (a drag is claimed once, on input; v0.3 audit L1: claimed by a per-drag token, not the tab id). The window list's file and profile names are accepted as metadata a page can't send anywhere (SR-04, SR-06), and are given only on real input (v0.3 audit I4). | SR-12, SR-16 |
-| T20 | Mitigate (a package is signed only after its checksum and attestation verify; the subkey lives only in the `github-pages` environment, which only `main` deploys; the signing job runs no project or third-party code; the primary key and revocation certificate stay offline; the public key ships in the `.deb`, so a revocation reaches users with the next upgrade; a revocation runbook in `docs/RELEASING.md`). Write access to `main` can already change the release workflow, so it adds no new power. | SR-10 |
+| T20 | Mitigate (a package is signed only after its checksum and attestation verify; the subkey lives only in the `github-pages` environment, which only `main` deploys; the signing job runs no npm packages and holds the key in a single step; the primary key and revocation certificate stay offline; the public key ships in the `.deb`, so a revocation reaches users with the next upgrade; a revocation runbook in `docs/RELEASING.md`). Write access to `main` can already change the release workflow, so it adds no new power. | SR-10 |
 | T21 | **Accept.** Pages serves over HTTPS, and `Acquire-By-Hash` keeps `InRelease` and `Packages` consistent; a `Valid-Until` would need a scheduled re-sign for a small gain. Owner: project owner (2026-11-04, ADR-029). | SR-10 |
 | T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
@@ -322,8 +322,9 @@ ship an Electron major that is out of support.
   (build provenance) ([ADR-017](../decisions/ADR-017-release-workflow-with-attestations.md)).
 - The apt repository ([ADR-029](../decisions/ADR-029-apt-repository-on-github-pages.md)) carries only a published
   release's `.deb`, signed only after its checksum and attestation verify. Its signing subkey is a secret of the
-  `github-pages` environment, read only by the signing job, which runs gpg and apt's tools and nothing else. The
-  primary key and its revocation certificate are kept offline by the owner. The public key ships in the `.deb`.
+  `github-pages` environment, read only by the signing job. That job runs no npm packages and no Actions besides
+  GitHub's own, pinned, and holds the key in one step that deletes the keyring when done. The primary key and
+  its revocation certificate are kept offline by the owner. The public key ships in the `.deb`.
 *AC*: CI configuration reviewed against this list before v0.1; the Pages workflow against the apt bullet when
 it first publishes the repository.
 

@@ -38,9 +38,10 @@ What shapes the choice:
    and by hand. A deploy that can't verify the `.deb` fails and leaves the live site as it was.
 4. **Verified before signed.** A job with no secrets downloads the `.deb` and `SHA256SUMS`, checks the
    checksum and the attestation (built by this repository's release workflow), and builds the unsigned
-   repository with `apt-ftparchive`. A second job, the only one with the signing key, runs nothing but gpg and
-   apt's own tools: it signs `Release` (`InRelease` and `Release.gpg`), then proves the result with an
-   `apt-get update` and `apt-get download` against it. A third job deploys.
+   repository with `apt-ftparchive`. A second job, the only one with the signing key, runs no npm packages and
+   no Actions besides GitHub's own, pinned. The key exists in one step, which signs `Release` (`InRelease` and
+   `Release.gpg`) with gpg and deletes the keyring; the next step proves the result with an `apt-get update` and
+   `apt-get download` against it. A third job deploys.
 5. **The key.** An ed25519 OpenPGP key used only for this repository. Its primary key and revocation
    certificate stay **offline with the owner**. CI holds only a **signing subkey**, as a secret of the
    `github-pages` environment, which only `main` may deploy from.
@@ -87,10 +88,10 @@ What shapes the choice:
 
 ### Risks
 - **The signing subkey leaks** (T20): anyone holding it can sign a package that apt installs as root for every
-  user who opted in. Mitigation: the subkey lives only in the `github-pages` environment, the signing job runs no
-  project or third-party code, and [Releasing](../RELEASING.md) has a revocation and rotation runbook. A
-  revocation reaches users with the next upgrade, which an attacker could race; the release notes then tell users
-  to check the key.
+  user who opted in. Mitigation: the subkey lives only in the `github-pages` environment, the signing job runs
+  no npm packages and holds the key in a single step, and [Releasing](../RELEASING.md) has a revocation and
+  rotation runbook. A revocation reaches users with the next upgrade, which an attacker could race; the release
+  notes then tell users to check the key.
 - **Write access to `main`** is enough to change the workflow and sign anything. This is no new power: it can
   already change the release workflow. Mitigation: the same account protections as for releases.
 - **Pages limits.** The site is capped at 1 GB and the repository holds one `.deb`, about 110 MB. Revisit if

@@ -1,11 +1,20 @@
 name: Pages
 
-# Publishes site/ as the project's website (https://swestash.github.io/galeo/). Static files only:
-# nothing is built or installed.
+# Publishes site/ as the project's website (https://swestash.github.io/galeo/) and, under /apt/, the signed apt
+# repository holding the latest release's .deb (ADR-029). Nothing is built: the .deb comes from the release,
+# checked against its checksum and attestation before it is signed.
 on:
   push:
     branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
+    paths:
+      - 'site/**'
+      - '.github/workflows/pages.yml'
+      - 'scripts/apt-repo.sh'
+      - 'packaging/linux/galeo-archive-keyring.asc'
+  # Publishing a draft by hand fires this; drafts never do. A release published by a token would not: then run
+  # this workflow by hand (RELEASING).
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -16,21 +25,98 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  upload:
-    name: Upload the site
+  assemble:
+    name: Check the release and build the repository
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 10
+    # No secrets here: this job downloads and checks the .deb, and writes the repository unsigned.
+    permissions:
+      contents: read
+      attestations: read
+    outputs:
+      apt: ${{ steps.build.outputs.apt }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Download and check the latest release's .deb
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          dir="$RUNNER_TEMP/release"
+          mkdir -p "$dir"
+          if ! gh release view --repo "$GITHUB_REPOSITORY" --json tagName >/dev/null 2>&1; then
+            echo "No published release: the site only."
+            exit 0
+          fi
+          gh release download --repo "$GITHUB_REPOSITORY" --dir "$dir" --pattern 'galeo_*_amd64.deb' --pattern SHA256SUMS
+          debs=$(find "$dir" -name 'galeo_*_amd64.deb')
+          [ "$(printf '%s\n' "$debs" | wc -l)" -eq 1 ] || { echo "expected one .deb, got: $debs"; exit 1; }
+          (cd "$dir" && sha256sum --ignore-missing --strict -c SHA256SUMS)
+          gh attestation verify "$debs" --repo "$GITHUB_REPOSITORY" \
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
+          echo "deb=$debs" >> "$GITHUB_OUTPUT"
+      - name: Build the unsigned repository
+        id: build
+        env:
+          DEB: ${{ steps.release.outputs.deb }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/pages"
+          cp -R site/. "$RUNNER_TEMP/pages/"
+          # Only a .deb that ships the key can be installed from the repository (ADR-029).
+          if [ -n "$DEB" ] && scripts/apt-repo.sh has-key "$DEB"; then
+            scripts/apt-repo.sh build "$DEB" "$RUNNER_TEMP/pages/apt"
+            cp packaging/linux/galeo-archive-keyring.asc "$RUNNER_TEMP/pages/apt/galeo.asc"
+            echo "apt=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No .deb with the repository key: the site only."
+            echo "apt=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pages-unsigned
+          path: ${{ runner.temp }}/pages
+          retention-days: 1
+          if-no-files-found: error
+
+  sign:
+    name: Sign the repository
+    needs: assemble
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The only job that can read the signing subkey: the github-pages environment, which only main deploys.
+    # It runs no npm packages and no Actions beyond GitHub's own, pinned; the key is in one step, which deletes
+    # the keyring when it is done.
+    environment: github-pages
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: pages-unsigned
+          path: ${{ runner.temp }}/pages
+      - name: Sign Release
+        if: needs.assemble.outputs.apt == 'true'
+        env:
+          APT_SIGNING_KEY: ${{ secrets.APT_SIGNING_KEY }}
+        run: |
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          trap 'gpgconf --kill all; rm -rf "$GNUPGHOME"' EXIT
+          printf '%s\n' "$APT_SIGNING_KEY" | gpg --batch --import
+          scripts/apt-repo.sh sign "$RUNNER_TEMP/pages/apt"
+      - name: Check that apt accepts it
+        if: needs.assemble.outputs.apt == 'true'
+        run: scripts/apt-repo.sh check "$RUNNER_TEMP/pages/apt" packaging/linux/galeo-archive-keyring.asc
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
-          path: site
+          path: ${{ runner.temp }}/pages
 
   deploy:
     name: Deploy
-    needs: upload
+    needs: sign
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     # Only this job may publish, and only through GitHub's Pages environment.

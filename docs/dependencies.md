@@ -114,10 +114,10 @@ Only GitHub's own Actions, each pinned by commit SHA (SR-10) and updated weekly 
 |---|---|---|---|
 | `actions/checkout` | 7.0.1 | CI, PR title, platforms, release, Pages | Check out the commit, without persisting credentials |
 | `actions/setup-node` | 7.1.0 | CI, PR title, platforms, release | Node from `.nvmrc` (CI caches npm; the release build doesn't) |
-| `actions/upload-artifact` | 7.0.2 | CI, platforms, release | Performance results and failure reports; the release packages for the next jobs |
-| `actions/download-artifact` | 8.0.2 | Platforms, release | Hands the built packages to the attest and release jobs, which hold the signing and write permissions (ADR-017, added 2026-10-14) |
+| `actions/upload-artifact` | 7.0.2 | CI, platforms, release, Pages | Performance results and failure reports; the release packages for the next jobs; the unsigned site and apt repository for the signing job |
+| `actions/download-artifact` | 8.0.2 | Platforms, release, Pages | Hands the built packages to the attest and release jobs, which hold the signing and write permissions (ADR-017, added 2026-10-14); hands the unsigned apt repository to the job that alone holds its signing key (ADR-029) |
 | `actions/attest-build-provenance` | 4.2.2 | Release | GitHub artifact attestations for every release package, the macOS and Windows previews included (SR-10, ADR-017, added 2026-10-14) |
-| `actions/upload-pages-artifact` | 5.0.0 | Pages | Packs `site/` for GitHub Pages (added 2026-11-03) |
+| `actions/upload-pages-artifact` | 5.0.0 | Pages | Packs `site/` and the signed apt repository for GitHub Pages (added 2026-11-03) |
 | `actions/deploy-pages` | 5.0.1 | Pages | Publishes it, from a job that alone holds the Pages write permission (added 2026-11-03) |
 
 ## Own modules and built-ins
@@ -135,6 +135,7 @@ so they carry the tests those packages would have had).
 | Dev orchestration | `scripts/dev.mjs`: Vite watch builds + Electron restart on main/preload change; renderer hot reload via Vite's dev server | `electron-vite` | ~60 lines |
 | Import-boundary check (ADR-007) | `scripts/check-boundaries.mjs` scanning `import` specifiers per folder, plus value-import reachability of `zod` from the preload and renderer | `dependency-cruiser` (18 deps; needs the TS JS API, which TS 7 lacks) | ~130 lines |
 | Unused-export check | `scripts/check-exports.mjs`: `import`/`export` statements in `src/`, `tests/`, `scripts/` and `build/` (scanning shared with the boundary check in `scripts/lib/source-scan.mjs`); unused locals come from the compiler | `knip`, `ts-prune` (need the TS JS API, which TS 7 lacks) | ~110 lines |
+| apt repository (ADR-029) | `scripts/apt-repo.sh`: builds one suite with `apt-ftparchive`, signs it with `gpg`, checks it with a rootless `apt-get`; all three ship with Ubuntu and the CI runner | `reprepro`, `aptly`, hosted package services | ~100 lines |
 | Docs reference check | `scripts/check-docs.mjs`: relative links and `#anchors` (slugs from `rehype-slug`, on the `remark-parse` and `remark-gfm` already used for rendering), ADR and SR ids, repository paths in code spans; never fetches web links | `remark-validate-links` | ~120 lines |
 | Decoding text | `TextDecoder` (WHATWG encodings) | — | — |
 | Binary detection | Own sniff (NUL bytes / invalid UTF-8 ratio in the first 8 KB) | — | — |
