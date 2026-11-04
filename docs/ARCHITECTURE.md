@@ -30,7 +30,8 @@
   [025](decisions/ADR-025-no-window-host-port.md) ·
   [026](decisions/ADR-026-window-lifecycle-hooks.md) ·
   [027](decisions/ADR-027-macos-windows-previews.md) ·
-  [028](decisions/ADR-028-default-app-known-types-on-macos-windows.md)
+  [028](decisions/ADR-028-default-app-known-types-on-macos-windows.md) ·
+  [029](decisions/ADR-029-apt-repository-on-github-pages.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in

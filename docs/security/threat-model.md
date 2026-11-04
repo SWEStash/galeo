@@ -2,14 +2,16 @@
 
 - **Status**: Approved (2026-09-26; design-time — to be verified against the built app by a
   security audit before each release)
-- **Date**: 2026-09-25 (updated 2026-09-26; requirements added per release since, last 2026-11-03)
-- **Scope**: v0.1 "reader" to v0.5 "platforms" (the macOS and Windows previews included)
+- **Date**: 2026-09-25 (updated 2026-09-26; requirements added per release since, last 2026-11-04)
+- **Scope**: v0.1 "reader" to v0.5 "platforms" (the macOS and Windows previews included), and the apt
+  repository (ADR-029)
 - **Related**: [PRD](../PRD.md) · [UX specification](../design/ux.md) ·
-  ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[028](../decisions/ADR-028-default-app-known-types-on-macos-windows.md), notably
+  ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[029](../decisions/ADR-029-apt-repository-on-github-pages.md), notably
   [ADR-004](../decisions/ADR-004-security-and-zero-network.md) (security & zero network),
   [ADR-005](../decisions/ADR-005-profiles-and-session-persistence.md) (profiles & sessions),
   [ADR-007](../decisions/ADR-007-platform-seam.md) (platform seam),
-  [ADR-008](../decisions/ADR-008-packaging-and-distribution.md) (packaging)
+  [ADR-008](../decisions/ADR-008-packaging-and-distribution.md) (packaging),
+  [ADR-029](../decisions/ADR-029-apt-repository-on-github-pages.md) (apt repository)
 
 Framed by the four questions: what are we building, what can go wrong, what are we doing about
 it, did we do a good job.
@@ -55,6 +57,7 @@ flowchart TB
 
   subgraph build[Build and release]
     registry[(npm registry)] == B8 ==> ci[CI · GitHub Actions] ==> pkg[.deb / AppImage<br/>macOS and Windows previews] ==> install[user install]
+    pkg == B8 · verified, then signed ==> apt[apt repository on GitHub Pages] ==> install
   end
 ```
 
@@ -69,7 +72,7 @@ flowchart TB
 | B5 | File content → renderer | **The primary boundary**: attacker-controlled bytes are parsed and rendered |
 | B6 | Renderer/main → network | Must carry no traffic at all |
 | B7 | App → OS handlers | `shell.openExternal` (URLs) and `shell.openPath` (files) hand control to other programs |
-| B8 | Supply chain → shipped binary | Dependencies, build pipeline and release artifacts |
+| B8 | Supply chain → shipped binary | Dependencies, build pipeline, release artifacts and the signed apt repository |
 
 ### Data classification
 
@@ -94,7 +97,8 @@ Entry points, most exposed first:
 3. **Files handed over by the desktop** (B1): double-clicks and drag-and-drop of arbitrarily named
    files.
 4. **Other same-user processes** (B2, B4): the single-instance channel, settings and session files.
-5. **The supply chain** (B8): roughly a thousand transitive npm packages, CI, release downloads.
+5. **The supply chain** (B8): roughly a thousand transitive npm packages, CI, release downloads, and the apt
+   repository with its signing key (ADR-029).
 
 **Realistic attackers**
 
@@ -132,6 +136,8 @@ Ranking is likelihood × impact: **H**igh, **M**edium, **L**ow.
 | T17 | B5, B8 | E | **Running renderers unsandboxed.** Chromium's sandbox is unavailable (the AppImage on Ubuntu 24.04+, where AppArmor restricts user namespaces) or disabled (`--no-sandbox` passed by a user, a wrapper or a crafted `.desktop`), so a content exploit (T1/T4) runs with full user privileges. | **H** |
 | T18 | B4, B1 | E | **Programs main starts (v0.3).** `fc-list` (the font pickers) and `update-mime-database` (the AppImage launcher) are found on `PATH` by name. A relative `PATH` entry (`.`, or an empty one) resolves against the folder galeo was started in, so a cloned repo's executable `fc-list` runs as the user. | L |
 | T19 | B3 | E, T, I | **Tabs moving between windows (v0.3, ADR-019).** A compromised page claims a tab the reader drags in another window, with its edit grant and unsaved text, by naming an id it learned earlier. It can also learn which files and profiles the other windows show. | L |
+| T20 | B8 | T, E | **A malicious update through the apt repository (ADR-029).** Whoever holds the repository's signing subkey, or can change the Pages workflow on `main`, signs a package that apt installs as root on every machine that added the repository. | M (impact **H**) |
+| T21 | B8 | T, D | **Stale repository metadata.** An attacker between the user and Pages, or a cache, serves an older correctly signed `InRelease`, so the user is held on an old version and misses a security release. | L |
 | T16 | — | R | **Repudiation.** Not meaningful for a single-user local tool; there are no actions by other principals to attribute. | — (accepted) |
 
 ## 4. Abuse cases
@@ -151,6 +157,7 @@ Ranking is likelihood × impact: **H**igh, **M**edium, **L**ow.
 | A11 | As a hostile repo author, I commit a 400 KB `data.csv` whose first line has 200,000 fields, so that the window showing it, and every session that restores it, freezes. | T8 |
 | A12 | As a hostile repo author, I ship an executable `fc-list` and wait for a user whose `PATH` starts with `.` to run `galeo` in the repo and open the font picker. | T18 |
 | A13 | As an attacker with script in one window's renderer, I keep the id of a tab that left my window. When the reader later drags it in another window, I claim it, with its edit grant. | T19, T6 |
+| A14 | As an attacker who stole the apt repository's signing subkey, I sign a `galeo` package with a higher version and serve it from a mirror or a hijacked network, so that the next `apt upgrade` runs my post-install script as root. | T20 |
 
 ## 5. What we're doing about it: decisions and security requirements
 
@@ -174,6 +181,8 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T14 | Mitigate | SR-17 |
 | T18 | Mitigate (v0.3 audit L3: only absolute `PATH` entries) | SR-13 |
 | T19 | Mitigate (a drag is claimed once, on input; v0.3 audit L1: claimed by a per-drag token, not the tab id). The window list's file and profile names are accepted as metadata a page can't send anywhere (SR-04, SR-06), and are given only on real input (v0.3 audit I4). | SR-12, SR-16 |
+| T20 | Mitigate (a package is signed only after its checksum and attestation verify; the subkey lives only in the `github-pages` environment, which only `main` deploys; the signing job runs no project or third-party code; the primary key and revocation certificate stay offline; the public key ships in the `.deb`, so a revocation reaches users with the next upgrade; a revocation runbook in `docs/RELEASING.md`). Write access to `main` can already change the release workflow, so it adds no new power. | SR-10 |
+| T21 | **Accept.** Pages serves over HTTPS, and `Acquire-By-Hash` keeps `InRelease` and `Packages` consistent; a `Valid-Until` would need a scheduled re-sign for a small gain. Owner: project owner (2026-11-04, ADR-029). | SR-10 |
 | T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
 
@@ -311,7 +320,12 @@ ship an Electron major that is out of support.
 - GitHub Actions pinned by commit SHA, with least-privilege `permissions:`.
 - Releases are built only in CI, and ship `SHA256SUMS` plus GitHub artifact attestations
   (build provenance) ([ADR-017](../decisions/ADR-017-release-workflow-with-attestations.md)).
-*AC*: CI configuration reviewed against this list before v0.1.
+- The apt repository ([ADR-029](../decisions/ADR-029-apt-repository-on-github-pages.md)) carries only a published
+  release's `.deb`, signed only after its checksum and attestation verify. Its signing subkey is a secret of the
+  `github-pages` environment, read only by the signing job, which runs gpg and apt's tools and nothing else. The
+  primary key and its revocation certificate are kept offline by the owner. The public key ships in the `.deb`.
+*AC*: CI configuration reviewed against this list before v0.1; the Pages workflow against the apt bullet when
+it first publishes the repository.
 
 **SR-11 — Minimal, validated IPC.** The preload exposes a small, typed, galeo-specific API
 (no generic `invoke(channel, …)`, no `ipcRenderer` exposure). Main validates every message: the
@@ -483,11 +497,11 @@ that stays untouched and a session recovered from a snapshot.
 ## 6. Did we do a good job? Coverage check
 
 - Every trust boundary B1–B8 has at least one threat analysed: B1 (T7, T18), B2 (T11), B3 (T6, T15, T19),
-  B4 (T8–T10, T14, T18), B5 (T1, T4, T8, T12, T13, T17), B6 (T3), B7 (T2), B8 (T5, T17).
+  B4 (T8–T10, T14, T18), B5 (T1, T4, T8, T12, T13, T17), B6 (T3), B7 (T2), B8 (T5, T17, T20, T21).
 - Every entry point in §2 maps to requirements: content (SR-01–03, SR-14); links (SR-04, SR-05);
   desktop hand-over (SR-13); same-user processes (T11 accepted, SR-16, SR-17); supply chain
   (SR-08–10).
-- Every threat has a decision. The accepted risks (T11, T16, and the T6 residual for forged drop
+- Every threat has a decision. The accepted risks (T11, T16, T21, and the T6 residual for forged drop
   grants) are documented with an owner.
 
 ## 7. Keeping it alive
