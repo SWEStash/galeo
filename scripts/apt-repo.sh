@@ -10,7 +10,7 @@ set -eu
 SUITE=stable
 COMPONENT=main
 ARCH=amd64
-# Where the .deb puts the public key (ADR-029); the user's sources entry names it in Signed-By.
+# Where the .deb carries the public key (ADR-029); its after-install copies it to /usr/share/keyrings.
 KEY_IN_DEB=./opt/galeo/resources/galeo-archive-keyring.asc
 
 fail() {

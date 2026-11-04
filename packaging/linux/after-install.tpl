@@ -1,5 +1,6 @@
 #!/bin/bash
-# Based on electron-builder's after-install template (MIT). galeo adds /usr/bin/gal and the MDX type.
+# Based on electron-builder's after-install template (MIT). galeo adds /usr/bin/gal, the apt repository's key
+# and the MDX type.
 
 if type update-alternatives >/dev/null 2>&1; then
     # Remove previous link if it doesn't use update-alternatives
@@ -24,6 +25,12 @@ fi
 if [ ! -e '/usr/bin/gal' ] || [ "`readlink '/usr/bin/gal'`" = '/opt/${sanitizedProductName}/gal' ]; then
     ln -sf '/opt/${sanitizedProductName}/gal' '/usr/bin/gal'
 fi
+
+# The apt repository's key, where users' sources entries name it (ADR-029). It replaces a copy the user
+# downloaded to set the repository up, so key rotations and revocations arrive with each upgrade.
+mkdir -p /usr/share/keyrings
+cp -f '/opt/${sanitizedProductName}/resources/galeo-archive-keyring.asc' '/usr/share/keyrings/galeo-archive-keyring.asc' || true
+chmod 644 '/usr/share/keyrings/galeo-archive-keyring.asc' || true
 
 # The MDX type (shared-mime-info gives *.mdx to a game ROM).
 mkdir -p /usr/share/mime/packages

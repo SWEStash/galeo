@@ -1,5 +1,6 @@
 #!/bin/bash
-# Based on electron-builder's after-remove template (MIT). galeo removes /usr/bin/gal and the MDX type.
+# Based on electron-builder's after-remove template (MIT). galeo removes /usr/bin/gal, the apt repository's
+# key and the MDX type.
 
 # Delete the link to the binary
 # update-alternatives --remove <name> <path>: 'path' must be the registered alternative binary,
@@ -13,6 +14,11 @@ fi
 if [ "`readlink '/usr/bin/gal'`" = '/opt/${sanitizedProductName}/gal' ]; then
     rm -f '/usr/bin/gal'
 fi
+
+# The apt repository's key, only when galeo goes (an upgrade's new after-install writes it again).
+case "$1" in
+    remove|purge) rm -f '/usr/share/keyrings/galeo-archive-keyring.asc' ;;
+esac
 
 rm -f '/usr/share/mime/packages/${executable}.xml'
 if hash update-mime-database 2>/dev/null; then

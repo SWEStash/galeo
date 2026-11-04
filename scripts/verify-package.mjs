@@ -112,11 +112,19 @@ if (process.platform === 'linux') {
     else if (!script('postrm').includes(`rm -f '${target}'`)) failures.push(`mime: postrm doesn't remove ${target}`);
     else console.log('mime: the MDX type in resources, installed and removed by the .deb');
 
-    // The apt repository's key, where users' sources entries look for it (ADR-029).
+    // The apt repository's key (ADR-029): in resources, copied to where sources entries name it, removed only with galeo.
     const key = readFileSync(path.resolve(import.meta.dirname, '../packaging/linux/galeo-archive-keyring.asc'));
-    const shipped = spawnSync('sh', ['-c', `dpkg-deb --fsys-tarfile "$1" | tar -xO ./opt/galeo/resources/galeo-archive-keyring.asc`, 'sh', path.join(RELEASE, deb)]);
-    if (shipped.status !== 0 || !key.equals(shipped.stdout)) failures.push("apt key: the .deb's /opt/galeo/resources/galeo-archive-keyring.asc is not packaging/linux/galeo-archive-keyring.asc");
-    else console.log('apt key: the repository key, in the .deb where sources entries name it');
+    let resourceKey = null;
+    try {
+      resourceKey = readFileSync(path.join(resources, 'galeo-archive-keyring.asc'));
+    } catch {
+      // Reported below.
+    }
+    const keyring = '/usr/share/keyrings/galeo-archive-keyring.asc';
+    if (!resourceKey?.equals(key)) failures.push('apt key: resources/galeo-archive-keyring.asc is not packaging/linux/galeo-archive-keyring.asc');
+    else if (!script('postinst').includes(`cp -f '/opt/galeo/resources/galeo-archive-keyring.asc' '${keyring}'`)) failures.push(`apt key: postinst doesn't copy it to ${keyring}`);
+    else if (!/remove\|purge\) rm -f '\/usr\/share\/keyrings\/galeo-archive-keyring\.asc'/.test(script('postrm'))) failures.push(`apt key: postrm doesn't remove ${keyring} on remove and purge only`);
+    else console.log('apt key: in resources, installed to /usr/share/keyrings, removed only with galeo');
   }
 }
 
