@@ -5,7 +5,7 @@ import { tabLabels } from '../../shared/tab-labels';
 import { editors } from '../edit/editors';
 import { watchDragExit } from './drag-exit';
 import { fromGaleo, TAB_TYPE } from './drag-types';
-import { indicators } from './indicators';
+import { flagsOf, indicators, type TabFlags } from './indicators';
 import { markerOf, rowName } from './side-panel';
 import type { TabStatus, TabStore, TabsView } from './store';
 import { insertion, spanOf, type Axis } from './strip';
@@ -119,8 +119,7 @@ export function TabStrip({
             layout={layout}
             status={view.statuses.get(tab.id)}
             hibernated={!view.rendered.has(tab.id)}
-            reloaded={view.reloaded.has(tab.id)}
-            crashed={view.crashed.has(tab.id)}
+            flags={flagsOf(view, tab.id)}
             onClose={() => store.close(tab.id)}
             onDragStart={dragStarted}
             onDragEnd={dragEnded}
@@ -139,8 +138,7 @@ function TabItem({
   layout,
   status,
   hibernated,
-  reloaded,
-  crashed,
+  flags,
   onClose,
   onDragStart,
   onDragEnd,
@@ -151,8 +149,7 @@ function TabItem({
   layout: TabLayout;
   status: TabStatus | undefined;
   hibernated: boolean;
-  reloaded: boolean;
-  crashed: boolean;
+  flags: TabFlags;
   onClose: () => void;
   onDragStart: (id: string, token: string) => void;
   onDragEnd: (id: string) => void;
@@ -175,7 +172,7 @@ function TabItem({
   const onAuxClick = (event: MouseEvent) => {
     if (event.button === 1) onClose();
   };
-  const shown = indicators(status, reloaded, crashed);
+  const shown = indicators(status, flags);
   const marks = shown.map(({ glyph, words }) => (
     <span key={glyph} className="tab-indicator" data-indicator={words} title={words}>
       <span aria-hidden="true">{glyph}</span>
@@ -229,7 +226,7 @@ function TabItem({
       {...markerFocus}
     >
       {layout === 'markers' ? (
-        <MarkerContent tab={tab} label={label} folder={folder} status={status} reloaded={reloaded} crashed={crashed} grab={{ ...dragProps, onAuxClick, onPointerEnter: (event: PointerEvent<Element>) => showTip(event.currentTarget), onPointerLeave: () => onMarkerTip?.(null) }}>
+        <MarkerContent tab={tab} label={label} folder={folder} status={status} flags={flags} grab={{ ...dragProps, onAuxClick, onPointerEnter: (event: PointerEvent<Element>) => showTip(event.currentTarget), onPointerLeave: () => onMarkerTip?.(null) }}>
           {marks}
         </MarkerContent>
       ) : layout === 'rows' ? (
@@ -271,8 +268,7 @@ function MarkerContent({
   label,
   folder,
   status,
-  reloaded,
-  crashed,
+  flags,
   grab,
   children,
 }: {
@@ -280,17 +276,20 @@ function MarkerContent({
   label: string;
   folder: string;
   status: TabStatus | undefined;
-  reloaded: boolean;
-  crashed: boolean;
+  flags: TabFlags;
   grab: object;
   children: ReactNode;
 }) {
-  const { letter, mark } = markerOf(tab, status, reloaded, crashed);
+  const { letter, mark } = markerOf(tab, status, flags);
   return (
     <span className="tab-grab" {...grab}>
       <span className="tab-marker" aria-hidden="true">
         {letter}
-        {mark && <span className="tab-marker-mark">{mark.glyph}</span>}
+        {mark && (
+          <span className="tab-marker-mark" data-indicator={mark.words}>
+            {mark.glyph}
+          </span>
+        )}
       </span>
       <span className="visually-hidden">
         {label}

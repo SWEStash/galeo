@@ -2,7 +2,7 @@
 
 import { fileName } from '../../shared/paths';
 import type { TabView } from '../../shared/tabs';
-import { indicators, type Indicator } from './indicators';
+import { indicators, type Indicator, type TabFlags } from './indicators';
 import type { TabStatus } from './store';
 
 /** A row's name: the file's own; the folder line below it tells tabs of the same name apart. */
@@ -11,12 +11,12 @@ export function rowName(tab: TabView): string {
 }
 
 /** The marks a collapsed marker has room for, most pressing first: it shows one. */
-const MARKER_MARKS = ['crashed the viewer', 'file missing', 'unsaved changes', 'following the end'];
+const MARKER_MARKS = ['crashed the viewer', 'file missing', 'unsaved changes', 'changed on disk', 'following the end'];
 
 /** A collapsed tab: the name's first letter or digit (a gear for Settings), and its most pressing mark. */
-export function markerOf(tab: TabView, status: TabStatus | undefined, reloaded: boolean, crashed: boolean): { letter: string; mark: Indicator | null } {
+export function markerOf(tab: TabView, status: TabStatus | undefined, flags: TabFlags): { letter: string; mark: Indicator | null } {
   const letter = tab.kind === 'settings' ? '⚙' : (/[\p{L}\p{N}]/u.exec(rowName(tab))?.[0]?.toLocaleUpperCase() ?? '•');
-  const shown = indicators(status, reloaded, crashed);
+  const shown = indicators(status, flags);
   const mark = MARKER_MARKS.map((words) => shown.find((each) => each.words === words)).find(Boolean) ?? null;
   return { letter, mark };
 }

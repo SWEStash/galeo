@@ -310,6 +310,10 @@ body,
   flex: none;
   font-size: 12px;
 }
+.tab-indicator[data-indicator='changed on disk'],
+.tab-marker-mark[data-indicator='changed on disk'] {
+  color: var(--galeo-color-link);
+}
 .tab-indicator[data-indicator='reloaded from disk'] {
   animation: galeo-reloaded 1s ease-out;
 }

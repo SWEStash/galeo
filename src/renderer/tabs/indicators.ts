@@ -1,4 +1,4 @@
-import type { TabStatus } from './store';
+import type { TabStatus, TabsView } from './store';
 
 /** A tab indicator (UX F4): a glyph, and the words a screen reader hears in the tab's name. */
 export interface Indicator {
@@ -6,10 +6,23 @@ export interface Indicator {
   words: string;
 }
 
+/** What the window knows of a tab beyond its document's status. */
+export interface TabFlags {
+  reloaded: boolean;
+  crashed: boolean;
+  /** Its file changed on disk while another tab was shown. */
+  updated: boolean;
+}
+
+export function flagsOf(view: Pick<TabsView, 'reloaded' | 'crashed' | 'updated'>, id: string): TabFlags {
+  return { reloaded: view.reloaded.has(id), crashed: view.crashed.has(id), updated: view.updated.has(id) };
+}
+
 /** Tab indicators (UX F4): always a glyph with words, never colour alone. The tab bar and the tab overview show them. */
-export function indicators(status: TabStatus | undefined, reloaded: boolean, crashed: boolean): Indicator[] {
+export function indicators(status: TabStatus | undefined, { reloaded, crashed, updated }: TabFlags): Indicator[] {
   const shown = [];
   if (crashed) shown.push({ glyph: '⚠', words: 'crashed the viewer' });
+  if (updated) shown.push({ glyph: '•', words: 'changed on disk' });
   if (reloaded) shown.push({ glyph: '↻', words: 'reloaded from disk' });
   if (status?.follow) shown.push({ glyph: '⇣', words: 'following the end' });
   if (status?.state === 'missing') shown.push({ glyph: '✕', words: 'file missing' });

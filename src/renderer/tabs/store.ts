@@ -45,6 +45,8 @@ export interface TabsView {
   widths: ReadonlyMap<string, ReaderWidth>;
   /** Tabs that took a new version of their file from disk within the last second (UX F4 `↻`). */
   reloaded: ReadonlySet<string>;
+  /** Tabs whose file changed on disk while another tab was shown; showing one clears it (UX F4 `•`). */
+  updated: ReadonlySet<string>;
   /** Tabs that were rendering when the window's renderer crashed: not rendered until the reader asks (ADR-002). */
   crashed: ReadonlySet<string>;
   /** A tab is being dragged, in this window or another: the whole tab bar takes the drop (ADR-019). */
@@ -139,6 +141,7 @@ export function createTabStore(api: TabsApi): TabStore {
     zooms: new Map(),
     widths: new Map(),
     reloaded: new Set(),
+    updated: new Set(),
     crashed: new Set(),
     dragging: false,
   };
@@ -168,7 +171,8 @@ export function createTabStore(api: TabsApi): TabStore {
     if (merged.active) rendered.add(merged.active);
     const own = <V,>(map: ReadonlyMap<string, V>) => new Map([...map].filter(([id]) => ids.has(id)));
     const reloaded = new Set([...merged.reloaded].filter((id) => ids.has(id)));
-    view = { ...merged, rendered, reloaded, reads: own(merged.reads), statuses: own(merged.statuses), zooms: own(merged.zooms), widths: own(merged.widths) };
+    const updated = new Set([...merged.updated].filter((id) => ids.has(id) && id !== merged.active));
+    view = { ...merged, rendered, reloaded, updated, reads: own(merged.reads), statuses: own(merged.statuses), zooms: own(merged.zooms), widths: own(merged.widths) };
     for (const id of positions.keys()) if (!ids.has(id)) positions.delete(id);
     for (const id of viewStates.keys()) if (!ids.has(id)) viewStates.delete(id);
     for (const listener of listeners) listener();
@@ -207,6 +211,12 @@ export function createTabStore(api: TabsApi): TabStore {
   const reread = (id: string) => {
     if (!view.tabs.some((tab) => tab.id === id)) return;
     set({ reads: new Map(view.reads).set(id, (view.reads.get(id) ?? 0) + 1) });
+  };
+
+  /** Main says a tab's file changed since the page read it: read it again, and mark it if it isn't shown. */
+  const stale = (id: string) => {
+    if (id !== view.active && view.tabs.some((tab) => tab.id === id) && !view.updated.has(id)) set({ updated: new Set(view.updated).add(id) });
+    reread(id);
   };
 
   const apply = (snapshot: TabSnapshot) => {
@@ -253,7 +263,7 @@ export function createTabStore(api: TabsApi): TabStore {
     },
     getSnapshot: () => view,
     async start() {
-      unsubscribe = [api.onChanged(apply), api.onDemote(demote), api.onStale(reread), api.onDragging((dragging) => set({ dragging }))];
+      unsubscribe = [api.onChanged(apply), api.onDemote(demote), api.onStale(stale), api.onDragging((dragging) => set({ dragging }))];
       apply(await api.snapshot());
     },
     stop() {

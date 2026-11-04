@@ -31,6 +31,7 @@ function fakeStore(active = 'b', dirty: string[] = []) {
     zooms: new Map(),
     widths: new Map(),
     reloaded: new Set(),
+    updated: new Set(),
     crashed: new Set(),
     dragging: false,
   };

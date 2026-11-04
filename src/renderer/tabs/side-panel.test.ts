@@ -18,6 +18,7 @@ const status = (change: Partial<TabStatus>): TabStatus => ({
 
 const plan: TabView = { id: 'p', path: '/home/me/docs/plan.md', format: 'markdown', folder: '~/docs' };
 const settings: TabView = { id: 's', path: '', kind: 'settings' };
+const NONE = { reloaded: false, crashed: false, updated: false };
 
 describe('rowName', () => {
   it("is the file's name, as the folder line below tells tabs of the same name apart", () => {
@@ -29,20 +30,26 @@ describe('rowName', () => {
 
 describe('markerOf', () => {
   it("shows the name's first letter, a gear for Settings", () => {
-    expect(markerOf(plan, undefined, false, false)).toEqual({ letter: 'P', mark: null });
-    expect(markerOf({ id: 'b', path: '/home/me/.bashrc' }, undefined, false, false).letter).toBe('B');
-    expect(markerOf({ id: 'n', path: '/x/42.txt' }, undefined, false, false).letter).toBe('4');
-    expect(markerOf(settings, undefined, false, false).letter).toBe('⚙');
+    expect(markerOf(plan, undefined, NONE)).toEqual({ letter: 'P', mark: null });
+    expect(markerOf({ id: 'b', path: '/home/me/.bashrc' }, undefined, NONE).letter).toBe('B');
+    expect(markerOf({ id: 'n', path: '/x/42.txt' }, undefined, NONE).letter).toBe('4');
+    expect(markerOf(settings, undefined, NONE).letter).toBe('⚙');
   });
 
   it('shows one mark: a crash or a missing file first, then unsaved changes, then following the end', () => {
-    const mark = (tabStatus: TabStatus | undefined, crashed = false) => markerOf(plan, tabStatus, false, crashed).mark?.words ?? null;
+    const mark = (tabStatus: TabStatus | undefined, crashed = false) => markerOf(plan, tabStatus, { ...NONE, crashed }).mark?.words ?? null;
     expect(mark(status({ dirty: true, editing: true, follow: true }), true)).toBe('crashed the viewer');
     expect(mark(status({ state: 'missing', dirty: true }))).toBe('file missing');
     expect(mark(status({ dirty: true, editing: true, follow: true }))).toBe('unsaved changes');
     expect(mark(status({ follow: true, editing: true }))).toBe('following the end');
     expect(mark(status({ editing: true }))).toBeNull();
-    expect(markerOf(plan, undefined, true, false).mark).toBeNull();
+    expect(markerOf(plan, undefined, { ...NONE, reloaded: true }).mark).toBeNull();
+  });
+
+  it('shows a file changed on disk after unsaved changes, before following the end', () => {
+    const updated = { ...NONE, updated: true };
+    expect(markerOf(plan, status({ follow: true }), updated).mark?.words).toBe('changed on disk');
+    expect(markerOf(plan, status({ dirty: true }), updated).mark?.words).toBe('unsaved changes');
   });
 });
 

@@ -110,7 +110,7 @@ function Card({ card, onClose }: { card: OverviewCard; onClose: () => void }) {
       {card.indicators.length > 0 && (
         <span className="tab-overview-indicators" aria-hidden="true">
           {card.indicators.map(({ glyph, words: title }) => (
-            <span key={glyph} className="tab-indicator" title={title}>
+            <span key={glyph} className="tab-indicator" data-indicator={title} title={title}>
               {glyph}
             </span>
           ))}

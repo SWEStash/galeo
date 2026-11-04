@@ -1,7 +1,7 @@
 import type { FormatId } from '../../shared/formats';
 import { tabLabels } from '../../shared/tab-labels';
 import { FORMAT_NAMES } from '../document/formats';
-import { indicators, type Indicator } from './indicators';
+import { flagsOf, indicators, type Indicator } from './indicators';
 import type { TabsView } from './store';
 
 /** A card in the tab overview (UX F17): what the tab bar says about a tab, plus its folder and format. */
@@ -35,7 +35,7 @@ const BADGES: Readonly<Record<FormatId, string>> = {
 };
 
 /** The window's tabs as overview cards, in tab order. */
-export function overviewCards(view: Pick<TabsView, 'tabs' | 'active' | 'statuses' | 'reloaded' | 'crashed'>): OverviewCard[] {
+export function overviewCards(view: Pick<TabsView, 'tabs' | 'active' | 'statuses' | 'reloaded' | 'crashed' | 'updated'>): OverviewCard[] {
   const labels = tabLabels(view.tabs.map((tab) => tab.path));
   return view.tabs.map((tab, index) => {
     const settings = tab.kind === 'settings';
@@ -46,7 +46,7 @@ export function overviewCards(view: Pick<TabsView, 'tabs' | 'active' | 'statuses
       folder: tab.folder ?? '',
       badge: settings ? '⚙' : BADGES[format],
       format: settings ? null : FORMAT_NAMES[format],
-      indicators: indicators(view.statuses.get(tab.id), view.reloaded.has(tab.id), view.crashed.has(tab.id)),
+      indicators: indicators(view.statuses.get(tab.id), flagsOf(view, tab.id)),
       active: tab.id === view.active,
       position: `${index + 1} of ${view.tabs.length}`,
     };

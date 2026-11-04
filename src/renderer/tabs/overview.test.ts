@@ -28,6 +28,7 @@ const view = (change: Partial<Parameters<typeof overviewCards>[0]> = {}) => ({
   active: 'b',
   statuses: new Map<string, TabStatus>(),
   reloaded: new Set<string>(),
+  updated: new Set<string>(),
   crashed: new Set<string>(),
   ...change,
 });
@@ -53,6 +54,15 @@ describe('overviewCards', () => {
       }),
     );
     expect(cards.map((card) => card.indicators.map((each) => each.words))).toEqual([['edit mode', 'unsaved changes'], ['reloaded from disk'], [], ['following the end']]);
+  });
+
+  it('shows a tab whose file changed while another was shown, as a dot with its words', () => {
+    const cards = overviewCards(view({ statuses: new Map([['a', status({ dirty: true })]]), updated: new Set(['a', 'c']) }));
+    expect(cards[0]!.indicators).toEqual([
+      { glyph: '•', words: 'changed on disk' },
+      { glyph: '●', words: 'unsaved changes' },
+    ]);
+    expect(cards[3]!.indicators.map((each) => each.words)).toEqual(['changed on disk']);
   });
 
   it('names a tab whose format main has not told yet as a plain file', () => {

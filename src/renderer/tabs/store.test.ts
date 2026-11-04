@@ -240,6 +240,43 @@ describe('createTabStore', () => {
     expect(store.getSnapshot().reads.has('nope')).toBe(false);
   });
 
+  describe('tabs whose file changed while another was shown', () => {
+    it('marks a background tab whose file changed, never the shown one', async () => {
+      const { store, stale } = setup(snapshot(1, ['a', 'b'], 'a'));
+      await store.start();
+      expect(store.getSnapshot().updated.size).toBe(0);
+      stale('b');
+      stale('a');
+      stale('nope');
+      expect([...store.getSnapshot().updated]).toEqual(['b']);
+    });
+
+    it('clears the mark once the tab is shown', async () => {
+      const { store, stale } = setup(snapshot(1, ['a', 'b'], 'a'));
+      await store.start();
+      stale('b');
+      store.activate('b');
+      expect(store.getSnapshot().updated.has('b')).toBe(false);
+    });
+
+    it("doesn't mark a tab the page reads again itself (another encoding)", async () => {
+      const { store } = setup(snapshot(1, ['a', 'b'], 'a'));
+      await store.start();
+      store.reread('b');
+      expect(store.getSnapshot().updated.size).toBe(0);
+    });
+
+    it('forgets a tab that left the window', async () => {
+      const { store, stale, push } = setup(snapshot(1, ['a', 'b', 'c'], 'a'));
+      await store.start();
+      stale('b');
+      stale('c');
+      store.close('b');
+      push(snapshot(2, ['a'], 'a'));
+      expect(store.getSnapshot().updated.size).toBe(0);
+    });
+  });
+
   it("keeps each tab's last position here, and reports it to main", async () => {
     const { store, api } = setup(snapshot(1, ['a'], 'a'));
     await store.start();

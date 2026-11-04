@@ -130,6 +130,7 @@ profile. Multiple selected files open as tabs in selection order.
   |---|---|
   | `⇣` | Log in follow-end mode |
   | `↻` (brief) | Reloaded from disk just now |
+  | `•` (link colour) | (v0.6) The file changed on disk while another tab was shown ("changed on disk"); cleared when the tab is shown. Also in tab search and the tab overview. A tab not read since galeo started gets none |
   | `✕` struck label | File missing |
   | `⚠` | Crashed (not auto-rendered again) |
   | `✎` | Edit mode (v0.2) |

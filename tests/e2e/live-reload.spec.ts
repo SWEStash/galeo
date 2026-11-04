@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { appDirs, launchApp, removeTempHome, tempHome } from '../helpers/launch';
@@ -86,6 +86,38 @@ test('a changed file shows ↻ on its tab for a moment and says Reloaded; the vi
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+for (const tabsPosition of ['top', 'left'] as const) {
+  test(`a tab whose file changed while another was shown is marked until shown (tabs ${tabsPosition})`, async () => {
+    const dir = tempHome();
+    const profile = path.join(appDirs(dir).config, 'profiles', 'default', 'profile.json');
+    mkdirSync(path.dirname(profile), { recursive: true });
+    saveFile(profile, `{"schemaVersion":1,"name":"default","settings":{"tabsPosition":"${tabsPosition}"}}`);
+    const [a, b] = ['a.md', 'b.md'].map((name) => path.join(dir, name)) as [string, string];
+    writeFileSync(a, '# A\n');
+    writeFileSync(b, '# B\n');
+    const { window, close } = await launchApp(['--', a, b], { home: dir });
+    try {
+      const tab = (name: string) => window.getByRole('tab', { name: new RegExp(`^${name}`) });
+      // Each read once, so galeo knows what it saw; then B is shown.
+      await tab('a.md').click();
+      await expect(shownDocument(window).locator('h1')).toHaveText('A');
+      await tab('b.md').click();
+      await expect(shownDocument(window).locator('h1')).toHaveText('B');
+
+      saveFile(a, '# A, changed\n');
+      await expect(tab('a.md')).toHaveAccessibleName(/changed on disk/);
+      await expect(tab('b.md')).not.toHaveAccessibleName(/changed on disk/);
+
+      await tab('a.md').click();
+      await expect(shownDocument(window).locator('h1')).toHaveText('A, changed');
+      await expect(tab('a.md')).not.toHaveAccessibleName(/changed on disk/);
+    } finally {
+      await close();
+      removeTempHome(dir);
+    }
+  });
+}
 
 test('F5 reads the shown file again, keeping its view', async () => {
   const dir = tempHome();

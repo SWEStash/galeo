@@ -29,14 +29,14 @@ function stub(answer: (query: string) => Promise<TabSearchResults> = async (quer
   return search;
 }
 
-async function shown() {
+async function shown(updated: ReadonlySet<string> = new Set()) {
   const onShow = vi.fn();
   const onReopen = vi.fn();
   const onClose = vi.fn();
   const container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
-  await act(async () => root!.render(<TabSearch onShow={onShow} onReopen={onReopen} onClose={onClose} say={say} />));
+  await act(async () => root!.render(<TabSearch onShow={onShow} onReopen={onReopen} onClose={onClose} say={say} updated={updated} />));
   await vi.waitFor(() => expect(document.querySelectorAll('[role="option"]')).toHaveLength(3));
   return { onShow, onReopen, onClose, input: document.querySelector('input')! };
 }
@@ -53,6 +53,17 @@ const type = async (input: HTMLInputElement, text: string) =>
   fillInput(input, text);
 
 describe('TabSearch', () => {
+  it('marks an open tab whose file changed while another was shown, in words too', async () => {
+    stub();
+    await shown(new Set(['t2', 'c1']));
+    const [readme, plan, notes] = [...document.querySelectorAll('[role="option"]')];
+    expect(plan!.querySelector('[data-indicator="changed on disk"]')?.textContent).toContain('•');
+    expect(plan!.textContent).toContain('changed on disk');
+    expect(readme!.querySelector('[data-indicator]')).toBeNull();
+    // A closed tab has no file being watched: no mark.
+    expect(notes!.querySelector('[data-indicator]')).toBeNull();
+  });
+
   it('lists the open tabs, then the recently closed ones, with the field focused', async () => {
     stub();
     const { input } = await shown();
@@ -120,7 +131,7 @@ describe('TabSearch when main fails', () => {
     const container = document.createElement('div');
     document.body.append(container);
     root = createRoot(container);
-    await act(async () => root!.render(<TabSearch onShow={vi.fn()} onReopen={vi.fn()} onClose={vi.fn()} say={say} />));
+    await act(async () => root!.render(<TabSearch onShow={vi.fn()} onReopen={vi.fn()} onClose={vi.fn()} say={say} updated={new Set()} />));
     await vi.waitFor(() => expect(say).toHaveBeenCalledWith("Couldn't search the tabs"));
   });
 });

@@ -29,7 +29,20 @@ interface Row extends TabHit {
  * Tab search (UX F16): a field over the window's open tabs and its recently closed ones, as main
  * matched them. Enter shows an open tab or reopens a closed one where it was; Esc closes.
  */
-export function TabSearch({ onShow, onReopen, onClose, say }: { onShow: (id: string) => void; onReopen: (id: string) => void; onClose: () => void; say: (message: string) => void }) {
+export function TabSearch({
+  onShow,
+  onReopen,
+  onClose,
+  say,
+  updated,
+}: {
+  onShow: (id: string) => void;
+  onReopen: (id: string) => void;
+  onClose: () => void;
+  say: (message: string) => void;
+  /** Open tabs whose file changed while another was shown: marked as in the tab bar. */
+  updated: ReadonlySet<string>;
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<TabSearchResults | null>(null);
   /** Enter came before main answered what was typed: it takes the first result of that answer. */
@@ -122,7 +135,15 @@ export function TabSearch({ onShow, onReopen, onClose, say }: { onShow: (id: str
                     <Collection items={section.rows} idScope={section.id}>
                       {(row) => (
                         <ListBoxItem id={row.key} textValue={`${row.name} ${row.detail}`} className="quick-open-item">
-                          <span className="quick-open-name">{row.name}</span>
+                          <span className="quick-open-name">
+                            {row.name}
+                            {!row.closed && updated.has(row.id) && (
+                              <span className="tab-indicator" data-indicator="changed on disk" title="changed on disk">
+                                <span aria-hidden="true"> •</span>
+                                <span className="visually-hidden">, changed on disk</span>
+                              </span>
+                            )}
+                          </span>
                           <span className="quick-open-detail">{row.detail}</span>
                         </ListBoxItem>
                       )}

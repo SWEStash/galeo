@@ -285,7 +285,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
       </Tabs>
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
       {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} say={setMessage} />}
-      {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} say={setMessage} />}
+      {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} say={setMessage} updated={view.updated} />}
       {overlay === 'tabOverview' && (
         <Suspense fallback={null}>
           <TabOverview store={store} onClose={closeOverlay} />
