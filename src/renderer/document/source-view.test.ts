@@ -1,7 +1,8 @@
 import { addCursorAbove, addCursorBelow, historyField } from '@codemirror/commands';
 import { selectNextOccurrence, selectSelectionMatches } from '@codemirror/search';
 import { foldCode, syntaxTree, unfoldCode } from '@codemirror/language';
-import { EditorState } from '@codemirror/state';
+import { EditorSelection, EditorState } from '@codemirror/state';
+import { runScopeHandlers } from '@codemirror/view';
 import { afterEach, describe, expect, it } from 'vitest';
 import { takenByDesktop } from '../../shared/desktop-keys';
 import { createSourceView, editingKeys, foldingKeys } from './source-view';
@@ -234,6 +235,64 @@ describe('createSourceView editing', () => {
     expect(edits).toBe(1);
     expect(source.text()).toBe('from disk!');
     source.destroy();
+  });
+
+  describe('Tab and Shift+Tab in edit mode', () => {
+    const press = (source: ReturnType<typeof createSourceView>, shiftKey = false) =>
+      runScopeHandlers(source.view, new KeyboardEvent('keydown', { key: 'Tab', shiftKey }), 'editor');
+    const editable = (text: string) => {
+      const { root, parent } = shadowContainer();
+      const source = createSourceView({ root, parent, text, language: 'markdown', wrap: false });
+      source.setEditable(true);
+      return { source, content: parent.querySelector('.cm-content')! };
+    };
+
+    it("inserts the file's indent at the cursor", () => {
+      const { source } = editable('- a\n    - b\nc');
+      source.view.dispatch({ selection: { anchor: source.view.state.doc.line(3).from } });
+      expect(press(source)).toBe(true);
+      expect(source.text()).toBe('- a\n    - b\n    c');
+      source.destroy();
+    });
+
+    it('inserts a tab in a file indented with tabs, and two spaces in a file with no indents', () => {
+      const tabs = editable('a\n\tb\n').source;
+      tabs.view.dispatch({ selection: { anchor: 0 } });
+      press(tabs);
+      expect(tabs.text()).toBe('\ta\n\tb\n');
+      const plain = editable('a').source;
+      plain.view.dispatch({ selection: { anchor: 0 } });
+      press(plain);
+      expect(plain.text()).toBe('  a');
+      tabs.destroy();
+      plain.destroy();
+    });
+
+    it('indents every selected line, and Shift+Tab takes one level off', () => {
+      const { source } = editable('- a\n- b\n- c');
+      source.view.dispatch({ selection: EditorSelection.range(0, source.view.state.doc.line(2).to) });
+      press(source);
+      expect(source.text()).toBe('  - a\n  - b\n- c');
+      press(source, true);
+      expect(source.text()).toBe('- a\n- b\n- c');
+      source.destroy();
+    });
+
+    it('leaves Tab to move the focus while reading', () => {
+      const { root, parent } = shadowContainer();
+      const source = createSourceView({ root, parent, text: 'a', language: 'markdown', wrap: false });
+      expect(press(source)).toBe(false);
+      expect(source.text()).toBe('a');
+      source.destroy();
+    });
+
+    it('says how to leave the editor with the keyboard, only while editing (WCAG 2.1.2)', () => {
+      const { source, content } = editable('a');
+      expect(content.getAttribute('aria-description')).toBe('Tab indents. Press Escape then Tab, or Ctrl+M, to move focus.');
+      source.setEditable(false);
+      expect(content.hasAttribute('aria-description')).toBe(false);
+      source.destroy();
+    });
   });
 
   it("binds no editing key the Linux desktop keeps: no Super, no Ctrl+Alt, none of GNOME's Alt keys (UX §5)", () => {

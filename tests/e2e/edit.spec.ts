@@ -8,6 +8,8 @@ import { appDirs, killApp, launchApp, launchSecond, tempHome, removeTempHome } f
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const indicator = (window: Page, words: string) => window.locator(`.tab-indicator[data-indicator="${words}"]`);
+/** CodeMirror's switch between Tab indenting and Tab moving the focus. */
+const TAB_FOCUS_KEY = process.platform === 'darwin' ? 'Shift+Alt+M' : 'Control+M'; // portable: chosen per system
 
 test('Ctrl+E edits the shown file, Ctrl+S saves it with its own line endings, and Ctrl+E reads again', async () => {
   const dir = tempHome();
@@ -33,6 +35,61 @@ test('Ctrl+E edits the shown file, Ctrl+S saves it with its own line endings, an
     await pressInMain(app, window, 'E');
     await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
     await expect(indicator(window, 'edit mode')).toHaveCount(0);
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
+test('in edit mode Tab indents and Shift+Tab un-indents; Esc then Tab, or Ctrl+M then Tab, leaves the editor', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'list.md');
+  writeFileSync(file, '- a\n- b\n');
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    await expect(shownDocument(window).locator('li').first()).toHaveText('a');
+    await pressInMain(app, window, 'E');
+    const editor = shownDocument(window).locator('.cm-content');
+    await expect(editor).toBeFocused();
+    await expect(editor).toHaveAttribute('aria-description', /Tab indents/);
+    const saved = async (text: string) => {
+      await window.keyboard.press('ControlOrMeta+s');
+      await expect.poll(() => readFileSync(file, 'utf8')).toBe(text);
+    };
+
+    await window.keyboard.press('ControlOrMeta+Home');
+    await window.keyboard.press('ArrowDown');
+    await window.keyboard.press('Tab');
+    await expect(editor).toBeFocused();
+    await saved('- a\n  - b\n');
+    await window.keyboard.press('Shift+Tab');
+    await saved('- a\n- b\n');
+
+    await window.keyboard.press('Escape');
+    await window.keyboard.press('Tab');
+    await expect(editor).not.toBeFocused();
+    expect(readFileSync(file, 'utf8')).toBe('- a\n- b\n');
+
+    await editor.click();
+    await window.keyboard.press(TAB_FOCUS_KEY);
+    await window.keyboard.press('Tab');
+    await expect(editor).not.toBeFocused();
+    // Ctrl+M again gives Tab back to indenting.
+    await editor.click();
+    await window.keyboard.press(TAB_FOCUS_KEY);
+    await window.keyboard.press('Tab');
+    await expect(editor).toBeFocused();
+
+    // With the find bar open, the first Esc only closes it (Tab still indents); Esc then Tab leaves.
+    await window.keyboard.press('ControlOrMeta+z');
+    await window.keyboard.press('ControlOrMeta+F');
+    await expect(window.getByRole('searchbox')).toBeFocused();
+    await editor.click();
+    await window.keyboard.press('Escape');
+    await expect(window.getByRole('searchbox')).toHaveCount(0);
+    await window.keyboard.press('Escape');
+    await window.keyboard.press('Tab');
+    await expect(editor).not.toBeFocused();
   } finally {
     await close();
     removeTempHome(dir);

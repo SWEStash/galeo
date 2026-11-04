@@ -509,6 +509,8 @@ the native menu on the active tab.
 | Add the next match / every match as cursors (v0.2) | Ctrl+D / Ctrl+Shift+L | Edit mode |
 | Add a cursor above / below (v0.2) | Shift+Alt+↑ / Shift+Alt+↓ | Edit mode. Ctrl+Alt+↑/↓ is GNOME's (workspaces); these keys were CodeMirror's copy line up/down, which is left out |
 | Add a cursor / a column of cursors (v0.2) | Ctrl+click / Alt+drag | Edit mode; Esc goes back to one cursor |
+| Indent / un-indent (v0.6) | Tab / Shift+Tab | Edit mode only (reading, Tab moves the focus). Tab adds the file's indent at the cursor (a tab, or its 2- or 4-space step, 2 when nothing is indented yet), or one level on every selected line |
+| Leave the editor with the keyboard (v0.6) | Esc then Tab; Ctrl+M (Shift+Option+M on macOS) | Edit mode (WCAG 2.1.2). Esc gives Tab back to the focus for 2 s; Ctrl+M switches Tab between indenting and moving the focus until pressed again. With the find bar open the first Esc closes it. The editor's description says so to screen readers |
 | Widen / narrow / reset reader width (v0.3) | Alt++ or Alt+= / Alt+- / Alt+0 | Per tab, like zoom (Ctrl); 8 ch steps, 40–200 ch; rendered Markdown and text only |
 | Full width (v0.3) | palette | Toggles back to the setting |
 | Move tab to new window / to window… (v0.3) | palette | F15 |

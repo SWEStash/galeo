@@ -204,6 +204,11 @@ the file into the window in front of you) when you want it here.
 - **Several cursors**: Ctrl+D adds the next match of the selection, Ctrl+Shift+L every match;
   Shift+Alt+↑/↓ adds a cursor above or below; Ctrl+click adds one where you click, and Alt+drag
   puts one on each line it crosses. Typing goes to all of them; Esc goes back to one.
+- **Tab** indents: at the cursor it adds the file's own indent (a tab, or its two or four spaces);
+  with lines selected it indents them all. **Shift+Tab** takes one level off. To move the focus
+  out of the editor with the keyboard, press **Esc** then **Tab**, or **Ctrl+M** (Shift+Option+M on
+  macOS), which switches Tab between indenting and moving the focus. With the find bar open, the
+  first Esc closes it.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
   permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the

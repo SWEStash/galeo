@@ -1,6 +1,6 @@
-import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, standardKeymap } from '@codemirror/commands';
+import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, indentLess, indentMore, standardKeymap } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
-import { foldGutter, foldKeymap, LanguageDescription, syntaxHighlighting, syntaxTree } from '@codemirror/language';
+import { foldGutter, foldKeymap, indentUnit, LanguageDescription, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import {
   closeSearchPanel,
   findNext,
@@ -16,7 +16,7 @@ import {
   setSearchQuery,
 } from '@codemirror/search';
 import { Annotation, Compartment, EditorSelection, EditorState, Transaction, type Extension, type Text } from '@codemirror/state';
-import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers, rectangularSelection, type KeyBinding } from '@codemirror/view';
+import { drawSelection, EditorView, highlightActiveLineGutter, keymap, lineNumbers, rectangularSelection, type Command, type KeyBinding } from '@codemirror/view';
 import { takenByDesktop } from '../../shared/desktop-keys';
 import type { OutlineEntry } from '../worker/pipeline/render';
 import { logLevels } from './log-view';
@@ -24,6 +24,7 @@ import { sourceOutline } from './source-outline';
 import { clamp, clamp01 } from '../../shared/math';
 import type { FindResult } from '../../shared/find';
 import { sourceHighlight, sourceTheme } from './source-theme';
+import { indentUnitOf } from './indent';
 import { diffSpan } from './text-diff';
 
 /** `markdown` and `log` are built in; any other name is a grammar from `@codemirror/language-data`. */
@@ -100,8 +101,17 @@ const reading = (): Extension => EditorState.readOnly.of(true);
  */
 const DESKTOP_KEYS = new Set(['Mod-Alt-ArrowUp', 'Mod-Alt-ArrowDown', 'Mod-Alt-\\', 'Shift-Alt-ArrowUp', 'Shift-Alt-ArrowDown']);
 
-/** The keys edit mode adds: editing, undo, and multiple cursors. */
+/** Tab in edit mode: the file's indent at each cursor, or one level more on every selected line. */
+const indentOrInsert: Command = (view) => {
+  if (view.state.selection.ranges.some((range) => !range.empty)) return indentMore(view);
+  view.dispatch(view.state.replaceSelection(view.state.facet(indentUnit)), { scrollIntoView: true, userEvent: 'input.indent' });
+  return true;
+};
+
+/** The keys edit mode adds: editing, indenting, undo, and multiple cursors. */
 export const editingKeys: readonly KeyBinding[] = [
+  // Escape then Tab, or Ctrl+M (CodeMirror's tab focus mode), moves the focus on instead (WCAG 2.1.2).
+  { key: 'Tab', run: indentOrInsert, shift: indentLess },
   ...defaultKeymap.filter((binding) => !DESKTOP_KEYS.has(binding.key ?? '')),
   ...historyKeymap,
   { key: 'Shift-Alt-ArrowUp', run: addCursorAbove },
@@ -110,10 +120,17 @@ export const editingKeys: readonly KeyBinding[] = [
   { key: 'Mod-Shift-l', run: selectSelectionMatches },
 ];
 
+/** What a screen reader hears about Tab in edit mode; on macOS CodeMirror's toggle is Shift+Option+M. */
+const leaveEditor = () =>
+  `Tab indents. Press Escape then Tab, or ${document.documentElement.dataset['platform'] === 'darwin' ? 'Shift+Option+M' : 'Ctrl+M'}, to move focus.`;
+
 // Several cursors (Ctrl+click, Alt+drag, the keys above) need drawing: the browser shows only one.
-const editing = (): Extension => [
+// The indent is the file's, taken when edit mode starts.
+const editing = (doc: Text): Extension => [
   history(),
   keymap.of(editingKeys),
+  indentUnit.of(indentUnitOf(doc.iterLines())),
+  EditorView.contentAttributes.of({ 'aria-description': leaveEditor() }),
   EditorState.allowMultipleSelections.of(true),
   drawSelection(),
   rectangularSelection(),
@@ -325,7 +342,7 @@ export function createSourceView(options: {
       });
     },
     setEditable(editable) {
-      view.dispatch({ effects: mode.reconfigure(editable ? editing() : reading()) });
+      view.dispatch({ effects: mode.reconfigure(editable ? editing(view.state.doc) : reading()) });
     },
     text() {
       return view.state.doc.toString();

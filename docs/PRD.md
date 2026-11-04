@@ -468,6 +468,13 @@ otherwise, and nothing leaves the machine.
   - AC: A relative link whose file doesn't exist is marked, with "file not found" as a tooltip and
     for screen readers; the marks follow the document when it changes. galeo checks only the files
     the document links to.
+- **Indent with Tab in edit mode.** In edit mode Tab and Shift+Tab indent and un-indent, as in
+  other editors, so lists and code nest without retyping spaces (added by the owner, 2026-11-04).
+  - AC: Tab adds the file's own indent at the cursor (a tab, or its two or four spaces) or one
+    level to every selected line; Shift+Tab takes one level off. While reading, Tab still moves
+    the focus.
+  - AC: Esc then Tab, or Ctrl+M, moves the focus out of the editor, so the keyboard is never
+    trapped, and the editor tells screen readers how.
 
 ### Could Have
 
