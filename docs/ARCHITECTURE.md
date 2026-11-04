@@ -1,7 +1,7 @@
 # galeo — Architecture
 
-- **Status**: Current — design of record for v0.1–v0.2, matching the accepted ADRs and kept in step with the code
-- **Date**: 2026-09-25 (updated 2026-09-26)
+- **Status**: Current — design of record for v0.1–v0.5, matching the accepted ADRs and kept in step with the code
+- **Date**: 2026-09-25 (updated 2026-09-26; reviewed against 0.5.0 on 2026-11-03)
 - **Sources**: [PRD](PRD.md) · [UX](design/ux.md) · [Threat model](security/threat-model.md) ·
   ADRs [001](decisions/ADR-001-app-shell-stack.md) ·
   [002](decisions/ADR-002-window-and-tab-model.md) ·
@@ -42,7 +42,7 @@ Every diagram uses these names exactly.
 
 | Name | Meaning |
 |---|---|
-| **Launcher** | The `gal` shell script. Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that routes every launch through `gal`'s argument handling and relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
+| **Launcher** | The `gal` shell script (`galeo.cmd` on Windows, §8). Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that routes every launch through `gal`'s argument handling and relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
 | **Main** | The Electron main process (Node). Hosts the Core and the Adapters |
 | **Core** | Pure TypeScript domain logic: routing, tab registry, lifecycle policy, sessions, settings, capability checks, argv parsing, link extraction (ADR-007) |
 | **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `OsShell`, `Clipboard`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `FontCatalog`, `Clock`. Window code is Main's own (`src/main/window/`), not a port (ADR-025) |
@@ -128,7 +128,7 @@ flowchart TB
 
 | Container | Runs | Trust | Owns |
 |---|---|---|---|
-| Launcher | `/bin/sh` | User | Nothing (stateless) |
+| Launcher | `/bin/sh` (`cmd.exe` on Windows) | User | Nothing (stateless) |
 | Main | Electron main, Node | Full user privileges | Tab registry, profiles, routing, capabilities, all disk and OS access |
 | Preload | Isolated world of each renderer | Bridge | The API surface: nothing beyond Contracts |
 | Window Renderer | Chromium renderer, sandboxed, no Node | **Untrusted** (renders hostile content) | DOM, render caches, UI state |
@@ -215,13 +215,13 @@ flowchart LR
 ```mermaid
 flowchart TB
   subgraph chromeui[Chrome UI · React]
-    tabs[features/tabs<br/>tab bar · DnD · reorder]
-    qo[features/quick-open]
-    pal[features/palette]
-    find[features/find]
-    outline[features/outline]
-    profiles[features/profiles]
-    settings[features/settings]
+    tabs[tabs/<br/>tab bar · DnD · reorder]
+    qo[quick-open/]
+    pal[palette/]
+    find[document/ find bar]
+    outline[outline/]
+    profiles[profiles/]
+    settings[settings/]
     status[status bar]
     store[(Registry mirror<br/>useSyncExternalStore)]
   end
@@ -446,7 +446,8 @@ flowchart TD
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`
 Electron binary, ADR-009), `/etc/apparmor.d/galeo` (`userns` profile for `galeo-bin`, for
-Chromium's sandbox on Ubuntu 24.04+), `/usr/bin/gal` (Launcher),
+Chromium's sandbox on Ubuntu 24.04+), `/usr/bin/galeo` (to the wrapper, through
+`update-alternatives`) and `/usr/bin/gal` (Launcher),
 `/usr/share/applications/galeo.desktop` (`Exec=/opt/galeo/galeo -- %F`, MIME types),
 `/usr/share/mime/packages/galeo.xml` (the `text/mdx` type, copied there by the post-install
 script), `/usr/share/icons/hicolor/*/apps/galeo.png`. Per-user data lives only in the Config, State and
@@ -486,11 +487,15 @@ src/
               pipeline) · app/ (the window's hooks: tab shortcuts, overlays, palette actions) ·
               testing/ (helpers for the component tests only)
 tests/
-  unit/       core + shared (vitest, node)
-  renderer/   pipeline, sanitizer corpus, format registry (vitest)
-  e2e/        Playwright for Electron: CLI open, tabs, DnD, reload, profiles, a11y (axe)
-  security/   payload corpus, no-network harness, fuse check
+  unit/       core, main, preload, design (colour contrast) and the launchers (vitest, node)
+  renderer/   pipeline, sanitizer corpus, link-set fuzz, HTML violations (vitest)
+  e2e/        Playwright for Electron: CLI open, tabs, DnD, reload, profiles, a11y (axe);
+              security/ (network guard, window hardening)
+  security/   no-network harness (the app under strace)
   perf/       harness for PRD targets
+  fixtures/   documents, generated files, the payload corpus · helpers/ (launch, fakes) · types/
+Component and module tests also sit beside their code in src/ (*.test.ts, *.test.tsx); the fuse
+check is part of scripts/verify-package.mjs.
 ```
 
 Import rules, enforced in CI: `core` and `shared` import no `electron`, `node:*` or DOM code;
