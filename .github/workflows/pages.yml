@@ -12,7 +12,8 @@ on:
       - 'scripts/apt-repo.sh'
       - 'packaging/linux/galeo-archive-keyring.asc'
   # Publishing a draft by hand fires this; drafts never do. A release published by a token would not: then run
-  # this workflow by hand (RELEASING).
+  # this workflow by hand (RELEASING). The release event runs on the tag, which the github-pages environment
+  # refuses (main only), so it only starts a run on main (hand-over below).
   release:
     types: [published]
   workflow_dispatch:
@@ -25,8 +26,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  hand-over:
+    name: Start the deploy on main
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+
   assemble:
     name: Check the release and build the repository
+    if: github.event_name != 'release'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     # No secrets here: this job downloads and checks the .deb, and writes the repository unsigned.
@@ -46,16 +60,18 @@ jobs:
         run: |
           dir="$RUNNER_TEMP/release"
           mkdir -p "$dir"
-          if ! gh release view --repo "$GITHUB_REPOSITORY" --json tagName >/dev/null 2>&1; then
+          if ! tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null); then
             echo "No published release: the site only."
             exit 0
           fi
-          gh release download --repo "$GITHUB_REPOSITORY" --dir "$dir" --pattern 'galeo_*_amd64.deb' --pattern SHA256SUMS
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$dir" --pattern 'galeo_*_amd64.deb' --pattern SHA256SUMS
           debs=$(find "$dir" -name 'galeo_*_amd64.deb')
           [ "$(printf '%s\n' "$debs" | wc -l)" -eq 1 ] || { echo "expected one .deb, got: $debs"; exit 1; }
           (cd "$dir" && sha256sum --ignore-missing --strict -c SHA256SUMS)
+          # Built by the release workflow, from this release's own tag, on GitHub's runners.
           gh attestation verify "$debs" --repo "$GITHUB_REPOSITORY" \
-            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml"
+            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+            --source-ref "refs/tags/$tag" --deny-self-hosted-runners
           echo "deb=$debs" >> "$GITHUB_OUTPUT"
       - name: Build the unsigned repository
         id: build

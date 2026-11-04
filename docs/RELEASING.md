@@ -71,8 +71,8 @@ Then cut it:
    publish it.
 10. **Website**: if the UI changed visibly, retake the [website's screenshots](development.md#website)
     and commit them; the page links to the latest release, so nothing else changes.
-11. **apt repository**: publishing starts the Pages workflow, which checks the new `.deb` and signs the
-    repository. When it is green, `sudo apt update && apt policy galeo` on the reference machine shows the
+11. **apt repository**: publishing starts the Pages workflow, which starts a second run on `main` (only
+    `main` may deploy); that one checks the new `.deb` and signs the repository. When it is green, `sudo apt update && apt policy galeo` on the reference machine shows the
     new version as the candidate. If the release was published by a token rather than by hand, the
     workflow doesn't start: run it with `gh workflow run pages.yml --ref main`.
 
