@@ -15,5 +15,7 @@ export default defineConfig({
     { name: 'no-network', testDir: 'tests/security/no-network', testMatch: '*.spec.ts', timeout: 90_000 },
     // Needs a `GALEO_PERF=1 npm run build`: only those builds carry the timing marks.
     { name: 'perf', testDir: 'tests/perf', testMatch: '*.spec.ts' },
+    // The website's screenshots (site/screenshots/); run by hand, never in CI.
+    { name: 'screenshots', testDir: 'tests/screenshots', testMatch: '*.spec.ts' },
   ],
 });

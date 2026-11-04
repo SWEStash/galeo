@@ -1,0 +1,11 @@
+# Search service settings
+service:
+  name: search
+  port: 8080
+index:
+  path: /var/lib/search/index
+  segments: 12
+ranking:
+  k1: 1.2
+  b: 0.75
+  recency_half_life_days: 30

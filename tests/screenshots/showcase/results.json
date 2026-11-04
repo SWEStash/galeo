@@ -1,0 +1,13 @@
+{
+  "run": "load-test-2026-11-02",
+  "target": { "p95_ms": 50, "qps": 1200 },
+  "passed": true,
+  "stages": [
+    { "name": "warm-up", "seconds": 60, "qps": 300, "p95_ms": 21.4, "errors": 0 },
+    { "name": "ramp", "seconds": 300, "qps": 900, "p95_ms": 34.8, "errors": 2 },
+    { "name": "peak", "seconds": 600, "qps": 1250, "p95_ms": 47.1, "errors": 5 },
+    { "name": "cool-down", "seconds": 60, "qps": 200, "p95_ms": 18.9, "errors": 0 }
+  ],
+  "hosts": ["search-1", "search-2", "search-3"],
+  "notes": null
+}

@@ -1,0 +1,84 @@
+2026-11-02T14:00:00Z INFO search query served latency_ms=8 shard=2
+2026-11-02T14:00:15Z INFO search index segment loaded latency_ms=69 shard=1
+2026-11-02T14:00:30Z WARN search slow query latency_ms=38 shard=3
+2026-11-02T14:00:45Z DEBUG search cache lookup latency_ms=12 shard=3
+2026-11-02T14:01:00Z INFO search index segment loaded latency_ms=89 shard=3
+2026-11-02T14:01:15Z DEBUG search parsed query latency_ms=69 shard=1
+2026-11-02T14:01:30Z DEBUG search cache lookup latency_ms=72 shard=3
+2026-11-02T14:01:45Z INFO search index segment loaded latency_ms=28 shard=3
+2026-11-02T14:02:00Z INFO search query served latency_ms=27 shard=1
+2026-11-02T14:02:15Z DEBUG search cache lookup latency_ms=76 shard=1
+2026-11-02T14:02:30Z INFO search checkpoint written latency_ms=71 shard=3
+2026-11-02T14:02:45Z DEBUG search parsed query latency_ms=18 shard=3
+2026-11-02T14:03:00Z INFO search query served latency_ms=29 shard=2
+2026-11-02T14:03:15Z INFO search query served latency_ms=69 shard=2
+2026-11-02T14:03:30Z DEBUG search cache lookup latency_ms=13 shard=2
+2026-11-02T14:03:45Z INFO search checkpoint written latency_ms=69 shard=3
+2026-11-02T14:04:00Z DEBUG search cache lookup latency_ms=40 shard=2
+2026-11-02T14:04:15Z DEBUG search parsed query latency_ms=69 shard=1
+2026-11-02T14:04:30Z DEBUG search parsed query latency_ms=76 shard=1
+2026-11-02T14:04:45Z DEBUG search cache lookup latency_ms=58 shard=1
+2026-11-02T14:05:00Z DEBUG search parsed query latency_ms=45 shard=1
+2026-11-02T14:05:15Z ERROR search shard timeout latency_ms=59 shard=1
+    at Shard.query (shard.ts:118:11)
+2026-11-02T14:05:30Z INFO search checkpoint written latency_ms=43 shard=1
+2026-11-02T14:05:45Z INFO search checkpoint written latency_ms=87 shard=3
+2026-11-02T14:06:00Z INFO search query served latency_ms=37 shard=1
+2026-11-02T14:06:15Z DEBUG search cache lookup latency_ms=17 shard=2
+2026-11-02T14:06:30Z DEBUG search cache lookup latency_ms=90 shard=1
+2026-11-02T14:06:45Z INFO search checkpoint written latency_ms=60 shard=3
+2026-11-02T14:07:00Z DEBUG search parsed query latency_ms=58 shard=1
+2026-11-02T14:07:15Z INFO search index segment loaded latency_ms=16 shard=3
+2026-11-02T14:07:30Z INFO search query served latency_ms=48 shard=3
+2026-11-02T14:07:45Z DEBUG search parsed query latency_ms=7 shard=2
+2026-11-02T14:08:00Z INFO search checkpoint written latency_ms=84 shard=2
+2026-11-02T14:08:15Z DEBUG search cache lookup latency_ms=19 shard=1
+2026-11-02T14:08:30Z INFO search query served latency_ms=38 shard=2
+2026-11-02T14:08:45Z INFO search query served latency_ms=39 shard=1
+2026-11-02T14:09:00Z DEBUG search parsed query latency_ms=56 shard=1
+2026-11-02T14:09:15Z DEBUG search parsed query latency_ms=46 shard=1
+2026-11-02T14:09:30Z INFO search query served latency_ms=28 shard=2
+2026-11-02T14:09:45Z INFO search index segment loaded latency_ms=7 shard=3
+2026-11-02T14:10:00Z INFO search index segment loaded latency_ms=15 shard=3
+2026-11-02T14:10:15Z INFO search query served latency_ms=38 shard=1
+2026-11-02T14:10:30Z DEBUG search cache lookup latency_ms=48 shard=3
+2026-11-02T14:10:45Z DEBUG search parsed query latency_ms=84 shard=1
+2026-11-02T14:11:00Z INFO search checkpoint written latency_ms=35 shard=1
+2026-11-02T14:11:15Z INFO search index segment loaded latency_ms=11 shard=1
+2026-11-02T14:11:30Z INFO search index segment loaded latency_ms=85 shard=2
+2026-11-02T14:11:45Z DEBUG search cache lookup latency_ms=42 shard=2
+2026-11-02T14:12:00Z DEBUG search cache lookup latency_ms=39 shard=2
+2026-11-02T14:12:15Z INFO search index segment loaded latency_ms=9 shard=1
+2026-11-02T14:12:30Z INFO search checkpoint written latency_ms=69 shard=3
+2026-11-02T14:12:45Z INFO search checkpoint written latency_ms=65 shard=1
+2026-11-02T14:13:00Z DEBUG search cache lookup latency_ms=89 shard=3
+2026-11-02T14:13:15Z DEBUG search parsed query latency_ms=74 shard=2
+2026-11-02T14:13:30Z DEBUG search parsed query latency_ms=32 shard=1
+2026-11-02T14:13:45Z INFO search query served latency_ms=86 shard=1
+2026-11-02T14:14:00Z DEBUG search parsed query latency_ms=11 shard=1
+2026-11-02T14:14:15Z INFO search query served latency_ms=85 shard=3
+2026-11-02T14:14:30Z INFO search index segment loaded latency_ms=25 shard=1
+2026-11-02T14:14:45Z INFO search checkpoint written latency_ms=53 shard=3
+2026-11-02T14:15:00Z ERROR search shard timeout latency_ms=81 shard=1
+    at Shard.query (shard.ts:118:11)
+2026-11-02T14:15:15Z INFO search query served latency_ms=63 shard=1
+2026-11-02T14:15:30Z INFO search index segment loaded latency_ms=62 shard=1
+2026-11-02T14:15:45Z INFO search index segment loaded latency_ms=47 shard=3
+2026-11-02T14:16:00Z INFO search query served latency_ms=9 shard=2
+2026-11-02T14:16:15Z INFO search index segment loaded latency_ms=28 shard=1
+2026-11-02T14:16:30Z INFO search index segment loaded latency_ms=15 shard=2
+2026-11-02T14:16:45Z INFO search checkpoint written latency_ms=88 shard=1
+2026-11-02T14:17:00Z INFO search checkpoint written latency_ms=5 shard=1
+2026-11-02T14:17:15Z INFO search query served latency_ms=23 shard=2
+2026-11-02T14:17:30Z WARN search slow query latency_ms=55 shard=1
+2026-11-02T14:17:45Z INFO search index segment loaded latency_ms=85 shard=1
+2026-11-02T14:18:00Z INFO search checkpoint written latency_ms=72 shard=1
+2026-11-02T14:18:15Z ERROR search shard timeout latency_ms=46 shard=3
+    at Shard.query (shard.ts:118:11)
+2026-11-02T14:18:30Z DEBUG search cache lookup latency_ms=41 shard=3
+2026-11-02T14:18:45Z WARN search slow query latency_ms=10 shard=3
+2026-11-02T14:19:00Z DEBUG search parsed query latency_ms=69 shard=1
+2026-11-02T14:19:15Z DEBUG search cache lookup latency_ms=79 shard=3
+2026-11-02T14:19:30Z ERROR search shard timeout latency_ms=15 shard=1
+    at Shard.query (shard.ts:118:11)
+2026-11-02T14:19:45Z INFO search query served latency_ms=86 shard=2
