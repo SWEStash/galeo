@@ -1,9 +1,10 @@
 # PRD: galeo
 
 - **Author**: project owner
-- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15)
+- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29)
 - **Status**: Approved (2026-09-26)
-- **Target release**: v0.1 "reader", then v0.2 "editor", v0.3 "formats" and v0.4 "tabs"
+- **Target release**: v0.1 "reader", then v0.2 "editor", v0.3 "formats", v0.4 "tabs" and v0.5
+  "platforms"
 - **Related**: the decision records, UX specification, threat model, architecture —
   see [References](#references)
 
@@ -341,7 +342,8 @@ must not obstruct (plain files only, no sidecar metadata).
 
 ### Won't Have (v0.4)
 
-- Official macOS and Windows support: planned for v0.5 (owner, 2026-10-21).
+- Official macOS and Windows support: planned for v0.5 (owner, 2026-10-21), which shipped them as
+  unsigned previews ([ADR-027](decisions/ADR-027-macos-windows-previews.md)).
 - Optional Vim keybindings, spell check in edit mode and ticking task-list checkboxes in the
   rendered view: a later release (owner, 2026-10-21).
 - More diagram engines (Vega-Lite, Graphviz, D2, PlantUML): a later release (owner, 2026-10-21).
@@ -368,8 +370,8 @@ tests on each system check them.
    other supported files from Finder or Explorer, so that galeo works like it does on Linux.
    - AC: Double-clicking a file galeo is set to open, "Open With → galeo", and dropping a file on
      the app's icon open it in a tab of the running galeo; galeo never makes itself the default app.
-   - AC: The Windows installer can put `galeo` on `PATH`; on macOS, Settings can install a `galeo`
-     command, and remove it again.
+   - AC: Settings can install a `galeo` command, and remove it again: on Windows a `galeo.cmd` in a
+     folder already on `PATH`, on macOS one in `~/.local/bin`. The installer itself adds no command.
 3. **Same safety on every system.** As a user, I want galeo never to hand a file that would run as a
    program to my system's default app, so that a link in a document can't start one.
    - AC: "Open with default app" isn't offered for the types Windows runs or installs when they are
@@ -500,8 +502,8 @@ live in the [UX specification](design/ux.md).
   [ADR-005 — Profiles & sessions](decisions/ADR-005-profiles-and-session-persistence.md) ·
   [ADR-006 — Renderer UI framework](decisions/ADR-006-renderer-ui-framework.md) ·
   [ADR-007 — Platform seam](decisions/ADR-007-platform-seam.md) ·
-  [ADR-008 — Packaging & distribution](decisions/ADR-008-packaging-and-distribution.md) ·
-  [Architecture](ARCHITECTURE.md) · [Dependencies](dependencies.md)
+  [ADR-008 — Packaging & distribution](decisions/ADR-008-packaging-and-distribution.md); the later
+  ones are in [the decisions folder](decisions/) · [Architecture](ARCHITECTURE.md) · [Dependencies](dependencies.md)
 - [UX specification](design/ux.md) · [Threat model](security/threat-model.md) (its security
   requirements are part of this PRD's constraints)
 - The target site's rendering setup (Astro MDX, Shiki `github-light`/`github-dark`, remark-math + KaTeX)
