@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- The page loads nothing but its own stylesheet and images, and runs no script. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <title>galeo: a fast, private desktop viewer and editor</title>
+  <meta name="description" content="Read and edit Markdown, text, logs, JSON, CSV, YAML and more. galeo never connects to the network.">
+  <link rel="icon" href="galeo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="hero">
+    <img class="logo" src="galeo.svg" alt="" width="96" height="96">
+    <h1>galeo</h1>
+    <p class="tagline">A fast, private desktop viewer and editor for the plans, notes, logs and data
+      that coding-agent work produces. It <strong>never connects to the network</strong>.</p>
+    <p class="actions">
+      <a class="button" href="https://github.com/SWEStash/galeo/releases/latest">Download</a>
+      <a class="button secondary" href="https://github.com/SWEStash/galeo">Source on GitHub</a>
+    </p>
+    <p class="platforms">Linux (Ubuntu 24.04 and later, x86_64) · macOS and Windows previews · MIT licence</p>
+    <picture class="shot hero-shot">
+      <source srcset="screenshots/markdown-dark.png" media="(prefers-color-scheme: dark)">
+      <img src="screenshots/markdown-light.png" width="1280" height="800"
+           alt="galeo showing a rendered Markdown plan, with a JSON, a CSV, a log and a YAML file open in other tabs.">
+    </picture>
+  </header>
+
+  <main id="main">
+    <section aria-labelledby="what">
+      <h2 id="what">What it does</h2>
+      <div class="features">
+        <figure>
+          <!-- The other theme from the one the hero shows, so both are seen. -->
+          <picture>
+            <source srcset="screenshots/markdown-light.png" media="(prefers-color-scheme: dark)">
+            <img class="shot" src="screenshots/markdown-dark.png" width="1280" height="800" loading="lazy"
+                 alt="The same Markdown plan in the other colour theme.">
+          </picture>
+          <figcaption><strong>Reading.</strong> GitHub-style Markdown with code, math and Mermaid
+            diagrams. Files reload when they change on disk.</figcaption>
+        </figure>
+        <figure>
+          <img class="shot" src="screenshots/split-edit.png" width="1280" height="800" loading="lazy"
+               alt="Edit mode: the Markdown source on the left and its live preview on the right.">
+          <figcaption><strong>Editing.</strong> Raw text with a live split preview. Saving keeps the
+            file's encoding, line endings and permissions.</figcaption>
+        </figure>
+        <figure>
+          <img class="shot" src="screenshots/json-tree.png" width="1280" height="800" loading="lazy"
+               alt="A JSON file of load-test results shown as an expanded tree.">
+          <figcaption><strong>JSON as a tree.</strong> Move through it with the arrow keys, expand
+            or collapse everything, copy a node's path.</figcaption>
+        </figure>
+        <figure>
+          <img class="shot" src="screenshots/csv-table.png" width="1280" height="800" loading="lazy"
+               alt="A CSV file of requests shown as a table with numbered rows and a fixed header.">
+          <figcaption><strong>CSV and TSV as a table.</strong> The separator and header row are found
+            for you, and the header stays in view as you scroll.</figcaption>
+        </figure>
+        <figure>
+          <img class="shot" src="screenshots/log.png" width="1280" height="800" loading="lazy"
+               alt="A log file in the dark theme with level badges, coloured key=value pairs and tinted warning and error lines.">
+          <figcaption><strong>Logs.</strong> Level badges, coloured fields, and End follows a log that
+            keeps growing.</figcaption>
+        </figure>
+        <figure>
+          <img class="shot" src="screenshots/find-all.png" width="1280" height="800" loading="lazy"
+               alt="Find in all tabs listing the matches for p95 in a Markdown file and a JSON file.">
+          <figcaption><strong>Find in all tabs.</strong> Every match in the window's tabs, unsaved
+            ones included, one keystroke away.</figcaption>
+        </figure>
+        <figure>
+          <img class="shot" src="screenshots/tabs-left-palette.png" width="1280" height="800" loading="lazy"
+               alt="Tabs in a panel on the left, with the command palette open over the document.">
+          <figcaption><strong>Tabs, windows and profiles.</strong> Browser-like tabs, on top or on the
+            left, that move between windows. Sessions come back after a restart, and each project
+            can have its own profile.</figcaption>
+        </figure>
+      </div>
+      <p>YAML, TOML, JSON Lines and source code open highlighted. MDX renders with nothing in it
+        running.</p>
+    </section>
+
+    <section aria-labelledby="install">
+      <h2 id="install">Install</h2>
+      <h3>Ubuntu and Debian (.deb)</h3>
+      <p>Download <code>galeo_&lt;version&gt;_amd64.deb</code> from the
+        <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a>, then:</p>
+      <pre tabindex="0"><code>sudo apt install ./galeo_*_amd64.deb
+galeo README.md</code></pre>
+      <p>This puts <code>galeo</code> and the shorter <code>gal</code> on your <code>PATH</code> and
+        adds galeo to <em>Open With</em> for Markdown, text, logs, data files and source code.</p>
+      <h3>Other Linux distributions (AppImage)</h3>
+      <p>Make <code>galeo-&lt;version&gt;.AppImage</code> executable and run it. To get the
+        <code>galeo</code> command, use <strong>Settings → Install command-line launcher</strong>.</p>
+      <h3>macOS and Windows (previews)</h3>
+      <p>Releases also include builds for macOS (<code>.dmg</code>, <code>.zip</code>) and Windows
+        (setup and portable <code>.exe</code>), for x64 and Arm. They are tested in CI but unsigned
+        and unsupported, so Gatekeeper and SmartScreen warn the first time you start them.
+        <a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md#macos-and-windows-previews">Installing the previews</a>
+        shows how to get past the warnings.</p>
+      <p>Every package has a <code>SHA256SUMS</code> entry and a GitHub artifact attestation:
+        <a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md#checking-a-download">checking a download</a>.</p>
+    </section>
+
+    <section aria-labelledby="use">
+      <h2 id="use">Use it</h2>
+      <pre tabindex="0"><code>galeo notes.md plan.md          # open files in the last window used
+galeo --new-window plan.md      # in a new window
+galeo --profile acme plan.md    # in the "acme" profile</code></pre>
+      <p>You can also double-click a file, drop it on a window, or use quick open. On macOS, use Cmd
+        instead of Ctrl.</p>
+      <div class="table-wrap" role="region" aria-label="Shortcuts" tabindex="0">
+        <table>
+          <caption>A few of the shortcuts</caption>
+          <thead><tr><th scope="col">Action</th><th scope="col">Keys</th></tr></thead>
+          <tbody>
+            <tr><td>Quick open</td><td><kbd>Ctrl+P</kbd></td></tr>
+            <tr><td>Command palette</td><td><kbd>Ctrl+Shift+P</kbd></td></tr>
+            <tr><td>Edit mode</td><td><kbd>Ctrl+E</kbd></td></tr>
+            <tr><td>Split view</td><td><kbd>Ctrl+\</kbd></td></tr>
+            <tr><td>Rendered or source view</td><td><kbd>Ctrl+U</kbd></td></tr>
+            <tr><td>Find / find in all tabs</td><td><kbd>Ctrl+F</kbd> / <kbd>Ctrl+Shift+F</kbd></td></tr>
+            <tr><td>Search tabs / tab overview</td><td><kbd>Ctrl+Shift+A</kbd> / <kbd>Ctrl+Shift+E</kbd></td></tr>
+            <tr><td>Outline</td><td><kbd>Ctrl+Shift+O</kbd></td></tr>
+            <tr><td>Settings</td><td><kbd>Ctrl+,</kbd></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>The <a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md">usage guide</a> covers
+        everything else.</p>
+    </section>
+
+    <section aria-labelledby="private">
+      <h2 id="private">Private by design</h2>
+      <ul>
+        <li><strong>No network.</strong> galeo makes no connections at all: no telemetry, no update
+          checks, no remote images. A test proves it at the socket level.</li>
+        <li><strong>Documents can't run code.</strong> Rendered content is sanitized, scripts are
+          blocked, and links to the web open in your browser only when you click them.</li>
+        <li><strong>Sandboxed.</strong> Chromium's sandbox is on, and every release is audited
+          against a <a href="https://github.com/SWEStash/galeo/blob/main/docs/security/threat-model.md">threat model</a>.</li>
+      </ul>
+      <p>This page follows the same rule: no scripts, no trackers, nothing loaded from anywhere else.</p>
+    </section>
+  </main>
+
+  <footer>
+    <nav aria-label="Project links">
+      <a href="https://github.com/SWEStash/galeo/releases">Releases</a>
+      <a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md">Usage guide</a>
+      <a href="https://github.com/SWEStash/galeo/blob/main/docs/ARCHITECTURE.md">Architecture</a>
+      <a href="https://github.com/SWEStash/galeo/issues">Issues</a>
+      <a href="https://github.com/SWEStash/galeo/blob/main/LICENSE">MIT licence</a>
+    </nav>
+  </footer>
+</body>
+</html>

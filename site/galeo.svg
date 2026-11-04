@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- galeo: a page with a heading and two lines, in mint strokes on a dark tile. -->
+  <rect width="512" height="512" rx="112" fill="#0d1117"/>
+  <g fill="none" stroke="#a5f5d9" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M150 88 H318 L402 172 V404 Q402 424 382 424 H150 Q130 424 130 404 V108 Q130 88 150 88 Z"/>
+    <path d="M318 88 V152 Q318 172 338 172 H402"/>
+    <path d="M196 206 L182 290 M242 206 L228 290 M170 230 H258 M164 266 H252"/>
+    <path d="M176 342 H356 M176 382 H300"/>
+  </g>
+</svg>

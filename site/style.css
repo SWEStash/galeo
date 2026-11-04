@@ -1,0 +1,268 @@
+/* galeo's website. Colours are the app's own tokens (src/renderer/styles/tokens.css). */
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --border: #d1d9e0;
+  --link: #0969da;
+  --code-bg: #f6f8fa;
+  --focus: #0969da;
+  --button-bg: #0d1117;
+  --button-fg: #ffffff;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --border: #3d444d;
+    --link: #4493f8;
+    --code-bg: #161b22;
+    --focus: #4493f8;
+    --button-bg: #a5f5d9;
+    --button-fg: #0d1117;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  color: var(--fg);
+  font: 17px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: var(--link);
+}
+
+a:focus-visible,
+.button:focus-visible,
+pre:focus-visible,
+.table-wrap:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.skip {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.skip:focus {
+  top: 1rem;
+}
+
+.hero,
+main,
+footer {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.hero {
+  text-align: center;
+  padding-top: 4rem;
+}
+
+.logo {
+  display: block;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 3rem;
+  line-height: 1.1;
+  margin: 1rem 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.tagline {
+  font-size: 1.25rem;
+  max-width: 40rem;
+  margin: 0 auto 1.5rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 0 0 1rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.6rem 1.4rem;
+  border-radius: 6px;
+  border: 1px solid var(--button-bg);
+  background: var(--button-bg);
+  color: var(--button-fg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button.secondary {
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--border);
+}
+
+.platforms {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 2.5rem;
+}
+
+.shot,
+.hero-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.hero-shot img {
+  box-shadow: 0 12px 40px rgb(0 0 0 / 18%);
+}
+
+section {
+  padding-top: 3.5rem;
+}
+
+h2 {
+  font-size: 1.8rem;
+  margin: 0 0 1.25rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border);
+}
+
+h3 {
+  font-size: 1.15rem;
+  margin: 1.75rem 0 0.5rem;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 28rem), 1fr));
+  gap: 2rem;
+}
+
+figure {
+  margin: 0;
+}
+
+figcaption {
+  margin-top: 0.75rem;
+}
+
+code,
+kbd,
+pre {
+  font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+code {
+  background: var(--code-bg);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  font-size: 1em;
+}
+
+kbd {
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05em 0.4em;
+  white-space: nowrap;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+
+caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.4rem 1.5rem 0.4rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+ul {
+  padding-left: 1.25rem;
+}
+
+li {
+  margin-bottom: 0.5rem;
+}
+
+footer {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+  border-top: 1px solid var(--border);
+}
+
+footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  justify-content: center;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 40rem) {
+  .hero {
+    padding-top: 2.5rem;
+  }
+
+  h1 {
+    font-size: 2.4rem;
+  }
+
+  .tagline {
+    font-size: 1.1rem;
+  }
+}
