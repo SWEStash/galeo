@@ -53,7 +53,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | Package | Version | Licence | Last publish | Weekly dl | Role / notes |
 |---|---|---|---|---|---|
 | `react`, `react-dom` | 19.3.x | MIT | 2026-09-23 | 169 M | Chrome UI (ADR-006) |
-| `react-aria-components` | 1.21.x | Apache-2.0 | 2026-09-25 | 4.2 M | Accessible tabs, drag and drop, combobox, dialogs, menus (Adobe). Apache-2.0 NOTICE shipped in the about/licences view |
+| `react-aria-components` | 1.22.x | Apache-2.0 | 2026-09-25 | 4.2 M | Accessible tabs, drag and drop, combobox, dialogs, menus (Adobe). Apache-2.0 NOTICE shipped in the about/licences view |
 
 ### Runtime: renderer, rendering pipeline (worker, ADR-003)
 
@@ -103,7 +103,7 @@ installed as npm packages. They are plain assets with no code and change rarely.
 | `happy-dom` | 21.0.x | MIT | 2026-09 | DOM environment for the `renderer` vitest project. Lighter and faster than jsdom; renderer tests are unit-level, so its missing layout APIs don't matter (added 2026-09-26) |
 | `vitest` | 5.0.x | MIT | 2026-09-25 | Unit and renderer tests (Node ≥ 22.12; the project pins Node 24) |
 | `@playwright/test` | 1.64.x | Apache-2.0 | 2026-10-07 | End-to-end tests via Playwright's Electron support (`_electron`, which Playwright labels experimental) |
-| `@axe-core/playwright` | 4.13.x | MPL-2.0 (dev only) | 2026-09-02 | Accessibility checks in end-to-end tests |
+| `@axe-core/playwright` | 4.14.x | MPL-2.0 (dev only) | 2026-09-02 | Accessibility checks in end-to-end tests |
 | `husky`, `@commitlint/cli`, `@commitlint/config-conventional` | 9.1 / 21.2 / 21.2 | MIT | 2026-09 | Commit hooks + Conventional Commits |
 
 ### CI: GitHub Actions
@@ -112,15 +112,15 @@ Only GitHub's own Actions, each pinned by commit SHA (SR-10) and updated weekly 
 
 | Action | Version | Used in | Role |
 |---|---|---|---|
-| `actions/checkout` | 7.0.1 | CI, PR title, release | Check out the commit, without persisting credentials |
-| `actions/setup-node` | 7.1.0 | CI, PR title, release | Node from `.nvmrc` (CI caches npm; the release build doesn't) |
-| `actions/upload-artifact` | 7.0.2 | CI, release | Performance results and failure reports; the release packages for the next jobs |
-| `actions/download-artifact` | 8.0.2 | Release | Hands the built packages to the attest and release jobs, which hold the signing and write permissions (ADR-017, added 2026-10-14) |
-| `actions/attest-build-provenance` | 4.2.2 | Release | GitHub artifact attestations for the `.deb` and the AppImage (SR-10, ADR-017, added 2026-10-14) |
+| `actions/checkout` | 7.0.1 | CI, PR title, platforms, release | Check out the commit, without persisting credentials |
+| `actions/setup-node` | 7.1.0 | CI, PR title, platforms, release | Node from `.nvmrc` (CI caches npm; the release build doesn't) |
+| `actions/upload-artifact` | 7.0.2 | CI, platforms, release | Performance results and failure reports; the release packages for the next jobs |
+| `actions/download-artifact` | 8.0.2 | Platforms, release | Hands the built packages to the attest and release jobs, which hold the signing and write permissions (ADR-017, added 2026-10-14) |
+| `actions/attest-build-provenance` | 4.2.2 | Release | GitHub artifact attestations for every release package, the macOS and Windows previews included (SR-10, ADR-017, added 2026-10-14) |
 
 ## Own modules and built-ins
 
-Self-owned modules live under `core/` or `renderer/lib/`, with unit tests (they replace packages,
+Self-owned modules live under `src/core/`, `src/shared/` and `src/main/adapters/` (the build checks under `scripts/`), with unit tests (they replace packages,
 so they carry the tests those packages would have had).
 
 | Need | Own module / built-in | Replaces | Approx. size |
@@ -131,7 +131,7 @@ so they carry the tests those packages would have had).
 | Encoding detection | UTF-8 strict → BOM (UTF-16/32) → Windows-1252 fallback with a banner and "Reopen with encoding…"; decode with `TextDecoder` | `chardet` | ~40 lines |
 | Frontmatter display | Shown as a collapsible, syntax-highlighted YAML block (never parsed) | `yaml` | 0 |
 | Dev orchestration | `scripts/dev.mjs`: Vite watch builds + Electron restart on main/preload change; renderer hot reload via Vite's dev server | `electron-vite` | ~60 lines |
-| Import-boundary check (ADR-007) | `scripts/check-boundaries.mjs` scanning `import` specifiers per folder, plus value-import reachability of `zod` from the preload and renderer | `dependency-cruiser` (18 deps; needs the TS JS API, which TS 7 lacks) | ~200 lines |
+| Import-boundary check (ADR-007) | `scripts/check-boundaries.mjs` scanning `import` specifiers per folder, plus value-import reachability of `zod` from the preload and renderer | `dependency-cruiser` (18 deps; needs the TS JS API, which TS 7 lacks) | ~130 lines |
 | Unused-export check | `scripts/check-exports.mjs`: `import`/`export` statements in `src/`, `tests/`, `scripts/` and `build/` (scanning shared with the boundary check in `scripts/lib/source-scan.mjs`); unused locals come from the compiler | `knip`, `ts-prune` (need the TS JS API, which TS 7 lacks) | ~110 lines |
 | Docs reference check | `scripts/check-docs.mjs`: relative links and `#anchors` (slugs from `rehype-slug`, on the `remark-parse` and `remark-gfm` already used for rendering), ADR and SR ids, repository paths in code spans; never fetches web links | `remark-validate-links` | ~120 lines |
 | Decoding text | `TextDecoder` (WHATWG encodings) | — | — |
@@ -158,7 +158,7 @@ so they carry the tests those packages would have had).
 | Svelte, Solid, Lit | See ADR-006 |
 | Electron Forge | See ADR-008. Its `plugin-vite` is on 7.11.x (2026-07) |
 | `electron-vite` | Lags Vite (5.x supports Vite ≤ 7; 6.0 in beta since 2026-04 with open Vite 8 bugs, alex8088/electron-vite#894, #906, #925). Plain Vite 8 + own dev script instead |
-| `dependency-cruiser` | See "Built-ins instead of packages" |
+| `dependency-cruiser` | See "Own modules and built-ins" |
 
 ## Licence notices to ship
 
