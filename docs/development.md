@@ -1,6 +1,6 @@
 # Developing galeo
 
-galeo is a desktop reader and editor for Markdown/text/log files: Electron 45, all TypeScript, React 19
+galeo is a desktop reader and editor for Markdown, text, logs and data files: Electron 45, all TypeScript, React 19
 chrome, unified rendering pipeline in a worker, zero network. Linux is official; macOS and Windows
 are previews.
 
@@ -19,7 +19,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run test:e2e` | Playwright end-to-end tests against the built app (`npm run build` first) |
 | `npm run test:no-network` | Zero-network proof on Linux: the built app runs under `strace` and must make no network `connect()` (needs `strace`) |
 | `npm run test:perf` | Timings for cold start, tabs, diagrams, data views, a 100 MB log, find in all tabs, typing in split view, and memory (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the budgets, see [performance runs](#performance-runs) |
-| `npm run package` | Build, then package for the current OS into `release/` (Linux: `.deb` and AppImage) |
+| `npm run package` | Build, then package for the current OS into `release/` (Linux: `.deb` and AppImage; macOS: `.dmg` and `.zip`; Windows: setup and portable `.exe`) |
 | `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon, the licence notices |
 | `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop: wrap the Playwright commands and `verify:package` in it |
 | `npm run boundaries` | Check the import rules below (`scripts/check-boundaries.mjs`) |
