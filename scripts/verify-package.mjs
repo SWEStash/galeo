@@ -111,6 +111,12 @@ if (process.platform === 'linux') {
     else if (!script('postinst').includes(`cp -f '/opt/galeo/resources/mime.xml' '${target}'`)) failures.push(`mime: postinst doesn't copy it to ${target}`);
     else if (!script('postrm').includes(`rm -f '${target}'`)) failures.push(`mime: postrm doesn't remove ${target}`);
     else console.log('mime: the MDX type in resources, installed and removed by the .deb');
+
+    // The apt repository's key, where users' sources entries look for it (ADR-029).
+    const key = readFileSync(path.resolve(import.meta.dirname, '../packaging/linux/galeo-archive-keyring.asc'));
+    const shipped = spawnSync('sh', ['-c', `dpkg-deb --fsys-tarfile "$1" | tar -xO ./opt/galeo/resources/galeo-archive-keyring.asc`, 'sh', path.join(RELEASE, deb)]);
+    if (shipped.status !== 0 || !key.equals(shipped.stdout)) failures.push("apt key: the .deb's /opt/galeo/resources/galeo-archive-keyring.asc is not packaging/linux/galeo-archive-keyring.asc");
+    else console.log('apt key: the repository key, in the .deb where sources entries name it');
   }
 }
 

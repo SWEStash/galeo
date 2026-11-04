@@ -19,9 +19,11 @@ export default {
     // The hicolor sizes, named <size>x<size>.png; the window and the AppImage launcher use resources/icon.png.
     icon: 'packaging/icons/png',
     // The MDX type: the .deb's after-install copies it into /usr/share/mime, the AppImage launcher into ~/.local.
+    // The apt repository's public key: users' sources entries name the .deb's copy in Signed-By (ADR-029).
     extraResources: [
       { from: 'packaging/icons/png/256x256.png', to: 'icon.png' },
       { from: 'packaging/linux/galeo-mime.xml', to: 'mime.xml' },
+      { from: 'packaging/linux/galeo-archive-keyring.asc', to: 'galeo-archive-keyring.asc' },
     ],
     category: 'Utility',
     maintainer: 'SWEStash <swestash.admin@gmail.com>',
