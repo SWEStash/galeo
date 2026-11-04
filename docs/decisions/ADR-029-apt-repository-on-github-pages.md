@@ -23,7 +23,9 @@ What shapes the choice:
 - **One maintainer, no servers.** Whatever hosts the repository must need no machine to run and no account
   beyond GitHub.
 - **The release pipeline is already trusted.** Packages are built only in CI, with `SHA256SUMS` and GitHub
-  artifact attestations (ADR-017). The repository should add a signature over that, not a new build.
+  artifact attestations (ADR-017). The repository should add a signature over that, not a new build. This
+  answers ADR-017's revisit trigger for a new channel: the release workflow is unchanged, and the repository
+  takes its packages only after checking their checksums and attestations.
 - **Measured (2026-11-04).** GitHub Pages served the 0.5.0 `.deb` (107 MB) whole, with range requests and a
   10-minute cache. apt 3.2 on Ubuntu 26.04 accepted a repository signed with an ed25519 subkey, through both
   gpgv and Sequoia's sqv, and rejected a tampered index and a wrong key.

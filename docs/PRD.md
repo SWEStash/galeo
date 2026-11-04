@@ -1,7 +1,7 @@
 # PRD: galeo
 
 - **Author**: project owner
-- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29)
+- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29, apt updates 2026-11-04)
 - **Status**: Approved (2026-09-26)
 - **Target release**: v0.1 "reader", then v0.2 "editor", v0.3 "formats", v0.4 "tabs" and v0.5
   "platforms"
@@ -456,7 +456,8 @@ live in the [UX specification](design/ux.md).
   `.desktop` file with MIME associations. AppImage as a secondary portable build for
   distributions without user-namespace restrictions (on Ubuntu 24.04+ it runs only if the user opts in to unsandboxed mode, with a warning). Previews
   (unsigned, unsupported, from v0.5, ADR-027): macOS `.dmg`/`.zip` (x64, arm64), Windows NSIS installer and
-  portable build (x64, arm64). No npm
+  portable build (x64, arm64). Updates for the `.deb` through a signed apt repository the user opts in to,
+  from the first release that ships its key (ADR-029); galeo itself still never checks for updates. No npm
   package in v0.1 (it could not offer desktop integration or the hardened binary).
 - **Accessibility**: full keyboard operation; visible focus; ARIA roles for tabs; bundled themes
   WCAG 2.2 AA contrast; honours reduced-motion.
