@@ -1,9 +1,9 @@
 # galeo — UX specification
 
 - **Status**: Approved (2026-09-26)
-- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 additions 2026-10-15)
-- **Covers**: v0.1 "reader" (and v0.2 "editor", v0.3 "formats" where marked)
-- **Related**: [PRD](../PRD.md) · ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[008](../decisions/ADR-008-packaging-and-distribution.md)
+- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 additions 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29)
+- **Covers**: v0.1 "reader" (and v0.2 "editor" to v0.5 "platforms" where marked)
+- **Related**: [PRD](../PRD.md) · ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[028](../decisions/ADR-028-default-app-known-types-on-macos-windows.md)
   (notably [002](../decisions/ADR-002-window-and-tab-model.md), [004](../decisions/ADR-004-security-and-zero-network.md),
   [005](../decisions/ADR-005-profiles-and-session-persistence.md), [006](../decisions/ADR-006-renderer-ui-framework.md)) ·
   [Threat model](../security/threat-model.md)
@@ -514,8 +514,8 @@ the native menu on the active tab.
 | Find in all tabs (v0.4) | Ctrl+Shift+F | F19 |
 | Fold / unfold the block at the cursor (v0.3) | Ctrl+Shift+[ / Ctrl+Shift+] (macOS: Cmd+Alt+[ / Cmd+Alt+]) | Source view of a highlighted file; also the gutter markers. CodeMirror's fold-all keys are Ctrl+Alt, the desktop's, so they are left out |
 
-On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`) and platform conventions apply
-(Cmd+Q quits, Cmd+, opens settings). Shortcuts are customisable in a later release; v0.1 ships
+On macOS previews, Ctrl maps to Cmd (Electron `CmdOrCtrl`), except Ctrl+Tab and Ctrl+Shift+Tab,
+and platform conventions apply (Cmd+Q quits, Cmd+, opens settings, Cmd+arrows in the table). Shortcuts are customisable in a later release; v0.1 ships
 this map only.
 
 ## 6. Theming and typography
