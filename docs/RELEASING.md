@@ -2,8 +2,10 @@
 
 galeo ships as a `.deb` (official) and an AppImage on GitHub Releases
 ([ADR-008](decisions/ADR-008-packaging-and-distribution.md)), with unsigned macOS and Windows
-previews beside them ([ADR-027](decisions/ADR-027-macos-windows-previews.md)). There is no
-auto-update: a new release is how fixes, Electron's included, reach users.
+previews beside them ([ADR-027](decisions/ADR-027-macos-windows-previews.md)). galeo has no
+auto-update: a new release is how fixes, Electron's included, reach users. Users who added the apt
+repository get it with `apt upgrade`; publishing a release updates the repository
+([ADR-029](decisions/ADR-029-apt-repository-on-github-pages.md)).
 
 ## Keeping Electron and dependencies current
 
@@ -69,3 +71,40 @@ Then cut it:
    publish it.
 10. **Website**: if the UI changed visibly, retake the [website's screenshots](development.md#website)
     and commit them; the page links to the latest release, so nothing else changes.
+11. **apt repository**: publishing starts the Pages workflow, which checks the new `.deb` and signs the
+    repository. When it is green, `sudo apt update && apt policy galeo` on the reference machine shows the
+    new version as the candidate. If the release was published by a token rather than by hand, the
+    workflow doesn't start: run it with `gh workflow run pages.yml --ref main`.
+
+## The apt repository's key
+
+The repository is signed by an ed25519 key made only for it
+([ADR-029](decisions/ADR-029-apt-repository-on-github-pages.md)), fingerprint
+`0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629`, made on 2026-11-04. Its signing subkeys: CI
+`7161 D5E2 348F 3879 A762 784E 8D6C 14A4 7CC8 1C1B`, standby `1A6B F2CF BFDE 0021 55C1 6CC3 2422 FDA4 EBD5 5664`. Its primary key, a **standby** signing
+subkey and the revocation certificate are on the owner's offline media; CI holds only the **CI** signing
+subkey, as the `APT_SIGNING_KEY` secret of the `github-pages` environment. The public key is
+`packaging/linux/galeo-archive-keyring.asc`: the `.deb` installs it, and users' sources entries name it, so a
+change to it reaches them with the next upgrade.
+
+To work with the offline key: `export GNUPGHOME=<media>/galeo-apt-gnupg`.
+
+**If the CI subkey leaks, or might have:**
+1. Delete the secret at once: `gh secret delete APT_SIGNING_KEY --env github-pages --repo SWEStash/galeo`.
+   The Pages workflow then fails at signing, and the live repository stays as it was.
+2. With the offline key, revoke the CI subkey (`gpg --edit-key <fingerprint>`, then `key 1`, `revkey`,
+   `save`), add a new signing subkey (`gpg --quick-add-key <fingerprint> ed25519 sign never`), and export the
+   public key to `packaging/linux/galeo-archive-keyring.asc`.
+3. Release a patch version carrying that key, and sign its repository **with the standby subkey**, which
+   users already trust. For this one deploy, set `APT_SIGNING_KEY` to
+   `gpg --armor --export-secret-subkeys '<standby subkey fingerprint>!'` and `APT_SIGNING_PASSPHRASE` to the
+   offline key's passphrase (both with `gh secret set … --env github-pages --repo SWEStash/galeo`).
+4. Once that deploy is green, delete `APT_SIGNING_PASSPHRASE`, set the new CI subkey as `APT_SIGNING_KEY`
+   (exported without a passphrase, as in the first key procedure), and add a new standby subkey for the next
+   time (its public key goes out with the next release).
+5. Say in the release notes what happened, which subkey was revoked, and that users should upgrade now.
+
+**If the primary key or both signing subkeys are lost or leak:** delete the secret, publish the revocation
+certificate (`gpg --import <media>/galeo-apt-gnupg/openpgp-revocs.d/<fingerprint>.rev`, then export the public
+key), and tell users in the release notes and on the website to remove the repository. A new key needs users
+to install a `.deb` by hand again, as on first setup.
