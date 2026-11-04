@@ -112,11 +112,13 @@ Only GitHub's own Actions, each pinned by commit SHA (SR-10) and updated weekly 
 
 | Action | Version | Used in | Role |
 |---|---|---|---|
-| `actions/checkout` | 7.0.1 | CI, PR title, platforms, release | Check out the commit, without persisting credentials |
+| `actions/checkout` | 7.0.1 | CI, PR title, platforms, release, Pages | Check out the commit, without persisting credentials |
 | `actions/setup-node` | 7.1.0 | CI, PR title, platforms, release | Node from `.nvmrc` (CI caches npm; the release build doesn't) |
 | `actions/upload-artifact` | 7.0.2 | CI, platforms, release | Performance results and failure reports; the release packages for the next jobs |
 | `actions/download-artifact` | 8.0.2 | Platforms, release | Hands the built packages to the attest and release jobs, which hold the signing and write permissions (ADR-017, added 2026-10-14) |
 | `actions/attest-build-provenance` | 4.2.2 | Release | GitHub artifact attestations for every release package, the macOS and Windows previews included (SR-10, ADR-017, added 2026-10-14) |
+| `actions/upload-pages-artifact` | 5.0.0 | Pages | Packs `site/` for GitHub Pages (added 2026-11-03) |
+| `actions/deploy-pages` | 5.0.1 | Pages | Publishes it, from a job that alone holds the Pages write permission (added 2026-11-03) |
 
 ## Own modules and built-ins
 
