@@ -249,7 +249,7 @@ the file into the window in front of you) when you want it here.
   reading, a click ticks the box in the file at once: see Reading.)
 - **Tab** indents: at the cursor it adds the file's own indent (a tab, or its two or four spaces);
   with lines selected it indents them all. **Shift+Tab** takes one level off. To move the focus
-  out of the editor with the keyboard, press **Esc** then **Tab**, or **Ctrl+M** (Shift+Option+M on
+  out of the editor with the keyboard, press **Esc** then **Tab**, or **Ctrl+M** (Control+M on
   macOS), which switches Tab between indenting and moving the focus. With the find bar open, the
   first Esc closes it.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its

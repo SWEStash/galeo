@@ -1,4 +1,4 @@
-import { addCursorAbove, addCursorBelow, historyField } from '@codemirror/commands';
+import { addCursorAbove, addCursorBelow, historyField, toggleTabFocusMode } from '@codemirror/commands';
 import { selectNextOccurrence, selectSelectionMatches } from '@codemirror/search';
 import { foldCode, syntaxTree, unfoldCode } from '@codemirror/language';
 import { EditorSelection, EditorState } from '@codemirror/state';
@@ -339,6 +339,10 @@ describe('createSourceView editing', () => {
       expect(press(source)).toBe(false);
       expect(source.text()).toBe('a');
       source.destroy();
+    });
+
+    it("toggles Tab between indenting and moving the focus with Control+M on macOS too, where CodeMirror's Shift+Option+M types a character", () => {
+      expect(editingKeys.some((binding) => binding.mac === 'Ctrl-m' && binding.run === toggleTabFocusMode)).toBe(true);
     });
 
     it('says how to leave the editor with the keyboard, only while editing (WCAG 2.1.2)', () => {

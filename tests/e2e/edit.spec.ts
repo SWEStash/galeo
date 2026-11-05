@@ -9,7 +9,7 @@ import { appDirs, killApp, launchApp, launchSecond, tempHome, removeTempHome } f
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const indicator = (window: Page, words: string) => window.locator(`.tab-indicator[data-indicator="${words}"]`);
 /** CodeMirror's switch between Tab indenting and Tab moving the focus. */
-const TAB_FOCUS_KEY = process.platform === 'darwin' ? 'Shift+Alt+M' : 'Control+M'; // portable: chosen per system
+const TAB_FOCUS_KEY = 'Control+M'; // portable: the real Control key on every system, macOS included
 
 test('Ctrl+E edits the shown file, Ctrl+S saves it with its own line endings, and Ctrl+E reads again', async () => {
   const dir = tempHome();

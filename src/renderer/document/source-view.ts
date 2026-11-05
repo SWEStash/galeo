@@ -1,4 +1,4 @@
-import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, indentLess, indentMore, standardKeymap } from '@codemirror/commands';
+import { addCursorAbove, addCursorBelow, defaultKeymap, history, historyKeymap, indentLess, indentMore, standardKeymap, toggleTabFocusMode } from '@codemirror/commands';
 import { markdown } from '@codemirror/lang-markdown';
 import { foldGutter, foldKeymap, indentUnit, LanguageDescription, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import {
@@ -119,6 +119,8 @@ const indentOrInsert: Command = (view) => {
 export const editingKeys: readonly KeyBinding[] = [
   // Escape then Tab, or Ctrl+M (CodeMirror's tab focus mode), moves the focus on instead (WCAG 2.1.2).
   { key: 'Tab', run: indentOrInsert, shift: indentLess },
+  // CodeMirror's macOS key for it, Shift+Option+M, types a character there and never reaches it; Control+M does.
+  { mac: 'Ctrl-m', run: toggleTabFocusMode },
   ...defaultKeymap.filter((binding) => !DESKTOP_KEYS.has(binding.key ?? '')),
   ...historyKeymap,
   { key: 'Shift-Alt-ArrowUp', run: addCursorAbove },
@@ -127,9 +129,9 @@ export const editingKeys: readonly KeyBinding[] = [
   { key: 'Mod-Shift-l', run: selectSelectionMatches },
 ];
 
-/** What a screen reader hears about Tab in edit mode; on macOS CodeMirror's toggle is Shift+Option+M. */
+/** What a screen reader hears about Tab in edit mode. */
 const leaveEditor = () =>
-  `Tab indents. Press Escape then Tab, or ${document.documentElement.dataset['platform'] === 'darwin' ? 'Shift+Option+M' : 'Ctrl+M'}, to move focus.`;
+  `Tab indents. Press Escape then Tab, or ${document.documentElement.dataset['platform'] === 'darwin' ? 'Control+M' : 'Ctrl+M'}, to move focus.`;
 
 // Several cursors (Ctrl+click, Alt+drag, the keys above) need drawing: the browser shows only one.
 // The indent is the file's, taken when edit mode starts.
