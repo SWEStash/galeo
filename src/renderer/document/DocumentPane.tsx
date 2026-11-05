@@ -101,6 +101,8 @@ export interface DocumentPaneProps {
   recovered: Recovered['kept'];
   /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
   onReread: () => void;
+  /** Main's list of the document's links to files that don't exist (broken link marks). */
+  onMissingLinks: () => Promise<string[]>;
   /** Reading: asks main to tick the task box on a line of the version the page loaded (ADR-031). */
   onToggleTask: (line: number, base: string) => Promise<TaskToggleResult>;
 }
@@ -168,6 +170,7 @@ export function DocumentPane({
   recovered,
   onReread,
   onToggleTask,
+  onMissingLinks,
   tableDefaults,
 }: DocumentPaneProps) {
   const [dirty, setDirty] = useState(false);
@@ -752,6 +755,7 @@ export function DocumentPane({
           changes={shownChanges}
           onChangeMarks={setChangeCount}
           onToggleTask={article ? toggleTask : undefined}
+          onMissingLinks={article ? onMissingLinks : undefined}
           rendered={rendered}
           source={{ text: dirty ? pinnedText : ready.text, language: sourceLanguage(ready.format, ready.path) }}
           editable={editing}

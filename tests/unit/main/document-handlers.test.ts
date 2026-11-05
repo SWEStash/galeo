@@ -308,3 +308,11 @@ describe('documents.toggleTask (ADR-031)', () => {
     await expect(handlers['documents.toggleTask']([settings.id, 1, `#${plan}`], event)).rejects.toThrow();
   });
 });
+
+describe('documents.missingLinks', () => {
+  it("answers the read document's links to files that don't exist", async () => {
+    const { handlers, id } = setup({ '/d/plan.md': '[here](notes.md) [gone](gone.md) [web](https://example.com)\n', '/d/notes.md': 'x' });
+    await handlers['documents.read']([id], event);
+    expect(await handlers['documents.missingLinks']([id], event)).toEqual(['gone.md']);
+  });
+});

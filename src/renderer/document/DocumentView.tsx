@@ -79,6 +79,8 @@ export interface DocumentViewProps {
   pendingFind?: FindRequest | null;
   /** Where `pendingFind` landed. */
   onPendingFind?: ((result: FindResult) => void) | undefined;
+  /** Main's list of the document's links to files that don't exist, asked after each render, to mark. */
+  onMissingLinks?: (() => Promise<string[]>) | undefined;
   /** Reading: the reader ticked the task box of the item on this source line; main does it (ADR-031). */
   onToggleTask?: ((line: number) => void) | undefined;
   /** What changed since the reader last looked (ADR-030), to mark; null for none. */
@@ -190,6 +192,7 @@ export function DocumentView({
   changes = null,
   onChangeMarks,
   onToggleTask,
+  onMissingLinks,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -346,6 +349,26 @@ export function DocumentView({
     if (showsRendered(view)) markDocumentPaint();
   }, [rendered]);
 
+
+  // Links to files that don't exist, as main finds them among the document's own links: marked, never colour alone.
+  useEffect(() => {
+    if (!rendered || !('html' in rendered) || !onMissingLinks) return;
+    let current = true;
+    void onMissingLinks().then((missing) => {
+      if (!current) return;
+      // Each render is a fresh article: only marks to add, never ones to take away.
+      const gone = new Set(missing);
+      for (const link of host().article.querySelectorAll<HTMLAnchorElement>('a[href]')) {
+        if (!gone.has(link.getAttribute('href')!)) continue;
+        link.classList.add('galeo-link-missing');
+        link.setAttribute('aria-description', 'file not found');
+        link.title = link.title ? `${link.title} (file not found)` : 'File not found';
+      }
+    });
+    return () => {
+      current = false;
+    };
+  }, [rendered, onMissingLinks]);
 
   // Local images wait for main: the page never names a file to load itself (ADR-004).
   useEffect(() => {

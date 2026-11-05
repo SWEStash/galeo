@@ -37,7 +37,7 @@ describe.each(Object.entries(SCHEMES))('the %s theme (UX §6, WCAG 2.1 AA)', (_s
     for (const token of syntax) for (const surface of SURFACES) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(['focus', 'control-border', 'changed'])('%s, which identifies a control or a change mark, stands out 3:1 or more', (token) => {
+  it.each(['focus', 'control-border', 'changed', 'link-missing'])('%s, which identifies a control or a mark, stands out 3:1 or more', (token) => {
     for (const surface of SURFACES) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(3);
   });
 

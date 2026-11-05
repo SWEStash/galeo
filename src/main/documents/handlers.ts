@@ -24,6 +24,7 @@ type DocumentChannels =
   | 'documents.forward'
   | 'documents.resolveImage'
   | 'documents.toggleTask'
+  | 'documents.missingLinks'
   | 'documents.save'
   | 'documents.dirty'
   | 'documents.leaveEdit'
@@ -108,6 +109,7 @@ export function documentHandlers(deps: {
     'documents.back': ([id], event) => links.back(id, event.sender.id),
     'documents.forward': ([id], event) => links.forward(id, event.sender.id),
     'documents.resolveImage': ([id, src], event) => links.resolveImage(id, event.sender.id, src),
+    'documents.missingLinks': ([id], event) => links.missingLinks(id, event.sender.id),
     'documents.save': async ([id, text, base], event) => {
       const window = event.sender.id;
       const record = records.get(id, window);

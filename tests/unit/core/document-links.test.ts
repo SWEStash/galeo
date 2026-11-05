@@ -277,3 +277,27 @@ describe('DocumentLinks.resolveImage', () => {
     expect(await links.resolveImage(id, 2, 'pics/dot.png')).toEqual({ kind: 'refused', reason: 'not-in-document' });
   });
 });
+
+describe('DocumentLinks.missingLinks', () => {
+  const only = (links: string[]) => () => ({ links, images: [], tasks: [] });
+
+  it("lists the document's links to local files that don't exist, in order, and nothing else", async () => {
+    const { links, id } = setup({
+      references: only(['notes.txt', 'gone.md', 'pics/dot.png', '#top', 'https://example.com/x', 'folder.png', 'also-gone.md#part', 'mailto:a@b.c']),
+    });
+    expect(await links.missingLinks(id, 1)).toEqual(['gone.md', 'also-gone.md#part']);
+  });
+
+  it('checks at most 500 file links', async () => {
+    const { links, id } = setup({ references: only(Array.from({ length: 600 }, (_, n) => `missing-${n}.md`)) });
+    const missing = await links.missingLinks(id, 1);
+    expect(missing).toHaveLength(500);
+    expect(missing.at(-1)).toBe('missing-499.md');
+  });
+
+  it("answers nothing for a tab it doesn't know, or another window's", async () => {
+    const { links, id } = setup({ references: only(['gone.md']) });
+    expect(await links.missingLinks('nope', 1)).toEqual([]);
+    expect(await links.missingLinks(id, 2)).toEqual([]);
+  });
+});

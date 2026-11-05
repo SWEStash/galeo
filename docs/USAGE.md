@@ -187,6 +187,8 @@ the file into the window in front of you) when you want it here.
   the arrow keys; double-click or Home puts it back at half. Ctrl+\ again goes back to the view
   you had; Ctrl+U goes to the rendered view. A window narrower than about 700 px shows one view
   until it widens. A tab keeps its split and divider across restarts.
+- **Broken links**: a link to a file that doesn't exist has a wavy red underline and says "File not
+  found"; the marks are checked again whenever the document changes.
 - **Tick task boxes**: click a task box (or press Space on it) to tick or untick it; galeo writes
   the file at once, keeping its encoding and line endings, and doesn't mark your tick as a change.
   If the file changed on disk meanwhile, nothing is written: tick again once it shows.

@@ -1,6 +1,8 @@
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
-import { launchApp } from '../helpers/launch';
+import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { saveFile } from '../helpers/save';
 
 const index = path.resolve(import.meta.dirname, '../fixtures/docs/links/index.md');
 const env = { GALEO_TEST_EXTERNAL: 'record', GALEO_TEST_BURST_ANSWER: 'block' };
@@ -139,5 +141,27 @@ test('a link to a missing file opens it in the missing state', async () => {
     await expect(window.getByTestId('document-state')).toHaveAttribute('data-state', 'missing');
   } finally {
     await close();
+  }
+});
+
+test("a link to a file that doesn't exist is marked, and the mark follows the document", async () => {
+  const dir = tempHome();
+  const doc = path.join(dir, 'plan.md');
+  writeFileSync(path.join(dir, 'here.md'), '# Here\n');
+  writeFileSync(doc, '# Plan\n\nSee [here](here.md), [gone](gone.md) and [the web](https://example.com).\n');
+  const { window, close } = await launchApp(['--', doc], { home: dir });
+  try {
+    const view = window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
+    await expect(view.locator('a.galeo-link-missing')).toHaveText(['gone']);
+    await expect(view.locator('a.galeo-link-missing')).toHaveAttribute('aria-description', 'file not found');
+    await expect(view.getByRole('link', { name: 'here' })).not.toHaveClass(/galeo-link-missing/);
+
+    writeFileSync(path.join(dir, 'gone.md'), '# Back\n');
+    saveFile(doc, '# Plan\n\nSee [here](here.md), [gone](gone.md) and [the web](https://example.com).\n\nMore.\n');
+    await expect(view.locator('p').last()).toHaveText('More.');
+    await expect(view.locator('a.galeo-link-missing')).toHaveCount(0);
+  } finally {
+    await close();
+    removeTempHome(dir);
   }
 });

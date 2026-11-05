@@ -255,7 +255,10 @@ mode closes the replace row and keeps find open.
   Only links actually present in the document can be opened (ADR-004). **Burst guard**: if one
   document triggers more than 3 external opens within 10 s, a dialog asks "This document is
   opening many links. Allow?" (Allow / Block for this tab).
-- Links to missing files → open a tab in the *missing* state.
+- Links to missing files → open a tab in the *missing* state. (v0.6) Before that, a link whose local
+  file doesn't exist shows a wavy underline (`--galeo-color-link-missing`), "File not found" as its
+  tooltip and "file not found" for screen readers; main checks the document's own links after each
+  render (at most 500), so the marks follow the document as it changes.
 - Images: local relative images render; remote images show a placeholder with the host name and
   "remote content blocked" (never fetched).
 

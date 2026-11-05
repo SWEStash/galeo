@@ -33,6 +33,8 @@
   --galeo-color-log-info: #0969da;
   /* Change marks (ADR-030): the bar beside a block or line that changed since the reader last looked; 3:1. */
   --galeo-color-changed: #9a6700;
+  /* The wavy underline of a link to a file that doesn't exist; 3:1. */
+  --galeo-color-link-missing: #d1242f;
   /* GitHub-style callouts: the border, icon and title of each type; each 4.5:1 on bg and code-bg. */
   --galeo-color-callout-note: #0969da;
   --galeo-color-callout-tip: #1a7f37;
@@ -66,6 +68,7 @@
   --galeo-color-log-warn: #d29922;
   --galeo-color-log-info: #4493f8;
   --galeo-color-changed: #d29922;
+  --galeo-color-link-missing: #f85149;
   --galeo-color-callout-note: #4493f8;
   --galeo-color-callout-tip: #3fb950;
   --galeo-color-callout-important: #ab7df8;

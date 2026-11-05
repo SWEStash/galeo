@@ -4,13 +4,16 @@ import type { WorkerFormat } from '../../shared/formats';
 import type { References } from '../../shared/markdown/references';
 import { classifyLink, type LinkContext } from '../links/classify';
 import type { ExternalOpenLimiter } from '../links/limiter';
-import { FsError, type FileSystem, type OsShell, type TaskRunner } from '../ports';
+import { FsError, isMissing, type FileSystem, type OsShell, type TaskRunner } from '../ports';
 import { IMAGE_MAX_BYTES, imageTypeOf, type ImageGrants } from './images';
 import type { InputCredits } from './input-credits';
 import type { HistoryEntry, TabRegistry } from '../tabs/registry';
 
 /** Extraction runs in a worker thread; hostile Markdown gets this long before it's abandoned. */
 const REFERENCES_TIMEOUT_MS = 2000;
+/** Broken link marks check at most this many file links of a document, this many at a time (SR-14). */
+const MISSING_CHECK_MAX = 500;
+const MISSING_CHECK_PARALLEL = 16;
 
 interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
   records: TabRegistry;
@@ -82,6 +85,34 @@ export class DocumentLinks {
   }
 
   /** Grants a local image the document shows, as an opaque URL the page can load (ADR-004). */
+  /**
+   * The document's links to local files that don't exist, in document order (broken link marks):
+   * only links of the text main read itself, so the page can't name a path; no content is read.
+   */
+  async missingLinks(id: string, window: number): Promise<string[]> {
+    const found = await this.references(id, window);
+    if (!found || found === 'unavailable') return [];
+    const files = found.references.links
+      .map((href) => ({ href, target: classifyLink(href, { ...this.deps, documentPath: found.record.path }) }))
+      .filter((link): link is { href: string; target: { kind: 'file'; path: string; anchor: string | null } } => link.target.kind === 'file')
+      .slice(0, MISSING_CHECK_MAX);
+    const missing = new Array<boolean>(files.length).fill(false);
+    let next = 0;
+    const check = async () => {
+      while (next < files.length) {
+        const at = next++;
+        try {
+          await this.deps.fs.stat(files[at]!.target.path);
+        } catch (error) {
+          if (isMissing(error)) missing[at] = true;
+          else if (!(error instanceof FsError)) throw error;
+        }
+      }
+    };
+    await Promise.all(Array.from({ length: MISSING_CHECK_PARALLEL }, check));
+    return files.flatMap((file, at) => (missing[at] ? [file.href] : []));
+  }
+
   async resolveImage(id: string, window: number, src: string): Promise<ImageResult> {
     const found = await this.references(id, window);
     if (found === 'unavailable') return { kind: 'refused', reason: 'unavailable' };

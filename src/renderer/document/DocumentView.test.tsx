@@ -100,6 +100,22 @@ describe('DocumentView', () => {
     expect(handle.current!.stepChange(1)).toBeNull();
   });
 
+  it("marks the links main says lead to files that don't exist, and follows a new render", async () => {
+    const onMissingLinks = vi.fn().mockResolvedValueOnce(['gone.md']).mockResolvedValueOnce([]);
+    const html = '<p><a href="gone.md">gone</a> <a href="here.md">here</a></p>';
+    const container = await render(<DocumentView {...props} rendered={{ html }} onMissingLinks={onMissingLinks} scheme="light" />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('a.galeo-link-missing')?.textContent).toBe('gone'));
+    const gone = shadow.querySelector('a.galeo-link-missing')!;
+    expect(gone.getAttribute('aria-description')).toBe('file not found');
+    expect(gone.getAttribute('title')).toBe('File not found');
+    expect(shadow.querySelectorAll('.galeo-link-missing')).toHaveLength(1);
+
+    await act(async () => root!.render(<DocumentView {...props} rendered={{ html: `${html} ` }} onMissingLinks={onMissingLinks} scheme="light" />));
+    await vi.waitFor(() => expect(onMissingLinks).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(shadow.querySelector('.galeo-link-missing')).toBeNull());
+  });
+
   it('updates the content and the scheme in place', async () => {
     const container = await render(<DocumentView {...props} rendered={{ html: '<p>a</p>' }} scheme="light" />);
     const shadow = shadowOf(container);

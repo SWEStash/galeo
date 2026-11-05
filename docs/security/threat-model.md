@@ -361,7 +361,9 @@ once per key the reader presses. Link
 and image extraction runs in a worker thread in main with a time budget, so hostile input cannot
 stall main.
 Local images are served only after main finds their `src` in the document's image set, through
-opaque `galeo://file/<id>` URLs. Reads are limited to regular files under the size caps.
+opaque `galeo://file/<id>` URLs. Broken link marks (v0.6, `documents.missingLinks`) stat only the
+local file targets of links in the text main read itself (at most 500, 16 at a time) and answer
+which don't exist: the page learns nothing about paths its document doesn't name, and no content. Reads are limited to regular files under the size caps.
 Writes (v0.2) are allowed only to paths that main has marked **edit-enabled** after the user's
 explicit edit command on that tab, observed by main itself (a `before-input-event` key such as
 Ctrl+E, or a native menu item). The renderer cannot enable editing by itself, and cannot

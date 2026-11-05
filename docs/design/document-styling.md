@@ -52,6 +52,7 @@ Defined on `:root`; the dark values apply when the root element has `data-scheme
 | `--galeo-color-callout-important` | `#8250df` / `#ab7df8` | Important callouts (`> [!IMPORTANT]`): border, icon and title |
 | `--galeo-color-callout-warning` | `#9a6700` / `#d29922` | Warning callouts (`> [!WARNING]`): border, icon and title |
 | `--galeo-color-callout-caution` | `#d1242f` / `#f85149` | Caution callouts (`> [!CAUTION]`): border, icon and title |
+| `--galeo-color-link-missing` | `#d1242f` / `#f85149` | The wavy underline of a link to a file that doesn't exist |
 | `--galeo-color-changed` | `#9a6700` / `#d29922` | Change marks: the bar and line beside what changed since the reader last looked, and (8 %) its tint |
 | `--galeo-syntax-keyword` | `#cf222e` / `#ff7b72` | Source highlighting: keywords |
 | `--galeo-syntax-string` | `#0a3069` / `#a5d6ff` | Strings, also in the JSON tree |
@@ -72,6 +73,7 @@ The fonts ship with the app (no web fonts), each with a system fallback.
 | `:host([data-scheme='dark'])` | The document while the app is dark; code highlighting switches on it |
 | `.galeo-frontmatter` | The collapsible frontmatter block: a `dl` of its fields when it is only `key: value` lines (open), else its highlighted source (collapsed) |
 | `.galeo-changed`, `.galeo-removed-before`, `.galeo-removed-after` | Change marks (ADR-030), on a rendered block or a source line (`.cm-line`): changed, or text removed before / after it; `.galeo-changed-gutter` on a marked line's number |
+| `.galeo-link-missing` | A link whose local file doesn't exist (`aria-description="file not found"`) |
 | `.galeo-callout` | A GitHub-style callout: the `blockquote`, with `.galeo-callout-note`, `-tip`, `-important`, `-warning` or `-caution`; its first child is the `.galeo-callout-title` paragraph |
 | `.galeo-remote-image` | Placeholder for a blocked remote image (`data-host`, `data-url`) |
 | `.galeo-text-reader` | The `.txt` reader view (paragraphs keep their line breaks) |

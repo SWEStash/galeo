@@ -150,6 +150,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
     [id],
   );
   // A request that fails on the way (the tab closed meanwhile) reads as a write that didn't happen.
+  const missingLinks = useCallback((): Promise<string[]> => window.galeo.documents.missingLinks(id).catch(() => []), [id]);
   const toggleTask = useCallback(
     (line: number, base: string): Promise<TaskToggleResult> =>
       window.galeo.documents.toggleTask(id, line, base).catch((): TaskToggleResult => ({ kind: 'failed', reason: 'unavailable' })),
@@ -241,6 +242,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
       editRequest={editRequest}
       onSave={save}
       onToggleTask={toggleTask}
+      onMissingLinks={missingLinks}
       onDirty={dirty}
       onLeaveEdit={leaveEdit}
       onMessage={onMessage}

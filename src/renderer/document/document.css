@@ -197,6 +197,11 @@ a {
   color: var(--galeo-color-link);
   text-underline-offset: 0.15em;
 }
+/* A link to a file that doesn't exist: a wavy underline, not colour alone; screen readers hear it too. */
+a.galeo-link-missing {
+  text-decoration: underline wavy var(--galeo-color-link-missing);
+  text-decoration-thickness: 1px;
+}
 
 :focus-visible {
   outline: 2px solid var(--galeo-color-focus);

@@ -110,6 +110,7 @@ export const CHANNELS = [
   'documents.forward',
   'documents.resolveImage',
   'documents.toggleTask',
+  'documents.missingLinks',
   'documents.pathMenu',
   'documents.contextMenu',
   'documents.save',
@@ -202,6 +203,8 @@ export interface Requests {
   'documents.resolveImage': [id: string, src: string];
   /** Ticks or unticks the task box on a line while reading, if the file is still `base` (ADR-031). */
   'documents.toggleTask': [id: string, line: number, base: string];
+  /** The document's links to local files that don't exist (broken link marks); only links of the text main read. */
+  'documents.missingLinks': [id: string];
   /** Asks main for the native menu of the document's path (copy it, reveal it); main acts on the choice. */
   'documents.pathMenu': [id: string];
   /**
@@ -327,6 +330,7 @@ export interface Responses {
   'documents.forward': HistoryResult;
   'documents.resolveImage': ImageResult;
   'documents.toggleTask': TaskToggleResult;
+  'documents.missingLinks': string[];
   'documents.pathMenu': void;
   'documents.contextMenu': void;
   'documents.save': SaveResult;
