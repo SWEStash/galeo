@@ -22,7 +22,7 @@ Taken from screenshots of every surface in both themes and from `src/renderer/st
 | Spacing | Paddings and gaps of 2, 3, 4, 5, 6, 8, 10, 12, 16, 24 px | No rhythm; 3, 5 and 10 px appear only a few times |
 | Corners | `--galeo-radius` (6 px, documented as the *code block* corner) used 13 times by the chrome, plus 3, 4 and 10 px | The chrome depends on a document token a reader may change in `custom.css`… which can't reach the chrome anyway, so the link is accidental |
 | Shadows | Four different overlay shadows (2/8, 4/12, 4/16, 8/24 px) | Menus, popovers and dialogs sit at random heights |
-| Backdrops | The tab overview dims the window (35 %); the palette, quick open and tab search don't | Similar overlays behave differently |
+| Backdrops | Every overlay dims the window with the same 35 % black, in both themes | Heavy in light, barely visible in dark |
 | Chrome colours | The bar uses the document's `--galeo-color-code-bg`; hover and selection mix `--galeo-color-focus` at 15 % | Fine for contrast, but the chrome has no colours of its own to tune |
 | Icons | Text symbols: `+` `▦` `◧` `‹` `›` `✕` `⤢` `⇣` `•` `↻` `▾` | Uneven sizes and weights across fonts and platforms; nothing to draw new controls (Commands, Search tabs, pin, copy, save) with |
 | Tabs | Fixed width, a divider between each, `✕` on every tab, an accent line under the shown one | Busy with many tabs; the shown tab stands out by a 2 px line only |
@@ -201,8 +201,8 @@ accessible name; colour is never the only signal.
 
 ### Overlays (palette, quick open, tab search, find in all tabs, tab overview)
 
-- One frame: `surface`, border, `radius-lg`, `shadow-2`, on `--galeo-scrim` (all of them; today only
-  the overview dims). 72 px from the top, 640 px wide (overview and find in all tabs as today).
+- One frame: `surface`, border, `radius-lg`, `shadow-2`, on `--galeo-scrim` (25 % light,
+  50 % dark; today 35 % in both). 72 px from the top, 640 px wide (overview and find in all tabs as today).
 - Input row: search icon + `text-lg` field, 12/16 px padding, a rule under it (no focus underline:
   the caret and the ring on the overlay show focus).
 - Rows: 6/8 px padding inside a 6 px inset list, `radius-md`; highlighted row `chrome-selected`.

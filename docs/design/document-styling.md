@@ -2,12 +2,18 @@
 
 - **Status**: First version (2026-09-27), built with the document view; custom CSS loads since 2026-09-29
 - **Related**: [UX](ux.md) §6 · [ADR-006](../decisions/ADR-006-renderer-ui-framework.md) ·
-  [Threat model](../security/threat-model.md) SR-17
+  [ADR-032](../decisions/ADR-032-design-tokens-v2.md) · [Threat model](../security/threat-model.md) SR-17
 
 Documents render inside a shadow root, isolated from the app's own styles. They inherit a small
 set of CSS custom properties from the app, and those properties, plus the classes below, are the
 stable surface a `custom.css` can rely on. Anything else in the markup may change between
 releases.
+
+"Stable" means renamed only with notice (ADR-032): a property or class listed here may be renamed or
+removed in a minor release, and the release notes and this page then name the old name and its
+replacement. The app's own interface has internal tokens too (`--galeo-space-*`, `--galeo-text-*`,
+`--galeo-chrome-*` and others). A document can see them, since they inherit, but they are not listed
+here and may change in any release.
 
 ## Where custom CSS applies
 
