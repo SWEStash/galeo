@@ -8,21 +8,49 @@ keyboard map is in the [UX specification](design/ux.md#5-keyboard-map).
 ## Installation
 
 galeo is released for Linux on x86_64, as a `.deb` package and an AppImage, on the
-[releases page](https://github.com/SWEStash/galeo/releases). It has no auto-update: a new release
-is how fixes reach you, so watch the repository's releases to hear about them.
+[releases page](https://github.com/SWEStash/galeo/releases), and the `.deb` through galeo's own apt
+repository. galeo never checks for updates itself: installed from the repository, it gets each release
+with `sudo apt update && sudo apt upgrade`.
 
-### The `.deb` package (Ubuntu 24.04 and later)
+### Ubuntu and Debian (Ubuntu 24.04 and later)
+
+Add galeo's apt repository and install it:
+
+```sh
+sudo curl -fsSLo /usr/share/keyrings/galeo-archive-keyring.asc https://swestash.github.io/galeo/apt/galeo.asc
+sudo tee /etc/apt/sources.list.d/galeo.sources > /dev/null <<'EOF'
+Types: deb
+URIs: https://swestash.github.io/galeo/apt/
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/galeo-archive-keyring.asc
+EOF
+sudo apt update && sudo apt install galeo
+```
+
+The key's fingerprint is `0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629`; compare it with
+`gpg --show-keys /usr/share/keyrings/galeo-archive-keyring.asc`. Installing galeo replaces the
+downloaded key with the one in the package, which keeps it up to date. The repository holds the
+latest release only; older ones stay on the releases page.
+
+To install a downloaded `.deb` instead, for instance after [checking it](#checking-a-download):
 
 ```sh
 sudo apt install ./galeo_<version>_amd64.deb
 ```
 
-It installs galeo in `/opt/galeo`, puts `galeo` and the shorter `gal` on your `PATH` (it leaves
+Adding the sources file above afterwards turns on updates: from galeo 0.5.1 the package has already
+put the key in place.
+
+Either way, it installs galeo in `/opt/galeo`, puts `galeo` and the shorter `gal` on your `PATH` (it leaves
 alone a `gal` command that belongs to another package), adds galeo to *Open With* for Markdown,
 MDX, text, log, JSON, YAML, TOML, CSV and TSV files and source code (it adds an MDX file type, since
 Ubuntu takes `.mdx` for a game ROM), and installs the AppArmor profile Chromium's sandbox needs on
 Ubuntu.
-`sudo apt remove galeo` removes it; your settings and sessions stay in your home folder.
+`sudo apt remove galeo` removes it, and the repository's key: delete
+`/etc/apt/sources.list.d/galeo.sources` too, or `apt update` reports the missing key. Your settings
+and sessions stay in your home folder.
 
 ### The AppImage
 

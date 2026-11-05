@@ -88,11 +88,23 @@
 
     <section aria-labelledby="install">
       <h2 id="install">Install</h2>
-      <h3>Ubuntu and Debian (.deb)</h3>
-      <p>Download <code>galeo_&lt;version&gt;_amd64.deb</code> from the
-        <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a>, then:</p>
-      <pre tabindex="0"><code>sudo apt install ./galeo_*_amd64.deb
+      <h3>Ubuntu and Debian (apt)</h3>
+      <p>Add galeo's apt repository and install it. <code>apt upgrade</code> then brings each release:</p>
+      <pre tabindex="0"><code>sudo curl -fsSLo /usr/share/keyrings/galeo-archive-keyring.asc https://swestash.github.io/galeo/apt/galeo.asc
+sudo tee /etc/apt/sources.list.d/galeo.sources &gt; /dev/null &lt;&lt;'EOF'
+Types: deb
+URIs: https://swestash.github.io/galeo/apt/
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/galeo-archive-keyring.asc
+EOF
+sudo apt update &amp;&amp; sudo apt install galeo
 galeo README.md</code></pre>
+      <p>The key's fingerprint is <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>.
+        Or download <code>galeo_&lt;version&gt;_amd64.deb</code> from the
+        <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and run
+        <code>sudo apt install ./galeo_*_amd64.deb</code>.</p>
       <p>This puts <code>galeo</code> and the shorter <code>gal</code> on your <code>PATH</code> and
         adds galeo to <em>Open With</em> for Markdown, text, logs, data files and source code.</p>
       <h3>Other Linux distributions (AppImage)</h3>
