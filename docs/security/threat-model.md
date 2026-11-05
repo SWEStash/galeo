@@ -377,7 +377,8 @@ Ticking a task box while reading (v0.6, ADR-031, `documents.toggleTask`) is the 
 edit mode. Main refuses it for a tab in edit mode, spends an input credit, flips only `[ ]` ↔ `[x]`
 on a line its own parse of the file (the shared extractor, in the task worker) shows as a task
 item and whose text starts with one, only while the file's hash is still the version the page
-read, and saves it as a save is (SR-15).
+read, only when the file's text encodes back to exactly its bytes (so nothing but the box
+changes), and saves it as a save is (SR-15).
 Moving a tab to another window (v0.3, ADR-019) moves its edit grant and unsaved text in main;
 the page never sends them. A window starts a drag of its own tab only by spending real input:
 the mouse press that started it, while its button is still down, or an input credit. Another

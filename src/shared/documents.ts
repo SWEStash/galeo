@@ -57,7 +57,7 @@ export type TaskToggleResult =
   | { kind: 'conflict'; version: string | null }
   | { kind: 'unencodable'; character: string; line: number }
   | { kind: 'failed'; reason: 'no-permission' | 'not-a-file' | 'unavailable' | 'too-large' }
-  | { kind: 'refused'; reason: 'no-input' | 'editing' | 'not-a-task' | 'unavailable' };
+  | { kind: 'refused'; reason: 'no-input' | 'editing' | 'not-a-task' | 'not-in-place' | 'unavailable' };
 
 /** Why a link wasn't followed; the page shows it in the status bar. */
 export type RefusalReason =

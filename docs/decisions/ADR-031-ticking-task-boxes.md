@@ -46,7 +46,10 @@ Option 1 (owner, 2026-11-05), with option 2's behaviour kept in edit mode.
   4. decodes it as a read does, and runs its own reference extraction (the shared parser, in the task
      worker, with its time budget) to find the source lines of task items; refuses `not-a-task` unless
      `line` is one (a `[ ]` in a code block or in raw HTML isn't);
-  5. flips that line's box and saves through `saveDocument` with the same `base` (SR-15: atomic,
+  5. refuses `not-in-place` unless the decoded text encodes back to exactly the file's bytes (a save
+     writes one kind of line ending and the encoding of record, so mixed or bare-CR line endings
+     and unreadable bytes would change; the v0.6 audit's L1 and L2, 2026-11-05);
+  6. flips that line's box and saves through `saveDocument` with the same `base` (SR-15: atomic,
      encoding, byte order mark and line endings kept), then remembers the new identity, as a save does.
   The page then reads the file again; change marks take the new text as seen (the reader's own tick
   isn't marked, ADR-030).

@@ -112,6 +112,7 @@ const TICK_FAILURES: Record<Extract<TaskToggleResult, { kind: 'refused' | 'faile
   'no-input': "Couldn't tick the box: try again",
   editing: 'In edit mode, tick in the preview of split view',
   'not-a-task': "This box isn't a task item in the file",
+  'not-in-place': "This file's line endings or encoding can't be kept: tick it in edit mode",
   unavailable: "galeo couldn't change the file just now",
   'no-permission': 'No permission to change this file',
   'too-large': 'This file is too large to change',

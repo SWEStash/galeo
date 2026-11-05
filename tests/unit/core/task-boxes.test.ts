@@ -10,8 +10,8 @@ const utf8 = (text: string) => new TextEncoder().encode(text);
 const extract = async (text: string) => extractReferences(text);
 const textOf = async (fs: FakeFileSystem) => new TextDecoder().decode(await fs.readFile('/d/plan.md', { maxBytes: 1 << 20 }));
 
-function toggle(fs: FakeFileSystem, line: number, base: string, references: (text: string) => Promise<References | null> = extract) {
-  return toggleTaskBox({ fs, decode, hash, references }, { path: '/d/plan.md', line, base, format: 'markdown' });
+function toggle(fs: FakeFileSystem, line: number, base: string, references: (text: string) => Promise<References | null> = extract, encoding?: 'utf-8') {
+  return toggleTaskBox({ fs, decode, hash, references }, { path: '/d/plan.md', line, base, format: 'markdown', encoding });
 }
 
 describe('toggleTaskBox', () => {
@@ -44,6 +44,22 @@ describe('toggleTaskBox', () => {
     const claims = async () => ({ links: [], images: [], tasks: [1] });
     expect(await toggle(fs, 1, hash(utf8(text)), claims)).toEqual({ kind: 'refused', reason: 'not-a-task' });
     expect(fs.saves).toEqual([]);
+  });
+
+  it('refuses, writing nothing, when saving would change more than the box (audit L1, L2)', async () => {
+    const cases: [string, Uint8Array, number, 'utf-8' | undefined][] = [
+      // Mixed line endings: a save writes one kind.
+      ['mixed line endings', utf8('# Plan\r\n\r\n- [ ] one\n- [x] two\r\n'), 3, undefined],
+      // A byte the chosen encoding can't read: a save would write U+FFFD in its place.
+      ['an unreadable byte', new Uint8Array([...utf8('- [ ] caf'), 0xe9, 10]), 1, 'utf-8'],
+      // Bare CR: the parser counts it as a line break, a save turns it into LF.
+      ['bare CR line endings', utf8('- [ ] one\r- [ ] two\r'), 2, undefined],
+    ];
+    for (const [name, bytes, line, encoding] of cases) {
+      const fs = new FakeFileSystem({ '/d/plan.md': bytes });
+      expect(await toggle(fs, line, hash(bytes), extract, encoding), name).toEqual({ kind: 'refused', reason: 'not-in-place' });
+      expect(fs.saves, name).toEqual([]);
+    }
   });
 
   it("refuses when main couldn't parse the file in time", async () => {

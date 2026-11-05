@@ -5,7 +5,8 @@ import { flipTaskBox } from '../../shared/markdown/task-box';
 import { FsError, type FileSystem } from '../ports';
 import { decodeText, type Decode, type WhatwgEncoding } from '../text/decode';
 import { READ_MAX_BYTES, type Hash } from './read';
-import { saveDocument } from './save';
+import { saveDocument, targetOf } from './save';
+import { encodeText } from '../text/encode';
 
 type Ticked = Exclude<TaskToggleResult, { kind: 'refused'; reason: 'no-input' | 'editing' }>;
 
@@ -29,6 +30,11 @@ export async function toggleTaskBox(
   if (version !== base) return { kind: 'conflict', version };
   const decoded = decodeText(bytes, deps.decode, encoding);
   if (decoded.kind !== 'text') return { kind: 'refused', reason: 'not-a-task' };
+  // A save writes the whole text again, in one kind of line ending and the encoding of record. Only
+  // a file that comes back byte for byte keeps everything but the box (mixed or bare-CR line
+  // endings and unreadable bytes don't): any other is refused, not rewritten.
+  const again = encodeText(decoded.text, targetOf(bytes, deps.decode, encoding), deps.decode);
+  if (again.kind !== 'bytes' || !sameBytes(again.bytes, bytes)) return { kind: 'refused', reason: 'not-in-place' };
   const references = await deps.references(decoded.text, format);
   if (!references) return { kind: 'refused', reason: 'unavailable' };
   const lines = decoded.text.split('\n');
@@ -37,3 +43,5 @@ export async function toggleTaskBox(
   lines[line - 1] = flipped;
   return saveDocument({ fs: deps.fs, decode: deps.decode, hash: deps.hash }, { path, text: lines.join('\n'), base, encoding });
 }
+
+const sameBytes = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((byte, at) => byte === b[at]);

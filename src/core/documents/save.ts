@@ -45,7 +45,7 @@ export async function saveDocument(
 }
 
 /** The shape of the text in a file's bytes: the encoding of record, its byte order mark, its line endings. */
-function targetOf(bytes: Uint8Array, decode: Decode, encoding?: WhatwgEncoding): Target {
+export function targetOf(bytes: Uint8Array, decode: Decode, encoding?: WhatwgEncoding): Target {
   const decoded = decodeText(bytes, decode, encoding);
   return decoded.kind === 'text'
     ? { encoding: decoded.encoding, bom: decoded.bom, lineEnding: lineEndingOf(decoded.text) }
