@@ -1,7 +1,9 @@
 import AxeBuilder from '@axe-core/playwright';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { launchApp } from '../helpers/launch';
+import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { saveFile } from '../helpers/save';
 
 const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
 const plan = path.join(docs, 'plan-50k.md');
@@ -109,5 +111,28 @@ test("a TOML file's outline lists its root keys and tables", async () => {
     await expect(entries.last()).toHaveText('[[bin]]');
   } finally {
     await close();
+  }
+});
+
+test("a plan's tasks show done of all in the status bar and under each heading, and follow the file", async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'tasks.md');
+  writeFileSync(file, '# Build\n\n- [x] parser\n- [ ] renderer\n\n# Ship\n\n- [ ] release\n');
+  const { window, close } = await launchApp(['--', file], { home: dir });
+  try {
+    await expect(window.getByTestId('status-tasks')).toHaveText('1 of 3 tasks');
+    await window.keyboard.press('ControlOrMeta+Shift+O');
+    const rows = outline(window).getByRole('button');
+    // The "1/2" on show is hidden from screen readers, which read the words instead.
+    await expect(rows.nth(0)).toHaveAccessibleName('Build (1 of 2 tasks done)');
+    await expect(rows.nth(1)).toHaveAccessibleName('Ship (0 of 1 tasks done)');
+    await expect(rows.nth(0).locator('.outline-tasks')).toHaveText('1/2');
+
+    saveFile(file, '# Build\n\n- [x] parser\n- [x] renderer\n\n# Ship\n\n- [ ] release\n');
+    await expect(window.getByTestId('status-tasks')).toHaveText('2 of 3 tasks');
+    await expect(rows.first()).toHaveAccessibleName('Build (2 of 2 tasks done)');
+  } finally {
+    await close();
+    removeTempHome(dir);
   }
 });

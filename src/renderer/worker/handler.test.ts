@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Renderer, RenderResult } from './pipeline/render';
 import { createMessageHandler, type WorkerReply } from './handler';
 
-const result: RenderResult = { html: '<p>x</p>', math: false, outline: [], links: [], images: [], words: 0, ms: 1, cached: false };
+const result: RenderResult = { html: '<p>x</p>', math: false, outline: [], links: [], images: [], words: 0, tasks: null, ms: 1, cached: false };
 
 function setup(renderer: Renderer, load: () => Promise<Renderer> = async () => renderer) {
   const replies: unknown[] = [];

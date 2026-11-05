@@ -26,6 +26,16 @@ async function render(props: Partial<Parameters<typeof OutlinePanel>[0]> = {}) {
 const buttons = (container: HTMLElement) => [...container.querySelectorAll('button')];
 
 describe('OutlinePanel', () => {
+  it("shows a heading's tasks done of all after its text, read with it", async () => {
+    const entries = [{ ...entry(1, 'Plan'), tasks: { done: 2, total: 5 } }, entry(2, 'Notes')];
+    const { container } = await render({ entries, current: null });
+    const [plan, notes] = buttons(container);
+    expect(plan!.querySelector('.outline-tasks')?.textContent).toBe('2/5');
+    expect(plan!.querySelector('.outline-tasks')?.getAttribute('aria-hidden')).toBe('true');
+    expect(plan!.textContent).toContain('(2 of 5 tasks done)');
+    expect(notes!.querySelector('.outline-tasks')).toBeNull();
+  });
+
   it('lists the headings as nested lists in a navigation landmark', async () => {
     const { container } = await render();
     const nav = container.querySelector('nav');

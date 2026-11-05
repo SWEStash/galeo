@@ -20,11 +20,19 @@ export const SHIKI_MAX_BLOCK_CHARS = 200_000;
 const KATEX_OPTIONS = { trust: false, maxExpand: 1000, maxSize: 50, throwOnError: false, strict: 'ignore' } as const;
 
 
+/** Task items (`- [ ]`, `- [x]`): how many are done of how many. */
+export interface TaskCount {
+  done: number;
+  total: number;
+}
+
 export interface OutlineEntry {
   depth: number;
   text: string;
   id: string;
   line: number;
+  /** The tasks under this heading, up to the next heading of any level; absent without any. */
+  tasks?: TaskCount;
 }
 
 export interface RenderResult {
@@ -38,6 +46,8 @@ export interface RenderResult {
   images: string[];
   /** Words of prose, for the status bar: code blocks, math, diagrams and front matter aren't counted. */
   words: number;
+  /** The document's task items, done of all; null without any. */
+  tasks: TaskCount | null;
   /** Parse and render time in milliseconds. */
   ms: number;
   cached: boolean;
@@ -60,6 +70,7 @@ interface Collected {
   outline: OutlineEntry[];
   links: Set<string>;
   images: Set<string>;
+  tasks: TaskCount;
 }
 
 /** remark-rehype drops frontmatter; keep its raw text to show it after sanitizing. */
@@ -105,6 +116,15 @@ const annotate = (collected: Collected) => () => (tree: Root) => {
     if (node.tagName === 'pre') unhighlightIfHuge(node);
     // A task-list checkbox is named by its item (WCAG 4.1.2): its own text, not its sub-items'.
     if (node.tagName === 'input' && node.properties['type'] === 'checkbox') {
+      // A task: counted in the document and under the heading it follows.
+      const done = node.properties['checked'] === true ? 1 : 0;
+      const add = (count: TaskCount) => {
+        count.done += done;
+        count.total += 1;
+      };
+      add(collected.tasks);
+      const heading = collected.outline.at(-1);
+      if (heading) add((heading.tasks ??= { done: 0, total: 0 }));
       const own = parent.children.filter((child) => !(child.type === 'element' && (child.tagName === 'ul' || child.tagName === 'ol')));
       node.properties['ariaLabel'] = own.map((child) => textOf(child)).join('').trim();
     }
@@ -301,7 +321,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
 
   async function run(format: WorkerFormat, text: string): Promise<Omit<RenderResult, 'cached'>> {
     const started = performance.now();
-    const collected: Collected = { frontmatter: null, highlighted: [], outline: [], links: new Set(), images: new Set() };
+    const collected: Collected = { frontmatter: null, highlighted: [], outline: [], links: new Set(), images: new Set(), tasks: { done: 0, total: 0 } };
     // First the document as sanitized HTML, which says what else it needs…
     const mdx = format === 'mdx' ? await (remarkMdx ??= loadMdx()) : null;
     const parse = articleParser({ mdx, mdast: [liftFrontmatter(collected)] })
@@ -335,6 +355,7 @@ export function createRenderer({ cacheEntries = 16 }: { cacheEntries?: number } 
       links: [...collected.links],
       images: [...collected.images],
       words,
+      tasks: collected.tasks.total > 0 ? collected.tasks : null,
       ms: performance.now() - started,
     };
   }

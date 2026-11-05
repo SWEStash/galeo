@@ -63,7 +63,17 @@ export function OutlinePanel({ entries, current, onChoose, onClose, empty = 'No 
             aria-current={entry.id === current ? 'location' : undefined}
             onClick={() => onChoose(entry.id)}
           >
-            {entry.text}
+            <span className="outline-text">{entry.text}</span>
+            {entry.tasks && (
+              <>
+                <span className="outline-tasks" aria-hidden="true">
+                  {entry.tasks.done}/{entry.tasks.total}
+                </span>
+                <span className="visually-hidden">
+                  ({entry.tasks.done} of {entry.tasks.total} tasks done)
+                </span>
+              </>
+            )}
           </button>
           {children.length > 0 && list(children)}
         </li>

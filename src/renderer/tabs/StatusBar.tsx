@@ -7,7 +7,7 @@ import { ENCODING_NAMES } from '../document/encodings';
 import { RENDERED_VIEW_NAMES } from '../document/formats';
 import { widthLabel } from '../document/width';
 import { unlessClosed } from './closed-tab';
-import { metricsLabel } from './metrics';
+import { metricsLabel, tasksLabel } from './metrics';
 import { shownTab, type TabStatus, type TabStore, type TabsView } from './store';
 
 const VIEW_NAMES = { rendered: 'Rendered', source: 'Source', split: 'Split' } as const;
@@ -30,6 +30,7 @@ export function StatusBar({ view, store, say, children }: { view: TabsView; stor
   const zoom = tab ? (view.zooms.get(tab.id) ?? 1) : 1;
   const width = tab && view.widths.get(tab.id);
   const metrics = status ? metricsLabel(status.lines, status.words) : null;
+  const tasks = tasksLabel(status?.tasks ?? null);
   const dispatcher = useDispatcher();
   const chooseEncoding = (encoding: ChosenEncoding | null) => {
     if (tab) void window.galeo.documents.setEncoding(tab.id, encoding).then(() => store.reread(tab.id), unlessClosed(say, "The encoding didn't change"));
@@ -56,6 +57,7 @@ export function StatusBar({ view, store, say, children }: { view: TabsView; stor
       )}
       {status?.table && <TableOptionsMenu className="status-table" options={status.table} onCommand={(command) => dispatcher.run(command)} />}
       {metrics && <span data-testid="status-metrics">{metrics}</span>}
+      {tasks && <span data-testid="status-tasks">{tasks}</span>}
       {status?.changes && <span data-testid="status-changes">{status.changes}</span>}
       {zoom !== 1 && <span data-testid="status-zoom">{Math.round(zoom * 100)}%</span>}
       {/* Only while the tab differs from the measure setting, as zoom shows only away from 100 %. */}

@@ -956,7 +956,8 @@ main {
   padding-left: 12px;
 }
 .outline-item {
-  display: block;
+  display: flex;
+  gap: 8px;
   width: 100%;
   padding: 3px 12px;
   overflow: hidden;
@@ -968,6 +969,17 @@ main {
   text-overflow: ellipsis;
   white-space: nowrap;
   cursor: pointer;
+}
+.outline-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* A heading's tasks done of all: kept in view at the end of its row, however long the heading. */
+.outline-tasks {
+  flex: none;
+  margin-left: auto;
+  color: var(--galeo-color-muted);
+  font-variant-numeric: tabular-nums;
 }
 .outline-item:hover {
   background: var(--galeo-color-code-bg);

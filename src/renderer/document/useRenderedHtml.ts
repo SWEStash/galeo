@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RENDER_ANYWAY_BUDGET_MS, RenderCancelled, RenderSuperseded, RenderSyntaxError, RenderTimeout, type RenderClient } from '../worker/client';
-import type { OutlineEntry } from '../worker/pipeline/render';
+import type { OutlineEntry, TaskCount } from '../worker/pipeline/render';
 import type { WorkerFormat } from '../../shared/formats';
 import { loadMathStyles } from './host';
 
@@ -30,6 +30,8 @@ type RenderState = (
   outline: readonly OutlineEntry[];
   /** Its words of prose, once rendered. */
   words: number | null;
+  /** Its task items, done of all; null without any. */
+  tasks: TaskCount | null;
 };
 
 const NO_OUTLINE: readonly OutlineEntry[] = [];
@@ -64,9 +66,10 @@ export function useRenderedHtml(
     syntax: SyntaxProblem | null;
     outline: readonly OutlineEntry[];
     words: number | null;
+    tasks: TaskCount | null;
   } | null>(null);
   const [attempt, setAttempt] = useState<Attempt>({ count: 0, long: false });
-  const lastGood = useRef<{ html: string; outline: readonly OutlineEntry[]; words: number | null } | null>(null);
+  const lastGood = useRef<{ html: string; outline: readonly OutlineEntry[]; words: number | null; tasks: TaskCount | null } | null>(null);
   const running = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -77,22 +80,22 @@ export function useRenderedHtml(
     client
       .markdown(text, { format, ...(attempt.long || readerAsked ? { budgetMs: RENDER_ANYWAY_BUDGET_MS } : {}), ...(live ? { live } : {}), signal: controller.signal })
       // Math shows only once KaTeX's styles are in, never unstyled.
-      .then(async ({ html, math, outline, words }) => {
+      .then(async ({ html, math, outline, words, tasks }) => {
         if (math) await loadMathStyles();
-        return { html, outline, words };
+        return { html, outline, words, tasks };
       })
       .then(
-        ({ html, outline, words }) => {
+        ({ html, outline, words, tasks }) => {
           if (!current) return;
-          lastGood.current = { html, outline, words };
-          setResult({ text, format, attempt, html, reason: 'error', syntax: null, outline, words });
+          lastGood.current = { html, outline, words, tasks };
+          setResult({ text, format, attempt, html, reason: 'error', syntax: null, outline, words, tasks });
         },
         (error: unknown) => {
           // Newer text took its place: its own render answers.
           if (!current || error instanceof RenderSuperseded) return;
           const syntax = error instanceof RenderSyntaxError ? { line: error.line, message: error.message } : null;
           const reason = error instanceof RenderTimeout ? 'slow' : error instanceof RenderCancelled ? 'cancelled' : syntax ? 'syntax' : 'error';
-          setResult({ text, format, attempt, html: null, reason, syntax, outline: NO_OUTLINE, words: null });
+          setResult({ text, format, attempt, html: null, reason, syntax, outline: NO_OUTLINE, words: null, tasks: null });
         },
       );
     return () => {
@@ -106,9 +109,9 @@ export function useRenderedHtml(
   const actions = { retry, renderAnyway, cancel };
   const settled = result?.text === text && result.format === format && result.attempt === attempt;
   const good = lastGood.current;
-  if (settled && result.html !== null) return { status: 'done', html: result.html, outline: result.outline, words: result.words, ...actions };
-  if (settled && live) return { status: 'paused', html: good?.html ?? null, reason: result.reason, syntax: result.syntax, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, ...actions };
-  if (settled) return { status: 'failed', html: null, reason: result.reason, syntax: result.syntax, outline: NO_OUTLINE, words: null, ...actions };
-  if (text === null || !wanted) return { status: 'idle', html: null, outline: NO_OUTLINE, words: null, ...actions };
-  return { status: 'pending', html: good?.html ?? null, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, ...actions };
+  if (settled && result.html !== null) return { status: 'done', html: result.html, outline: result.outline, words: result.words, tasks: result.tasks, ...actions };
+  if (settled && live) return { status: 'paused', html: good?.html ?? null, reason: result.reason, syntax: result.syntax, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, tasks: good?.tasks ?? null, ...actions };
+  if (settled) return { status: 'failed', html: null, reason: result.reason, syntax: result.syntax, outline: NO_OUTLINE, words: null, tasks: null, ...actions };
+  if (text === null || !wanted) return { status: 'idle', html: null, outline: NO_OUTLINE, words: null, tasks: null, ...actions };
+  return { status: 'pending', html: good?.html ?? null, outline: good?.outline ?? NO_OUTLINE, words: good?.words ?? null, tasks: good?.tasks ?? null, ...actions };
 }

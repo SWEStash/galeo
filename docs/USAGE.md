@@ -187,6 +187,8 @@ the file into the window in front of you) when you want it here.
   the arrow keys; double-click or Home puts it back at half. Ctrl+\ again goes back to the view
   you had; Ctrl+U goes to the rendered view. A window narrower than about 700 px shows one view
   until it widens. A tab keeps its split and divider across restarts.
+- **Task progress**: a Markdown plan with task items (`- [ ]`, `- [x]`) shows how many are done in
+  the status bar ("7 of 12 tasks"), and the outline shows each heading's own count ("2/5").
 - **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
   Ctrl+0, or Ctrl and the wheel), and every command by name in the **palette** (Ctrl+Shift+P).
 - **Reader width** per tab: Alt++ or Alt+= widens the reading column of Markdown and `.txt` by

@@ -678,10 +678,11 @@ export function DocumentPane({
       editing,
       dirty,
       changes: changesNote,
+      tasks: article ? render.tasks : null,
       // The status bar's Table options read these while a table shows (ADR-021).
       table: tabular && view !== 'source' ? { separator: separatorChoice, found: shownTable?.table?.separator ?? null, header } : null,
     });
-  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, tabular, separatorChoice, shownTable?.table, header]);
+  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, render.tasks, tabular, separatorChoice, shownTable?.table, header]);
 
   // Ready content is always shown: no document means the content is a state of its own.
   if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={onContextMenu} />;

@@ -14,3 +14,9 @@ export function metricsLabel(lines: number | null, words: number | null): string
   }
   return parts.length ? parts.join(' · ') : null;
 }
+
+/** A document's task items for the status bar, "7 of 12 tasks"; null without any. */
+export function tasksLabel(tasks: { done: number; total: number } | null): string | null {
+  if (!tasks) return null;
+  return `${tasks.done.toLocaleString('en')} of ${tasks.total.toLocaleString('en')} ${tasks.total === 1 ? 'task' : 'tasks'}`;
+}

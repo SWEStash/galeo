@@ -124,6 +124,43 @@ describe('Markdown pipeline', () => {
     expect(outline.map((entry) => entry.text)).toEqual(['After the frontmatter']);
   });
 
+  describe('task progress', () => {
+    it('counts the tasks done of all, and per heading up to the next heading', async () => {
+      const text = [
+        '- [x] before any heading',
+        '',
+        '# Plan',
+        '',
+        '- [ ] one',
+        '- [X] two',
+        '  - [x] nested three',
+        '',
+        '## Later',
+        '',
+        '- [ ] four',
+        '',
+        '## Notes',
+        '',
+        'No tasks here.',
+        '',
+        '```md',
+        '- [ ] in a code block',
+        '```',
+      ].join('\n');
+      const { tasks, outline } = await render.markdown(text);
+      expect(tasks).toEqual({ done: 3, total: 5 });
+      expect(outline.map((entry) => [entry.text, entry.tasks ?? null])).toEqual([
+        ['Plan', { done: 2, total: 3 }],
+        ['Later', { done: 0, total: 1 }],
+        ['Notes', null],
+      ]);
+    });
+
+    it('has no count without tasks', async () => {
+      expect((await render.markdown('# Title\n\n- a plain item\n')).tasks).toBeNull();
+    });
+  });
+
   it('typesets math rather than leaving it as code', async () => {
     const doc = dom((await render.markdown(fixture('math.md'))).html);
     expect(doc.querySelector('code.language-math')).toBeNull();
