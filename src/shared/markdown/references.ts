@@ -1,4 +1,4 @@
-import type { Root } from 'hast';
+import type { Element, Root } from 'hast';
 import remarkMdx from 'remark-mdx';
 import type { WorkerFormat } from '../formats';
 import { eachElement } from './hast';
@@ -13,19 +13,33 @@ export interface References {
   links: string[];
   /** Local image sources, in document order, without duplicates. */
   images: string[];
+  /** The source line of each task item (`- [ ]`), in document order: the boxes ticking may flip (ADR-031). */
+  tasks: number[];
 }
 
 /** The references a sanitized tree keeps: links to other hosts by `//` and non-local images don't count. */
 function collectReferences(tree: Root): References {
   const links = new Set<string>();
   const images = new Set<string>();
+  const tasks: number[] = [];
   eachElement(tree, (node) => {
+    const line = node.position?.start.line;
+    if (node.tagName === 'li' && line !== undefined && isTaskItem(node)) tasks.push(line);
     const href = node.properties['href'];
     if (node.tagName === 'a' && typeof href === 'string' && !isNetworkPathReference(href)) links.add(href);
     const src = node.properties['src'];
     if (node.tagName === 'img' && typeof src === 'string' && isLocalReference(src)) images.add(src);
   });
-  return { links: [...links], images: [...images] };
+  return { links: [...links], images: [...images], tasks };
+}
+
+const firstElement = (node: Element) => node.children.find((child): child is Element => child.type === 'element');
+const isCheckbox = (node: Element | undefined) => node?.tagName === 'input' && node.properties['type'] === 'checkbox';
+
+/** A list item whose box comes first: in the item itself (a tight list) or in its first paragraph (a loose one). */
+function isTaskItem(item: Element): boolean {
+  const first = firstElement(item);
+  return isCheckbox(first) || (first?.tagName === 'p' && isCheckbox(firstElement(first)));
 }
 
 const parsers = { markdown: articleParser(), mdx: articleParser({ mdx: remarkMdx }) };

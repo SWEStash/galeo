@@ -44,14 +44,25 @@ describe('extractReferences', () => {
 
   it('parses MDX by its format: expressions and component props are never links', () => {
     const text = '{"[x](x.md)"}\n\n<Card href="card.md" src="card.png" />\n\n<a href="html.md">h</a> [md](md.md) <img src="i.png" alt="" />\n';
-    expect(extractReferences(text, 'mdx')).toEqual({ links: ['html.md', 'md.md'], images: ['i.png'] });
+    expect(extractReferences(text, 'mdx')).toEqual({ links: ['html.md', 'md.md'], images: ['i.png'], tasks: [] });
     expect(extractReferences('{"[x](x.md)"}', 'markdown').links).toEqual(['x.md']);
   });
 
   it('runs as a task on { text, format } only', () => {
-    expect(referencesTask({ text: '[a](a.md)', format: 'mdx' })).toEqual({ links: ['a.md'], images: [] });
+    expect(referencesTask({ text: '[a](a.md)', format: 'mdx' })).toEqual({ links: ['a.md'], images: [], tasks: [] });
     for (const input of ['[a](a.md)', { text: '[a](a.md)' }, { text: 1, format: 'mdx' }, { text: '', format: 'text' }, null]) {
       expect(() => referencesTask(input)).toThrow(/bad input/);
     }
+  });
+});
+
+describe('task item lines', () => {
+  it('lists the source line of each task item, tight or loose, never a box in a code block', () => {
+    const text = ['# Plan', '', '- [ ] one', '- [x] two', '', '1. [ ] three', '', '   loose', '', '```md', '- [ ] in code', '```', '', '- plain'].join('\n');
+    expect(extractReferences(text).tasks).toEqual([3, 4, 6]);
+  });
+
+  it('lists none without task items', () => {
+    expect(extractReferences('# Title\n\n- a\n').tasks).toEqual([]);
   });
 });

@@ -27,6 +27,7 @@ import { sourceHighlight, sourceTheme } from './source-theme';
 import { changeLines, markLines } from './change-lines';
 import type { ChangedRanges } from './change-ranges';
 import { indentUnitOf } from './indent';
+import { flipTaskBox } from '../../shared/markdown/task-box';
 import { diffSpan } from './text-diff';
 
 /** `markdown` and `log` are built in; any other name is a grammar from `@codemirror/language-data`. */
@@ -83,6 +84,8 @@ export interface SourceView {
   onOutline(listener: (entries: OutlineEntry[]) => void): () => void;
   /** Calls `listener` when the view scrolls up (the user leaving the end of a log). */
   onScrollUp(listener: () => void): () => void;
+  /** Edit mode: flips the task box on a task item's line (ADR-031); false when the line has none, or while reading. */
+  toggleTask(line: number): boolean;
   /** Marks the lines changed since the reader last looked (ADR-030; null: none); returns them, for F7. */
   markChanges(ranges: ChangedRanges | null): number[];
   destroy(): void;
@@ -407,6 +410,15 @@ export function createSourceView(options: {
       };
       view.scrollDOM.addEventListener('scroll', onScroll, { passive: true });
       return () => view.scrollDOM.removeEventListener('scroll', onScroll);
+    },
+    toggleTask(line) {
+      const state = view.state;
+      if (state.readOnly || line < 1 || line > state.doc.lines) return false;
+      const { from, to, text } = state.doc.line(line);
+      const flipped = flipTaskBox(text);
+      if (flipped === null) return false;
+      view.dispatch({ changes: { from, to, insert: flipped }, userEvent: 'input.toggle' });
+      return true;
     },
     markChanges(ranges) {
       return markLines(view, ranges);

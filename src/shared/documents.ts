@@ -51,6 +51,14 @@ export type SaveResult =
   | { kind: 'failed'; reason: 'no-permission' | 'not-a-file' | 'unavailable' | 'too-large' }
   | { kind: 'refused'; reason: 'not-editable' | 'no-input' };
 
+/** What ticking a task box while reading did (ADR-031): saved, or why not. */
+export type TaskToggleResult =
+  | { kind: 'saved'; version: string }
+  | { kind: 'conflict'; version: string | null }
+  | { kind: 'unencodable'; character: string; line: number }
+  | { kind: 'failed'; reason: 'no-permission' | 'not-a-file' | 'unavailable' | 'too-large' }
+  | { kind: 'refused'; reason: 'no-input' | 'editing' | 'not-a-task' | 'unavailable' };
+
 /** Why a link wasn't followed; the page shows it in the status bar. */
 export type RefusalReason =
   | 'not-in-document'

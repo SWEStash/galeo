@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChosenEncoding, DocumentContent, Recovered } from '../../shared/contracts';
-import type { ImageResult, SaveResult } from '../../shared/documents';
+import type { ImageResult, SaveResult, TaskToggleResult } from '../../shared/documents';
 import { DiffDialog } from '../edit/DiffDialog';
 import type { Editor } from '../edit/editors';
 import { workerFormat, type ViewMode } from '../../shared/formats';
@@ -101,6 +101,25 @@ export interface DocumentPaneProps {
   recovered: Recovered['kept'];
   /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
   onReread: () => void;
+  /** Reading: asks main to tick the task box on a line of the version the page loaded (ADR-031). */
+  onToggleTask: (line: number, base: string) => Promise<TaskToggleResult>;
+}
+
+/** What the status bar says when a task box couldn't be ticked (ADR-031). */
+const TICK_FAILURES: Record<Extract<TaskToggleResult, { kind: 'refused' | 'failed' }>['reason'], string> = {
+  'no-input': "Couldn't tick the box: try again",
+  editing: 'In edit mode, tick in the preview of split view',
+  'not-a-task': "This box isn't a task item in the file",
+  unavailable: "galeo couldn't change the file just now",
+  'no-permission': 'No permission to change this file',
+  'too-large': 'This file is too large to change',
+  'not-a-file': "Couldn't save the tick",
+};
+
+function tickNotSaved(result: Exclude<TaskToggleResult, { kind: 'saved' }>): string {
+  if (result.kind === 'conflict') return 'The file changed on disk: tick again once it shows';
+  if (result.kind === 'unencodable') return "Couldn't save the tick";
+  return TICK_FAILURES[result.reason];
 }
 
 /** Unsaved text goes to main once typing pauses this long. */
@@ -148,6 +167,7 @@ export function DocumentPane({
   onKeep,
   recovered,
   onReread,
+  onToggleTask,
   tableDefaults,
 }: DocumentPaneProps) {
   const [dirty, setDirty] = useState(false);
@@ -479,6 +499,15 @@ export function DocumentPane({
     stepFind(direction);
     return true;
   };
+  // A task box ticked while reading (ADR-031): main writes it; the new text is the reader's own, not a change to mark.
+  const toggleTask = (line: number) => {
+    if (!ready) return;
+    void onToggleTask(line, ready.version).then((result) => {
+      if (result.kind !== 'saved') return onMessage(tickNotSaved(result));
+      changeMarks.acceptNext();
+      onReread();
+    });
+  };
   // F7 / Shift+F7: the next or previous change mark, said aloud through the status bar (ADR-030).
   const goToChange = (direction: 1 | -1) => () => {
     if (!ready) return false;
@@ -722,6 +751,7 @@ export function DocumentPane({
           ref={documentHandle}
           changes={shownChanges}
           onChangeMarks={setChangeCount}
+          onToggleTask={article ? toggleTask : undefined}
           rendered={rendered}
           source={{ text: dirty ? pinnedText : ready.text, language: sourceLanguage(ready.format, ready.path) }}
           editable={editing}

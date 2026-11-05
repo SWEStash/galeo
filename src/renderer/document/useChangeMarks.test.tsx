@@ -75,6 +75,15 @@ describe('useChangeMarks', () => {
     await settled(now, (ranges) => expect(ranges?.changed).toEqual([[2, 2]]));
   });
 
+  it("takes the reader's own write as seen: the next text is the new baseline, unmarked", async () => {
+    const { render, now } = await mounted({ path: '/a.md', text: doc('- [ ] a', '- [ ] b'), active: true, editing: false, encoding: 'utf-8' });
+    act(() => now().acceptNext());
+    await render({ text: doc('- [x] a', '- [ ] b') });
+    expect(now().ranges).toBeNull();
+    await render({ text: doc('- [x] a', '- [x] b') });
+    await settled(now, (ranges) => expect(ranges?.changed).toEqual([[2, 2]]));
+  });
+
   it('starts again, unmarked, when the file is read in another encoding', async () => {
     const { render, now } = await mounted({ path: '/a.md', text: doc('a'), active: true, editing: false, encoding: 'utf-8' });
     await render({ text: doc('ä'), encoding: 'windows-1252' });

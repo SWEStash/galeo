@@ -177,7 +177,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T9 | Mitigate | SR-15 |
 | T10 | Mitigate | SR-16 |
 | T11 | **Accept.** Same-user processes already have equal privilege; the channel only opens files, which is intended behaviour. Owner: project owner. | SR-13 (argv handled as data) |
-| T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo, or, while the reader types, spend their key presses on quick-open listings, opens and the document's own links of its choosing. In v0.2 it can also write the one file the reader put in edit mode, while it is in edit mode, and the reader may confirm main's question about a file without reading its path. In v0.3 it can send its own tabs, with their grants and unsaved text, to another galeo window while the reader gives input (ADR-019); that window gains nothing the page didn't have. Exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner (writes: 2026-10-11, ADR-015). | SR-12 (drop grants from the preload's isolated world; input credits for quick open and links; edit mode only for read text, and main's own question for files the reader didn't hand over) |
+| T6 (residual) | **Accept.** A full renderer-process compromise can forge a drag-and-drop grant and read a local file into galeo, or, while the reader types, spend their key presses on quick-open listings, opens and the document's own links of its choosing. In v0.2 it can also write the one file the reader put in edit mode, while it is in edit mode, and the reader may confirm main's question about a file without reading its path. In v0.3 it can send its own tabs, with their grants and unsaved text, to another galeo window while the reader gives input (ADR-019); that window gains nothing the page didn't have. In v0.6 it can flip a task box (`[ ]` ↔ `[x]`) on a task-item line of any file open in its window, once per real key press or click of the reader (ADR-031): nothing else in the file, no new file, and not a file changed since it was read. Exfiltration stays blocked (SR-04, SR-06, SR-12). Owner: project owner (writes: 2026-10-11, ADR-015; task boxes: 2026-11-05, ADR-031). | SR-12 (drop grants from the preload's isolated world; input credits for quick open and links; edit mode only for read text, and main's own question for files the reader didn't hand over) |
 | T14 | Mitigate | SR-17 |
 | T18 | Mitigate (v0.3 audit L3: only absolute `PATH` entries) | SR-13 |
 | T19 | Mitigate (a drag is claimed once, on input; v0.3 audit L1: claimed by a per-drag token, not the tab id). The window list's file and profile names are accepted as metadata a page can't send anywhere (SR-04, SR-06), and are given only on real input (v0.3 audit I4). | SR-12, SR-16 |
@@ -371,6 +371,11 @@ A file the reader didn't hand over from the command line, Files or a second laun
 through a link, a drop, quick open or recent files) is enabled only after the reader answers
 *Edit* in main's native dialog naming its path (ADR-015). The renderer chooses the active tab, so
 without that question it could steer the key press to a file of its choosing.
+Ticking a task box while reading (v0.6, ADR-031, `documents.toggleTask`) is the one write without
+edit mode. Main refuses it for a tab in edit mode, spends an input credit, flips only `[ ]` ↔ `[x]`
+on a line its own parse of the file (the shared extractor, in the task worker) shows as a task
+item and whose text starts with one, only while the file's hash is still the version the page
+read, and saves it as a save is (SR-15).
 Moving a tab to another window (v0.3, ADR-019) moves its edit grant and unsaved text in main;
 the page never sends them. A window starts a drag of its own tab only by spending real input:
 the mouse press that started it, while its button is still down, or an input credit. Another

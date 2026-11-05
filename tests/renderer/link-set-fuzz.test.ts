@@ -69,7 +69,8 @@ describe("the renderer's references match main's", () => {
     for (let seed = 1; seed <= 300; seed++) {
       const text = document(seed);
       const { links, images } = await renderer.markdown(text);
-      expect({ seed, links, images }).toEqual({ seed, ...extractReferences(text) });
+      const main = extractReferences(text);
+      expect({ seed, links, images }).toEqual({ seed, links: main.links, images: main.images });
     }
   }, 60_000);
 
@@ -77,7 +78,8 @@ describe("the renderer's references match main's", () => {
     for (let seed = 1; seed <= 300; seed++) {
       const text = document(seed, MDX_PIECES);
       const { links, images } = await renderer.markdown(text, { format: 'mdx' });
-      expect({ seed, links, images }).toEqual({ seed, ...extractReferences(text, 'mdx') });
+      const main = extractReferences(text, 'mdx');
+      expect({ seed, links, images }).toEqual({ seed, links: main.links, images: main.images });
     }
   }, 60_000);
 });

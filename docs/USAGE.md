@@ -187,6 +187,9 @@ the file into the window in front of you) when you want it here.
   the arrow keys; double-click or Home puts it back at half. Ctrl+\ again goes back to the view
   you had; Ctrl+U goes to the rendered view. A window narrower than about 700 px shows one view
   until it widens. A tab keeps its split and divider across restarts.
+- **Tick task boxes**: click a task box (or press Space on it) to tick or untick it; galeo writes
+  the file at once, keeping its encoding and line endings, and doesn't mark your tick as a change.
+  If the file changed on disk meanwhile, nothing is written: tick again once it shows.
 - **Task progress**: a Markdown plan with task items (`- [ ]`, `- [x]`) shows how many are done in
   the status bar ("7 of 12 tasks"), and the outline shows each heading's own count ("2/5").
 - **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
@@ -239,6 +242,9 @@ the file into the window in front of you) when you want it here.
 - **Several cursors**: Ctrl+D adds the next match of the selection, Ctrl+Shift+L every match;
   Shift+Alt+↑/↓ adds a cursor above or below; Ctrl+click adds one where you click, and Alt+drag
   puts one on each line it crosses. Typing goes to all of them; Esc goes back to one.
+- **Task boxes**: in edit mode, the preview of split view (Ctrl+\) ticks them: a click (or Space)
+  changes the editor's line from `[ ]` to `[x]` and back; Ctrl+S saves it, Ctrl+Z undoes it. (While
+  reading, a click ticks the box in the file at once: see Reading.)
 - **Tab** indents: at the cursor it adds the file's own indent (a tab, or its two or four spaces);
   with lines selected it indents them all. **Shift+Tab** takes one level off. To move the focus
   out of the editor with the keyboard, press **Esc** then **Tab**, or **Ctrl+M** (Shift+Option+M on

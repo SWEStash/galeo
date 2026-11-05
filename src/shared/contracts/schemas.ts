@@ -79,6 +79,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'documents.back': z.tuple([documentId]),
   'documents.forward': z.tuple([documentId]),
   'documents.resolveImage': z.tuple([documentId, z.string().min(1).max(8192)]),
+  'documents.toggleTask': z.tuple([documentId, z.number().int().min(1).max(100_000_000), z.string().min(1).max(256)]),
   'documents.pathMenu': z.tuple([documentId]),
   'documents.contextMenu': z.tuple([documentId]),
   'documents.save': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version.nullable()]),

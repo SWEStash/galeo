@@ -173,6 +173,48 @@ describe('DocumentView editing', () => {
 describe('DocumentView in split', () => {
   const twoViews = { source: { text: '# src src', language: 'markdown' as const }, wrap: false, scheme: 'light' as const };
 
+  describe('task boxes (ADR-031)', () => {
+    const task = { source: { text: '- [ ] one\n', language: 'markdown' as const }, wrap: false, scheme: 'light' as const };
+    const html = '<ul class="contains-task-list"><li class="task-list-item" data-src-line="1" data-src-end="1"><input type="checkbox" disabled> one</li></ul>';
+
+    it('in edit mode, ticks a box in the preview by ticking it in the source', async () => {
+      // happy-dom can't follow CodeMirror's focus inside a shadow root; clicking for real is the e2e's.
+      const { EditorView } = await import('@codemirror/view');
+      const focus = vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+      const handle = { current: null as DocumentHandle | null };
+      const container = await render(<DocumentView {...task} view="split" editable rendered={{ html }} ref={(value) => void (handle.current = value)} />);
+      const shadow = shadowOf(container);
+      await vi.waitFor(() => expect(shadow.querySelector('.cm-content')?.getAttribute('aria-readonly')).toBeNull(), { timeout: 5_000 });
+      const box = shadow.querySelector<HTMLInputElement>('article input[type=checkbox]')!;
+      await vi.waitFor(() => expect(box.disabled).toBe(false));
+      // What a click does to a checkbox.
+      act(() => {
+        box.checked = true;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      expect(handle.current!.sourceText()).toBe('- [x] one\n');
+      focus.mockRestore();
+    });
+
+    it("while reading, asks to tick a box's line, and shows the file's state until it changes", async () => {
+      const onToggleTask = vi.fn();
+      const container = await render(<DocumentView {...task} view="rendered" rendered={{ html }} onToggleTask={onToggleTask} />);
+      const box = shadowOf(container).querySelector<HTMLInputElement>('article input[type=checkbox]')!;
+      expect(box.disabled).toBe(false);
+      act(() => {
+        box.checked = true;
+        box.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      expect(onToggleTask).toHaveBeenCalledWith(1);
+      expect(box.checked).toBe(false);
+    });
+
+    it('keeps the boxes off where nothing can tick them', async () => {
+      const container = await render(<DocumentView {...task} view="rendered" rendered={{ html }} />);
+      expect(shadowOf(container).querySelector<HTMLInputElement>('article input[type=checkbox]')!.disabled).toBe(true);
+    });
+  });
+
   it('shows the source editor beside the rendered article, the divider where the reader left it', async () => {
     const container = await render(<DocumentView {...twoViews} view="split" splitRatio={0.3} rendered={{ html: '<p>src</p>' }} />);
     const shadow = shadowOf(container);

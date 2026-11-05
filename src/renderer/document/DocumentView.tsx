@@ -79,6 +79,8 @@ export interface DocumentViewProps {
   pendingFind?: FindRequest | null;
   /** Where `pendingFind` landed. */
   onPendingFind?: ((result: FindResult) => void) | undefined;
+  /** Reading: the reader ticked the task box of the item on this source line; main does it (ADR-031). */
+  onToggleTask?: ((line: number) => void) | undefined;
   /** What changed since the reader last looked (ADR-030), to mark; null for none. */
   changes?: ChangedRanges | null;
   /** How many marks the view showing has, or that most of the document changed. */
@@ -187,6 +189,7 @@ export function DocumentView({
   onPendingFind,
   changes = null,
   onChangeMarks,
+  onToggleTask,
   ref,
 }: DocumentViewProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -466,6 +469,32 @@ export function DocumentView({
     sourceView.setEditable(editable);
     if (editable && showsSource(view)) sourceView.view.focus();
   }, [editable, sourceReady, view]);
+
+  // Task boxes (ADR-031): reading, a tick goes to main; in edit mode the preview's boxes tick the editor's text.
+  const toggleListener = useLatest(onToggleTask);
+  const canToggle = onToggleTask !== undefined;
+  useLayoutEffect(() => {
+    const on = editable ? sourceReady && host().source !== null : canToggle;
+    for (const box of host().article.querySelectorAll<HTMLInputElement>('input[type=checkbox]')) box.disabled = !on;
+  }, [rendered, editable, sourceReady, canToggle]);
+  useEffect(() => {
+    const article = host().article;
+    const onChange = (event: Event) => {
+      const box = event.target;
+      if (!(box instanceof HTMLInputElement) || box.type !== 'checkbox') return;
+      const line = Number(box.closest<HTMLElement>('li[data-src-line]')?.dataset['srcLine']);
+      if (editing.current) {
+        // The source decides: a box whose line is no task item goes back as it was.
+        if (!host().source?.toggleTask(line)) box.checked = !box.checked;
+        return;
+      }
+      // The box shows the file: it changes when main has ticked it and the new text is in.
+      box.checked = !box.checked;
+      if (line) toggleListener.current?.(line);
+    };
+    article.addEventListener('change', onChange);
+    return () => article.removeEventListener('change', onChange);
+  }, []);
 
   // Change marks (ADR-030): on the rendered blocks after each render, and on the source's lines.
   const changeMarks = useRef<{ blocks: HTMLElement[]; lines: number[]; mostChanged: boolean; at: number }>({ blocks: [], lines: [], mostChanged: false, at: -1 });

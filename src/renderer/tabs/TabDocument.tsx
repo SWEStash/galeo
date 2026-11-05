@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChosenEncoding, FollowResult, HistoryResult, Recovered } from '../../shared/contracts';
-import type { ImageResult, RefusalReason, SaveResult } from '../../shared/documents';
+import type { ImageResult, RefusalReason, SaveResult, TaskToggleResult } from '../../shared/documents';
 import { fileName } from '../../shared/paths';
 import type { ScrollAnchor, TableDefaults, TabViewState } from '../../shared/tabs';
 import { DocumentPane, type DocumentPaneProps } from '../document/DocumentPane';
@@ -150,6 +150,11 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
     [id],
   );
   // A request that fails on the way (the tab closed meanwhile) reads as a write that didn't happen.
+  const toggleTask = useCallback(
+    (line: number, base: string): Promise<TaskToggleResult> =>
+      window.galeo.documents.toggleTask(id, line, base).catch((): TaskToggleResult => ({ kind: 'failed', reason: 'unavailable' })),
+    [id],
+  );
   const save = useCallback(
     (text: string, base: string | null): Promise<SaveResult> =>
       window.galeo.documents.save(id, text, base).catch((): SaveResult => ({ kind: 'failed', reason: 'unavailable' })),
@@ -235,6 +240,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
       onViewState={onViewState}
       editRequest={editRequest}
       onSave={save}
+      onToggleTask={toggleTask}
       onDirty={dirty}
       onLeaveEdit={leaveEdit}
       onMessage={onMessage}

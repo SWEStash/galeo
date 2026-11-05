@@ -266,6 +266,12 @@ mode closes the replace row and keeps find open.
   save/discard). A file opened from a link, a drop, quick open or recent files first asks in a
   native dialog naming its full path: *Edit* / *Cancel* (Cancel is the default), once per file
   per tab (ADR-015).
+- (v0.6) Task boxes (ADR-031). Reading: a click (or Space) on a box asks main to flip `[ ]` ↔ `[x]`
+  on its line in the file; the box shows the file's state, so it changes once the new text is in,
+  which isn't marked as a change (F20). Refusals say why in the status bar ("The file changed on
+  disk: tick again once it shows", "This box isn't a task item in the file", …). In edit mode the
+  split view's preview ticks the editor's text instead, as an ordinary edit (unsaved until Ctrl+S,
+  undone with Ctrl+Z).
 - Ctrl+S saves (atomic); status bar shows "Saved" briefly. Unsaved `●` on tab.
 - Closing a tab/window/profile, or quitting, with unsaved changes → dialog: Save / Don't save / Cancel
   (focus on Save; Esc = Cancel). Closing the window or quitting again while that dialog is open →

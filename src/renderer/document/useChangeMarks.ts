@@ -23,6 +23,8 @@ export function useChangeMarks({ tabId, path, text, active, editing, encoding }:
   ranges: ChangedRanges | null;
   tooLarge: boolean;
   clear: () => void;
+  /** The reader's own write is on its way (a task box ticked while reading): the next text is seen, unmarked. */
+  acceptNext: () => void;
 } {
   const [ranges, setRanges] = useState<ChangedRanges | null>(null);
   // A document over the cap that changed since the reader looked: there is no baseline to mark against.
@@ -53,8 +55,13 @@ export function useChangeMarks({ tabId, path, text, active, editing, encoding }:
     readIn.current = encoding;
   }, [encoding]);
 
+  const ownWrite = useRef(false);
   useEffect(() => {
     if (text === null || editing || !active) return;
+    if (ownWrite.current && text !== baselines.get(tabId, path)) {
+      ownWrite.current = false;
+      return look(text);
+    }
     if (baselines.tooLarge(text)) {
       if (largeSeen.current !== null && largeSeen.current !== text) setTooLarge(true);
       largeSeen.current ??= text;
@@ -73,5 +80,6 @@ export function useChangeMarks({ tabId, path, text, active, editing, encoding }:
   }, [tabId, path, text, active, editing, encoding]);
 
   const clear = useCallback(() => look(latest.current.text), [tabId]);
-  return { ranges, tooLarge, clear };
+  const acceptNext = useCallback(() => void (ownWrite.current = true), []);
+  return { ranges, tooLarge, clear, acceptNext };
 }

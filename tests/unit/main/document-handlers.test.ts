@@ -277,3 +277,34 @@ describe('documentHandlers saving', () => {
     expect(handlers['documents.recover']([id], event)).toEqual({ edit: true, kept: null });
   });
 });
+
+describe('documents.toggleTask (ADR-031)', () => {
+  const plan = '- [ ] one\n- [x] two\n';
+  const otherWindow = { ...event, sender: { id: 2 } } as WindowIpcEvent;
+  const text = async (fs: FakeFileSystem, file: string) => new TextDecoder().decode(await fs.readFile(file, { maxBytes: 1 << 20 }));
+
+  it("ticks a task item's box while reading, on the reader's input, as a save that isn't a change on disk", async () => {
+    const { fs, handlers, reads, id } = setup({ '/d/plan.md': plan });
+    await handlers['documents.read']([id], event);
+    expect(await handlers['documents.toggleTask']([id, 1, `#${plan}`], event)).toEqual({ kind: 'saved', version: '#- [x] one\n- [x] two\n' });
+    expect(await text(fs, '/d/plan.md')).toBe('- [x] one\n- [x] two\n');
+    expect(await reads.changed(id, '/d/plan.md')).toBe(false);
+  });
+
+  it('refuses in edit mode, where the editor holds the text, and without input; writes nothing', async () => {
+    const editing = setup({ '/d/plan.md': plan });
+    editing.grants.grant(editing.id, 1, '/d/plan.md');
+    expect(await editing.handlers['documents.toggleTask']([editing.id, 1, `#${plan}`], event)).toEqual({ kind: 'refused', reason: 'editing' });
+    expect(editing.fs.saves).toEqual([]);
+    const idle = setup({ '/d/plan.md': plan }, '', { credits: 0 });
+    expect(await idle.handlers['documents.toggleTask']([idle.id, 1, `#${plan}`], event)).toEqual({ kind: 'refused', reason: 'no-input' });
+    expect(idle.fs.saves).toEqual([]);
+  });
+
+  it("refuses another window's tab and the Settings tab", async () => {
+    const { handlers, records, id } = setup({ '/d/plan.md': plan });
+    await expect(handlers['documents.toggleTask']([id, 1, `#${plan}`], otherWindow)).rejects.toThrow(/unknown document/);
+    const settings = records.openSettings(1);
+    await expect(handlers['documents.toggleTask']([settings.id, 1, `#${plan}`], event)).rejects.toThrow();
+  });
+});

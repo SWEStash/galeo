@@ -96,6 +96,55 @@ test('in edit mode Tab indents and Shift+Tab un-indents; Esc then Tab, or Ctrl+M
   }
 });
 
+test('reading, a click ticks a task box in the file itself, keeping its line endings; it is not marked as a change', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'plan.md');
+  writeFileSync(file, '# Plan\r\n\r\n- [ ] build\r\n- [x] test\r\n');
+  const { window, close } = await launchApp(['--', file]);
+  try {
+    const box = shownDocument(window).getByRole('checkbox', { name: 'build' });
+    await expect(box).toBeEnabled();
+    await box.click();
+    await expect.poll(() => readFileSync(file, 'utf8')).toBe('# Plan\r\n\r\n- [x] build\r\n- [x] test\r\n');
+    await expect(box).toBeChecked();
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+    await expect(shownDocument(window).locator('.galeo-changed')).toHaveCount(0);
+
+    await box.click();
+    await expect.poll(() => readFileSync(file, 'utf8')).toBe('# Plan\r\n\r\n- [ ] build\r\n- [x] test\r\n');
+    await expect(box).not.toBeChecked();
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
+test('in edit mode a task box ticks from the preview of split view, as an edit Ctrl+S saves', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'plan.md');
+  writeFileSync(file, '# Plan\r\n\r\n- [ ] build\r\n- [x] test\r\n');
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    const box = shownDocument(window).getByRole('checkbox', { name: 'build' });
+    await expect(box).toBeVisible();
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    // Edit mode shows the editor; split view puts the preview beside it, whose boxes tick the editor's text.
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(box).toBeEnabled();
+    await box.click();
+    await expect(indicator(window, 'unsaved changes')).toBeAttached();
+    await expect(shownDocument(window).locator('.cm-line').filter({ hasText: 'build' })).toHaveText('- [x] build');
+    expect(readFileSync(file, 'utf8')).toBe('# Plan\r\n\r\n- [ ] build\r\n- [x] test\r\n');
+    await window.keyboard.press('ControlOrMeta+s');
+    await expect(window.getByTestId('status-message')).toHaveText('Saved');
+    expect(readFileSync(file, 'utf8')).toBe('# Plan\r\n\r\n- [x] build\r\n- [x] test\r\n');
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
 test('after a save, the rendered view shows the saved text', async () => {
   const dir = tempHome();
   const file = path.join(dir, 'notes.md');

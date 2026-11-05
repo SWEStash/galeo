@@ -164,9 +164,14 @@ export class DocumentLinks {
     return { record, references };
   }
 
-  private async extract(read: Read): Promise<References | null> {
+  private extract(read: Read): Promise<References | null> {
+    return this.extractFrom(read.text, read.format);
+  }
+
+  /** The references of a text, by the same parse and in the same worker as a document's; null if it fails or runs out of time. */
+  async extractFrom(text: string, format: WorkerFormat): Promise<References | null> {
     // An MDX syntax error fails the task: no link is followed until the file parses.
-    const result = await this.deps.tasks.run<References>('references', { text: read.text, format: read.format }, { timeoutMs: REFERENCES_TIMEOUT_MS });
+    const result = await this.deps.tasks.run<References>('references', { text, format }, { timeoutMs: REFERENCES_TIMEOUT_MS });
     return result.ok ? result.value : null;
   }
 }

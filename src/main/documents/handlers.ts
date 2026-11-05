@@ -4,9 +4,10 @@ import type { CloseAnswer } from '../../core/documents/unsaved';
 import type { ReadIdentities } from '../../core/documents/identities';
 import type { DocumentLinks } from '../../core/documents/links';
 import type { DocumentMenus } from '../../core/documents/menus';
-import { FORMATS } from '../../core/formats/registry';
+import { detectFormat, FORMATS } from '../../core/formats/registry';
 import { readDocument } from '../../core/documents/read';
 import { saveDocument } from '../../core/documents/save';
+import { toggleTaskBox } from '../../core/documents/task-boxes';
 import type { TabRegistry } from '../../core/tabs/registry';
 import type { FileSystem } from '../../core/ports';
 import type { Decode, WhatwgEncoding } from '../../core/text/decode';
@@ -22,6 +23,7 @@ type DocumentChannels =
   | 'documents.back'
   | 'documents.forward'
   | 'documents.resolveImage'
+  | 'documents.toggleTask'
   | 'documents.save'
   | 'documents.dirty'
   | 'documents.leaveEdit'
@@ -117,6 +119,24 @@ export function documentHandlers(deps: {
         { path: record.path, text, base, encoding: records.encoding(id, window) ?? undefined, shape: reads.shapeOf(id, record.path) },
       );
       // The file's new identity, before the watcher reports the write: our own save isn't a change on disk.
+      if (result.kind === 'saved') await reads.remember(id, record.path);
+      return result;
+    },
+    // Ticking a task box while reading (ADR-031): the reader's input, a line main's own parse shows
+    // as a task item, the file still as read; then saved as a save is. In edit mode the editor ticks.
+    'documents.toggleTask': async ([id, line, base], event) => {
+      const window = event.sender.id;
+      const record = records.get(id, window);
+      if (!record) throw new Error(UNKNOWN_DOCUMENT);
+      if (record.kind === 'settings') throw new Error('not a document');
+      if (grants.allows(id, window, record.path)) return { kind: 'refused', reason: 'editing' };
+      const format = workerFormat(detectFormat(record.path));
+      if (!format) return { kind: 'refused', reason: 'not-a-task' };
+      if (!input.spend(window)) return { kind: 'refused', reason: 'no-input' };
+      const result = await toggleTaskBox(
+        { fs, decode, hash, references: (text, of) => links.extractFrom(text, of) },
+        { path: record.path, line, base, encoding: records.encoding(id, window) ?? undefined, format },
+      );
       if (result.kind === 'saved') await reads.remember(id, record.path);
       return result;
     },

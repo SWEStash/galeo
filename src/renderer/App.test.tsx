@@ -77,6 +77,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       back: vi.fn().mockResolvedValue({ kind: 'none' }),
       forward: vi.fn().mockResolvedValue({ kind: 'none' }),
       resolveImage: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-in-document' }),
+      toggleTask: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'no-input' }),
       pathMenu: vi.fn().mockResolvedValue(undefined),
       contextMenu: vi.fn().mockResolvedValue(undefined),
       save: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-editable' }),

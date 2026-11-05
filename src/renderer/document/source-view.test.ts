@@ -253,6 +253,45 @@ describe('createSourceView editing', () => {
     source.destroy();
   });
 
+  describe('ticking a task box from the preview (ADR-031)', () => {
+    const editable = (text: string) => {
+      const { root, parent } = shadowContainer();
+      const source = createSourceView({ root, parent, text, language: 'markdown', wrap: false });
+      source.setEditable(true);
+      return source;
+    };
+
+    it("flips the box on a task item's line, as an edit that can be undone", () => {
+      const source = editable('# Plan\n\n- [ ] one\n  1. [x] two\n* [X] three\n');
+      let edits = 0;
+      source.onEdit(() => edits++);
+      expect(source.toggleTask(3)).toBe(true);
+      expect(source.toggleTask(4)).toBe(true);
+      expect(source.toggleTask(5)).toBe(true);
+      expect(source.text()).toBe('# Plan\n\n- [x] one\n  1. [ ] two\n* [ ] three\n');
+      expect(edits).toBe(3);
+      source.destroy();
+    });
+
+    it('does nothing on a line that is no task item', () => {
+      const source = editable('# Plan\n\ntext [ ] here\n- plain item\n');
+      expect(source.toggleTask(1)).toBe(false);
+      expect(source.toggleTask(3)).toBe(false);
+      expect(source.toggleTask(4)).toBe(false);
+      expect(source.toggleTask(99)).toBe(false);
+      expect(source.text()).toBe('# Plan\n\ntext [ ] here\n- plain item\n');
+      source.destroy();
+    });
+
+    it('never changes the text while reading', () => {
+      const { root, parent } = shadowContainer();
+      const source = createSourceView({ root, parent, text: '- [ ] one\n', language: 'markdown', wrap: false });
+      expect(source.toggleTask(1)).toBe(false);
+      expect(source.text()).toBe('- [ ] one\n');
+      source.destroy();
+    });
+  });
+
   describe('Tab and Shift+Tab in edit mode', () => {
     const press = (source: ReturnType<typeof createSourceView>, shiftKey = false) =>
       runScopeHandlers(source.view, new KeyboardEvent('keydown', { key: 'Tab', shiftKey }), 'editor');

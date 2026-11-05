@@ -147,7 +147,7 @@ describe('DocumentLinks.follow', () => {
   it('refuses a disallowed scheme or host even if the link set somehow holds it', async () => {
     // The sanitizer keeps these out of the link set; main refuses them regardless.
     const { links, shell, id } = setup({
-      references: () => ({ links: ['ftp://files.example/x', '//evil.example/x', 'JAVASCRIPT:alert(1)'], images: [] }),
+      references: () => ({ links: ['ftp://files.example/x', '//evil.example/x', 'JAVASCRIPT:alert(1)'], images: [], tasks: [] }),
     });
     expect(await links.follow(id, 1, 'ftp://files.example/x')).toEqual({ kind: 'refused', reason: 'scheme' });
     expect(await links.follow(id, 1, '//evil.example/x')).toEqual({ kind: 'refused', reason: 'host' });

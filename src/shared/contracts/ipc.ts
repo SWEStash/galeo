@@ -1,7 +1,7 @@
 // The IPC contract between main and the renderer (ADR-007, SR-11). Only names and types live
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS` and `EVENTS`, one fixed method per channel or event.
-import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, SaveResult } from '../documents';
+import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, SaveResult, TaskToggleResult } from '../documents';
 import type { FindAllResult } from '../find';
 import type { Platform, WindowCommand } from '../keymap';
 import type { SystemFont } from '../fonts';
@@ -109,6 +109,7 @@ export const CHANNELS = [
   'documents.back',
   'documents.forward',
   'documents.resolveImage',
+  'documents.toggleTask',
   'documents.pathMenu',
   'documents.contextMenu',
   'documents.save',
@@ -199,6 +200,8 @@ export interface Requests {
   'documents.forward': [id: string];
   /** An image the document shows, as written in it; main answers with an opaque URL (ADR-004). */
   'documents.resolveImage': [id: string, src: string];
+  /** Ticks or unticks the task box on a line while reading, if the file is still `base` (ADR-031). */
+  'documents.toggleTask': [id: string, line: number, base: string];
   /** Asks main for the native menu of the document's path (copy it, reveal it); main acts on the choice. */
   'documents.pathMenu': [id: string];
   /**
@@ -323,6 +326,7 @@ export interface Responses {
   'documents.back': HistoryResult;
   'documents.forward': HistoryResult;
   'documents.resolveImage': ImageResult;
+  'documents.toggleTask': TaskToggleResult;
   'documents.pathMenu': void;
   'documents.contextMenu': void;
   'documents.save': SaveResult;
