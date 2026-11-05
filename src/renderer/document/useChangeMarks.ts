@@ -8,6 +8,8 @@ export interface ChangeMarkInput {
   path: string;
   /** The file's text as last read; null before the first read. */
   text: string | null;
+  /** The content hash of that read (its `version`). */
+  version: string | null;
   /** The tab is shown. */
   active: boolean;
   editing: boolean;
@@ -19,12 +21,12 @@ export interface ChangeMarkInput {
  * baseline; leaving the tab, clearing the marks and ending edit mode take a new one; while shown,
  * changes add up against it. Edit mode shows none. Ranges are null when there is nothing to mark.
  */
-export function useChangeMarks({ tabId, path, text, active, editing, encoding }: ChangeMarkInput): {
+export function useChangeMarks({ tabId, path, text, version, active, editing, encoding }: ChangeMarkInput): {
   ranges: ChangedRanges | null;
   tooLarge: boolean;
   clear: () => void;
-  /** The reader's own write is on its way (a task box ticked while reading): the next text is seen, unmarked. */
-  acceptNext: () => void;
+  /** The reader's own write, saved as `version` (a task box ticked while reading): a read of that version is seen, unmarked. */
+  acceptNext: (version: string) => void;
 } {
   const [ranges, setRanges] = useState<ChangedRanges | null>(null);
   // A document over the cap that changed since the reader looked: there is no baseline to mark against.
@@ -55,12 +57,14 @@ export function useChangeMarks({ tabId, path, text, active, editing, encoding }:
     readIn.current = encoding;
   }, [encoding]);
 
-  const ownWrite = useRef(false);
+  const ownWrite = useRef<string | null>(null);
   useEffect(() => {
     if (text === null || editing || !active) return;
-    if (ownWrite.current && text !== baselines.get(tabId, path)) {
-      ownWrite.current = false;
-      return look(text);
+    if (ownWrite.current !== null && text !== baselines.get(tabId, path)) {
+      // Only the version the write saved: a change that landed after it is still marked.
+      const own = version === ownWrite.current;
+      ownWrite.current = null;
+      if (own) return look(text);
     }
     if (baselines.tooLarge(text)) {
       if (largeSeen.current !== null && largeSeen.current !== text) setTooLarge(true);
@@ -77,9 +81,9 @@ export function useChangeMarks({ tabId, path, text, active, editing, encoding }:
     return () => {
       current = false;
     };
-  }, [tabId, path, text, active, editing, encoding]);
+  }, [tabId, path, text, version, active, editing, encoding]);
 
   const clear = useCallback(() => look(latest.current.text), [tabId]);
-  const acceptNext = useCallback(() => void (ownWrite.current = true), []);
+  const acceptNext = useCallback((saved: string) => void (ownWrite.current = saved), []);
   return { ranges, tooLarge, clear, acceptNext };
 }

@@ -263,7 +263,7 @@ export function DocumentPane({
   // the file (it changed on disk) neither replaces it nor becomes the version a save names.
   const [editing, setEditing] = useState(false);
   // What changed since the reader last looked (ADR-030): rendered Markdown and the source view, not logs.
-  const changeMarks = useChangeMarks({ tabId, path: ready?.path ?? '', text: ready?.text ?? null, active, editing, encoding: ready?.encoding ?? null });
+  const changeMarks = useChangeMarks({ tabId, path: ready?.path ?? '', text: ready?.text ?? null, version: ready?.version ?? null, active, editing, encoding: ready?.encoding ?? null });
   const shownChanges = ready && ready.format !== 'log' ? changeMarks.ranges : null;
   const [changeCount, setChangeCount] = useState({ count: 0, mostChanged: false });
   // A split in a window too narrow for it shows one view; the toggles still act on the split.
@@ -508,7 +508,7 @@ export function DocumentPane({
     if (!ready) return;
     void onToggleTask(line, ready.version).then((result) => {
       if (result.kind !== 'saved') return onMessage(tickNotSaved(result));
-      changeMarks.acceptNext();
+      changeMarks.acceptNext(result.version);
       onReread();
     });
   };

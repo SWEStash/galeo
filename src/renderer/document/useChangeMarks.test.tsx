@@ -38,7 +38,7 @@ const settled = (now: () => ReturnType<typeof useChangeMarks>, check: (ranges: C
 
 describe('useChangeMarks', () => {
   it('shows no marks on the first look, then marks what changed while the tab stays shown, adding up', async () => {
-    const { render, now } = await mounted({ path: '/a.md', text: doc('a', 'b', 'c'), active: true, editing: false, encoding: 'utf-8' });
+    const { render, now } = await mounted({ version: null, path: '/a.md', text: doc('a', 'b', 'c'), active: true, editing: false, encoding: 'utf-8' });
     expect(now().ranges).toBeNull();
     await render({ text: doc('a', 'B', 'c') });
     await settled(now, (ranges) => expect(ranges?.changed).toEqual([[2, 2]]));
@@ -47,7 +47,7 @@ describe('useChangeMarks', () => {
   });
 
   it('marks, on return, only what changed since the reader left', async () => {
-    const { render, now } = await mounted({ path: '/a.md', text: doc('a', 'b'), active: true, editing: false, encoding: 'utf-8' });
+    const { render, now } = await mounted({ version: null, path: '/a.md', text: doc('a', 'b'), active: true, editing: false, encoding: 'utf-8' });
     await render({ text: doc('A', 'b') });
     await render({ active: false });
     await render({ text: doc('A', 'B') });
@@ -56,7 +56,7 @@ describe('useChangeMarks', () => {
   });
 
   it('clears on request, taking the shown text as the baseline', async () => {
-    const { render, now } = await mounted({ path: '/a.md', text: doc('a'), active: true, editing: false, encoding: 'utf-8' });
+    const { render, now } = await mounted({ version: null, path: '/a.md', text: doc('a'), active: true, editing: false, encoding: 'utf-8' });
     await render({ text: doc('b') });
     await settled(now, (ranges) => expect(ranges).not.toBeNull());
     act(() => now().clear());
@@ -66,7 +66,7 @@ describe('useChangeMarks', () => {
   });
 
   it("shows no marks in edit mode, and never marks the reader's own edits after it", async () => {
-    const { render, now } = await mounted({ path: '/a.md', text: doc('a'), active: true, editing: false, encoding: 'utf-8' });
+    const { render, now } = await mounted({ version: null, path: '/a.md', text: doc('a'), active: true, editing: false, encoding: 'utf-8' });
     await render({ editing: true });
     await render({ text: doc('mine') });
     expect(now().ranges).toBeNull();
@@ -75,17 +75,25 @@ describe('useChangeMarks', () => {
     await settled(now, (ranges) => expect(ranges?.changed).toEqual([[2, 2]]));
   });
 
-  it("takes the reader's own write as seen: the next text is the new baseline, unmarked", async () => {
-    const { render, now } = await mounted({ path: '/a.md', text: doc('- [ ] a', '- [ ] b'), active: true, editing: false, encoding: 'utf-8' });
-    act(() => now().acceptNext());
-    await render({ text: doc('- [x] a', '- [ ] b') });
+  it("takes the reader's own write as seen: the version it saved is the new baseline, unmarked", async () => {
+    const { render, now } = await mounted({ path: '/a.md', text: doc('- [ ] a', '- [ ] b'), version: 'v1', active: true, editing: false, encoding: 'utf-8' });
+    act(() => now().acceptNext('v2'));
+    await render({ text: doc('- [x] a', '- [ ] b'), version: 'v2' });
     expect(now().ranges).toBeNull();
-    await render({ text: doc('- [x] a', '- [x] b') });
+    await render({ text: doc('- [x] a', '- [x] b'), version: 'v3' });
     await settled(now, (ranges) => expect(ranges?.changed).toEqual([[2, 2]]));
   });
 
+  it('still marks a change that landed before the reread of the reader\'s own write', async () => {
+    const { render, now } = await mounted({ path: '/a.md', text: doc('- [ ] a', 'b'), version: 'v1', active: true, editing: false, encoding: 'utf-8' });
+    act(() => now().acceptNext('v2'));
+    // An agent wrote after the tick was saved: the reread is v3, not the tick's v2.
+    await render({ text: doc('- [x] a', 'B'), version: 'v3' });
+    await settled(now, (ranges) => expect(ranges?.changed).toEqual([[1, 2]]));
+  });
+
   it('starts again, unmarked, when the file is read in another encoding', async () => {
-    const { render, now } = await mounted({ path: '/a.md', text: doc('a'), active: true, editing: false, encoding: 'utf-8' });
+    const { render, now } = await mounted({ version: null, path: '/a.md', text: doc('a'), active: true, editing: false, encoding: 'utf-8' });
     await render({ text: doc('ä'), encoding: 'windows-1252' });
     expect(now().ranges).toBeNull();
     await render({ text: doc('ä', 'b') });
@@ -94,7 +102,7 @@ describe('useChangeMarks', () => {
 
   it('says a document too large to mark changed, once it changes, until it is looked at again', async () => {
     const big = 'x'.repeat(2_000_001);
-    const { render, now } = await mounted({ path: '/a.md', text: big, active: true, editing: false, encoding: 'utf-8' });
+    const { render, now } = await mounted({ version: null, path: '/a.md', text: big, active: true, editing: false, encoding: 'utf-8' });
     expect(now().tooLarge).toBe(false);
     await render({ text: `${big}y` });
     expect(now().tooLarge).toBe(true);
