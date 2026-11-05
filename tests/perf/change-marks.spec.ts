@@ -26,7 +26,8 @@ test('coming back to a 1 MB plan with 50 scattered changes adds its marks within
     const tab = (name: string) => window.getByRole('tab', { name: new RegExp(`^${name}`) });
     const shown = window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
     await tab('plan.md').click();
-    await expect(shown.locator('p').first()).toBeAttached();
+    // The plan's first render takes seconds on a busy machine; the timing starts later.
+    await expect(shown.locator('p').first()).toBeAttached({ timeout: 20_000 });
     const samples: number[] = [];
     // When the new text shows, before marks: the reread and render a change costs without them.
     const textShown: number[] = [];
