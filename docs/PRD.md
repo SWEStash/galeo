@@ -517,7 +517,7 @@ as fast and as keyboard- and screen-reader-friendly as before.
    - AC: In both tab layouts, a Commands button (`⋯`) opens the command palette and a Search tabs
      button (`⌕`) opens tab search. The profile menu has Settings and New window.
    - AC: A right-click on a tab, in the tab bar or the tab list, offers Close tab, Reopen closed
-     tab, Move to new window, Move to window… and Pin or Unpin.
+     tab, Move to new window, Move to window…, Copy path, Reveal in Files and Pin or Unpin.
    - AC: The document's right-click menu adds Back and Forward when there is history, Find…,
      Reload, and Edit or Save; in a JSON tree also Expand all, Collapse all and Copy JSON path.
      Edit and Save stay with galeo's main process, as the shortcuts do.
