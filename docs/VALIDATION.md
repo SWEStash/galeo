@@ -235,3 +235,5 @@ runs in three shards on macOS arm64 and Windows x64 only, to save the minutes qu
 | Release dry run 41143442494 (2026-10-30, `b7b1c9b`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
 | 0.5.0 candidate: Platforms 41673935169 (2026-11-03, `65f4481`) | Pass, Pass | Pass | Pass, Pass | Pass |
 | Release 0.5.0: release workflow 41723206000 (2026-11-03, tag `v0.5.0` on `e9c2800`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
+| 0.6.0 candidate: Platforms 42043373888 (2026-11-05, `9bf3a72`) | Pass, Fail: Shift+Option+M types a character on macOS, so the editor's way out never worked; fixed in `aa7d4ef` (Control+M), and the failed test re-run on it, 42048291129: Pass | Pass | Pass, Pass | Pass |
+| Release 0.6.0: release workflow 42066951847 (2026-11-05, tag `v0.6.0` on `ef707b8`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
