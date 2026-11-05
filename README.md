@@ -49,8 +49,12 @@ shows how to get past them.
 
 ## Features
 
-- **Reading**: GitHub-style Markdown with code, math and Mermaid diagrams, and logs that can follow
-  a growing file. Files reload when they change on disk.
+- **Reading**: GitHub-style Markdown with code, math, Mermaid diagrams and callouts, front matter
+  as a list of fields, and logs that can follow a growing file. Files reload when they change on
+  disk.
+- **Following an agent's work**: what changed since you last looked is marked (F7 steps through
+  it), tabs whose file changed show a dot, plans count their tasks done and tick from the page,
+  and links to files that don't exist are marked.
 - **Editing**: raw text with a live split preview. Saving keeps the file's encoding, line endings
   and permissions.
 - **Data and code**: JSON as a tree, CSV and TSV as a table, YAML, TOML and source code

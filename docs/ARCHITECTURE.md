@@ -309,6 +309,12 @@ keeps its distance, else the block at the top does. A warm tab takes the change 
 again; hibernated tabs refresh on their next wake. Rename or delete puts the tab in the *missing*
 state; if the path reappears, the tab reads it again.
 
+(v0.6) A `tabs.stale` for a tab that isn't shown also marks it *changed on disk* in the renderer's
+tab store, until it is shown. Change marks (ADR-030) live in the renderer only: a per-window
+store keeps the text each tab showed when the reader left it (capped), and the pane diffs a new
+read against it, line by line with `@codemirror/merge`, then marks the rendered blocks
+(`data-src-line`) or source lines that changed; nothing crosses to Main.
+
 ### 5.4 Clicking a link (capability check)
 
 ```mermaid
@@ -327,6 +333,10 @@ sequenceDiagram
     M-->>R: refused (status-bar message)
   end
 ```
+
+(v0.6) After each render the renderer asks `documents.missingLinks(tabId)`: Main stats the local
+file targets of the links in the text it read itself (at most 500, 16 at a time) and answers the
+ones that don't exist, which the page marks; no content is read and the page names no path.
 
 ### 5.5 Save (ADR-013)
 
@@ -347,6 +357,12 @@ over 256 MB. The same write removes that file's temp files left by a crash more 
 ago. The new identity is remembered before the watcher reports the write, so the page reads the file again itself after each save. A null `version` writes back a file that was deleted, only
 while it is still gone, in the shape of the tab's last read (`ReadIdentities` keeps the encoding,
 byte order mark and line endings, never the text).
+
+(v0.6, ADR-031) Ticking a task box while reading sends `documents.toggleTask(tabId, line, version)`,
+refused for a tab in edit mode. Main spends an input credit, reads the file again (conflict unless
+its hash is `version`), runs its own reference extraction to check that `line` is a task item
+whose text starts with a box, flips `[ ]` ↔ `[x]` and saves through the same path as above. In
+edit mode the split view's preview ticks the editor's text instead.
 
 A change on disk reaches a tab with unsaved changes as a new read like any other (`tabs.stale`);
 the page keeps its text and shows the "File changed on disk" bar (UX F12) instead of taking it.

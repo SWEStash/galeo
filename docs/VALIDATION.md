@@ -59,6 +59,10 @@ Record the date, the build and the result of each row.
 | JSON tree and log colours, then Orca (v0.4) | Open a JSON file and a service log, in light and then dark: the tree's keys, numbers, booleans and null in one colour, strings in another, previews muted; the log's timestamps muted, level words in their level's colour, `key=value` keys in colour, error and warning lines faintly tinted. Orca reads each tree row and log line as before ("name: \"galeo\"", the whole line) | Pass (2026-10-28, `.deb` 0.4.0) |
 | Orca: find in all tabs (v0.4) | Ctrl+Shift+F, type a word in three tabs: Orca says "Find in all tabs", then "Searching…" and the total ("6 matches in 3 tabs"); ↓ reads each match with its line and the tab group's name and count; Match case reads as a toggle; Enter shows the tab and Orca reads the find bar with the word and "2 of 3"; Esc returns to the document | Pass (2026-10-28, `.deb` 0.4.0; 0.5.0 `.deb`, 2026-11-03; 0.5.1 `.deb`, 2026-11-04) |
 | Data views by keyboard, then Orca (v0.3) | In a CSV table the arrows move cell to cell and Orca reads each cell; in a JSON tree the arrows expand and collapse items and Orca reads each one | Pass (2026-10-20, `.deb` 0.3.0) |
+| Orca: change marks (v0.6) | Show another tab, change the first tab's file from a terminal: Ctrl+Tab reads it with "…, changed on disk". Show it: F7 says "Change 1 of N" and Orca reads the block with "changed" ("text removed before this" after a removal); Shift+F7 goes back; *Clear change marks* in the palette removes them | Not run (0.6.0) |
+| Orca: callouts, front matter and task counts (v0.6) | A `> [!WARNING]` reads its title, then its text; flat front matter reads as a list of terms and values; Ctrl+Shift+O reads a heading as "Plan (2 of 5 tasks done)"; the status bar says "7 of 12 tasks" | Not run (0.6.0) |
+| Task boxes and Tab by keyboard, then Orca (v0.6) | Reading: Tab to a task box, Space ticks it in the file (`cat` shows `[x]`), Orca reads "checkbox, checked". Edit mode: Tab indents a list line, Shift+Tab un-indents; Esc then Tab, and Ctrl+M then Tab, move the focus out of the editor; Orca reads the editor's description | Not run (0.6.0) |
+| Orca: broken links (v0.6) | A link to a file that doesn't exist has a wavy underline; Orca reads it with "file not found" | Not run (0.6.0) |
 
 ## Performance
 
@@ -97,6 +101,7 @@ Electron and Mermaid updates (1257 → 1377 MB).
 | Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — | 16.7 ms (p95 33.4) | 16.7 ms (p95 33.3) | 16.7 ms (p95 33.3) |
 | A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — | 1567 ms (p95 1947) | 1358 ms (p95 1401) | 1324 ms (p95 1489) |
 | Find in all tabs over three 100 MB tabs: the longest main is busy at once (v0.5) | 100 ms (2026-11-02) | — | — | — | — | — | 19 ms; the other window 8 ms; a query 1830 ms | 17 ms; the other window 12 ms; a query 1375 ms |
+| Coming back to a 1 MB plan with 50 scattered changes: new text shown → all marks drawn (v0.6) | 100 ms (2026-11-05) | — | — | — | — | — | — | — |
 
 The v0.3 rows were first measured on 2026-10-16 during development (headless, Electron 44.8.0, the
 machine under a load average of 2–3, so not release figures): the JSON tree opened in 1550–1986 ms and
@@ -184,6 +189,7 @@ these.
 | Drop a folder: quick open opens on it | Pass (2026-10-05) |
 | `galeo file.md` while galeo is on another workspace: GNOME's "galeo is ready" notice, no workspace switch | Pass (2026-10-05, Ubuntu 26.04; 0.2.0 `.deb`, 2026-10-15; 0.4.0 `.deb`, 2026-10-28) |
 | Live reload from a real editor or agent: in place, no jump, `↻` for about a second | Pass (2026-10-05) |
+| Following an agent (v0.6): an agent rewriting a plan in a background tab gives it the blue `•`; showing it marks what changed, the plan's task count follows, and ticking a box while reading writes the file (an editor open on it reloads) | Not run (0.6.0) |
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
