@@ -32,7 +32,8 @@
   [027](decisions/ADR-027-macos-windows-previews.md) ·
   [028](decisions/ADR-028-default-app-known-types-on-macos-windows.md) ·
   [029](decisions/ADR-029-apt-repository-on-github-pages.md) ·
-  [030](decisions/ADR-030-change-marks.md)
+  [030](decisions/ADR-030-change-marks.md) ·
+  [031](decisions/ADR-031-ticking-task-boxes.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
