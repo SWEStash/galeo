@@ -74,6 +74,16 @@ npm run headless -- npm run site:screenshots
 They open the documents in `tests/screenshots/showcase/` at 1280×800 on an emulated 2× display.
 Look at each one before committing it.
 
+To compare the interface before and after a change of its look, `tests/screenshots/chrome.spec.ts`
+takes every surface around the document (tab bar and side panel states, menus, overlays, Settings,
+banners, the empty window), light and dark, into `GALEO_SHOTS_DIR` (default `.local/design/shots/`,
+not committed):
+
+```sh
+npm run build
+GALEO_SHOTS_DIR=/tmp/before npm run headless -- npx playwright test --project=screenshots tests/screenshots/chrome.spec.ts
+```
+
 ## Before pushing
 
 Run `npm run preflight` and push only when it ends with "all green". On a busy machine it may end

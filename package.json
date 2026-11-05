@@ -33,7 +33,7 @@
     "test:e2e": "playwright test --project=e2e",
     "test:no-network": "playwright test --project=no-network",
     "test:perf": "playwright test --project=perf",
-    "site:screenshots": "playwright test --project=screenshots",
+    "site:screenshots": "playwright test --project=screenshots tests/screenshots/site.spec.ts",
     "headless": "sh scripts/headless.sh",
     "preflight": "sh scripts/preflight.sh"
   },
