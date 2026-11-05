@@ -493,6 +493,72 @@ otherwise, and nothing leaves the machine.
 - Watching a folder for new files.
 - Drag between windows checked on X11.
 
+## User Stories — v0.7 "polish"
+
+v0.7 is about how galeo looks and how far the mouse reaches. The interface around the document
+gets a fresher look, and the controls the mouse paths review accepted
+([mouse-paths.md](design/mouse-paths.md)) are built. Documents keep their look, and galeo stays
+as fast and as keyboard- and screen-reader-friendly as before.
+
+### Must Have
+
+1. **A fresher look.** As the owner, I want the interface around the document to look more modern,
+   so that galeo is pleasant to keep open all day while staying minimal.
+   - AC: The tab bar or tab list, the title bar, the status bar, the menus, dialogs and overlays and
+     Settings share one set of spacing, text sizes, corners and shadows, in light and dark, with
+     icons in place of text symbols.
+   - AC: Text keeps 4.5:1 contrast and controls 3:1 in both themes; every control shows its focus.
+     Movement is short, and none plays when the system asks for reduced motion.
+   - AC: The window and the first document open as fast as before (650 ms and 1250 ms).
+   - AC: Documents look as they do today. Some names a `custom.css` can use may change; their own
+     ADR decides it, and the release notes list each change.
+2. **Mouse paths.** As a reader using the mouse, I want to reach the commands I use while reading
+   without knowing their shortcuts, so that every feature can be found.
+   - AC: In both tab layouts, a Commands button (`⋯`) opens the command palette and a Search tabs
+     button (`⌕`) opens tab search. The profile menu has Settings and New window.
+   - AC: A right-click on a tab, in the tab bar or the tab list, offers Close tab, Reopen closed
+     tab, Move to new window, Move to window… and Pin or Unpin.
+   - AC: The document's right-click menu adds Back and Forward when there is history, Find…,
+     Reload, and Edit or Save; in a JSON tree also Expand all, Collapse all and Copy JSON path.
+     Edit and Save stay with galeo's main process, as the shortcuts do.
+   - AC: In the status bar, the view's name opens a menu (Rendered, Source, Split, Wrap, Outline,
+     each where it applies), a log offers Follow, and a click on the zoom or the width resets it.
+   - AC: Each control runs the same command as its shortcut, and has a name a screen reader reads.
+
+### Should Have
+
+- **Copy buttons.** A code block has a Copy button, and *Copy as rich text* puts the rendered
+  document on the clipboard, so that code and notes paste elsewhere without retyping.
+  - AC: The button is reachable by keyboard and says "Copied" for screen readers. Rich text is the
+    document as galeo shows it, with its plain text alongside; galeo never reads the clipboard.
+- **Pinned tabs.** A tab can be pinned, so that the documents I keep coming back to stay put.
+  - AC: Pinned tabs stay first, in both layouts, show a pin, and a screen reader hears "pinned".
+    galeo never hibernates them on its own, and they stay pinned after a restart.
+- **Save a diagram.** The diagram viewer saves the diagram as SVG or PNG, so that I can use it in
+  another document.
+  - AC: galeo asks where to save, and writes only that file. The SVG is the one galeo shows, already
+    cleaned of scripts and outside links.
+
+### Could Have
+
+- **Export to PDF.** *Export to PDF…* saves the rendered document as a PDF, offline.
+  - AC: The PDF has the document only, without galeo's bars, in the light theme, and avoids
+    splitting code blocks and diagrams across pages. galeo writes only the file I chose.
+- **Launchers per profile.** On Linux, Settings can add a launcher "galeo — <profile>" that opens
+  that profile, as the main launcher opens the default one.
+  - AC: Removing it removes only launchers galeo added. On macOS and Windows the option says it
+    isn't available.
+
+### Won't Have (v0.7)
+
+- A new look for documents themselves (headings, code blocks, tables).
+- The mouse's back and forward buttons (turned down in the mouse paths review).
+- Following a large log without re-reading the whole file on each change.
+- Optional Vim keybindings, spell check in edit mode and more diagram engines.
+- Watching a folder for new files.
+- Drag between windows checked on X11.
+- Removing the Windows command (`galeo.cmd`) when galeo is uninstalled.
+
 ## User Experience
 
 A browser-like window: a tab bar with the profile name/colour at the left, the document below,
