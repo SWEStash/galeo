@@ -64,8 +64,9 @@ the [decision records](../decisions/)).
 **Window title** (used by GNOME's overview and Alt+Tab): `<file name> — <profile> — galeo`.
 
 *Planned (the [mouse paths review](mouse-paths.md), not yet built):* a `⌕` Search tabs button and a
-`⋯` Commands button (it opens the command palette) after `+` and `▦`, in the tab bar or, with tabs
-on the left, the title bar; Settings and New window in the profile menu; in the status bar, the view
+`⋯` Commands button (it opens the command palette) beside `▦` at the bar's far right, before the
+window controls, while `+` stays after the last tab (in the tab bar or, with tabs on the left, the
+title bar); Settings and New window in the profile menu; in the status bar, the view
 name as a menu (views, wrap, outline), a Follow toggle for logs, and a click on the zoom or reader
 width resetting it.
 
@@ -358,8 +359,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 - Unlike quick open (F8), it never lists files that aren't tabs: it answers "where is that tab",
   not "open a file". Closed windows stay with Ctrl+Shift+T.
 - The list holds only tabs of this window, so of one profile.
-- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* a `⌕` button after `+` and
-  `▦` opens it.
+- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* a `⌕` button at the bar's
+  far right, beside `▦`, opens it.
 
 ### F17 — Tab overview (v0.4)
 

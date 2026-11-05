@@ -2,7 +2,8 @@
 
 - Date: 2026-11-02
 - Status: accepted by the owner (2026-11-02), with one proposal turned down (the mouse's back and forward
-  buttons)
+  buttons). Amended 2026-11-05 (owner, with the [visual refresh](visual-refresh.md)): `+` stays after the
+  last tab; `▦`, `⌕` and `⋯` sit at the bar's far right
 - Scope: every command in the palette (`COMMANDS` in `src/shared/commands.ts`, 56 entries). For each:
   - how a mouse user reaches it today;
   - whether it should get a control or menu entry, and why;
@@ -136,7 +137,7 @@ enough) or **no** (with the reason).
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
-│▌acme │ plan.md │ handoff.md ✕ │ agent.log ⇣ │  + ▦ ⌕ ⋯  ░░░ grip ░░░   ─ □ ✕ │
+│▌acme │ plan.md │ handoff.md ✕ │ agent.log ⇣ │ +  ░░░ grip ░░░   ▦ ⌕ ⋯ │ ─ □ ✕ │
 ├────────────────────────────────────────────────────────────────────────────────┤
 │            document          (right-click: Back · Forward · Find… · Reload ·   │
 │                               Edit/Save · Open with default app · Reveal ·      │
@@ -147,13 +148,14 @@ enough) or **no** (with the reason).
 └────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-`⌕` and `⋯` follow `+` and `▦` after the last tab, so the grip keeps its place and its width.
+`+` follows the last tab, where a new tab appears. `▦`, `⌕` and `⋯` sit at the far right, before the window
+controls: they keep their place however many tabs are open, and the grip is the space between.
 
 ### Tabs on the left
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────┐
-│ ◧ ▌acme  + ▦ ⌕ ⋯   plan.md — ~/notes  ░░░░ drags the window ░░░░      ─ □ ✕ │
+│ ◧ ▌acme  +    plan.md — ~/notes  ░░░ drags the window ░░░    ▦ ⌕ ⋯ │ ─ □ ✕ │
 ├──────────────┬─────────────────────────────────────────────────────────────────┤
 │ plan.md      │                                                                 │
 │  ~/notes     │   document                                                      │
