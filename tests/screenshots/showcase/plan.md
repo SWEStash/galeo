@@ -3,6 +3,9 @@
 The service answers queries from the index in under **50 ms** at p95. This plan moves it from the
 prototype to production in three checkpoints.
 
+> [!NOTE]
+> The p95 target is measured on the staging cluster with production traffic replayed.
+
 ## Checkpoints
 
 | Checkpoint | Scope | Status |
