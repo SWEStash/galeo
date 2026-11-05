@@ -50,6 +50,45 @@
   --galeo-syntax-type: #116329;
   --galeo-syntax-variable: #953800;
   --galeo-syntax-invalid: #82071e;
+
+  /*
+   * The chrome's own scale (ADR-032, docs/design/visual-refresh.md §2). Internal: not part of the
+   * custom.css contract, and free to change in any release.
+   */
+  --galeo-space-2xs: 2px;
+  --galeo-space-xs: 4px;
+  --galeo-space-sm: 6px;
+  --galeo-space-md: 8px;
+  --galeo-space-lg: 12px;
+  --galeo-space-xl: 16px;
+  --galeo-space-2xl: 24px;
+  --galeo-space-3xl: 32px;
+  --galeo-text-xs: 11px;
+  --galeo-text-sm: 12px;
+  --galeo-text-md: 13px;
+  --galeo-text-lg: 15px;
+  --galeo-text-xl: 18px;
+  --galeo-text-2xl: 22px;
+  --galeo-radius-sm: 4px;
+  --galeo-radius-md: 6px;
+  --galeo-radius-lg: 10px;
+  --galeo-radius-full: 999px;
+  --galeo-shadow-1: 0 2px 8px rgb(0 0 0 / 12%);
+  --galeo-shadow-2: 0 8px 28px rgb(0 0 0 / 18%);
+  --galeo-scrim: rgb(0 0 0 / 25%);
+  --galeo-motion-fast: 100ms;
+  --galeo-motion-base: 150ms;
+  --galeo-ease: cubic-bezier(0.2, 0, 0, 1);
+  /* Chrome colours, for now the document colours the chrome has always used. */
+  --galeo-chrome-bar: var(--galeo-color-code-bg);
+  --galeo-chrome-surface: var(--galeo-color-bg);
+  --galeo-chrome-hover: var(--galeo-color-code-bg);
+  --galeo-chrome-press: var(--galeo-color-border);
+  --galeo-chrome-selected: color-mix(in srgb, var(--galeo-color-focus) 15%, var(--galeo-color-bg));
+  /* Tints: a find-in-all-tabs match, a banner, the drop area's veil. */
+  --galeo-chrome-match: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
+  --galeo-chrome-banner: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));
+  --galeo-chrome-veil: color-mix(in srgb, var(--galeo-color-bg) 85%, transparent);
   color-scheme: light;
 }
 
@@ -82,5 +121,16 @@
   --galeo-syntax-type: #7ee787;
   --galeo-syntax-variable: #ffa657;
   --galeo-syntax-invalid: #ffa198;
+  --galeo-shadow-1: 0 2px 8px rgb(0 0 0 / 40%);
+  --galeo-shadow-2: 0 8px 28px rgb(0 0 0 / 55%);
+  --galeo-scrim: rgb(0 0 0 / 50%);
   color-scheme: dark;
+}
+
+/* Reduced motion: every chrome transition and animation drawn from the motion tokens is instant. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --galeo-motion-fast: 0ms;
+    --galeo-motion-base: 0ms;
+  }
 }

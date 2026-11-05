@@ -30,10 +30,10 @@ body,
   flex: none;
   height: env(titlebar-area-height, 36px);
   padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-bar);
   border-bottom: 1px solid var(--galeo-color-border);
   -webkit-app-region: drag;
-  font: 13px var(--galeo-font-ui);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
   color: var(--galeo-color-fg);
 }
 
@@ -44,20 +44,20 @@ body,
 
 /* macOS puts its window buttons at the bar's start. */
 :root[data-platform='darwin'] .tab-bar {
-  padding-left: 78px;
+  padding-left: 78px; /* literal: clears the macOS window buttons */
 }
 
 /* The profile chip (UX F5): its name, and its accent beside it. */
 .profile-chip {
   display: flex;
   flex: none;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
   max-width: 160px;
-  margin: 4px 6px;
-  padding: 0 8px;
+  margin: var(--galeo-space-xs) var(--galeo-space-sm);
+  padding: 0 var(--galeo-space-md);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
   font: inherit;
@@ -85,36 +85,36 @@ body,
 .menu-popover {
   min-width: 220px;
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
-  font: 13px var(--galeo-font-ui);
+  box-shadow: var(--galeo-shadow-1);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
   color: var(--galeo-color-fg);
 }
 
 .menu {
-  padding: 4px;
+  padding: var(--galeo-space-xs);
   outline: none;
 }
 
 .menu-header {
-  padding: 6px 8px 2px;
+  padding: var(--galeo-space-sm) var(--galeo-space-md) var(--galeo-space-2xs);
   color: var(--galeo-color-muted);
-  font-size: 12px;
+  font-size: var(--galeo-text-sm);
 }
 
 .menu-item {
   display: flex;
-  gap: 8px;
+  gap: var(--galeo-space-md);
   align-items: center;
-  padding: 5px 8px;
-  border-radius: 4px;
+  padding: var(--galeo-space-sm) var(--galeo-space-md);
+  border-radius: var(--galeo-radius-sm);
   outline: none;
   cursor: default;
 }
 
 .menu-item[data-focused] {
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-hover);
 }
 
 .menu-item[data-disabled] {
@@ -124,19 +124,19 @@ body,
 .menu-label {
   display: flex;
   flex: 1;
-  gap: 8px;
+  gap: var(--galeo-space-md);
   align-items: center;
 }
 
 .menu-description {
   margin-left: auto;
   color: var(--galeo-color-muted);
-  font-size: 12px;
+  font-size: var(--galeo-text-sm);
 }
 
 .menu-separator {
   height: 1px;
-  margin: 4px 0;
+  margin: var(--galeo-space-xs) 0;
   background: var(--galeo-color-border);
 }
 
@@ -145,29 +145,29 @@ body,
   inset: 0;
   display: grid;
   place-items: center;
-  background: rgb(0 0 0 / 35%);
+  background: var(--galeo-scrim);
 }
 
 .modal {
   width: min(420px, calc(100vw - 32px));
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
-  font: 14px var(--galeo-font-ui);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
 }
 
 .dialog {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 16px;
+  gap: var(--galeo-space-lg);
+  padding: var(--galeo-space-xl);
   outline: none;
 }
 
 .dialog h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--galeo-text-xl);
 }
 
 .dialog p {
@@ -177,13 +177,13 @@ body,
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--galeo-space-xs);
 }
 
 .field input {
-  padding: 5px 8px;
+  padding: var(--galeo-space-sm) var(--galeo-space-md);
   border: 1px solid var(--galeo-color-control-border);
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
   font: inherit;
@@ -191,23 +191,23 @@ body,
 
 .field .react-aria-FieldError {
   color: var(--galeo-color-log-error);
-  font-size: 13px;
+  font-size: var(--galeo-text-md);
 }
 
 .swatches-label {
-  margin-top: 4px;
+  margin-top: var(--galeo-space-xs);
 }
 
 .swatches {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 0 0 12px;
+  gap: var(--galeo-space-md);
+  margin: 0 0 var(--galeo-space-lg);
   outline: none;
 }
 
 .swatch-item {
-  padding: 3px;
+  padding: var(--galeo-space-xs);
   border: 2px solid transparent;
   border-radius: 50%;
   outline: none;
@@ -230,7 +230,7 @@ body,
 
 .dialog-buttons {
   display: flex;
-  gap: 8px;
+  gap: var(--galeo-space-md);
   justify-content: flex-end;
 }
 
@@ -253,10 +253,10 @@ body,
 .tab {
   display: flex;
   flex: 0 1 200px;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
   min-width: 72px;
-  padding: 0 8px 0 0;
+  padding: 0 var(--galeo-space-md) 0 0;
   border-right: 1px solid var(--galeo-color-border);
   color: var(--galeo-color-fg);
   cursor: default;
@@ -282,11 +282,11 @@ body,
 .tab-grab {
   display: flex;
   flex: 1;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
   align-self: stretch;
   min-width: 0;
-  padding-left: 12px;
+  padding-left: var(--galeo-space-lg);
 }
 
 .tab-label {
@@ -308,7 +308,7 @@ body,
 
 .tab-indicator {
   flex: none;
-  font-size: 12px;
+  font-size: var(--galeo-text-sm);
 }
 .tab-indicator[data-indicator='changed on disk'],
 .tab-marker-mark[data-indicator='changed on disk'] {
@@ -335,8 +335,8 @@ body,
 .tab-close {
   flex: none;
   width: 18px;
-  border-radius: 4px;
-  font-size: 11px;
+  border-radius: var(--galeo-radius-sm);
+  font-size: var(--galeo-text-xs);
   line-height: 18px;
   text-align: center;
 }
@@ -358,12 +358,12 @@ body,
   border: none;
   background: transparent;
   color: var(--galeo-color-fg);
-  font-size: 18px;
+  font-size: 18px; /* literal: glyph size until the icons replace it */
   line-height: 1;
   -webkit-app-region: no-drag;
 }
 .tab-scroll:hover:not(:disabled) {
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-hover);
 }
 .tab-scroll:disabled {
   color: var(--galeo-color-muted);
@@ -376,18 +376,18 @@ body,
   align-self: center;
   width: 26px;
   height: 26px;
-  margin: 0 4px;
+  margin: 0 var(--galeo-space-xs);
   border: none;
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: transparent;
   color: var(--galeo-color-muted);
-  font-size: 18px;
+  font-size: 18px; /* literal: glyph size until the icons replace it */
   line-height: 1;
   -webkit-app-region: no-drag;
 }
 .tab-new:hover,
 .tab-overview-button:hover {
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-hover);
   color: var(--galeo-color-fg);
 }
 .tab-new:focus-visible,
@@ -411,12 +411,12 @@ body,
 .quick-open-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 10px 12px;
+  padding: var(--galeo-space-lg) var(--galeo-space-lg);
   border: none;
   border-bottom: 1px solid var(--galeo-color-control-border);
   background: transparent;
   color: var(--galeo-color-fg);
-  font: 15px var(--galeo-font-ui);
+  font: var(--galeo-text-lg) var(--galeo-font-ui);
   outline: none;
 }
 .quick-open-field:focus-within .quick-open-input {
@@ -425,34 +425,34 @@ body,
 .quick-open-list {
   max-height: min(60vh, 480px);
   overflow-y: auto;
-  padding: 4px 0;
+  padding: var(--galeo-space-xs) 0;
   outline: none;
 }
 .quick-open-header {
-  padding: 8px 12px 2px;
+  padding: var(--galeo-space-md) var(--galeo-space-lg) var(--galeo-space-2xs);
   color: var(--galeo-color-muted);
-  font-size: 11px;
+  font-size: var(--galeo-text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .quick-open-item {
   display: flex;
-  gap: 12px;
+  gap: var(--galeo-space-lg);
   align-items: baseline;
-  padding: 4px 12px;
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
   cursor: default;
   outline: none;
 }
 .quick-open-item[data-focused],
 .quick-open-item[data-hovered] {
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-hover);
   box-shadow: inset 2px 0 0 var(--galeo-color-focus);
 }
 .quick-open-label {
   display: flex;
   flex: 1;
-  gap: 12px;
+  gap: var(--galeo-space-lg);
   align-items: baseline;
   min-width: 0;
 }
@@ -468,17 +468,17 @@ body,
   flex: 1;
 }
 .find-all-case {
-  margin: 0 8px;
-  padding: 2px 6px;
+  margin: 0 var(--galeo-space-md);
+  padding: var(--galeo-space-2xs) var(--galeo-space-sm);
   border: 1px solid var(--galeo-color-control-border);
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: transparent;
   color: var(--galeo-color-fg);
-  font: 13px var(--galeo-font-ui);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
 }
 .find-all-case[aria-pressed='true'] {
   border-color: var(--galeo-color-focus);
-  background: color-mix(in srgb, var(--galeo-color-focus) 15%, var(--galeo-color-bg));
+  background: var(--galeo-chrome-selected);
 }
 .find-all .quick-open-header {
   text-transform: none;
@@ -492,20 +492,20 @@ body,
 }
 .find-all-text {
   overflow: hidden;
-  font-family: var(--galeo-font-mono, monospace);
-  font-size: 13px;
+  font-family: var(--galeo-font-code);
+  font-size: var(--galeo-text-md);
   text-overflow: ellipsis;
   white-space: pre;
 }
 .find-all-text mark {
-  background: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
+  background: var(--galeo-chrome-match);
   color: inherit;
 }
 /* The fill icon (Tab's mouse shortcut) shows on the row under the pointer and the highlighted one. */
 .quick-open-fill {
   visibility: hidden;
-  padding: 0 4px;
-  border-radius: 3px;
+  padding: 0 var(--galeo-space-xs);
+  border-radius: var(--galeo-radius-sm);
   color: var(--galeo-color-muted);
   cursor: pointer;
 }
@@ -520,7 +520,7 @@ body,
 .quick-open-detail {
   overflow: hidden;
   color: var(--galeo-color-muted);
-  font-size: 12px;
+  font-size: var(--galeo-text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -531,19 +531,19 @@ body,
 }
 .palette-keys {
   display: flex;
-  gap: 4px;
+  gap: var(--galeo-space-xs);
 }
 .palette-keys kbd {
-  padding: 0 4px;
+  padding: 0 var(--galeo-space-xs);
   border: 1px solid var(--galeo-color-border);
-  border-radius: 3px;
+  border-radius: var(--galeo-radius-sm);
   color: var(--galeo-color-muted);
-  font: 12px var(--galeo-font-ui);
+  font: var(--galeo-text-sm) var(--galeo-font-ui);
   white-space: nowrap;
 }
 .quick-open-empty {
   margin: 0;
-  padding: 12px;
+  padding: var(--galeo-space-lg);
   color: var(--galeo-color-muted);
 }
 
@@ -554,23 +554,23 @@ body,
 .tab-overview-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--galeo-space-md);
   max-height: min(70vh, 640px);
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--galeo-space-lg);
   outline: none;
 }
 .tab-overview-card {
   position: relative;
   display: grid;
   grid-template: 'badge label marks' auto 'badge folder folder' auto / auto 1fr auto;
-  column-gap: 8px;
+  column-gap: var(--galeo-space-md);
   align-items: center;
   box-sizing: border-box;
   width: 214px;
-  padding: 8px 24px 8px 8px;
+  padding: var(--galeo-space-md) var(--galeo-space-2xl) var(--galeo-space-md) var(--galeo-space-md);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   cursor: default;
   outline: none;
 }
@@ -590,11 +590,11 @@ body,
 .tab-overview-badge {
   grid-area: badge;
   min-width: 34px;
-  padding: 2px 4px;
+  padding: var(--galeo-space-2xs) var(--galeo-space-xs);
   border: 1px solid var(--galeo-color-control-border);
-  border-radius: 3px;
+  border-radius: var(--galeo-radius-sm);
   color: var(--galeo-color-muted);
-  font-size: 10px;
+  font-size: var(--galeo-text-xs);
   font-weight: 600;
   text-align: center;
 }
@@ -607,13 +607,13 @@ body,
 .tab-overview-indicators {
   display: flex;
   grid-area: marks;
-  gap: 4px;
+  gap: var(--galeo-space-xs);
 }
 .tab-overview-folder {
   grid-area: folder;
   overflow: hidden;
   color: var(--galeo-color-muted);
-  font-size: 12px;
+  font-size: var(--galeo-text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -622,10 +622,10 @@ body,
   top: 4px;
   right: 4px;
   visibility: hidden;
-  padding: 0 4px;
-  border-radius: 3px;
+  padding: 0 var(--galeo-space-xs);
+  border-radius: var(--galeo-radius-sm);
   color: var(--galeo-color-muted);
-  font-size: 11px;
+  font-size: var(--galeo-text-xs);
 }
 .tab-overview-card[data-hovered] .tab-overview-close,
 .tab-overview-card[data-focused] .tab-overview-close {
@@ -638,7 +638,7 @@ body,
 /* Where a dragged card would go: a line between two cards. */
 .tab-overview-grid .react-aria-DropIndicator {
   width: 0;
-  margin: 0 -4px;
+  margin: 0 calc(-1 * var(--galeo-space-xs));
 }
 .tab-overview-grid .react-aria-DropIndicator[data-drop-target] {
   outline: 1px solid var(--galeo-color-accent);
@@ -697,12 +697,12 @@ body,
   align-self: center;
   width: 26px;
   height: 26px;
-  margin: 0 2px 0 4px;
+  margin: 0 var(--galeo-space-2xs) 0 var(--galeo-space-xs);
   border: none;
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: transparent;
   color: var(--galeo-color-muted);
-  font-size: 16px;
+  font-size: 16px; /* literal: glyph size until the icons replace it */
   line-height: 1;
   -webkit-app-region: no-drag;
 }
@@ -730,7 +730,7 @@ body,
   box-sizing: border-box;
   display: flex;
   border-right: 1px solid var(--galeo-color-border);
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-bar);
   -webkit-app-region: no-drag;
 }
 .window:has(> .status-bar) .side-panel {
@@ -758,7 +758,7 @@ body,
 .side-panel .tab {
   flex: none;
   min-width: 0;
-  padding: 5px 6px 5px 0;
+  padding: var(--galeo-space-sm) var(--galeo-space-sm) var(--galeo-space-sm) 0;
   border-right: none;
   border-bottom: 1px solid var(--galeo-color-border);
 }
@@ -769,14 +769,14 @@ body,
 
 .side-panel .tab-grab {
   flex-direction: column;
-  gap: 2px;
+  gap: var(--galeo-space-2xs);
   align-items: stretch;
-  padding-left: 10px;
+  padding-left: var(--galeo-space-lg);
 }
 
 .tab-line {
   display: flex;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
   min-width: 0;
 }
@@ -785,7 +785,7 @@ body,
 .tab-folder {
   overflow: hidden;
   color: var(--galeo-color-muted);
-  font-size: 11px;
+  font-size: var(--galeo-text-xs);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -798,7 +798,7 @@ body,
 /* Collapsed: a marker per tab, at least 24 px, the shown one filled (not colour alone). */
 .side-panel[data-collapsed] .tab {
   justify-content: center;
-  padding: 3px 0;
+  padding: var(--galeo-space-xs) 0;
   border-bottom: none;
 }
 .side-panel[data-collapsed] .tab[data-selected] {
@@ -819,7 +819,7 @@ body,
   height: 24px;
   place-items: center;
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   font-weight: 600;
 }
 .tab[data-selected] .tab-marker {
@@ -831,7 +831,7 @@ body,
   position: absolute;
   top: -5px;
   right: -5px;
-  font-size: 9px;
+  font-size: 9px; /* literal: a letter that fits the 24 px collapsed marker */
   line-height: 1;
 }
 
@@ -839,12 +839,12 @@ body,
   position: fixed;
   z-index: 10;
   max-width: 320px;
-  padding: 4px 8px;
+  padding: var(--galeo-space-xs) var(--galeo-space-md);
   overflow: hidden;
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
-  box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
+  box-shadow: var(--galeo-shadow-1);
   text-overflow: ellipsis;
   white-space: nowrap;
   transform: translateY(-50%);
@@ -899,13 +899,13 @@ main {
 
 .notice {
   display: flex;
-  gap: 12px;
+  gap: var(--galeo-space-lg);
   align-items: center;
-  padding: 6px 12px;
+  padding: var(--galeo-space-sm) var(--galeo-space-lg);
   border-bottom: 1px solid var(--galeo-color-border);
   background: var(--galeo-color-code-bg);
   color: var(--galeo-color-fg);
-  font: 13px var(--galeo-font-ui);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
 }
 
 .notice p {
@@ -934,15 +934,15 @@ main {
   flex: 0 0 auto;
   width: min(260px, 35vw);
   overflow-y: auto;
-  padding: 8px 0;
+  padding: var(--galeo-space-md) 0;
   border-left: 1px solid var(--galeo-color-border);
-  font: 13px var(--galeo-font-ui);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
 }
 .outline-title {
   margin: 0;
-  padding: 4px 12px 6px;
+  padding: var(--galeo-space-xs) var(--galeo-space-lg) var(--galeo-space-sm);
   color: var(--galeo-color-muted);
-  font-size: 11px;
+  font-size: var(--galeo-text-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -953,13 +953,13 @@ main {
   list-style: none;
 }
 .outline-list .outline-list {
-  padding-left: 12px;
+  padding-left: var(--galeo-space-lg);
 }
 .outline-item {
   display: flex;
-  gap: 8px;
+  gap: var(--galeo-space-md);
   width: 100%;
-  padding: 3px 12px;
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
   overflow: hidden;
   border: none;
   background: none;
@@ -982,7 +982,7 @@ main {
   font-variant-numeric: tabular-nums;
 }
 .outline-item:hover {
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-hover);
 }
 .outline-item:focus-visible {
   outline: 2px solid var(--galeo-color-focus);
@@ -994,7 +994,7 @@ main {
 }
 .outline-empty {
   margin: 0;
-  padding: 4px 12px;
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
   color: var(--galeo-color-muted);
 }
 
@@ -1002,22 +1002,22 @@ body {
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
   font-family: var(--galeo-font-ui);
-  font-size: 14px;
+  font-size: var(--galeo-text-md);
 }
 
 .document-banner {
   display: flex;
-  gap: 12px;
+  gap: var(--galeo-space-lg);
   align-items: center;
-  padding: 6px 16px;
+  padding: var(--galeo-space-sm) var(--galeo-space-xl);
   border-bottom: 1px solid var(--galeo-color-border);
-  background: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));
+  background: var(--galeo-chrome-banner);
 }
 
 button {
-  padding: 2px 10px;
+  padding: var(--galeo-space-2xs) var(--galeo-space-lg);
   border: 1px solid var(--galeo-color-border);
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
   font: inherit;
@@ -1054,9 +1054,9 @@ button:focus-visible {
 }
 .document-state-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--galeo-space-md);
   margin-top: 1.5em;
-  font-size: 14px;
+  font-size: var(--galeo-text-md);
 }
 
 .document-loading {
@@ -1067,7 +1067,7 @@ button:focus-visible {
 }
 .document-loading-line {
   height: 0.9em;
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: var(--galeo-color-code-bg);
   animation: galeo-pulse 1.2s ease-in-out infinite alternate;
 }
@@ -1080,7 +1080,7 @@ button:focus-visible {
   padding: 0 1.5rem;
 }
 .document-loading-cancel {
-  padding: 2px 4px;
+  padding: var(--galeo-space-2xs) var(--galeo-space-xs);
   border: none;
   background: none;
   color: var(--galeo-color-muted);
@@ -1110,19 +1110,19 @@ button:focus-visible {
   z-index: 10;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
-  padding: 6px 8px;
+  padding: var(--galeo-space-sm) var(--galeo-space-md);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+  box-shadow: var(--galeo-shadow-1);
 }
 .find-bar input {
   width: 16em;
-  padding: 3px 6px;
+  padding: var(--galeo-space-xs) var(--galeo-space-sm);
   border: 1px solid var(--galeo-color-control-border);
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
   font: inherit;
@@ -1140,12 +1140,12 @@ button:focus-visible {
 .find-replace {
   display: flex;
   flex-basis: 100%;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
 }
 .find-bar button[aria-pressed='true'] {
   border-color: var(--galeo-color-focus);
-  background: color-mix(in srgb, var(--galeo-color-focus) 15%, var(--galeo-color-bg));
+  background: var(--galeo-chrome-selected);
 }
 
 .document-view[data-waking] {
@@ -1161,23 +1161,23 @@ button:focus-visible {
 .status-bar {
   display: flex;
   flex: none;
-  gap: 16px;
+  gap: var(--galeo-space-xl);
   align-items: center;
   min-width: 0;
   height: var(--galeo-status-bar-height);
-  padding: 0 12px;
+  padding: 0 var(--galeo-space-lg);
   border-top: 1px solid var(--galeo-color-border);
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-bar);
   color: var(--galeo-color-muted);
-  font: 12px var(--galeo-font-ui);
+  font: var(--galeo-text-sm) var(--galeo-font-ui);
   white-space: nowrap;
 }
 
 .status-path,
 .status-encoding {
-  padding: 0 4px;
+  padding: 0 var(--galeo-space-xs);
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -1207,12 +1207,12 @@ button:focus-visible {
 
 .menu-popover {
   min-width: 180px;
-  padding: 4px;
+  padding: var(--galeo-space-xs);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
-  font: 13px var(--galeo-font-ui);
+  box-shadow: var(--galeo-shadow-1);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
   color: var(--galeo-color-fg);
 }
 
@@ -1221,8 +1221,8 @@ button:focus-visible {
 }
 
 .menu-item {
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: var(--galeo-space-xs) var(--galeo-space-md);
+  border-radius: var(--galeo-radius-sm);
   cursor: default;
   outline: none;
 }
@@ -1245,7 +1245,7 @@ button:focus-visible {
   margin: 12vh auto 0;
   padding: 0 1.5rem;
   color: var(--galeo-color-fg);
-  font: 14px var(--galeo-font-ui);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
 }
 
 .empty-window h1 {
@@ -1276,10 +1276,10 @@ button:focus-visible {
 
 .empty-window-item {
   display: flex;
-  gap: 12px;
+  gap: var(--galeo-space-lg);
   align-items: baseline;
   width: 100%;
-  padding: 4px 8px;
+  padding: var(--galeo-space-xs) var(--galeo-space-md);
   border: 0;
   text-align: left;
 }
@@ -1302,10 +1302,10 @@ button:focus-visible {
   height: 100%;
   overflow: auto;
   box-sizing: border-box;
-  padding: 24px 32px 48px;
+  padding: var(--galeo-space-2xl) var(--galeo-space-3xl) calc(var(--galeo-space-3xl) + var(--galeo-space-xl));
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
-  font: 14px var(--galeo-font-ui);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
 }
 
 .settings-view > * {
@@ -1313,22 +1313,22 @@ button:focus-visible {
 }
 
 .settings-view h1 {
-  margin: 0 0 16px;
-  font-size: 22px;
+  margin: 0 0 var(--galeo-space-xl);
+  font-size: var(--galeo-text-2xl);
 }
 
 .settings-view h2 {
-  margin: 28px 0 8px;
-  padding-bottom: 4px;
+  margin: var(--galeo-space-2xl) 0 var(--galeo-space-md);
+  padding-bottom: var(--galeo-space-xs);
   border-bottom: 1px solid var(--galeo-color-border);
-  font-size: 15px;
+  font-size: var(--galeo-text-lg);
 }
 
 .settings-scope,
 .setting .react-aria-RadioGroup {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 16px;
+  gap: var(--galeo-space-xs) var(--galeo-space-xl);
   align-items: center;
 }
 
@@ -1340,9 +1340,9 @@ button:focus-visible {
 .setting {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: var(--galeo-space-sm) var(--galeo-space-lg);
   align-items: flex-end;
-  padding: 10px 0;
+  padding: var(--galeo-space-lg) 0;
 }
 
 .setting > .field,
@@ -1356,66 +1356,66 @@ button:focus-visible {
 
 .field-hint {
   color: var(--galeo-color-muted);
-  font-size: 13px;
+  font-size: var(--galeo-text-md);
 }
 
 /* Font pickers: the name with a button opening the list, then a sample line in the font. */
 .font-input {
   display: flex;
-  gap: 4px;
+  gap: var(--galeo-space-xs);
 }
 .font-input input {
   flex: 1;
   min-width: 0;
 }
 .font-open {
-  padding: 0 10px;
+  padding: 0 var(--galeo-space-lg);
 }
 .font-popover {
   max-height: min(60vh, 420px);
   overflow-y: auto;
 }
 .font-list .menu-item {
-  font-size: 15px;
+  font-size: var(--galeo-text-lg);
 }
 .font-preview {
-  margin: 4px 0 0;
+  margin: var(--galeo-space-xs) 0 0;
   overflow: hidden;
   color: var(--galeo-color-muted);
-  font-size: 15px;
+  font-size: var(--galeo-text-lg);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .field textarea {
-  padding: 5px 8px;
+  padding: var(--galeo-space-sm) var(--galeo-space-md);
   border: 1px solid var(--galeo-color-control-border);
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
-  font: 13px var(--galeo-font-code);
+  font: var(--galeo-text-md) var(--galeo-font-code);
 }
 
 .setting-source {
   color: var(--galeo-color-muted);
-  font-size: 12px;
+  font-size: var(--galeo-text-sm);
 }
 
 .settings-refused {
-  padding: 8px 12px;
+  padding: var(--galeo-space-md) var(--galeo-space-lg);
   border: 1px solid var(--galeo-color-log-error);
-  border-radius: var(--galeo-radius);
+  border-radius: var(--galeo-radius-md);
 }
 
 .settings-buttons {
   display: flex;
-  gap: 8px;
+  gap: var(--galeo-space-md);
 }
 
 .react-aria-RadioButton,
 .react-aria-SwitchButton {
   display: inline-flex;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
 }
 
@@ -1443,7 +1443,7 @@ button:focus-visible {
   width: 30px;
   height: 16px;
   border: 2px solid var(--galeo-color-muted);
-  border-radius: 10px;
+  border-radius: var(--galeo-radius-lg);
 }
 
 .switch-track::after {
@@ -1469,9 +1469,9 @@ button:focus-visible {
 .settings-view button,
 .dialog-buttons button,
 .notice button {
-  padding: 4px 10px;
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
   border: 1px solid var(--galeo-color-border);
-  border-radius: 4px;
+  border-radius: var(--galeo-radius-sm);
   background: var(--galeo-color-code-bg);
   color: var(--galeo-color-fg);
   font: inherit;
@@ -1487,14 +1487,14 @@ button:focus-visible {
 }
 .drop-overlay {
   position: absolute;
-  inset: 8px;
+  inset: var(--galeo-space-md);
   display: grid;
   place-items: center;
   border: 2px dashed var(--galeo-color-focus);
-  border-radius: var(--galeo-radius);
-  background: color-mix(in srgb, var(--galeo-color-bg) 85%, transparent);
+  border-radius: var(--galeo-radius-md);
+  background: var(--galeo-chrome-veil);
   color: var(--galeo-color-fg);
-  font: 600 16px var(--galeo-font-ui);
+  font: 600 var(--galeo-text-lg) var(--galeo-font-ui);
   pointer-events: none;
 }
 
@@ -1520,9 +1520,9 @@ button:focus-visible {
 .diff-view-bar,
 .diff-view-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
-  padding: 8px 12px;
+  padding: var(--galeo-space-md) var(--galeo-space-lg);
 }
 .diff-view-bar {
   border-bottom: 1px solid var(--galeo-color-border);
@@ -1534,14 +1534,14 @@ button:focus-visible {
 .dialog .diff-view-title {
   flex: 1;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--galeo-text-md);
 }
 .diff-view-sides {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  padding: 4px 12px;
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
   color: var(--galeo-color-muted);
-  font-size: 12px;
+  font-size: var(--galeo-text-sm);
 }
 .diff-view-body {
   flex: 1;
@@ -1566,9 +1566,9 @@ button:focus-visible {
 }
 .zoom-viewer-bar {
   display: flex;
-  gap: 6px;
+  gap: var(--galeo-space-sm);
   align-items: center;
-  padding: 8px 12px;
+  padding: var(--galeo-space-md) var(--galeo-space-lg);
   border-bottom: 1px solid var(--galeo-color-border);
 }
 .zoom-viewer-title {
@@ -1576,7 +1576,7 @@ button:focus-visible {
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--galeo-text-md);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1598,7 +1598,7 @@ button:focus-visible {
 }
 /* A diagram drawn light for its own colours keeps its light panel in dark mode. */
 .zoom-viewer-viewport[data-panel='light'] {
-  background: #ffffff;
+  background: #ffffff; /* literal: a light-drawn diagram keeps white in both themes */
 }
 .galeo-viewer-content > img {
   display: block;
@@ -1612,25 +1612,25 @@ button:focus-visible {
 }
 
 .dialog h3 {
-  margin: 4px 0 0;
-  font-size: 14px;
+  margin: var(--galeo-space-xs) 0 0;
+  font-size: var(--galeo-text-md);
 }
 
 .about-notices {
   max-height: min(50vh, 420px);
   overflow: auto;
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius);
-  padding: 4px 8px;
+  border-radius: var(--galeo-radius-md);
+  padding: var(--galeo-space-xs) var(--galeo-space-md);
 }
 
 .about-notices summary {
-  padding: 4px 0;
+  padding: var(--galeo-space-xs) 0;
   cursor: pointer;
 }
 
 .about-notices pre {
-  margin: 4px 0 8px;
+  margin: var(--galeo-space-xs) 0 var(--galeo-space-md);
   white-space: pre-wrap;
-  font: 12px var(--galeo-font-code);
+  font: var(--galeo-text-sm) var(--galeo-font-code);
 }
