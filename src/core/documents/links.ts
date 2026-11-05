@@ -11,9 +11,10 @@ import type { HistoryEntry, TabRegistry } from '../tabs/registry';
 
 /** Extraction runs in a worker thread; hostile Markdown gets this long before it's abandoned. */
 const REFERENCES_TIMEOUT_MS = 2000;
-/** Broken link marks check at most this many file links of a document, this many at a time (SR-14). */
+/** Broken link marks check at most this many file links of a document (SR-14)… */
 const MISSING_CHECK_MAX = 500;
-const MISSING_CHECK_PARALLEL = 16;
+/** …this many at a time: a link into a hanging mount must not hold every one of Node's file threads. */
+const MISSING_CHECK_PARALLEL = 4;
 
 interface DocumentLinksDeps extends Omit<LinkContext, 'documentPath'> {
   records: TabRegistry;

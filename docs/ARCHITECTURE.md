@@ -335,7 +335,7 @@ sequenceDiagram
 ```
 
 (v0.6) After each render the renderer asks `documents.missingLinks(tabId)`: Main stats the local
-file targets of the links in the text it read itself (at most 500, 16 at a time) and answers the
+file targets of the links in the text it read itself (at most 500, 4 at a time) and answers the
 ones that don't exist, which the page marks; no content is read and the page names no path.
 
 ### 5.5 Save (ADR-013)
