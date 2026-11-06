@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process';
 import electronPath from 'electron';
 import { build, createServer } from 'vite';
+import { createBuildGate } from './lib/build-gate.mjs';
 import { createRestarter } from './lib/restarter.mjs';
 
 const renderer = await createServer({ configFile: 'build/vite.renderer.config.ts' });
@@ -36,20 +37,21 @@ async function startElectron() {
 }
 
 const restarter = createRestarter({ restart: startElectron, delayMs: 100 });
+const MAIN = 'build/vite.main.config.ts';
+const PRELOAD = 'build/vite.preload.config.ts';
+// Electron starts once main and preload have both built; later rebuilds restart it.
+const built = createBuildGate([MAIN, PRELOAD], () => restarter.request());
 
 async function watchBuild(configFile) {
   const watcher = await build({ configFile, build: { watch: {} }, logLevel: 'warn' });
   watcher.on('event', (event) => {
-    if (event.code === 'END') restarter.request();
+    if (event.code === 'END') built(configFile);
     if (event.code === 'ERROR') console.error(event.error);
   });
   return watcher;
 }
 
-const watchers = await Promise.all([
-  watchBuild('build/vite.main.config.ts'),
-  watchBuild('build/vite.preload.config.ts'),
-]);
+const watchers = await Promise.all([watchBuild(MAIN), watchBuild(PRELOAD)]);
 
 async function shutdown(code) {
   if (shuttingDown) return;
