@@ -200,7 +200,8 @@ describe('profileLauncherExec', () => {
   const fs = new FakeFileSystem({ '/usr/share/applications/galeo.desktop': '[Desktop Entry]\nName=galeo\nExec=/opt/galeo/galeo -- %F\n' });
   const run = { packaged: true, platform: 'linux' as NodeJS.Platform, env: {}, fs, utf8 };
 
-  it("is the AppImage, else the package entry's command, else a test's, on Linux only", async () => {
+  // Linux only, with POSIX paths throughout.
+  it.runIf(posix)("is the AppImage, else the package entry's command, else a test's, on Linux only", async () => {
     expect(await profileLauncherExec({ ...run, env: { APPIMAGE } })).toBe(APPIMAGE);
     expect(await profileLauncherExec(run)).toBe('/opt/galeo/galeo');
     expect(await profileLauncherExec({ ...run, packaged: false })).toBeNull();

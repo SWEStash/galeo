@@ -238,6 +238,11 @@ function TabItem({
       data-hibernated={hibernated || undefined}
       data-missing={status?.state === 'missing' || undefined}
       {...markerFocus}
+      // A middle press over the scrolling strip starts Chromium's autoscroll on Windows, and the
+      // middle click that closes the tab never comes.
+      onMouseDown={(event: MouseEvent) => {
+        if (event.button === 1) event.preventDefault();
+      }}
       onContextMenu={
         onMenu &&
         ((event: MouseEvent) => {

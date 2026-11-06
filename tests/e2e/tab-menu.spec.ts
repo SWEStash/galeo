@@ -11,7 +11,7 @@ const files = ['basic.md', 'gfm.md', 'math.md'].map((name) => path.join(docs, na
 const answer = (app: ElectronApplication, choice: string) => app.evaluate((_electron, value) => void (process.env['GALEO_TEST_MENU_CHOICE'] = value), choice);
 const menus = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __galeoMenus?: { label: string; enabled?: boolean }[][] }).__galeoMenus ?? []);
 /** The window's tabs in order, by file name, as main holds them. */
-const names = (page: Page) => page.evaluate(async () => (await window.galeo.tabs.snapshot()).tabs.map((tab) => tab.path.split('/').at(-1)));
+const names = (page: Page) => page.evaluate(async () => (await window.galeo.tabs.snapshot()).tabs.map((tab) => tab.path.split(/[\\/]/).at(-1)));
 
 test('a right-click on a tab offers its commands; each runs on that tab, as its shortcut does', async () => {
   const { app, window, close } = await launchApp(['--', ...files], { env: { GALEO_TEST_MENU_CHOICE: 'none' } });
@@ -59,6 +59,7 @@ test('a right-click on a tab offers its commands; each runs on that tab, as its 
 });
 
 test('the context-menu key on a focused tab opens its menu too', async () => {
+  test.skip(process.platform === 'darwin', 'macOS has no context-menu key');
   const { app, window, close } = await launchApp(['--', ...files.slice(0, 2)], { env: { GALEO_TEST_MENU_CHOICE: 'pin' } });
   try {
     await window.getByRole('tab', { name: /basic\.md/ }).click();

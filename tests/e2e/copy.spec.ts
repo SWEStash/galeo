@@ -21,7 +21,8 @@ test('a code block has a Copy button, by mouse and by keyboard, that copies its 
     await copy.click();
     const code = (await block.textContent())!;
     expect(code).toMatch(/^npm test\nnpm run check\n?$/);
-    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(code);
+    // Windows' clipboard gives text back with its own line endings.
+    await expect.poll(async () => (await app.evaluate(({ clipboard }) => clipboard.readText())).replaceAll('\r\n', '\n')).toBe(code);
     await expect(window.getByTestId('status-message')).toHaveText('Copied');
 
     await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
