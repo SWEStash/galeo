@@ -27,8 +27,10 @@ function stubBridge() {
     delete: vi.fn().mockResolvedValue(undefined),
   };
   const session = { previous: vi.fn().mockResolvedValue([]), restorePrevious: vi.fn().mockResolvedValue(undefined) };
-  Object.defineProperty(window, 'galeo', { value: { profiles, session }, configurable: true });
-  return { profiles, session };
+  const bridge = { command: vi.fn().mockResolvedValue(undefined) };
+  const tabs = { openSettings: vi.fn().mockResolvedValue('settings') };
+  Object.defineProperty(window, 'galeo', { value: { profiles, session, window: bridge, tabs }, configurable: true });
+  return { profiles, session, bridge, tabs };
 }
 
 async function render(state: ProfilesState = STATE, onAbout: () => void = () => {}) {
@@ -99,6 +101,19 @@ describe('ProfileChip (UX F5)', () => {
     await openMenu(container);
     await act(async () => menuItem('About galeo')!.click());
     expect(onAbout).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens a new window of the profile, and Settings, from the menu (mouse paths review)', async () => {
+    const { bridge, tabs } = stubBridge();
+    const container = await render();
+    await openMenu(container);
+    const names = [...document.querySelectorAll('[role="menuitem"]')].map((item) => item.textContent);
+    expect(names.slice(3, 5)).toEqual(['New window', 'Settings']);
+    await act(async () => menuItem('New window')!.click());
+    expect(bridge.command).toHaveBeenCalledWith('newWindow');
+    await openMenu(container);
+    await act(async () => menuItem('Settings')!.click());
+    expect(tabs.openSettings).toHaveBeenCalledOnce();
   });
 
   it('opens the menu on Ctrl+Shift+M', async () => {

@@ -42,7 +42,7 @@ type Editing = { kind: 'new' } | { kind: 'edit' } | { kind: 'delete' } | null;
 
 /**
  * The profile chip at the tab bar's left edge (UX F5): the window's profile by name and accent,
- * and its menu (Ctrl+Shift+M): switch, new, edit, delete, restore a previous session.
+ * and its menu (Ctrl+Shift+M): switch, a new window, Settings, new, edit, delete, restore a previous session.
  */
 export function ProfileChip({ state, onAbout, say }: { state: ProfilesState; onAbout: () => void; say: (message: string) => void }) {
   const current = state.profiles.find((profile) => profile.id === state.current);
@@ -72,6 +72,8 @@ export function ProfileChip({ state, onAbout, say }: { state: ProfilesState; onA
       if (id !== state.current) void window.galeo.profiles.open(id).catch(reportFailure(say, "Couldn't open the profile"));
     } else if (key.startsWith('restore:')) void window.galeo.session.restorePrevious(Number(key.slice('restore:'.length))).catch(reportFailure(say, "Couldn't restore the previous session"));
     else if (key === 'about') onAbout();
+    else if (key === 'new-window') void window.galeo.window.command('newWindow').catch(reportFailure(say, "Couldn't open a window"));
+    else if (key === 'settings') void window.galeo.tabs.openSettings().catch(reportFailure(say, "Couldn't open Settings"));
   };
 
   return (
@@ -97,6 +99,15 @@ export function ProfileChip({ state, onAbout, say }: { state: ProfilesState; onA
                   </Text>
                 </MenuItem>
               ))}
+            </MenuSection>
+            <Separator className="menu-separator" />
+            <MenuSection>
+              <MenuItem id="new-window" className="menu-item">
+                New window
+              </MenuItem>
+              <MenuItem id="settings" className="menu-item">
+                Settings
+              </MenuItem>
             </MenuSection>
             <Separator className="menu-separator" />
             <MenuSection>
