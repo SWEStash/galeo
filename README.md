@@ -59,10 +59,14 @@ shows how to get past them.
   and permissions.
 - **Data and code**: JSON as a tree, CSV and TSV as a table, YAML, TOML and source code
   highlighted, MDX rendered with nothing in it running.
-- **Tabs, windows and profiles**: browser-like tabs, on top or on the left, that move between
-  windows; sessions that come back after a restart; a profile per project.
-- **Keyboard first**: quick open (Ctrl+P), a command palette (Ctrl+Shift+P), search tabs
-  (Ctrl+Shift+A), a tab overview (Ctrl+Shift+E) and find in all tabs (Ctrl+Shift+F).
+- **Tabs, windows and profiles**: browser-like tabs, on top or on the left, that pin and move between
+  windows; sessions that come back after a restart; a profile per project, with its own launcher on
+  Linux.
+- **Sharing what you read**: copy a code block or the whole document as rich text, save a diagram as
+  SVG or PNG, export a document to PDF.
+- **Keyboard first, mouse too**: quick open (Ctrl+P), a command palette (Ctrl+Shift+P), search tabs
+  (Ctrl+Shift+A), a tab overview (Ctrl+Shift+E) and find in all tabs (Ctrl+Shift+F), each also a
+  button or a right-click menu entry.
 - **Private**: no network connections, documents can't run scripts, and Chromium's sandbox is on.
 
 The [usage guide](docs/USAGE.md) covers all of it.

@@ -200,6 +200,12 @@ flowchart LR
   Main and offers the page ids for the files it lists, never paths to request.
   The window keys (new window, close window, quit, full screen) are taken there too, so they
   work while a page is busy; the palette asks for the same four over `window.command`.
+- (v0.7) The tab's and the document's right-click menus are native menus Main builds and shows
+  (`DocumentMenus`): Main acts on the path entries and Edit itself and hands the page back only the
+  command to run; a choice earns the window one input credit, as a key press does. The writes
+  outside edit mode (a diagram's SVG or PNG, `diagrams.save`; a PDF, `documents.exportPdf` then
+  `printPdf`; a profile's launcher) go only to a path Main's own save dialog returned, or to the
+  user's applications folder for that profile, each for real input (threat model SR-12).
 - Main runs one **profile runtime** per running profile: its settings (watching `settings.json`,
   `profile.json` and both `custom.css`), session, recent files and windows. Every open request
   (first launch, a forwarded launch, the macOS dock) goes through one queue: argv parser →

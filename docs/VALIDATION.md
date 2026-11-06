@@ -63,6 +63,9 @@ Record the date, the build and the result of each row.
 | Orca: callouts, front matter and task counts (v0.6) | A `> [!WARNING]` reads its title, then its text; flat front matter reads as a list of terms and values; Ctrl+Shift+O reads a heading as "Plan (2 of 5 tasks done)"; the status bar says "7 of 12 tasks" | Pass (2026-11-05, `.deb` 0.6.0) |
 | Task boxes and Tab by keyboard, then Orca (v0.6) | Reading: Tab to a task box, Space ticks it in the file (`cat` shows `[x]`), Orca reads "checkbox, checked". Edit mode: Tab indents a list line, Shift+Tab un-indents; Esc then Tab, and Ctrl+M then Tab, move the focus out of the editor; Orca reads the editor's description | Pass (2026-11-05, `.deb` 0.6.0) |
 | Orca: broken links (v0.6) | A link to a file that doesn't exist has a wavy underline; Orca reads it with "file not found" | Pass (2026-11-05, `.deb` 0.6.0) |
+| The new look by keyboard, then Orca (v0.7) | In light and dark, both tab layouts: Tab reaches `+`, `▦`, `⌕`, `⋯` and the status bar's view menu, Follow, zoom and width, each with a visible 1 px ring; Orca reads each button's name with its shortcut ("Search tabs (Ctrl+Shift+A)") | Not run (0.7.0) |
+| Menus by keyboard, then Orca (v0.7) | Shift+F10 on a tab opens its menu (Pin, Move…, Copy path…), on a document the document's (Back, Find…, Edit, Export to PDF…); Orca reads each entry; a pinned tab reads "…, pinned" | Not run (0.7.0) |
+| Copy buttons, then Orca (v0.7) | Tab to a code block's Copy button: it shows, Orca reads "Copy code"; Enter copies and Orca says "Copied" | Not run (0.7.0) |
 
 ## Performance
 
@@ -195,6 +198,9 @@ these.
 | `galeo file.md` while galeo is on another workspace: GNOME's "galeo is ready" notice, no workspace switch | Pass (2026-10-05, Ubuntu 26.04; 0.2.0 `.deb`, 2026-10-15; 0.4.0 `.deb`, 2026-10-28) |
 | Live reload from a real editor or agent: in place, no jump, `↻` for about a second | Pass (2026-10-05) |
 | Following an agent (v0.6): an agent rewriting a plan in a background tab gives it the blue `•`; showing it marks what changed, the plan's task count follows, and ticking a box while reading writes the file (an editor open on it reloads) | Pass (2026-11-05, `.deb` 0.6.0) |
+| Pinned tabs (v0.7): pin a tab from its right-click menu; it moves first with a pin, in both layouts; it stays pinned after quitting and starting again; Unpin puts it back among the others | Not run (0.7.0) |
+| Copy and share (v0.7): a code block's Copy pastes into a terminal; *Copy as rich text* pastes into LibreOffice Writer with headings, bold and code; the viewer's Save as SVG… and Save as PNG… open in an image viewer; *Export to PDF…* in dark mode opens in the document viewer as a light page with no bars | Not run (0.7.0) |
+| Profile launcher (v0.7): Settings → Profile launcher → Add to applications: "galeo — <profile>" shows in the GNOME app grid and opens that profile; Remove takes it out; deleting the profile removes it | Not run (0.7.0) |
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
