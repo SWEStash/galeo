@@ -1,3 +1,5 @@
+import { iconElement } from '../ui/icons';
+
 /** Below this in both dimensions an image is an icon or a badge: nothing to see larger. */
 const ICON_PX = 48;
 
@@ -27,7 +29,7 @@ export function offerZoom(image: HTMLImageElement, onExpand: (image: ImageExpand
   expand.className = 'galeo-image-expand';
   expand.setAttribute('aria-label', 'Expand image');
   expand.title = 'Expand image';
-  expand.textContent = '⤢';
+  expand.append(iconElement('expand'));
   const open = () => onExpand({ url: image.src, name, returnFocus: () => expand.focus() });
   expand.addEventListener('click', (event) => {
     // Inside a link, the button opens the viewer and the link stays where it is.

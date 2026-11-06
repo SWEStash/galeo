@@ -1033,7 +1033,7 @@ main {
   align-items: center;
   padding: var(--galeo-space-sm) var(--galeo-space-lg);
   border-bottom: 1px solid var(--galeo-color-border);
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-bar);
   color: var(--galeo-color-fg);
   font: var(--galeo-text-md) var(--galeo-font-ui);
 }
@@ -1066,6 +1066,7 @@ main {
   overflow-y: auto;
   padding: var(--galeo-space-md) 0;
   border-left: 1px solid var(--galeo-color-border);
+  background: var(--galeo-chrome-bar);
   font: var(--galeo-text-md) var(--galeo-font-ui);
 }
 .outline-title {
@@ -1142,12 +1143,13 @@ body {
   padding: var(--galeo-space-sm) var(--galeo-space-xl);
   border-bottom: 1px solid var(--galeo-color-border);
   background: var(--galeo-chrome-banner);
+  box-shadow: inset 3px 0 0 var(--galeo-color-link);
 }
 
 button {
   padding: var(--galeo-space-2xs) var(--galeo-space-lg);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-sm);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
   font: inherit;
@@ -1244,8 +1246,8 @@ button:focus-visible {
   align-items: center;
   padding: var(--galeo-space-sm) var(--galeo-space-md);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-md);
-  background: var(--galeo-color-bg);
+  border-radius: var(--galeo-radius-lg);
+  background: var(--galeo-chrome-surface);
   box-shadow: var(--galeo-shadow-1);
 }
 .find-bar input {
@@ -1291,11 +1293,11 @@ button:focus-visible {
 .status-bar {
   display: flex;
   flex: none;
-  gap: var(--galeo-space-xl);
+  gap: var(--galeo-space-lg);
   align-items: center;
   min-width: 0;
   height: var(--galeo-status-bar-height);
-  padding: 0 var(--galeo-space-lg);
+  padding: 0 var(--galeo-space-md);
   border-top: 1px solid var(--galeo-color-border);
   background: var(--galeo-chrome-bar);
   color: var(--galeo-color-muted);
@@ -1305,12 +1307,28 @@ button:focus-visible {
 
 .status-path,
 .status-encoding {
-  padding: 0 var(--galeo-space-xs);
+  height: 20px;
+  padding: 0 var(--galeo-space-sm);
   border: 0;
   border-radius: var(--galeo-radius-sm);
   background: none;
   color: inherit;
   font: inherit;
+  transition: background var(--galeo-motion-fast) var(--galeo-ease);
+}
+.status-path {
+  color: var(--galeo-color-fg);
+}
+/* Read-only or Editing: the document's state, as an outlined badge. */
+.status-mode {
+  padding: 0 var(--galeo-space-sm);
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius-sm);
+  line-height: 16px;
+}
+.status-mode[data-editing] {
+  border-color: var(--galeo-color-log-warn);
+  color: var(--galeo-color-fg);
 }
 
 .status-path {
@@ -1322,7 +1340,7 @@ button:focus-visible {
 
 .status-path:hover,
 .status-encoding:hover {
-  background: var(--galeo-color-border);
+  background: var(--galeo-chrome-hover);
   color: var(--galeo-color-fg);
 }
 
@@ -1383,7 +1401,7 @@ button:focus-visible {
 }
 
 .empty-window-item:hover {
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-hover);
 }
 
 .empty-window-folder {
@@ -1569,8 +1587,8 @@ button:focus-visible {
 .notice button {
   padding: var(--galeo-space-xs) var(--galeo-space-lg);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-sm);
-  background: var(--galeo-color-code-bg);
+  border-radius: var(--galeo-radius-md);
+  background: var(--galeo-chrome-surface);
   color: var(--galeo-color-fg);
   font: inherit;
 }
@@ -1668,6 +1686,13 @@ button:focus-visible {
   align-items: center;
   padding: var(--galeo-space-md) var(--galeo-space-lg);
   border-bottom: 1px solid var(--galeo-color-border);
+  background: var(--galeo-chrome-bar);
+}
+.zoom-viewer-bar .react-aria-Button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  height: 28px;
 }
 .zoom-viewer-title {
   flex: 1;

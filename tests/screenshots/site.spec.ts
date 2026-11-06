@@ -18,7 +18,7 @@ for (const theme of ['light', 'dark'] as const) {
       // Light shows the top of the plan; dark its math, code and diagram.
       if (theme === 'dark') {
         await shown(window).getByRole('heading', { name: 'Ranking' }).evaluate((heading) => heading.scrollIntoView({ block: 'start' }));
-        await expect(shown(window).locator('.galeo-diagram svg').first()).toBeVisible();
+        await expect(shown(window).locator('.galeo-diagram-svg svg').first()).toBeVisible();
       }
     }, { theme });
   });

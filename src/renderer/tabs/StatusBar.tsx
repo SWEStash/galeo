@@ -49,7 +49,11 @@ export function StatusBar({ view, store, say, children }: { view: TabsView; stor
         </button>
       )}
       {status?.view && <span data-testid="status-view">{viewName(status)}</span>}
-      {status?.view && <span data-testid="status-mode">{status.editing ? 'Editing' : 'Read-only'}</span>}
+      {status?.view && (
+        <span className="status-mode" data-testid="status-mode" data-editing={status.editing || undefined}>
+          {status.editing ? 'Editing' : 'Read-only'}
+        </span>
+      )}
       {status?.encoding && (
         <EncodingMenu className="status-encoding" onChoose={chooseEncoding}>
           <span data-testid="status-encoding">{ENCODING_NAMES[status.encoding]}</span>

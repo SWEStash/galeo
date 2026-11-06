@@ -2,6 +2,7 @@ import type { ColorScheme } from './host';
 import { setTrustedHtml } from './host';
 import { renderMermaid, sanitizeSvg } from './mermaid-engine';
 import type { DiagramExpand } from './requests';
+import { iconElement } from '../ui/icons';
 
 export interface DiagramOptions {
   scheme: ColorScheme;
@@ -154,7 +155,7 @@ export function attachDiagrams(article: HTMLElement, options: DiagramOptions): D
     expand.className = 'galeo-diagram-expand';
     expand.setAttribute('aria-label', 'Expand diagram');
     expand.title = 'Expand diagram';
-    expand.textContent = '⤢';
+    expand.append(iconElement('expand'));
     const panel = drawnIn(element, scheme) !== scheme;
     const returnFocus = () => element.querySelector<HTMLElement>('.galeo-diagram-expand')?.focus();
     expand.addEventListener('click', () => options.onExpand?.({ svg, name, panel, returnFocus }));

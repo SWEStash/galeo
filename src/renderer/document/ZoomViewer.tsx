@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type Keyboar
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
 import { setTrustedHtml } from './host';
 import { actualSize, fit, panBy, zoomAt, type View } from './viewer-math';
+import { Icon } from '../ui/icons';
 
 /** One key or button press zooms by this much; the wheel zooms smoothly. */
 const STEP = 1.25;
@@ -138,7 +139,7 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
                   {view ? `${Math.round(view.scale * 100)} %` : ''}
                 </span>
                 <Button aria-label="Zoom out (−)" onPress={() => zoomCentred(1 / STEP)}>
-                  −
+                  <Icon name="zoom-out" />
                 </Button>
                 <Button aria-label="Fit to window (0)" onPress={fitted}>
                   Fit
@@ -147,10 +148,10 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
                   100 %
                 </Button>
                 <Button aria-label="Zoom in (+)" onPress={() => zoomCentred(STEP)}>
-                  +
+                  <Icon name="zoom-in" />
                 </Button>
                 <Button aria-label="Close (Esc)" onPress={onClose}>
-                  ✕
+                  <Icon name="close" />
                 </Button>
               </div>
               <div

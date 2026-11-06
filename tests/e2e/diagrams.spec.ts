@@ -42,7 +42,7 @@ test('diagrams are drawn as they come into view, named for screen readers, with 
     await expect(flow!.locator('.galeo-diagram-svg')).toHaveAttribute('role', 'img');
     await expect(flow!.locator('.galeo-diagram-svg')).toHaveAttribute('aria-label', 'Checkout flow');
     await expect(sequence!).toHaveAttribute('aria-label', 'Diagram');
-    await expect(flow!.locator('svg')).toBeVisible();
+    await expect(flow!.locator('.galeo-diagram-svg svg')).toBeVisible();
     await expect(broken!).toHaveAttribute('data-state', 'error');
     await expect(broken!.locator('.galeo-block-error-message')).not.toBeEmpty();
     await expect(broken!.locator('code')).toContainText('A --> B -->');
