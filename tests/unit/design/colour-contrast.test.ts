@@ -41,8 +41,19 @@ describe.each(Object.entries(SCHEMES))('the %s theme (UX §6, WCAG 2.1 AA)', (_s
     for (const surface of SURFACES) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(3);
   });
 
-  it.each(ACCENTS.map((accent) => [accent.name, accent.color]))('the %s accent stands out 3:1 on the tab bar', (_name, color) => {
-    expect(contrast(color, tokens['code-bg']!)).toBeGreaterThanOrEqual(3);
+  it.each(ACCENTS.map((accent) => [accent.name, accent.color]))('the %s accent stands out 3:1 on the tab bar and the shown tab', (_name, color) => {
+    for (const surface of ['chrome-bar', 'chrome-surface']) expect(contrast(color, tokens[surface]!), `on ${surface}`).toBeGreaterThanOrEqual(3);
+  });
+
+  // The interface around the document (ADR-032): its bars, menus and overlays, and a control under the
+  // pointer, pressed or highlighted in a list.
+  const CHROME = ['chrome-bar', 'chrome-surface', 'chrome-hover', 'chrome-press', 'chrome-selected'];
+  it.each(['fg', 'muted'])('%s text reads at 4.5:1 or more on every chrome surface', (token) => {
+    for (const surface of CHROME) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it.each(['focus', 'control-border'])('%s stands out 3:1 or more on the bars and on menus and overlays', (token) => {
+    for (const surface of ['chrome-bar', 'chrome-surface']) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(3);
   });
 });
 
