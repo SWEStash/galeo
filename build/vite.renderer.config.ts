@@ -28,7 +28,7 @@ function workerEntries(): Plugin {
 
 // The window renderer. Web workers imported with `new Worker(new URL(...))` are bundled by Vite
 // as separate chunks of this build.
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   define,
   root: 'src/renderer',
   base: './',
@@ -43,4 +43,13 @@ export default defineConfig({
   },
   worker: { format: 'es', plugins: () => [workerEntries(), bundleGraph('worker')] },
   server: { host: '127.0.0.1', strictPort: false },
-});
+  // npm run dev: the dependency scan starts from the page and the render worker. Found only once the
+  // worker loads, the worker's packages made Vite rebuild its dependencies and reload the page,
+  // which left a second copy of React behind ("Invalid hook call").
+  optimizeDeps: { entries: ['index.html', 'worker/render.worker.ts'] },
+  // npm run dev serves the worker's modules through the page's pipeline, where worker.plugins don't
+  // run: the same DOM-free entries, for page and worker alike (both work without a DOM).
+  ...(command === 'serve'
+    ? { resolve: { alias: Object.fromEntries(Object.entries(WORKER_ENTRIES).map(([name, file]) => [name, path.resolve(import.meta.dirname, '../node_modules', name, file)])) } }
+    : {}),
+}));
