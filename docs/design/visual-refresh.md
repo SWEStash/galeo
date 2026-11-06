@@ -126,8 +126,10 @@ reduce` every duration is 0 (one rule in `tokens.css`), as the reload pulse and 
 
 ### Focus
 
-A 2 px ring in `--galeo-color-focus`, 2 px outside the control (inside for tabs and list rows,
-which touch their neighbours). Unchanged in colour; made the same on every control.
+A 1 px ring in `--galeo-color-focus`, the same on every control and in documents. Outside a control
+it has a faint halo (the colour at 18 %); inside one (tabs, list rows, the document area, overview cards)
+it sits on the edge, without a halo. The colour is the softest blue that still stands out 3:1 on every
+background it meets (light `#218bff`, dark `#2d65b9`; owner, 2026-11-06).
 
 ## 3. Two directions
 

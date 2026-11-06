@@ -47,7 +47,7 @@ Defined on `:root`; the dark values apply when the root element has `data-scheme
 | `--galeo-color-border` | `#d1d9e0` / `#3d444d` | Rules, table borders |
 | `--galeo-color-link` | `#0969da` / `#4493f8` | Links |
 | `--galeo-color-code-bg` | `#f6f8fa` / `#161b22` | Code block and inline code background |
-| `--galeo-color-focus` | `#0969da` / `#4493f8` | Focus ring |
+| `--galeo-color-focus` | `#218bff` / `#2d65b9` | Focus ring (1 px) |
 | `--galeo-color-mark` | yellow, 45% | Find matches |
 | `--galeo-color-mark-current` | orange | The current find match |
 | `--galeo-color-log-error` | `#d1242f` / `#f85149` | Log error badges, level words and line tint (9 %) |

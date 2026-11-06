@@ -23,7 +23,7 @@
   --galeo-color-control-border: #818b98;
   --galeo-color-link: #0969da;
   --galeo-color-code-bg: #f6f8fa;
-  --galeo-color-focus: #0969da;
+  --galeo-color-focus: #218bff;
   /* The window's profile accent (the page sets it); chrome only, never documents. */
   --galeo-color-accent: #3a7bd5;
   --galeo-color-mark: rgb(255 212 59 / 45%);
@@ -88,9 +88,9 @@
   --galeo-chrome-hover: #e9ebed;
   --galeo-chrome-press: #e1e3e5;
   --galeo-chrome-selected: #dae9f9;
-  /* The focus ring around a control: softer than the document's focus colour, still 3:1 on bars and menus. */
-  --galeo-chrome-focus: #218bff;
-  --galeo-chrome-focus-ring: 1px solid var(--galeo-chrome-focus);
+  /* The focus ring: 1 px, and a faint halo where it sits outside a control. */
+  --galeo-focus-ring: 1px solid var(--galeo-color-focus);
+  --galeo-focus-halo: 0 0 0 3px color-mix(in srgb, var(--galeo-color-focus) 18%, transparent);
   /* Tints: a find-in-all-tabs match, a banner, the drop area's veil. */
   --galeo-chrome-match: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
   --galeo-chrome-banner: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));
@@ -106,7 +106,7 @@
   --galeo-color-control-border: #6e7681;
   --galeo-color-link: #4493f8;
   --galeo-color-code-bg: #161b22;
-  --galeo-color-focus: #4493f8;
+  --galeo-color-focus: #2d65b9;
   --galeo-color-mark: rgb(187 128 9 / 45%);
   --galeo-color-mark-current: #d29922;
   --galeo-color-log-error: #f85149;
@@ -132,7 +132,6 @@
   --galeo-chrome-hover: #0f1217;
   --galeo-chrome-press: #181b20;
   --galeo-chrome-selected: #152539;
-  --galeo-chrome-focus: #316dca;
   --galeo-shadow-1: 0 2px 8px rgb(0 0 0 / 40%);
   --galeo-shadow-2: 0 8px 28px rgb(0 0 0 / 55%);
   --galeo-scrim: rgb(0 0 0 / 50%);
