@@ -101,13 +101,16 @@ export function TabOverview({ store, onClose }: { store: OverviewStore; onClose:
 }
 
 function Card({ card, onClose }: { card: OverviewCard; onClose: () => void }) {
-  const words = [...card.indicators.map((each) => each.words), card.format, card.active ? 'shown now' : null, card.position].filter(Boolean);
+  const words = [card.pinned ? 'pinned' : null, ...card.indicators.map((each) => each.words), card.format, card.active ? 'shown now' : null, card.position].filter(Boolean);
   return (
     <GridListItem id={card.id} textValue={card.label} className="tab-overview-card" data-testid="overview-card" data-card-id={card.id} data-active={card.active || undefined}>
       <span className="tab-overview-badge" aria-hidden="true">
         {card.badge}
       </span>
-      <span className="tab-overview-label">{card.label}</span>
+      <span className="tab-overview-label">
+        {card.pinned && <Icon name="pin" className="tab-pin" />}
+        {card.label}
+      </span>
       {card.indicators.length > 0 && (
         <span className="tab-overview-indicators" aria-hidden="true">
           {card.indicators.map(({ glyph, words: title }) => (

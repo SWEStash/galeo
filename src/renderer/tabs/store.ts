@@ -76,6 +76,7 @@ type TabsApi = Pick<
   | 'position'
   | 'zoom'
   | 'width'
+  | 'pin'
   | 'viewState'
   | 'renderAgain'
   | 'onChanged'
@@ -100,6 +101,8 @@ export interface TabStore {
   setCloseGuard(guard: ((id: string) => Promise<boolean>) | null): void;
   /** Main owns the order: the new order shows once its snapshot arrives. */
   move(id: string, position: number): void;
+  /** Pins or unpins the tab; main moves it into or out of the pinned block. */
+  pin(id: string, pinned: boolean): void;
   reopenClosed(): void;
   /** Reopens one closed tab by the id tab search gave it (UX F16). */
   reopenClosedTab(id: string): void;
@@ -292,6 +295,9 @@ export function createTabStore(api: TabsApi): TabStore {
     },
     move(id, position) {
       void api.move(id, position);
+    },
+    pin(id, pinned) {
+      void api.pin(id, pinned);
     },
     moved(id, position) {
       positions.set(id, position);

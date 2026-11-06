@@ -80,6 +80,20 @@ describe('TabBar', () => {
     expect([...byId('bar-tools').children].map((button) => (button as HTMLElement).dataset['testid'])).toEqual(['tab-overview-button', 'tab-search-button', 'commands-button']);
   });
 
+  it('shows a pinned tab with a pin and no ✕; a screen reader hears "pinned"', async () => {
+    view.tabs = [{ ...TABS[0]!, pinned: true }, TABS[1]!];
+    try {
+      await bar(false);
+      const [pinned, other] = [...document.querySelectorAll<HTMLElement>('[role="tab"]')];
+      expect(pinned!.querySelector('.tab-grab > .tab-pin')).not.toBeNull();
+      expect(pinned!.textContent).toContain('README.md, pinned');
+      expect(pinned!.querySelector('.tab-close')).toBeNull();
+      expect(other!.querySelector('.tab-close')).not.toBeNull();
+    } finally {
+      view.tabs = TABS;
+    }
+  });
+
   it('with the tabs on the left: the panel button, the chip and + start the title bar; the tools end it', async () => {
     await bar(true);
     expect(order()).toEqual(['panel-toggle', 'chip', 'tab-new', 'side-panel', 'title-bar-text', 'window-grip', 'bar-tools']);

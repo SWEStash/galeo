@@ -88,6 +88,18 @@ describe('the side panel (ADR-023)', () => {
     expect(panel().style.width).toBe('220px');
   });
 
+  it('shows a pin before a pinned row\'s name and on its collapsed marker; a screen reader hears "pinned"', async () => {
+    const view = viewOf({ tabs: [{ ...TABS[0]!, pinned: true }, ...TABS.slice(1)] });
+    await shown({ view });
+    expect(tabs()[0]!.querySelector('.tab-line > .tab-pin')).not.toBeNull();
+    expect(tabs()[0]!.textContent).toContain('README.md, pinned');
+    expect(tabs()[1]!.querySelector('.tab-pin')).toBeNull();
+    act(() => root?.unmount());
+    await shown({ view, collapsed: true });
+    expect(tabs()[0]!.querySelector('.tab-marker .tab-marker-pin')).not.toBeNull();
+    expect(tabs()[0]!.textContent).toContain('README.md, pinned, ~/acme');
+  });
+
   it("shows the shown tab's name and folder in the title bar, for the eye only", async () => {
     await shown();
     const text = document.querySelector('[data-testid="title-bar-text"]')!;

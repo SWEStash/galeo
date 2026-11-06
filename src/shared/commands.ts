@@ -47,6 +47,7 @@ export const COMMANDS = {
   moveTabRight: { label: 'Move tab right', group: 'Tabs', runs: 'page' },
   moveTabToNewWindow: { label: 'Move tab to new window', group: 'Tabs', runs: 'page' },
   moveTabToWindow: { label: 'Move tab to window…', group: 'Tabs', runs: 'page' },
+  togglePin: { label: 'Pin or unpin tab', group: 'Tabs', runs: 'page' },
   profileMenu: { label: 'Profile menu', group: 'App', runs: 'page' },
   settings: { label: 'Settings', group: 'App', runs: 'page' },
   zoomIn: { label: 'Zoom in', group: 'View', runs: 'page' },

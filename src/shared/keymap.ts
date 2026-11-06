@@ -45,6 +45,7 @@ const BASE = {
   // Palette only (UX §5), as is dragging the tab (ADR-019).
   moveTabToNewWindow: [],
   moveTabToWindow: [],
+  togglePin: [],
   profileMenu: ['CmdOrCtrl+Shift+M'],
   settings: ['CmdOrCtrl+,'],
   /** Ctrl++ as most apps; Ctrl+= too, on layouts where = needs no Shift. */

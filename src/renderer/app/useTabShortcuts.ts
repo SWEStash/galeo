@@ -4,7 +4,7 @@ import type { ReaderWidth } from '../../shared/tabs';
 import { useCommands } from '../commands/useCommands';
 import { hasReadingColumn } from '../document/width';
 import { tabAction } from '../tabs/commands';
-import type { TabStore } from '../tabs/store';
+import { shownTab, type TabStore } from '../tabs/store';
 import { wheelZoom } from '../tabs/wheel-zoom';
 import { movableTab, moveShownTab } from './tab-moves';
 import { reportFailure } from '../tabs/closed-tab';
@@ -76,6 +76,13 @@ export function useTabShortcuts(store: TabStore, openQuickOpen: () => void, meas
       if (id === null) return true;
       if (store.getSnapshot().tabs.length < 2) say("It's this window's only tab");
       else moveShownTab(id, 'new', say);
+      return true;
+    },
+    togglePin: () => {
+      const tab = shownTab(store.getSnapshot());
+      if (!tab) return false;
+      if (tab.kind === 'settings') say("The Settings tab can't be pinned");
+      else store.pin(tab.id, !tab.pinned);
       return true;
     },
     closeTab: tabs('closeTab'),

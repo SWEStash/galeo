@@ -373,6 +373,18 @@ body,
   padding-left: var(--galeo-space-lg);
 }
 
+/* A pinned tab's pin, before its name: in the bar, a side panel row and an overview card. */
+.tab-pin {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  color: var(--galeo-color-muted);
+}
+.tab-overview-label .tab-pin {
+  margin-right: var(--galeo-space-xs);
+  vertical-align: -1px;
+}
+
 .tab-label {
   flex: 1;
   min-width: 0;
@@ -983,6 +995,16 @@ body,
   border: 1px solid var(--galeo-color-border);
   border-radius: var(--galeo-radius-md);
   font-weight: 600;
+}
+.tab-marker-pin {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--galeo-radius-full);
+  background: var(--galeo-chrome-bar);
+  color: var(--galeo-color-muted);
 }
 .tab[data-selected] .tab-marker {
   border: 2px solid var(--galeo-color-accent);

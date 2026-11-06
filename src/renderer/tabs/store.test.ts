@@ -31,6 +31,7 @@ function setup(initial: TabSnapshot) {
     position: vi.fn().mockResolvedValue(undefined),
     zoom: vi.fn().mockResolvedValue(undefined),
     width: vi.fn().mockResolvedValue(undefined),
+    pin: vi.fn().mockResolvedValue(undefined),
     viewState: vi.fn().mockResolvedValue(undefined),
     renderAgain: vi.fn().mockResolvedValue(undefined),
     onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {

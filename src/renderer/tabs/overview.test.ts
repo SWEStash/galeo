@@ -36,11 +36,16 @@ const view = (change: Partial<Parameters<typeof overviewCards>[0]> = {}) => ({
 describe('overviewCards', () => {
   it('gives a card per tab in tab order: its label as the tab bar shows it, folder, format and position', () => {
     expect(overviewCards(view())).toEqual([
-      { id: 'a', label: 'acme/README.md', folder: '~/acme', badge: 'MD', format: 'Markdown', indicators: [], active: false, position: '1 of 4' },
-      { id: 'b', label: 'beta/README.md', folder: '~/beta', badge: 'MD', format: 'Markdown', indicators: [], active: true, position: '2 of 4' },
-      { id: 's', label: 'Settings', folder: '', badge: '⚙', format: null, indicators: [], active: false, position: '3 of 4' },
-      { id: 'c', label: 'app.log', folder: '/srv/logs', badge: 'LOG', format: 'log', indicators: [], active: false, position: '4 of 4' },
+      { id: 'a', label: 'acme/README.md', folder: '~/acme', badge: 'MD', format: 'Markdown', indicators: [], pinned: false, active: false, position: '1 of 4' },
+      { id: 'b', label: 'beta/README.md', folder: '~/beta', badge: 'MD', format: 'Markdown', indicators: [], pinned: false, active: true, position: '2 of 4' },
+      { id: 's', label: 'Settings', folder: '', badge: '⚙', format: null, indicators: [], pinned: false, active: false, position: '3 of 4' },
+      { id: 'c', label: 'app.log', folder: '/srv/logs', badge: 'LOG', format: 'log', indicators: [], pinned: false, active: false, position: '4 of 4' },
     ]);
+  });
+
+  it('marks a pinned tab', () => {
+    const cards = overviewCards(view({ tabs: [{ ...tabs[0]!, pinned: true }, tabs[1]!] }));
+    expect(cards.map((card) => card.pinned)).toEqual([true, false]);
   });
 
   it("shows each tab's indicators, with their words", () => {

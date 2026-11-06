@@ -185,6 +185,9 @@ function TabItem({
     </span>
   ));
   const folder = tab.kind === 'settings' ? '' : (tab.folder ?? '');
+  // A pinned tab shows a pin before its name; a screen reader hears "pinned" after it.
+  const pin = tab.pinned && <Icon name="pin" className="tab-pin" />;
+  const pinned = tab.pinned && <span className="visually-hidden">, pinned</span>;
 
   // A collapsed marker's tooltip: on the pointer, and on keyboard focus (not after a click).
   const tipText = [folder ? `${label} — ${folder}` : label, ...shown.map((each) => each.words)].join(', ');
@@ -239,7 +242,9 @@ function TabItem({
           {/* All of the row but its ✕ starts a drag. */}
           <span className="tab-grab" {...dragProps} onAuxClick={onAuxClick} title={tab.path || undefined}>
             <span className="tab-line">
+              {pin}
               <span className="tab-label">{label}</span>
+              {pinned}
               {marks}
             </span>
             {folder && (
@@ -255,12 +260,15 @@ function TabItem({
         <>
           {/* All of the tab but its ✕ starts a drag, edge to edge. */}
           <span className="tab-grab" {...dragProps} onAuxClick={onAuxClick}>
+            {pin}
             <span className="tab-label" title={tab.path}>
               {label}
             </span>
+            {pinned}
             {marks}
           </span>
-          {close}
+          {/* A pinned tab keeps its room for the name: it closes by keys, the menu or a middle click. */}
+          {!tab.pinned && close}
         </>
       )}
     </Tab>
@@ -289,6 +297,7 @@ function MarkerContent({
   return (
     <span className="tab-grab" {...grab}>
       <span className="tab-marker" aria-hidden="true">
+        {tab.pinned && <Icon name="pin" className="tab-marker-pin" />}
         {letter}
         {mark && (
           <span className="tab-marker-mark" data-indicator={mark.words}>
@@ -298,6 +307,7 @@ function MarkerContent({
       </span>
       <span className="visually-hidden">
         {label}
+        {tab.pinned && ', pinned'}
         {folder && `, ${folder}`}
       </span>
       <span className="tab-marker-marks">{children}</span>

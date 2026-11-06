@@ -14,6 +14,7 @@ export interface OverviewCard {
   badge: string;
   format: string | null;
   indicators: Indicator[];
+  pinned: boolean;
   active: boolean;
   /** "3 of 9", in the card's accessible name. */
   position: string;
@@ -47,6 +48,7 @@ export function overviewCards(view: Pick<TabsView, 'tabs' | 'active' | 'statuses
       badge: settings ? '⚙' : BADGES[format],
       format: settings ? null : FORMAT_NAMES[format],
       indicators: indicators(view.statuses.get(tab.id), flagsOf(view, tab.id)),
+      pinned: tab.pinned === true,
       active: tab.id === view.active,
       position: `${index + 1} of ${view.tabs.length}`,
     };
