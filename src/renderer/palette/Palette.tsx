@@ -3,6 +3,7 @@ import { Autocomplete, Dialog, Input, Label, ListBox, ListBoxItem, Modal, ModalO
 import type { Platform } from '../../shared/keymap';
 import { paletteEntries, type PaletteEntry } from './entries';
 import { plural } from '../../shared/words';
+import { Icon } from '../ui/icons';
 
 /**
  * The command palette (Ctrl+Shift+P, UX §5): every command by name, with its keys. Enter runs the
@@ -40,6 +41,7 @@ export function Palette({ platform, onChoose, onClose }: { platform: Platform; o
           <div className="quick-open-body" onKeyDownCapture={onKeyDown}>
             <Autocomplete inputValue={query} onInputChange={setQuery}>
               <TextField className="quick-open-field">
+                <Icon name="search" />
                 <Label className="visually-hidden">Run a command by name</Label>
                 {/* The combobox pattern (UX §7): the list below is always shown, so it's always expanded. */}
                 <Input ref={input} role="combobox" aria-expanded className="quick-open-input" placeholder="Type a command" spellCheck={false} />

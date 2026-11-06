@@ -21,6 +21,7 @@ import { editors } from '../edit/editors';
 import { keepCaretKeys } from '../overlay-keys';
 import { plural } from '../../shared/words';
 import { logFailure, reportFailure } from './closed-tab';
+import { Icon } from '../ui/icons';
 
 /** Typing pauses this long before the window's tabs are searched. */
 const DEBOUNCE_MS = 150;
@@ -164,6 +165,7 @@ export function FindAll({
             <Autocomplete inputValue={query} onInputChange={setQuery}>
               <div className="find-all-field">
                 <TextField className="quick-open-field">
+                  <Icon name="search" />
                   <Label className="visually-hidden">Find in the source of this window's tabs</Label>
                   {/* The combobox pattern (UX §7): the list below is always shown, so it's always expanded. */}
                   <Input ref={input} role="combobox" aria-expanded className="quick-open-input" placeholder="Find in all tabs (source text)" spellCheck={false} />

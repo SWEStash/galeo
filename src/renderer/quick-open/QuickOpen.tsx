@@ -20,6 +20,7 @@ import type { QuickOpenEntry, QuickOpenResults } from '../../shared/quick-open';
 import { keepCaretKeys } from '../overlay-keys';
 import { plural } from '../../shared/words';
 import { logFailure, reportFailure } from '../tabs/closed-tab';
+import { Icon } from '../ui/icons';
 
 /**
  * Quick open (UX F8): a field over main's results, open tabs and recent files first, then the
@@ -141,6 +142,7 @@ export function QuickOpen({ platform, onClose, say }: { platform: Platform; onCl
           <div className="quick-open-body" onKeyDownCapture={onKeyDown}>
             <Autocomplete inputValue={query} onInputChange={type}>
               <TextField className="quick-open-field">
+                <Icon name="search" />
                 <Label className="visually-hidden">Open a file by name, or type ~/ or / for a path</Label>
                 {/* The combobox pattern (UX §7): the list below is always shown, so it's always expanded. */}
                 <Input ref={input} role="combobox" aria-expanded className="quick-open-input" placeholder="Search files by name, or type ~/ or /" spellCheck={false} />

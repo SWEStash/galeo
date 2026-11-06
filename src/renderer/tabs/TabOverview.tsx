@@ -6,6 +6,7 @@ import { tabAction } from './commands';
 import { CARD_TYPE } from './drag-types';
 import { droppedAt, overviewCards, type OverviewCard } from './overview';
 import type { TabStore } from './store';
+import { Icon } from '../ui/icons';
 
 export type OverviewStore = Pick<TabStore, 'subscribe' | 'getSnapshot' | 'activate' | 'close' | 'move'>;
 
@@ -130,7 +131,7 @@ function Card({ card, onClose }: { card: OverviewCard; onClose: () => void }) {
           onClose();
         }}
       >
-        ✕
+        <Icon name="close" />
       </span>
     </GridListItem>
   );

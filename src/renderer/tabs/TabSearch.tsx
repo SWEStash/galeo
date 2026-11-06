@@ -18,6 +18,7 @@ import type { TabHit, TabSearchResults } from '../../shared/tabs';
 import { keepCaretKeys } from '../overlay-keys';
 import { plural } from '../../shared/words';
 import { reportFailure } from './closed-tab';
+import { Icon } from '../ui/icons';
 
 interface Row extends TabHit {
   /** Unique in the list: an open tab and a closed one are told apart. */
@@ -113,6 +114,7 @@ export function TabSearch({
           <div className="quick-open-body" onKeyDownCapture={onKeyDown}>
             <Autocomplete inputValue={query} onInputChange={setQuery}>
               <TextField className="quick-open-field">
+                <Icon name="search" />
                 <Label className="visually-hidden">Search this window's open and recently closed tabs</Label>
                 {/* The combobox pattern (UX §7): the list below is always shown, so it's always expanded. */}
                 <Input ref={input} role="combobox" aria-expanded className="quick-open-input" placeholder="Search tabs by name or folder" spellCheck={false} />

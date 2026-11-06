@@ -88,39 +88,61 @@ body,
   border-radius: 50%;
 }
 
+/* Menus drawn in the page (the profile menu, the status bar's menus, the font list): one look. */
 .menu-popover {
   min-width: 220px;
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-md);
-  background: var(--galeo-color-bg);
+  border-radius: var(--galeo-radius-lg);
+  background: var(--galeo-chrome-surface);
   box-shadow: var(--galeo-shadow-1);
   font: var(--galeo-text-md) var(--galeo-font-ui);
   color: var(--galeo-color-fg);
 }
+.menu-popover[data-entering] {
+  animation: galeo-rise var(--galeo-motion-base) var(--galeo-ease);
+}
 
 .menu {
-  padding: var(--galeo-space-xs);
+  padding: var(--galeo-space-sm);
   outline: none;
 }
 
 .menu-header {
-  padding: var(--galeo-space-sm) var(--galeo-space-md) var(--galeo-space-2xs);
+  padding: var(--galeo-space-sm) var(--galeo-space-md) var(--galeo-space-xs);
   color: var(--galeo-color-muted);
-  font-size: var(--galeo-text-sm);
+  font-size: var(--galeo-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .menu-item {
   display: flex;
   gap: var(--galeo-space-md);
   align-items: center;
-  padding: var(--galeo-space-sm) var(--galeo-space-md);
-  border-radius: var(--galeo-radius-sm);
+  min-height: 28px;
+  box-sizing: border-box;
+  padding: var(--galeo-space-xs) var(--galeo-space-md);
+  border-radius: var(--galeo-radius-md);
   outline: none;
   cursor: default;
 }
 
 .menu-item[data-focused] {
-  background: var(--galeo-chrome-hover);
+  background: var(--galeo-chrome-selected);
+}
+
+/* Overlays and menus open with a short fade and rise; they close at once. */
+@keyframes galeo-rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes galeo-fade {
+  from {
+    opacity: 0;
+  }
 }
 
 .menu-item[data-disabled] {
@@ -153,14 +175,23 @@ body,
   place-items: center;
   background: var(--galeo-scrim);
 }
+.modal-overlay[data-entering] {
+  animation: galeo-fade var(--galeo-motion-base) var(--galeo-ease);
+}
 
+/* Every overlay and dialog: one frame, lifted over the backdrop. */
 .modal {
   width: min(420px, calc(100vw - 32px));
+  overflow: hidden;
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-md);
-  background: var(--galeo-color-bg);
+  border-radius: var(--galeo-radius-lg);
+  background: var(--galeo-chrome-surface);
+  box-shadow: var(--galeo-shadow-2);
   color: var(--galeo-color-fg);
   font: var(--galeo-text-md) var(--galeo-font-ui);
+}
+.modal[data-entering] {
+  animation: galeo-rise var(--galeo-motion-base) var(--galeo-ease);
 }
 
 .dialog {
@@ -174,6 +205,7 @@ body,
 .dialog h2 {
   margin: 0;
   font-size: var(--galeo-text-xl);
+  font-weight: 600;
 }
 
 .dialog p {
@@ -189,7 +221,7 @@ body,
 .field input {
   padding: var(--galeo-space-sm) var(--galeo-space-md);
   border: 1px solid var(--galeo-color-control-border);
-  border-radius: var(--galeo-radius-sm);
+  border-radius: var(--galeo-radius-md);
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
   font: inherit;
@@ -491,28 +523,34 @@ body,
   display: flex;
   flex-direction: column;
 }
+.quick-open-field {
+  display: flex;
+  gap: var(--galeo-space-md);
+  align-items: center;
+  padding-left: var(--galeo-space-xl);
+  border-bottom: 1px solid var(--galeo-color-border);
+  color: var(--galeo-color-muted);
+}
 .quick-open-input {
+  flex: 1;
   width: 100%;
+  min-width: 0;
   box-sizing: border-box;
-  padding: var(--galeo-space-lg) var(--galeo-space-lg);
+  padding: var(--galeo-space-lg) var(--galeo-space-xl) var(--galeo-space-lg) 0;
   border: none;
-  border-bottom: 1px solid var(--galeo-color-control-border);
   background: transparent;
   color: var(--galeo-color-fg);
   font: var(--galeo-text-lg) var(--galeo-font-ui);
   outline: none;
 }
-.quick-open-field:focus-within .quick-open-input {
-  box-shadow: inset 0 -2px 0 var(--galeo-color-focus);
-}
 .quick-open-list {
   max-height: min(60vh, 480px);
   overflow-y: auto;
-  padding: var(--galeo-space-xs) 0;
+  padding: var(--galeo-space-sm);
   outline: none;
 }
 .quick-open-header {
-  padding: var(--galeo-space-md) var(--galeo-space-lg) var(--galeo-space-2xs);
+  padding: var(--galeo-space-md) var(--galeo-space-md) var(--galeo-space-xs);
   color: var(--galeo-color-muted);
   font-size: var(--galeo-text-xs);
   font-weight: 600;
@@ -523,14 +561,16 @@ body,
   display: flex;
   gap: var(--galeo-space-lg);
   align-items: baseline;
-  padding: var(--galeo-space-xs) var(--galeo-space-lg);
+  padding: var(--galeo-space-sm) var(--galeo-space-md);
+  border-radius: var(--galeo-radius-md);
   cursor: default;
   outline: none;
 }
-.quick-open-item[data-focused],
 .quick-open-item[data-hovered] {
   background: var(--galeo-chrome-hover);
-  box-shadow: inset 2px 0 0 var(--galeo-color-focus);
+}
+.quick-open-item[data-focused] {
+  background: var(--galeo-chrome-selected);
 }
 .quick-open-label {
   display: flex;
@@ -598,7 +638,7 @@ body,
 }
 .quick-open-fill:hover {
   color: var(--galeo-color-fg);
-  background: var(--galeo-color-control-border);
+  background: var(--galeo-chrome-press);
 }
 .quick-open-detail {
   overflow: hidden;
@@ -617,11 +657,13 @@ body,
   gap: var(--galeo-space-xs);
 }
 .palette-keys kbd {
-  padding: 0 var(--galeo-space-xs);
+  padding: 0 var(--galeo-space-sm);
   border: 1px solid var(--galeo-color-border);
+  border-bottom-width: 2px;
   border-radius: var(--galeo-radius-sm);
+  background: var(--galeo-chrome-bar);
   color: var(--galeo-color-muted);
-  font: var(--galeo-text-sm) var(--galeo-font-ui);
+  font: var(--galeo-text-xs) var(--galeo-font-ui);
   white-space: nowrap;
 }
 .quick-open-empty {
@@ -645,6 +687,7 @@ body,
 }
 .tab-overview-card {
   position: relative;
+  background: var(--galeo-chrome-surface);
   display: grid;
   grid-template: 'badge label marks' auto 'badge folder folder' auto / auto 1fr auto;
   column-gap: var(--galeo-space-md);
@@ -658,10 +701,10 @@ body,
   outline: none;
 }
 .tab-overview-card[data-hovered] {
-  background: var(--galeo-color-code-bg);
+  background: var(--galeo-chrome-hover);
 }
 .tab-overview-card[data-active] {
-  box-shadow: inset 0 -2px 0 var(--galeo-color-accent);
+  box-shadow: inset 0 2px 0 var(--galeo-color-accent);
 }
 .tab-overview-card[data-focus-visible] {
   outline: 2px solid var(--galeo-color-focus);
@@ -704,18 +747,24 @@ body,
   position: absolute;
   top: 4px;
   right: 4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
   visibility: hidden;
-  padding: 0 var(--galeo-space-xs);
   border-radius: var(--galeo-radius-sm);
   color: var(--galeo-color-muted);
-  font-size: var(--galeo-text-xs);
+}
+.tab-overview-close .icon {
+  width: 12px;
+  height: 12px;
 }
 .tab-overview-card[data-hovered] .tab-overview-close,
 .tab-overview-card[data-focused] .tab-overview-close {
   visibility: visible;
 }
 .tab-overview-close:hover {
-  background: var(--galeo-color-control-border);
+  background: var(--galeo-chrome-press);
   color: var(--galeo-color-fg);
 }
 /* Where a dragged card would go: a line between two cards. */
@@ -1284,38 +1333,6 @@ button:focus-visible {
 
 .status-message {
   margin-left: auto;
-}
-
-.menu-popover {
-  min-width: 180px;
-  padding: var(--galeo-space-xs);
-  border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-md);
-  background: var(--galeo-color-bg);
-  box-shadow: var(--galeo-shadow-1);
-  font: var(--galeo-text-md) var(--galeo-font-ui);
-  color: var(--galeo-color-fg);
-}
-
-.menu {
-  outline: none;
-}
-
-.menu-item {
-  padding: var(--galeo-space-xs) var(--galeo-space-md);
-  border-radius: var(--galeo-radius-sm);
-  cursor: default;
-  outline: none;
-}
-
-.menu-item[data-focused] {
-  background: var(--galeo-color-focus);
-  color: var(--galeo-color-bg);
-}
-
-/* A focused item's state (a profile's "Open", a window's file) takes the item's colour on the focus background. */
-.menu-item[data-focused] .menu-description {
-  color: inherit;
 }
 
 /* A window without tabs (UX §4). */
