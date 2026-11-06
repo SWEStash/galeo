@@ -246,7 +246,7 @@ function start(initialMode: StartupMode): void {
     }
   };
   const warmLimits = (current: Settings) => ({ count: current.warmTabs, bytes: current.warmMegabytes * MIB });
-  const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS));
+  const warm = new WarmTabs(warmLimits(DEFAULT_SETTINGS), (windowId, id) => documents.pinned(id, windowId));
   cleanups.add((windowId) => warm.closeWindow(windowId));
   const reads = new ReadIdentities(fs);
   // The window's tabs: links and reads forget each before the registry lets the window go.

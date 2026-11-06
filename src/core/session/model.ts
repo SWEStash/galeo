@@ -25,4 +25,6 @@ export interface SessionFile {
   focusOrder: number[];
 }
 
-export const SESSION_VERSION = 1;
+/** 2 (v0.7): a tab may be pinned. A version 1 file has no pins, so it reads as it is. */
+export const SESSION_VERSION = 2;
+export const SESSION_MIGRATIONS = { 1: (data: Record<string, unknown>) => data };

@@ -38,6 +38,13 @@ describe('SessionStore (ADR-005, SR-17)', () => {
     expect(await store.load()).toEqual({ session: session(5), notice: null });
   });
 
+  it('reads a version 1 session as it is (it has no pins) and writes the current version', async () => {
+    const { fs, store } = setup({ [FILE]: json(session(5)) });
+    expect((await store.load()).session).toEqual(session(5));
+    await store.save(session(6));
+    expect((await read(fs, FILE)).schemaVersion).toBe(2);
+  });
+
   it('writes owner-only, and rotates the previous file into .1 to .3 on the first save of a run only', async () => {
     const { fs, store } = setup({ [FILE]: json(session(3)), [`${FILE}.1`]: json(session(2)), [`${FILE}.2`]: json(session(1)), [`${FILE}.3`]: json(session(0)) });
     await store.save(session(10));

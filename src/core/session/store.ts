@@ -3,7 +3,7 @@ import { joinPath } from '../../shared/paths';
 import type { SettingsNotice } from '../../shared/settings';
 import type { FileSystem } from '../ports';
 import { moveIfPresent, readJsonFile, writeJsonFile, type JsonFileSpec, type Parse, type Utf8 } from '../settings/json-file';
-import { SESSION_VERSION, type SessionFile } from './model';
+import { SESSION_MIGRATIONS, SESSION_VERSION, type SessionFile } from './model';
 
 /** Sessions hold paths and positions only; a bigger file is refused, not parsed (SR-17). */
 const SESSION_MAX_BYTES = 4 * 1024 * 1024;
@@ -30,7 +30,7 @@ export class SessionStore {
   private writing: Promise<void> = Promise.resolve();
 
   constructor(private readonly deps: SessionStoreDeps) {
-    this.spec = { fs: deps.fs, utf8: deps.utf8, parse: deps.parse, version: SESSION_VERSION, migrations: {}, maxBytes: SESSION_MAX_BYTES };
+    this.spec = { fs: deps.fs, utf8: deps.utf8, parse: deps.parse, version: SESSION_VERSION, migrations: SESSION_MIGRATIONS, maxBytes: SESSION_MAX_BYTES };
     this.file = joinPath(deps.dir, 'session.json');
   }
 

@@ -128,6 +128,7 @@ export const CHANNELS = [
   'tabs.position',
   'tabs.zoom',
   'tabs.width',
+  'tabs.pin',
   'tabs.viewState',
   'tabs.close',
   'tabs.reopenClosed',
@@ -249,6 +250,8 @@ export interface Requests {
   'tabs.zoom': [id: string, zoom: number];
   /** The tab's own reader width, kept by main for the session; null when it follows the setting again. */
   'tabs.width': [id: string, width: ReaderWidth | null];
+  /** Pins or unpins the tab (it moves to the end of the pinned block, or just after it). */
+  'tabs.pin': [id: string, pinned: boolean];
   'tabs.viewState': [id: string, state: TabViewState];
   'tabs.close': [id: string];
   /** Brings back the window's most recently closed tab. */
@@ -348,6 +351,7 @@ export interface Responses {
   'tabs.position': void;
   'tabs.zoom': void;
   'tabs.width': void;
+  'tabs.pin': void;
   'tabs.viewState': void;
   'tabs.close': void;
   /** The reopened tab's id, or null when none was closed. */

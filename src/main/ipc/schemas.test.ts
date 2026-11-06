@@ -94,6 +94,11 @@ describe('document channel arguments (SR-11)', () => {
     }
   });
 
+  it('tabs.pin takes an id and whether to pin', () => {
+    for (const good of [[ID, true], [ID, false]]) expect(accepts('tabs.pin', good)).toBe(true);
+    for (const bad of [[ID], [ID, 'true'], [ID, 1], [ID, true, 'x']]) expect(accepts('tabs.pin', bad)).toBe(false);
+  });
+
   it('settings.fonts takes nothing', () => {
     expect(accepts('settings.fonts', [])).toBe(true);
     expect(accepts('settings.fonts', ['--all'])).toBe(false);

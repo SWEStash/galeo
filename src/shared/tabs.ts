@@ -36,6 +36,8 @@ export interface TabView extends DocumentRecord, TabViewState {
   position?: ScrollAnchor;
   /** It was rendering when the window's renderer crashed: shown only when the reader asks (ADR-002). */
   crashed?: true;
+  /** Pinned: in the block at the start of the window's tabs. */
+  pinned?: true;
   /** File tabs, as sent to the page: the file's format and its folder as the reader sees it (`~/…`). */
   format?: FormatId;
   folder?: string;

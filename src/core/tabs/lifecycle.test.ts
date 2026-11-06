@@ -112,4 +112,34 @@ describe('WarmTabs', () => {
     warm.activated(5, 'a', MB);
     expect(warm.activated(5, 'b', MB)).toEqual([]);
   });
+
+  describe('a kept (pinned) tab', () => {
+    const pinned = new Set(['p']);
+    const keeping = (limits = { count: 1, bytes: 20 * MB }) => new WarmTabs(limits, (_window, id) => pinned.has(id));
+
+    it('stays warm past the count and counts toward it neither', () => {
+      const warm = keeping();
+      for (const id of ['p', 'a', 'b']) warm.activated(1, id, MB);
+      expect(warm.activated(1, 'c', MB)).toEqual(['a']);
+      expect(warm.warm(1)).toEqual(['c', 'b', 'p']);
+    });
+
+    it('stays warm past the byte budget, and its weight does not count', () => {
+      const warm = keeping({ count: 3, bytes: 10 * MB });
+      warm.activated(1, 'p', 50 * MB);
+      warm.activated(1, 'a', 9 * MB);
+      expect(warm.activated(1, 'b', MB)).toEqual([]);
+      expect(warm.activated(1, 'c', MB)).toEqual([]);
+      expect(warm.activated(1, 'd', MB)).toEqual(['a']);
+    });
+
+    it('is passed over under memory pressure', () => {
+      const warm = keeping({ count: 3, bytes: 20 * MB });
+      for (const id of ['a', 'p', 'b']) warm.activated(1, id, MB);
+      expect(warm.pressure(1)).toEqual(['a']);
+      expect(warm.pressure(1)).toEqual([]);
+      expect(warm.warm(1)).toEqual(['b', 'p']);
+    });
+  });
 });
+

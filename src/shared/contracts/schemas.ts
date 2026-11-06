@@ -98,6 +98,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'tabs.position': z.tuple([documentId, scrollAnchor]),
   'tabs.zoom': z.tuple([documentId, zoomLevel]),
   'tabs.width': z.tuple([documentId, readerWidth.nullable()]),
+  'tabs.pin': z.tuple([documentId, z.boolean()]),
   'tabs.viewState': z.tuple([documentId, tabViewState]),
   'tabs.close': z.tuple([documentId]),
   'tabs.reopenClosed': z.tuple([]),

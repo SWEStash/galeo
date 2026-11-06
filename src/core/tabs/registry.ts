@@ -38,15 +38,18 @@ interface Stored {
   settings?: true;
   /** It was rendering when its window's renderer crashed: not rendered again until the reader asks. */
   crashed?: true;
+  /** Pinned: kept in the block at the start of its window's order, never hibernated on its own. */
+  pinned?: true;
 }
 
-/** A tab as a session keeps it: its history, where in it, its zoom (absent at 100 %) and reader width. */
+/** A tab as a session keeps it: its history, where in it, its zoom (absent at 100 %), reader width and pin. */
 interface TabState {
   entries: HistoryEntry[];
   index: number;
   zoom?: number;
   /** Its own reader width; absent while it follows the setting. */
   width?: ReaderWidth;
+  pinned?: true;
 }
 
 /** A window's tabs as a session keeps them, and which was shown. */
@@ -64,6 +67,7 @@ interface Closed {
   zoom?: number;
   /** Its own reader width; absent while it follows the setting. */
   width?: ReaderWidth;
+  pinned?: true;
   /** When it closed, on the registry's own clock (`stamp`). */
   at: number;
 }
@@ -77,7 +81,8 @@ export const HISTORY_DEPTH = 50;
  * The tabs open in each window, as main knows them (ADR-002): which exist, their order and the
  * window they belong to. Reads go through a tab, so a window can only read what was opened for it.
  * Each tab keeps its own back/forward history. Every change bumps the window's revision, so the
- * window's mirror can tell a newer snapshot from a stale one.
+ * window's mirror can tell a newer snapshot from a stale one. Pinned tabs form a block at the start
+ * of the order: a tab enters, moves and leaves within its own block.
  */
 export class TabRegistry {
   private readonly records = new Map<string, Stored>();
@@ -134,6 +139,7 @@ export class TabRegistry {
         ...(ratio ? { ratio } : {}),
         ...(table ? { table } : {}),
         ...(record.crashed ? { crashed: true as const } : {}),
+        ...(record.pinned ? { pinned: true as const } : {}),
       };
     });
     return { revision: this.revisions.get(window) ?? 0, active: this.active.get(window) ?? null, tabs };
@@ -147,8 +153,8 @@ export class TabRegistry {
     return {
       active: shown < 0 ? null : shown,
       tabs: order.map((id) => {
-        const { entries, index, zoom, width } = this.records.get(id)!;
-        return { entries: entries.map((entry) => ({ ...entry })), index, ...(zoom ? { zoom } : {}), ...(width ? { width } : {}) };
+        const { entries, index, zoom, width, pinned } = this.records.get(id)!;
+        return { entries: entries.map((entry) => ({ ...entry })), index, ...(zoom ? { zoom } : {}), ...(width ? { width } : {}), ...(pinned ? { pinned } : {}) };
       }),
     };
   }
@@ -169,7 +175,7 @@ export class TabRegistry {
   /** Opens a session's tabs in a window, after any it has, under new ids; the saved active one is active. */
   restoreWindow(window: number, state: WindowState): DocumentRecord[] {
     const restored = state.tabs.map((tab) => {
-      const record = this.insert(window, tab.entries.map((entry) => ({ ...entry })), tab.index, this.orderOf(window).length);
+      const record = this.insert(window, tab.entries.map((entry) => ({ ...entry })), tab.index, this.orderOf(window).length, false, tab.pinned);
       this.keepLook(record.id, tab);
       return record;
     });
@@ -205,6 +211,27 @@ export class TabRegistry {
     if (width) record.width = width;
   }
 
+  /**
+   * Pins or unpins the tab: a pinned tab goes to the end of the pinned block, an unpinned one to just
+   * after it. Never the settings tab.
+   */
+  setPinned(id: string, window: number, pinned: boolean): boolean {
+    const record = this.owned(id, window);
+    if (!record || record.settings) return false;
+    if (Boolean(record.pinned) === pinned) return true;
+    const order = this.orderOf(window);
+    order.splice(order.indexOf(id), 1);
+    if (pinned) record.pinned = true;
+    else delete record.pinned;
+    order.splice(this.pinnedCount(window), 0, id);
+    this.changed(window);
+    return true;
+  }
+
+  pinned(id: string, window: number): boolean {
+    return this.owned(id, window)?.pinned === true;
+  }
+
   /** The window says it shows `id` now (it activates tabs itself, then reports it). */
   activate(id: string, window: number): boolean {
     if (!this.owned(id, window)) return false;
@@ -233,6 +260,7 @@ export class TabRegistry {
       position,
       ...(record.zoom ? { zoom: record.zoom } : {}),
       ...(record.width ? { width: record.width } : {}),
+      ...(record.pinned ? { pinned: true as const } : {}),
       at: this.stamp(),
     });
     this.closed.set(window, closed.slice(-CLOSED_DEPTH));
@@ -272,24 +300,25 @@ export class TabRegistry {
   }
 
   private bringBack(window: number, tab: Closed): DocumentRecord {
-    const record = this.insert(window, tab.entries, tab.index, tab.position);
+    const record = this.insert(window, tab.entries, tab.index, tab.position, false, tab.pinned);
     this.keepLook(record.id, tab);
     return record;
   }
 
-  /** Moves the tab to `position` in its window's order, clamped to the ends. */
+  /** Moves the tab to `position` in its window's order, clamped to the ends of its block (pinned or not). */
   move(id: string, window: number, position: number): boolean {
-    if (!this.owned(id, window)) return false;
+    const record = this.owned(id, window);
+    if (!record) return false;
     const order = this.orderOf(window);
     order.splice(order.indexOf(id), 1);
-    order.splice(clamp(position, 0, order.length), 0, id);
+    order.splice(this.within(window, position, record.pinned === true), 0, id);
     this.changed(window);
     return true;
   }
 
   /**
    * Moves the tab, as it is and under its id, to `position` in another window, shown there (ADR-019).
-   * Not a close: the window it left can't reopen it. Never the settings tab.
+   * Not a close: the window it left can't reopen it. Never the settings tab. A pinned tab stays pinned.
    */
   transfer(id: string, from: number, to: number, position: number): boolean {
     const record = this.owned(id, from);
@@ -299,7 +328,7 @@ export class TabRegistry {
     if (this.active.get(from) === id) this.active.delete(from);
     record.window = to;
     const target = this.orderOf(to);
-    target.splice(clamp(position, 0, target.length), 0, id);
+    target.splice(this.within(to, position, record.pinned === true), 0, id);
     this.active.set(to, id);
     this.changed(from);
     this.changed(to);
@@ -397,13 +426,13 @@ export class TabRegistry {
     this.changed(window);
   }
 
-  private insert(window: number, entries: HistoryEntry[], index: number, position: number, settings = false): DocumentRecord {
+  private insert(window: number, entries: HistoryEntry[], index: number, position: number, settings = false, pinned = false): DocumentRecord {
     let id = this.randomId();
     while (this.records.has(id)) id = this.randomId();
-    const record: Stored = { id, window, entries, index, ...(settings ? { settings: true as const } : {}) };
+    const placed = this.within(window, position, pinned);
+    const record: Stored = { id, window, entries, index, ...(settings ? { settings: true as const } : {}), ...(pinned ? { pinned: true as const } : {}) };
     this.records.set(id, record);
-    const order = this.orderOf(window);
-    order.splice(Math.min(position, order.length), 0, id);
+    this.orderOf(window).splice(placed, 0, id);
     this.changed(window);
     return recordOf(record);
   }
@@ -433,6 +462,17 @@ export class TabRegistry {
     record.index += step;
     this.changed(window);
     return { ...target };
+  }
+
+  /** How many tabs the window's pinned block holds. */
+  private pinnedCount(window: number): number {
+    return this.orderOf(window).filter((id) => this.records.get(id)!.pinned).length;
+  }
+
+  /** `position` clamped to the block a pinned (or unpinned) tab belongs in, in the order as it is now. */
+  private within(window: number, position: number, pinned: boolean): number {
+    const block = this.pinnedCount(window);
+    return pinned ? clamp(position, 0, block) : clamp(position, block, this.orderOf(window).length);
   }
 
   private orderOf(window: number): string[] {

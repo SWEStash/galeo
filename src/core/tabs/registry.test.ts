@@ -625,4 +625,70 @@ describe('TabRegistry', () => {
       expect(tabs.exportWindow(2)).toEqual({ tabs: [{ entries: [{ path: '/d/a.md', anchor: null }], index: 0, zoom: 1.5 }], active: 0 });
     });
   });
+
+  describe('pinned tabs', () => {
+    function window(paths: string[]) {
+      const records = new TabRegistry(counterIds());
+      const ids = paths.map((path) => records.open(path, 1, null, records.list(1).at(-1)?.id).id);
+      const order = () => records.list(1).map((record) => record.path);
+      return { records, ids, order };
+    }
+
+    it('pins to the end of the pinned block and unpins to just after it', () => {
+      const { records, ids, order } = window(['/a', '/b', '/c', '/d']);
+      expect(records.setPinned(ids[2]!, 1, true)).toBe(true);
+      expect(records.setPinned(ids[3]!, 1, true)).toBe(true);
+      expect(order()).toEqual(['/c', '/d', '/a', '/b']);
+      expect(records.setPinned(ids[2]!, 1, false)).toBe(true);
+      expect(order()).toEqual(['/d', '/c', '/a', '/b']);
+      expect(records.snapshot(1).tabs.map((tab) => tab.pinned ?? false)).toEqual([true, false, false, false]);
+      expect(records.pinned(ids[3]!, 1)).toBe(true);
+    });
+
+    it('moves a tab only within its own block', () => {
+      const { records, ids, order } = window(['/a', '/b', '/c']);
+      records.setPinned(ids[2]!, 1, true);
+      records.move(ids[1]!, 1, 0);
+      expect(order()).toEqual(['/c', '/b', '/a']);
+      records.move(ids[2]!, 1, 9);
+      expect(order()).toEqual(['/c', '/b', '/a']);
+    });
+
+    it('never opens a new tab inside the block, even after a shown pinned tab', () => {
+      const { records, ids, order } = window(['/a', '/b']);
+      records.setPinned(ids[0]!, 1, true);
+      records.setPinned(ids[1]!, 1, true);
+      records.activate(ids[0]!, 1);
+      records.open('/c', 1);
+      records.open('/d', 1, null, null);
+      expect(order()).toEqual(['/a', '/b', '/d', '/c']);
+    });
+
+    it('keeps the pin through a session, a reopen and a move to another window', () => {
+      const { records, ids } = window(['/a', '/b']);
+      records.setPinned(ids[1]!, 1, true);
+      const state = records.exportWindow(1);
+      expect(state.tabs.map((tab) => tab.pinned ?? false)).toEqual([true, false]);
+      records.restoreWindow(2, state);
+      expect(records.snapshot(2).tabs.map((tab) => [tab.path, tab.pinned ?? false])).toEqual([['/b', true], ['/a', false]]);
+
+      records.close(ids[1]!, 1);
+      const back = records.reopenClosed(1)!;
+      expect(records.pinned(back.id, 1)).toBe(true);
+      expect(records.list(1)[0]!.id).toBe(back.id);
+
+      records.open('/c', 3);
+      records.transfer(back.id, 1, 3, 5);
+      expect(records.snapshot(3).tabs.map((tab) => [tab.path, tab.pinned ?? false])).toEqual([['/b', true], ['/c', false]]);
+    });
+
+    it('does not pin the settings tab, or a tab of another window', () => {
+      const { records, ids } = window(['/a']);
+      const settings = records.openSettings(1);
+      expect(records.setPinned(settings.id, 1, true)).toBe(false);
+      expect(records.setPinned(ids[0]!, 2, true)).toBe(false);
+      expect(records.pinned(ids[0]!, 1)).toBe(false);
+    });
+  });
 });
+

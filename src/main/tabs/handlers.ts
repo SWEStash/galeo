@@ -18,6 +18,7 @@ type TabChannels =
   | 'tabs.position'
   | 'tabs.zoom'
   | 'tabs.width'
+  | 'tabs.pin'
   | 'tabs.viewState'
   | 'tabs.close'
   | 'tabs.reopenClosed'
@@ -127,6 +128,9 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     },
     'tabs.width': ([id, width], event) => {
       if (!tabs.setWidth(id, event.sender.id, width)) resync(event.sender.id);
+    },
+    'tabs.pin': ([id, pinned], event) => {
+      if (!tabs.setPinned(id, event.sender.id, pinned)) resync(event.sender.id);
     },
     'tabs.close': ([id], event) => {
       const window = event.sender.id;

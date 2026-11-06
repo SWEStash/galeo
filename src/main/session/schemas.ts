@@ -35,6 +35,7 @@ const tab = z
     index: z.int().min(0),
     zoom: zoomLevel.optional(),
     width: readerWidth.optional(),
+    pinned: z.literal(true).optional(),
   })
   .refine((value) => value.index < value.entries.length, 'index outside the history');
 

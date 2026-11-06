@@ -14,7 +14,8 @@ interface Rendered {
  * Which tabs of each window keep their rendered DOM (ADR-002). The active tab always does; up to
  * `count` others stay warm while they fit in `bytes`, and the least recently shown go first. The
  * returned ids are the tabs the window must hibernate. Weight is what the window reports for a
- * tab's rendered content.
+ * tab's rendered content. A kept tab (pinned) never hibernates on its own and counts toward neither
+ * limit.
  */
 export class WarmTabs {
   /** Per window, most recently shown first; the first one is the active tab. */
@@ -22,7 +23,10 @@ export class WarmTabs {
   /** Windows whose profile set its own limits; the others use the default ones. */
   private readonly own = new Map<number, WarmLimits>();
 
-  constructor(private limits: WarmLimits) {}
+  constructor(
+    private limits: WarmLimits,
+    private readonly kept: (window: number, id: string) => boolean = () => false,
+  ) {}
 
   /** The window shows `id`; without a weight, it keeps the one it last reported (or 0, not rendered yet). */
   activated(window: number, id: string, weight?: number): string[] {
@@ -45,7 +49,10 @@ export class WarmTabs {
   /** Memory is short: the least recently shown warm tab goes, even under the limits. */
   pressure(window: number): string[] {
     const tabs = this.windows.get(window) ?? [];
-    return tabs.length > 1 ? [tabs.pop()!.id] : [];
+    for (let at = tabs.length - 1; at > 0; at--) {
+      if (!this.kept(window, tabs[at]!.id)) return [tabs.splice(at, 1)[0]!.id];
+    }
+    return [];
   }
 
   /**
@@ -82,9 +89,12 @@ export class WarmTabs {
   private fit(window: number, tabs: Rendered[]): string[] {
     const { count, bytes } = this.own.get(window) ?? this.limits;
     const demoted: string[] = [];
-    const warmBytes = () => tabs.slice(1).reduce((sum, tab) => sum + tab.weight, 0);
-    while (tabs.length > 1 && (tabs.length - 1 > count || warmBytes() > bytes)) {
-      demoted.push(tabs.pop()!.id);
+    const others = () => tabs.slice(1).filter((tab) => !this.kept(window, tab.id));
+    const warmBytes = () => others().reduce((sum, tab) => sum + tab.weight, 0);
+    while (others().length > count || (others().length > 0 && warmBytes() > bytes)) {
+      const last = others().at(-1)!;
+      tabs.splice(tabs.indexOf(last), 1);
+      demoted.push(last.id);
     }
     return demoted;
   }
