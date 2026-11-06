@@ -1,4 +1,5 @@
 import type { EditGrants } from '../../core/documents/edit-grants';
+import type { PdfExports } from '../../core/documents/pdf-export';
 import type { TabSearches } from '../../core/documents/find-all';
 import type { CloseAnswer } from '../../core/documents/unsaved';
 import type { ReadIdentities } from '../../core/documents/identities';
@@ -13,6 +14,7 @@ import type { FileSystem } from '../../core/ports';
 import type { Decode, WhatwgEncoding } from '../../core/text/decode';
 import type { Hash } from '../../core/documents/read';
 import { UNKNOWN_DOCUMENT, type DocumentContent } from '../../shared/documents';
+import { fileName } from '../../shared/paths';
 import { workerFormat } from '../../shared/formats';
 import type { Handlers } from '../ipc/register';
 
@@ -33,7 +35,9 @@ type DocumentChannels =
   | 'documents.recover'
   | 'documents.findAll'
   | 'documents.pathMenu'
-  | 'documents.contextMenu';
+  | 'documents.contextMenu'
+  | 'documents.exportPdf'
+  | 'documents.printPdf';
 
 /**
  * The document channels. Every request names a document by id and is scoped to the sending
@@ -58,8 +62,10 @@ export function documentHandlers(deps: {
   searches: TabSearches;
   /** A document's native menus, built and shown by main (ADR-004). */
   menus: Pick<DocumentMenus, 'path' | 'document'>;
+  /** Export to PDF (#56). */
+  pdf: Pick<PdfExports, 'choose' | 'print'>;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened, searches, menus } = deps;
+  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened, searches, menus, pdf } = deps;
   /** The id names a document of the sender's, not its Settings tab. */
   const assertDocument = (id: string, window: number) => {
     if (records.get(id, window)?.kind === 'settings') throw new Error('not a document');
@@ -152,6 +158,13 @@ export function documentHandlers(deps: {
       assertDocument(id, event.sender.id);
       return menus.path(id, event.sender.id);
     },
+    'documents.exportPdf': ([id], event) => {
+      assertDocument(id, event.sender.id);
+      const record = records.get(id, event.sender.id);
+      if (!record) throw new Error(UNKNOWN_DOCUMENT);
+      return pdf.choose(event.sender.id, fileName(record.path));
+    },
+    'documents.printPdf': ([token], event) => pdf.print(event.sender.id, token),
     // A choice in the native menu is the reader's own input (as the tab menu's): Save, which the page
     // runs next, spends it as Ctrl+S does.
     'documents.contextMenu': async ([id, context], event) => {

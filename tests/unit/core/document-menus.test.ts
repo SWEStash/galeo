@@ -89,10 +89,10 @@ describe('DocumentMenus.document (UX F11)', () => {
     expect(labels(shown).slice(4, 8)).toEqual(['Save', 'Expand all', 'Collapse all', 'Copy JSON path']);
   });
 
-  it('offers Copy as rich text while a rendered Markdown document shows', async () => {
+  it('offers Copy as rich text and Export to PDF while a rendered Markdown document shows', async () => {
     const { menus, shown, id } = setup(null);
     await menus.document(id, 1, { tree: false, rich: true });
-    expect(labels(shown).slice(5, 7)).toEqual(['Copy as rich text', 'Open with default app']);
+    expect(labels(shown).slice(5, 8)).toEqual(['Copy as rich text', 'Export to PDF…', 'Open with default app']);
   });
 
   it("turns on edit mode itself, as Ctrl+E does, only for the window's shown tab", async () => {
@@ -106,7 +106,7 @@ describe('DocumentMenus.document (UX F11)', () => {
   });
 
   it('hands the page the commands it runs, and nothing once the tab shows another file', async () => {
-    for (const choice of ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path', 'copy-rich'] as const) {
+    for (const choice of ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path', 'copy-rich', 'export-pdf'] as const) {
       const each = setup(choice);
       expect(await each.menus.document(each.id, 1, READING)).toBe(choice);
     }

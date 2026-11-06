@@ -5,6 +5,7 @@ import { useLatest } from './useLatest';
 import type { ImageResult } from '../../shared/documents';
 import { offerZoom, type ImageExpand } from './images';
 import { offerCodeCopy, richTextOf } from './code-copy';
+import type { Printable } from './print';
 import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
 import type { CsvTable } from '../../shared/csv';
@@ -138,6 +139,8 @@ export interface DocumentHandle extends Finder {
   tree(): JsonTreeView | null;
   /** The rendered document as rich text (its HTML and plain text), or null when none is rendered. */
   richText(): { html: string; text: string } | null;
+  /** What a print copy is made from (#56): the rendered HTML and its images' URLs, or null. */
+  printable(): Printable | null;
   /** Goes to the next (1) or previous (-1) change mark, wrapping round; null when there is none. */
   stepChange(direction: 1 | -1): { index: number; count: number } | null;
 }
@@ -249,6 +252,13 @@ export function DocumentView({
       replaceAll: (text) => host().source?.replaceAll(text) ?? 0,
       tree: () => host().tree,
       richText: () => (host().article.childElementCount > 0 ? richTextOf(host().article) : null),
+      printable: () => {
+        const shown = renderedNow.current;
+        if (!shown || !('html' in shown)) return null;
+        const images = new Map<string, string>();
+        for (const image of host().article.querySelectorAll<HTMLImageElement>('img[data-galeo-src]')) if (image.src) images.set(image.dataset['galeoSrc']!, image.src);
+        return { html: shown.html, images };
+      },
       stepChange: (direction) => {
         const marks = changeMarks.current;
         const inSource = view === 'source';
@@ -323,6 +333,7 @@ export function DocumentView({
   const expandListener = useLatest(onExpandDiagram);
   const imageListener = useLatest(onExpandImage);
   const copyListener = useLatest(onCopyCode);
+  const renderedNow = useLatest(rendered);
   const shownScheme = useRef(scheme);
   useEffect(() => () => diagrams.current?.dispose(), []);
   useLayoutEffect(() => {

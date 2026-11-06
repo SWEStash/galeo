@@ -621,3 +621,29 @@ a .galeo-image > img {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Printing (Export to PDF, #56): no buttons of galeo's, code that wraps instead of scrolling, and
+   blocks kept whole on a page where they fit. */
+@media print {
+  .galeo-code-copy,
+  .galeo-diagram-expand,
+  .galeo-image-expand,
+  .galeo-split-divider {
+    display: none;
+  }
+  pre {
+    overflow: visible;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+  pre, table, figure, blockquote, .galeo-diagram, .katex-display, img {
+    break-inside: avoid;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid;
+  }
+  table {
+    display: table;
+    width: 100%;
+  }
+}

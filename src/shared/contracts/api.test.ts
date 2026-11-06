@@ -43,7 +43,7 @@ describe('buildApi', () => {
     expect(Object.keys(api.diagrams)).toEqual(['save']);
     expect(Object.keys(api.quickOpen)).toEqual(['start', 'query', 'open', 'close', 'onResults']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable', 'installLauncher', 'installProfileLauncher', 'uninstallProfileLauncher', 'uninstallLauncher', 'startInfo']);
-    expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'toggleTask', 'missingLinks', 'pathMenu', 'contextMenu', 'save', 'dirty', 'leaveEdit', 'closeAnswer', 'keep', 'recover', 'findAll', 'onEditMode', 'onConfirmClose']);
+    expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'toggleTask', 'missingLinks', 'pathMenu', 'contextMenu', 'save', 'exportPdf', 'printPdf', 'dirty', 'leaveEdit', 'closeAnswer', 'keep', 'recover', 'findAll', 'onEditMode', 'onConfirmClose']);
     expect(Object.keys(api.tabs)).toEqual([
       'snapshot',
       'activated',

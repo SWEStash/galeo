@@ -64,7 +64,12 @@ export class DocumentMenus {
             { id: 'copy-json-path', label: 'Copy JSON path' },
           ]
         : []),
-      ...(rich ? [{ id: 'copy-rich', label: 'Copy as rich text' }] : []),
+      ...(rich
+        ? [
+            { id: 'copy-rich', label: 'Copy as rich text' },
+            { id: 'export-pdf', label: 'Export to PDF…' },
+          ]
+        : []),
       { id: 'open-default', label: 'Open with default app', enabled: await this.openable(tab.path) },
       { id: 'reveal', label: 'Reveal in Files' },
       { id: 'copy-path', label: 'Copy path' },

@@ -11,6 +11,27 @@ body,
   margin: 0;
 }
 
+/* Export to PDF (#56): the page prints only the copy of the document made for it, never galeo's bars. */
+.galeo-print {
+  display: none;
+}
+@media print {
+  /* Paper, whatever the window's theme: the dark scheme would paint the page's margins dark. */
+  :root[data-scheme],
+  html,
+  body {
+    height: auto;
+    background: #fff; /* literal: paper */
+    color-scheme: light;
+  }
+  body > :not(.galeo-print) {
+    display: none !important;
+  }
+  .galeo-print {
+    display: block;
+  }
+}
+
 :root {
   --galeo-status-bar-height: 24px;
 }

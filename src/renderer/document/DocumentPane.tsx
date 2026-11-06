@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { exportPdf } from './pdf-export';
 import type { DocumentMenuContext } from '../../shared/contracts/ipc';
 import type { ChosenEncoding, DocumentContent, Recovered } from '../../shared/contracts';
 import type { ImageResult, SaveResult, TaskToggleResult } from '../../shared/documents';
@@ -633,6 +634,15 @@ export function DocumentPane({
         return true;
       },
       ...tableCommands,
+      exportPdf: () => {
+        const printable = article && view !== 'source' ? documentHandle.current?.printable() : null;
+        if (!printable) {
+          if (ready) onMessage('Export to PDF works on a rendered Markdown document');
+          return ready !== null;
+        }
+        void exportPdf(tabId, printable, onMessage);
+        return true;
+      },
       copyRichText: () => {
         const rich = article && view !== 'source' ? documentHandle.current?.richText() : null;
         if (!rich) {

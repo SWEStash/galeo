@@ -11,6 +11,7 @@ import { ReadIdentities } from '../core/documents/identities';
 import { DocumentLinks } from '../core/documents/links';
 import { DocumentMenus } from '../core/documents/menus';
 import { DiagramSaves, type DiagramFormat } from '../core/documents/diagram-save';
+import { PdfExports } from '../core/documents/pdf-export';
 import { diagramHandlers } from './documents/diagram-handlers';
 import { DocumentWatches } from '../core/documents/watches';
 import { SelectionGrants } from '../core/documents/selections';
@@ -196,6 +197,21 @@ function start(initialMode: StartupMode): void {
   // Real input per window: what lets a request reach beyond the window's own grants (T6).
   const input = new InputCredits(Date.now);
   cleanups.add((windowId) => input.closeWindow(windowId));
+  // Export to PDF (#56): main asks where, then prints the window, whose print stylesheet shows only the document.
+  const pdf = new PdfExports({
+    fs,
+    input,
+    askPath: askPdfPath,
+    print: async (windowId) => {
+      const contents = webContents.fromId(windowId);
+      if (!contents) throw new Error('the window is gone');
+      const letter = ['US', 'CA'].includes(app.getLocaleCountryCode());
+      return new Uint8Array(await contents.printToPDF({ printBackground: true, pageSize: letter ? 'Letter' : 'A4' }));
+    },
+    randomId: randomUUID,
+    now: Date.now,
+  });
+  cleanups.add((windowId) => pdf.closeWindow(windowId));
   // One worker for main's parsing and searches; it starts on the first task, not at launch.
   const tasks = new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js'));
   const searches = new TabSearches({ records: documents, grants, fs, tasks });
@@ -823,6 +839,7 @@ function start(initialMode: StartupMode): void {
             void profileOf(windowId)?.recent.add(file).catch((error: unknown) => console.warn('galeo: recent files not saved', error)),
           searches,
           menus,
+          pdf,
         }),
         ...tabHandlers({
           tabs: documents,
@@ -971,6 +988,16 @@ async function ask(windowId: number, options: MessageBoxOptions): Promise<number
   const owner = windowOf(windowId);
   const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
   return response;
+}
+
+/** Main's own save dialog for a PDF (#56); unpackaged test runs answer with `GALEO_TEST_SAVE_PATH` too. */
+async function askPdfPath(windowId: number, suggested: string): Promise<string | null> {
+  const answer = !app.isPackaged ? process.env['GALEO_TEST_SAVE_PATH'] : undefined;
+  if (answer !== undefined) return answer || null;
+  const options = { title: 'Export to PDF', defaultPath: path.join(app.getPath('documents'), suggested), filters: [{ name: 'PDF document', extensions: ['pdf'] }] };
+  const owner = windowOf(windowId);
+  const { canceled, filePath } = owner ? await dialog.showSaveDialog(owner, options) : await dialog.showSaveDialog(options);
+  return canceled || !filePath ? null : filePath;
 }
 
 /**

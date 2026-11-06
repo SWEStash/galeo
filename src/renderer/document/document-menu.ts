@@ -12,6 +12,7 @@ const COMMANDS: Record<DocumentMenuChoice, Command> = {
   'collapse-all': 'collapseAll',
   'copy-json-path': 'copyJsonPath',
   'copy-rich': 'copyRichText',
+  'export-pdf': 'exportPdf',
 };
 
 /**

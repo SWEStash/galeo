@@ -40,6 +40,7 @@ class SlowFileSystem extends FakeFileSystem {
 function setup(files: Record<string, string>, slow = '', { credits = Infinity, choice = null as DocumentMenuChoice | null } = {}) {
   const fs = new SlowFileSystem(files, slow);
   const grants = new EditGrants();
+  const pdfs: string[] = [];
   const input = { left: credits, spend: () => input.left-- > 0, received: () => void input.left++ };
   const reads = new ReadIdentities(fs);
   const answers: string[] = [];
@@ -72,12 +73,13 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity, c
     unsaved: { answer: (window, answer) => void answers.push(`${window}:${answer}`) },
     opened: (path, window) => opened.push(`${window}:${path}`),
     searches: new TabSearches({ records, grants, fs, tasks: new FakeTaskRunner({ findInText: findInTextTask, findInBytes: (input) => findInBytesTask(input, decode) }) }),
+    pdf: { choose: async (window, name) => (pdfs.push(`choose ${window} ${name}`), 'token'), print: async (window, token) => (pdfs.push(`print ${window} ${token}`), 'saved') },
     menus: {
       path: async (id, window) => void menus.push(`path ${id} ${window}`),
       document: async (id, window, context) => (menus.push(`document ${id} ${window} ${JSON.stringify(context)}`), choice),
     },
   });
-  return { fs, records, handlers, opened, grants, input, reads, answers, menus, id: records.open(Object.keys(files)[0]!, 1).id };
+  return { fs, records, handlers, opened, grants, input, reads, answers, menus, pdfs, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
 describe('documentHandlers', () => {
@@ -102,6 +104,15 @@ describe('documentHandlers', () => {
     expect(() => handlers['documents.pathMenu']([settings.id], event)).toThrow(/not a document/);
     await expect(handlers['documents.contextMenu']([settings.id, { tree: false, rich: false }], event)).rejects.toThrow(/not a document/);
     expect(menus).toEqual([`path ${id} 1`, `document ${id} 1 {"tree":true,"rich":false}`]);
+  });
+
+  it("exports a document, named by its file, never the settings tab", async () => {
+    const { records, handlers, pdfs, id } = setup({ '/d/notes.md': '# a' });
+    expect(await handlers['documents.exportPdf']([id], event)).toBe('token');
+    expect(await handlers['documents.printPdf'](['token'], event)).toBe('saved');
+    expect(pdfs).toEqual(['choose 1 notes.md', 'print 1 token']);
+    const settings = records.openSettings(1);
+    await expect(async () => handlers['documents.exportPdf']([settings.id], event)).rejects.toThrow(/not a document/);
   });
 
   it("counts a choice in the document's menu as input, so the Save the page runs next works", async () => {

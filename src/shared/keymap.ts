@@ -52,6 +52,7 @@ const BASE = {
   moveTabToWindow: [],
   togglePin: [],
   copyRichText: [],
+  exportPdf: [],
   profileMenu: ['CmdOrCtrl+Shift+M'],
   settings: ['CmdOrCtrl+,'],
   /** Ctrl++ as most apps; Ctrl+= too, on layouts where = needs no Shift. */

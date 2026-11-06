@@ -3,6 +3,8 @@
  * user's custom.css may override the documented ones (docs/design/document-styling.md).
  * The colour scheme is chosen by `data-scheme` on the root element (see theme.ts).
  */
+/* The light theme: the app's by default, and always the print copy's (#56). */
+.galeo-print,
 :root {
   --galeo-font-ui: 'Inter', system-ui, sans-serif;
   --galeo-font-prose: 'Inter', system-ui, sans-serif;

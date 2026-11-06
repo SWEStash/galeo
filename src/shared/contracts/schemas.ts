@@ -86,6 +86,8 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'documents.pathMenu': z.tuple([documentId]),
   'documents.contextMenu': z.tuple([documentId, z.strictObject({ tree: z.boolean(), rich: z.boolean() })]),
   'documents.save': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version.nullable()]),
+  'documents.exportPdf': z.tuple([documentId]),
+  'documents.printPdf': z.tuple([z.string().min(1).max(100)]),
   // An SVG's text, or a PNG's bytes, at most 20 MiB (DIAGRAM_MAX_BYTES; main checks the bytes again).
   'diagrams.save': z.union([
     z.tuple([z.literal('svg'), z.string().min(1).max(20 * 1024 * 1024), z.string().max(200)]),

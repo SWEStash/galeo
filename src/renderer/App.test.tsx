@@ -83,6 +83,8 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       missingLinks: vi.fn().mockResolvedValue([]),
       pathMenu: vi.fn().mockResolvedValue(undefined),
       contextMenu: vi.fn().mockResolvedValue(null),
+      exportPdf: vi.fn().mockResolvedValue(null),
+      printPdf: vi.fn().mockResolvedValue('saved'),
       save: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-editable' }),
       dirty: vi.fn().mockResolvedValue(undefined),
       leaveEdit: vi.fn().mockResolvedValue(undefined),
