@@ -297,7 +297,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
       {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} say={setMessage} updated={view.updated} />}
       {overlay === 'tabOverview' && (
         <Suspense fallback={null}>
-          <TabOverview store={store} onClose={closeOverlay} />
+          <TabOverview store={store} onClose={closeOverlay} onTabMenu={(id) => void showTabMenu(id, { store, say: setMessage, chooseWindow: () => openOverlay('moveTab') })} />
         </Suspense>
       )}
       {overlay === 'findAll' && (

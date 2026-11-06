@@ -15,7 +15,7 @@ export type OverviewStore = Pick<TabStore, 'subscribe' | 'getSnapshot' | 'activa
  * cards, Enter or a click shows that tab, Delete or Ctrl+W closes it, Ctrl+Shift+PgUp/PgDn move it;
  * dragging a card moves it too. Esc (or Ctrl+Shift+E again) closes the overview.
  */
-export function TabOverview({ store, onClose }: { store: OverviewStore; onClose: () => void }) {
+export function TabOverview({ store, onClose, onTabMenu }: { store: OverviewStore; onClose: () => void; /** A card's right-click menu (the tab's, UX F4). */ onTabMenu?: (id: string) => void }) {
   const view = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const cards = overviewCards(view);
   const grid = useRef<HTMLDivElement>(null);
@@ -89,7 +89,17 @@ export function TabOverview({ store, onClose }: { store: OverviewStore; onClose:
     <ModalOverlay className="modal-overlay tab-overview-overlay" isOpen isDismissable onOpenChange={(isOpen) => !isOpen && onClose()}>
       <Modal className="modal tab-overview">
         <Dialog className="tab-overview-dialog" aria-label="Tab overview" data-testid="tab-overview">
-          <div onKeyDownCapture={onKeyDownCapture} onKeyDown={onKeyDown} onFocus={onFocus}>
+          <div
+            onKeyDownCapture={onKeyDownCapture}
+            onKeyDown={onKeyDown}
+            onFocus={onFocus}
+            onContextMenu={(event) => {
+              const id = (event.target as Element).closest<HTMLElement>('[data-card-id]')?.dataset['cardId'];
+              if (!id || !onTabMenu) return;
+              event.preventDefault();
+              onTabMenu(id);
+            }}
+          >
             <GridList ref={grid} layout="grid" aria-label="Tabs in this window" className="tab-overview-grid" items={cards} onAction={(key) => show(String(key))} dragAndDropHooks={dragAndDropHooks}>
               {(card) => <Card card={card} onClose={() => store.close(card.id)} />}
             </GridList>

@@ -181,7 +181,7 @@ The tab's right-click menu works the same on a tab, a row and a collapsed marker
 1. `⋯` Commands button (opens the palette) and `⌕` Search tabs button, in the bar or title bar
    (built in v0.7).
 2. Settings and New window in the profile menu (built in v0.7).
-3. A right-click menu on tabs, rows and markers (built in v0.7, with Pin or Unpin tab).
+3. A right-click menu on tabs, rows and markers (built in v0.7, with Pin or Unpin tab, and on overview cards).
 4. More entries in the document's right-click menu, which main builds (Edit and Save need a note in the
    threat model, since they reach main's edit capability) (built in v0.7):
    - Back / Forward;

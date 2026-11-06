@@ -95,3 +95,19 @@ test('with the tabs on the left, a row and a collapsed marker offer the same men
     removeTempHome(home);
   }
 });
+
+test("a right-click on an overview card offers the same menu, for that card's tab", async () => {
+  const { app, window, close } = await launchApp(['--', ...files], { env: { GALEO_TEST_MENU_CHOICE: 'pin' } });
+  try {
+    await expect(window.getByRole('tab')).toHaveCount(3);
+    await window.keyboard.press('ControlOrMeta+Shift+E');
+    const card = window.getByTestId('overview-card').filter({ hasText: 'math.md' });
+    await card.click({ button: 'right' });
+    await expect.poll(() => names(window)).toEqual(['math.md', 'basic.md', 'gfm.md']);
+    expect((await menus(app)).at(-1)!.at(-1)!.label).toBe('Pin tab');
+    await expect(window.getByTestId('tab-overview')).toBeVisible();
+    await expect(window.getByTestId('overview-card').first()).toContainText('math.md');
+  } finally {
+    await close();
+  }
+});

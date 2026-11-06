@@ -291,7 +291,7 @@ their line, and Enter shows that tab with its find bar on the match. It searches
 text, so a rendered page can count differently. The ⌕ and ⋯ buttons at the end of the bar open tab
 search and the command palette.
 
-Right-click a tab (or press Shift+F10 on it) for its menu: close it, reopen the last closed tab, move
+Right-click a tab or its card in the overview (or press Shift+F10 on a tab) for its menu: close it, reopen the last closed tab, move
 it to a new window or another one, copy its path, reveal it in Files, or pin it. Pinned tabs stay
 first, show a pin, are never put to sleep to save memory, and stay pinned after a restart; *Pin or
 unpin tab* in the palette does the same for the shown tab. The profile menu also opens a new window

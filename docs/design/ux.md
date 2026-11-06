@@ -119,7 +119,7 @@ profile. Multiple selected files open as tabs in selection order.
 - (v0.4) Search tabs finds an open or recently closed tab by name (F16); the tab overview shows
   them all at once (F17); a profile can put its tabs in a list on the left (F18); find in all tabs
   searches their text (F19).
-- (v0.7) A right-click on a tab, a side-panel row or a collapsed marker (or the context-menu key,
+- (v0.7) A right-click on a tab, a side-panel row, a collapsed marker or an overview card (or the context-menu key,
   Shift+F10, on a focused one) opens its menu, which main builds: Close tab, Reopen closed tab, Move
   to new window, Move to window…, Copy path, Reveal in Files, Pin or Unpin tab, each greyed out where
   it doesn't apply (the moves need another tab; the Settings tab offers only Close and Reopen). Each
