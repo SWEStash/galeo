@@ -161,6 +161,8 @@ function homeEnv(home: string): Record<string, string> {
     XDG_CONFIG_HOME: path.join(home, 'config'),
     XDG_STATE_HOME: path.join(home, 'state'),
     XDG_CACHE_HOME: path.join(home, 'cache'),
+    // Launchers (a profile's included) go to the user's applications folder: the test's own, never the real one.
+    XDG_DATA_HOME: path.join(home, 'data'),
     GALEO_TEST_HOME: home,
     // Chromium's own log on stderr, so a Windows app that won't quit says what it was doing (close()).
     ...(process.platform === 'win32' ? { ELECTRON_ENABLE_LOGGING: '1' } : {}),

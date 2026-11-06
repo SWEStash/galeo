@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   appCommand,
   appImageLauncher,
+  profileLauncher,
   installAppCommand,
   installLauncher,
   launcherPaths,
@@ -299,5 +300,19 @@ describe('appCommand ("Install command-line launcher" on macOS and Windows, ADR-
     const fs = new FakeFileSystem({});
     expect(await installAppCommand({ fs, utf8 }, made)).toEqual({ ok: true });
     expect(fs.modeOf(WINDOWS_APPS)).toBe(0o755);
+  });
+});
+
+describe('profileLauncher (#60)', () => {
+  it('refuses a relative command, a control character, or something that is not a profile id', () => {
+    expect(profileLauncher('galeo', { id: 'work', name: 'Work' }, '/apps')).toMatchObject({ ok: false });
+    expect(profileLauncher('/opt/galeo/galeo', { id: 'work', name: 'Work\nExec=/bin/sh' }, '/apps')).toMatchObject({ ok: false });
+    expect(profileLauncher('/opt/galeo/galeo', { id: '../work', name: 'Work' }, '/apps')).toMatchObject({ ok: false });
+  });
+
+  it('quotes a command with spaces, as the Desktop Entry spec asks', () => {
+    const entry = profileLauncher('/home/me/my apps/galeo.AppImage', { id: 'work', name: 'Work' }, '/apps');
+    expect(entry).toMatchObject({ ok: true, path: '/apps/galeo-profile-work.desktop' });
+    expect(entry.ok && entry.content).toContain('Exec="/home/me/my apps/galeo.AppImage" --profile work -- %F');
   });
 });

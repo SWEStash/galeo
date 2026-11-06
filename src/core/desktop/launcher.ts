@@ -1,4 +1,5 @@
 import { COMMAND_MARKER } from '../argv';
+import { isProfileId } from '../profiles/names';
 import { folderOf, joinPath } from '../../shared/paths';
 import type { FileSystem } from '../ports';
 import { kindOf, type Utf8 } from '../settings/json-file';
@@ -240,6 +241,68 @@ export async function uninstallLauncher(
   if (await sort(paths.icon.path, async () => icon !== null && (await sameBytes(fs, paths.icon.path, icon)))) await fs.touch(paths.icon.theme);
   if (await sort(paths.mime.path, () => marked(deps, paths.mime.path, MIME_MARK))) await deps.refreshMime(paths.mime.database).catch(() => undefined);
   return { removed, kept };
+}
+
+/** What a profile's launcher carries (#60), with the profile's id: galeo only replaces or removes its own. */
+const profileMark = (id: string) => `X-galeo-Profile=${id}`;
+
+/** Where a profile's launcher goes: one desktop entry per profile in the user's applications folder. */
+export function profileLauncherPath(applicationsDir: string, id: string): string {
+  return joinPath(applicationsDir, `galeo-profile-${id}.desktop`);
+}
+
+/** A string value as the Desktop Entry spec writes it. */
+function entryString(value: string): string {
+  return value.replace(/\\/g, '\\\\');
+}
+
+/**
+ * A profile's own launcher (#60): an application entry "galeo — <name>" that opens galeo in that
+ * profile, by its id (a name could match another profile later, an unknown one would create it),
+ * files after `--` (SR-13), with a New Window action. `exec` is the galeo command this run has.
+ */
+export function profileLauncher(exec: string, profile: { id: string; name: string }, applicationsDir: string): { ok: true; path: string; content: string } | { ok: false; reason: string } {
+  if (/\p{Cc}/u.test(exec) || /\p{Cc}/u.test(profile.name)) return { ok: false, reason: 'a control character in the path or the name' };
+  if (!exec.startsWith('/')) return { ok: false, reason: "galeo's command is not an absolute path" };
+  if (!isProfileId(profile.id)) return { ok: false, reason: 'not a profile id' };
+  const run = `${execArgument(exec)} --profile ${profile.id}`;
+  const content = [
+    '[Desktop Entry]',
+    `Name=${entryString(`galeo — ${profile.name}`)}`,
+    `Comment=${entryString(`Opens galeo in the ${profile.name} profile`)}`,
+    `Exec=${run} -- %F`,
+    'Icon=galeo',
+    'Type=Application',
+    'Terminal=false',
+    'StartupWMClass=galeo',
+    `MimeType=${MIME_TYPES.join(';')};`,
+    'Categories=Utility;',
+    'Actions=new-window;',
+    profileMark(profile.id),
+    '',
+    '[Desktop Action new-window]',
+    'Name=New Window',
+    `Exec=${run} --new-window`,
+    '',
+  ].join('\n');
+  return { ok: true, path: profileLauncherPath(applicationsDir, profile.id), content };
+}
+
+/** Writes a profile's launcher, unless a file there isn't that profile's galeo entry. */
+export async function installProfileLauncher(deps: { fs: FileSystem; utf8: Utf8 }, file: { path: string; content: string }, id: string): Promise<{ ok: true } | { ok: false; reason: string }> {
+  if (!(await ownedOrAbsent(deps, file.path, profileMark(id)))) return { ok: false, reason: `${file.path} exists and is not galeo's` };
+  const dir = folderOf(file.path);
+  if ((await kindOf(deps.fs, dir)) !== 'directory') await deps.fs.mkdir(dir, { mode: 0o755 });
+  await deps.fs.writeFileAtomic(file.path, deps.utf8.encode(file.content), { mode: 0o644 });
+  return { ok: true };
+}
+
+/** Removes a profile's launcher while it carries that profile's mark; anything else there is kept. */
+export async function uninstallProfileLauncher(deps: { fs: FileSystem; utf8: Utf8 }, path: string, id: string): Promise<{ removed: string[]; kept: string[] }> {
+  if ((await kindOf(deps.fs, path)) === null) return { removed: [], kept: [] };
+  if (!(await marked(deps, path, profileMark(id)))) return { removed: [], kept: [path] };
+  await deps.fs.removeFile(path);
+  return { removed: [path], kept: [] };
 }
 
 /** The file at `path` carries galeo's `mark`. */

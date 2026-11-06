@@ -117,6 +117,8 @@ export const CHANNELS = [
   'app.info',
   'app.resolveSandboxUnavailable',
   'app.installLauncher',
+  'app.installProfileLauncher',
+  'app.uninstallProfileLauncher',
   'app.uninstallLauncher',
   'documents.read',
   'documents.setEncoding',
@@ -209,6 +211,9 @@ export interface Requests {
   'app.installLauncher': [];
   /** AppImage only: removes what install wrote, while it is still galeo's. */
   'app.uninstallLauncher': [];
+  /** Adds or removes the sender profile's own launcher, "galeo — <profile>" (#60, Linux). */
+  'app.installProfileLauncher': [];
+  'app.uninstallProfileLauncher': [];
   /** Reads one of them by id; there is no way to read by path (SR-12). */
   'documents.read': [id: string];
   /** Reads the document with this encoding from now on ("Reopen with encoding…"); null detects it again. */
@@ -347,6 +352,8 @@ export interface Responses {
   'app.installLauncher': { ok: true; bin: string } | { ok: false; reason: string };
   /** What was removed, and what was kept because galeo didn't write it. */
   'app.uninstallLauncher': { removed: string[]; kept: string[] };
+  'app.installProfileLauncher': { ok: true; path: string } | { ok: false; reason: string };
+  'app.uninstallProfileLauncher': { removed: string[]; kept: string[] };
   'documents.read': DocumentContent;
   'documents.setEncoding': void;
   'documents.followLink': FollowResult;

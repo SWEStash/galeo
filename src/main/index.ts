@@ -52,7 +52,8 @@ import { runFile } from './adapters/run-file';
 import { decodeWithPlatform } from './adapters/text-decoder';
 import { sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
-import { appHandlers, launcherTarget } from './app/handlers';
+import { appHandlers, launcherTarget, profileLauncherExec, profileLauncherFile } from './app/handlers';
+import { uninstallProfileLauncher } from '../core/desktop/launcher';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { sendEvent } from './ipc/send';
@@ -676,6 +677,10 @@ function start(initialMode: StartupMode): void {
       await running.stopped(id);
     }
     await catalog.delete(id);
+    // Its launcher would bring back a profile of that name (#60): it goes too, while it is galeo's.
+    if (process.platform === 'linux') {
+      await uninstallProfileLauncher({ fs, utf8 }, profileLauncherFile(app.getPath('home'), process.env, id), id).catch((error: unknown) => console.warn('galeo: profile launcher not removed', error));
+    }
     await broadcastProfiles();
   };
 
@@ -766,6 +771,11 @@ function start(initialMode: StartupMode): void {
             env: process.env,
             // Fixed program and arguments; the folder is the user's own MIME database.
             refreshMime: (database) => runFile('update-mime-database', [database], { timeout: 30_000, maxBuffer: 1024 * 1024 }).then(() => undefined),
+            profileOf: (windowId) => {
+              const profile = profileOf(windowId);
+              return profile ? { id: profile.id, name: profile.name } : null;
+            },
+            profileExec: () => profileLauncherExec({ packaged: app.isPackaged, platform: process.platform, env: process.env, fs, utf8 }),
           },
         }),
         ...profileHandlers({

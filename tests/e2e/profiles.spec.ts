@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
 import { pressInMain } from '../helpers/keys';
@@ -152,6 +152,11 @@ test('deleting a profile asks first, closes its windows and removes only its own
     expect(launchSecond(home, ['--profile', 'Old', '--', gfm]).status).toBe(0);
     const old = await opened;
     await expect.poll(() => paths(old)).toEqual([gfm]);
+    // Its launcher (#60) would bring a profile of that name back: it goes with the profile, while galeo's.
+    const applications = path.join(home, 'data', 'applications');
+    mkdirSync(applications, { recursive: true });
+    writeFileSync(path.join(applications, 'galeo-profile-old.desktop'), '[Desktop Entry]\nX-galeo-Profile=old\n');
+    writeFileSync(path.join(applications, 'galeo-profile-default.desktop'), '[Desktop Entry]\nX-galeo-Profile=default\n');
     await menuAction(old, /Delete profile/);
     const confirm = old.getByRole('alertdialog');
     await expect(confirm).toContainText("Delete profile 'Old'?");
@@ -165,6 +170,8 @@ test('deleting a profile asks first, closes its windows and removes only its own
     // Its state folder goes right after its config folder.
     await expect.poll(() => existsSync(path.join(state, 'profiles', 'old'))).toBe(false);
     expect(existsSync(gfm)).toBe(true);
+    if (process.platform === 'linux') await expect.poll(() => existsSync(path.join(applications, 'galeo-profile-old.desktop'))).toBe(false);
+    expect(existsSync(path.join(applications, 'galeo-profile-default.desktop'))).toBe(true);
     expect(await paths(window)).toEqual([basic]);
     // default is never offered for deletion.
     await chip(window).click();

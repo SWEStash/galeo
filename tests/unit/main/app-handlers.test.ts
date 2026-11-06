@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InputCredits } from '../../../src/core/documents/input-credits';
-import { appHandlers, launcherTarget, type LauncherTarget } from '../../../src/main/app/handlers';
+import { appHandlers, execCommand, launcherTarget, profileLauncherExec, type LauncherTarget } from '../../../src/main/app/handlers';
 import { utf8 } from '../../../src/main/adapters/utf8';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
 import type { AppInfo } from '../../../src/shared/contracts';
@@ -10,7 +10,7 @@ const from = (id: number) => ({ sender: { id } }) as WindowIpcEvent;
 const GAL = ['#!/bin/sh', 'GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"', 'exec "$GALEO_BIN" "$@"', ''].join('\n');
 const APPIMAGE = '/home/me/Apps/galeo.AppImage';
 
-function setup({ target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTarget | null, env = {} as Record<string, string>, files = {} as Record<string, string> } = {}) {
+function setup({ target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTarget | null, env = {} as Record<string, string>, files = {} as Record<string, string>, profileExec = '/opt/galeo/galeo' as string | null } = {}) {
   const fs = new FakeFileSystem({ '/opt/galeo/gal': GAL, '/opt/galeo/resources/mime.xml': '<!-- The MDX type, installed by galeo. --><mime/>', ...files });
   const input = new InputCredits(() => 0);
   const refreshed: string[] = [];
@@ -29,6 +29,8 @@ function setup({ target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTa
       resourcesDir: '/opt/galeo/resources',
       env,
       refreshMime: async (database) => void refreshed.push(database),
+      profileOf: (window) => (window === 1 ? { id: 'work', name: 'Work \\ Notes' } : null),
+      profileExec: async () => profileExec,
     },
   });
   return { handlers, fs, input, refreshed, sandbox, withdraw: () => (offered = false) };
@@ -156,5 +158,59 @@ describe('appHandlers', () => {
     withdraw();
     await expect(async () => handlers['app.resolveSandboxUnavailable'](['quit'], from(1))).rejects.toThrow('not offered');
     expect(sandbox).toEqual(['quit', 'proceed']);
+  });
+});
+
+describe('profile launchers (#60)', () => {
+  const ENTRY = '/home/me/.local/share/applications/galeo-profile-work.desktop';
+  const read = async (fs: FakeFileSystem, file: string) => utf8.decode(await fs.readFile(file, { maxBytes: 1e5 }));
+
+  it.runIf(posix)("installs the sender profile's entry, opening galeo in that profile by id, and removes only it", async () => {
+    const { handlers, fs, input } = setup();
+    input.received(1);
+    expect(await handlers['app.installProfileLauncher']([], from(1))).toEqual({ ok: true, path: ENTRY });
+    const entry = await read(fs, ENTRY);
+    expect(entry).toContain('Name=galeo — Work \\\\ Notes\n');
+    expect(entry).toContain('Exec=/opt/galeo/galeo --profile work -- %F\n');
+    expect(entry).toContain('Exec=/opt/galeo/galeo --profile work --new-window\n');
+    expect(entry).toContain('X-galeo-Profile=work');
+    expect(fs.modeOf(ENTRY)).toBe(0o644);
+    input.received(1);
+    expect(await handlers['app.uninstallProfileLauncher']([], from(1))).toEqual({ removed: [ENTRY], kept: [] });
+  });
+
+  it.runIf(posix)('keeps an entry galeo did not write, or another profile\'s', async () => {
+    const { handlers, input } = setup({ files: { [ENTRY]: '[Desktop Entry]\nX-galeo-Profile=home\n' } });
+    input.received(1);
+    expect(await handlers['app.installProfileLauncher']([], from(1))).toEqual({ ok: false, reason: `${ENTRY} exists and is not galeo's` });
+    input.received(1);
+    expect(await handlers['app.uninstallProfileLauncher']([], from(1))).toEqual({ removed: [], kept: [ENTRY] });
+  });
+
+  it('needs real input, and says why when this run has no command to launch', async () => {
+    const { handlers, input } = setup({ profileExec: null });
+    await expect(handlers['app.installProfileLauncher']([], from(1))).rejects.toThrow('no input');
+    await expect(handlers['app.uninstallProfileLauncher']([], from(1))).rejects.toThrow('no input');
+    input.received(1);
+    expect(await handlers['app.installProfileLauncher']([], from(1))).toMatchObject({ ok: false, reason: expect.stringContaining('no command') });
+  });
+});
+
+describe('profileLauncherExec', () => {
+  const fs = new FakeFileSystem({ '/usr/share/applications/galeo.desktop': '[Desktop Entry]\nName=galeo\nExec=/opt/galeo/galeo -- %F\n' });
+  const run = { packaged: true, platform: 'linux' as NodeJS.Platform, env: {}, fs, utf8 };
+
+  it("is the AppImage, else the package entry's command, else a test's, on Linux only", async () => {
+    expect(await profileLauncherExec({ ...run, env: { APPIMAGE } })).toBe(APPIMAGE);
+    expect(await profileLauncherExec(run)).toBe('/opt/galeo/galeo');
+    expect(await profileLauncherExec({ ...run, packaged: false })).toBeNull();
+    expect(await profileLauncherExec({ ...run, packaged: false, env: { GALEO_TEST_PROFILE_LAUNCHER_EXEC: '/tmp/galeo' } })).toBe('/tmp/galeo');
+    expect(await profileLauncherExec({ ...run, platform: 'darwin' })).toBeNull();
+    expect(await profileLauncherExec({ ...run, fs: new FakeFileSystem({}) })).toBeNull();
+  });
+
+  it('reads a quoted command', () => {
+    expect(execCommand('[Desktop Entry]\nExec="/opt/my apps/galeo" -- %F\n')).toBe('/opt/my apps/galeo');
+    expect(execCommand('[Desktop Entry]\nName=x\n')).toBeNull();
   });
 });

@@ -69,6 +69,8 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       resolveSandboxUnavailable: vi.fn().mockResolvedValue(undefined),
       installLauncher: vi.fn().mockResolvedValue({ ok: false, reason: 'not an AppImage' }),
       uninstallLauncher: vi.fn().mockRejectedValue(new Error('not an AppImage')),
+      installProfileLauncher: vi.fn().mockResolvedValue({ ok: true, path: '/home/me/.local/share/applications/galeo-profile-default.desktop' }),
+      uninstallProfileLauncher: vi.fn().mockResolvedValue({ removed: [], kept: [] }),
     },
     documents: {
       read: vi.fn().mockResolvedValue(documents.content),

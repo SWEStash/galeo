@@ -256,7 +256,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
                       settings &&
                       profile && (
                         <Suspense fallback={null}>
-                          <SettingsView state={settings} profile={profile} launcher={commandLauncher ? platform : null} version={version} onAbout={() => openAbout()} say={setMessage} />
+                          <SettingsView state={settings} profile={profile} launcher={commandLauncher ? platform : null} profileLauncher={platform === 'linux'} version={version} onAbout={() => openAbout()} say={setMessage} />
                         </Suspense>
                       )
                     ) : (

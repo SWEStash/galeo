@@ -1,12 +1,25 @@
 import path from 'node:path';
-import { appCommand, appCommandPath, appImageLauncher, installAppCommand, installLauncher, launcherPaths, uninstallAppCommand, uninstallLauncher } from '../../core/desktop/launcher';
+import {
+  appCommand,
+  appCommandPath,
+  appImageLauncher,
+  installAppCommand,
+  installLauncher,
+  installProfileLauncher,
+  launcherPaths,
+  profileLauncher,
+  profileLauncherPath,
+  uninstallAppCommand,
+  uninstallLauncher,
+  uninstallProfileLauncher,
+} from '../../core/desktop/launcher';
 import type { InputCredits } from '../../core/documents/input-credits';
 import type { FileSystem } from '../../core/ports';
 import type { Utf8 } from '../../core/settings/json-file';
 import type { AppInfo } from '../../shared/contracts';
 import type { Handlers } from '../ipc/register';
 
-type AppChannels = 'app.info' | 'app.installLauncher' | 'app.uninstallLauncher' | 'app.resolveSandboxUnavailable';
+type AppChannels = 'app.info' | 'app.installLauncher' | 'app.uninstallLauncher' | 'app.installProfileLauncher' | 'app.uninstallProfileLauncher' | 'app.resolveSandboxUnavailable';
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -36,6 +49,42 @@ export function launcherTarget(run: { packaged: boolean; platform: NodeJS.Platfo
   }
   const appImage = env['APPIMAGE'];
   return appImage && path.posix.isAbsolute(appImage) ? { kind: 'appimage', appImage } : null;
+}
+
+/** The first argument of a desktop entry's Exec line: the command it runs. */
+export function execCommand(entry: string): string | null {
+  const line = /^Exec=(.*)$/m.exec(entry)?.[1]?.trim();
+  if (!line) return null;
+  if (!line.startsWith('"')) return line.split(/\s+/)[0] ?? null;
+  const end = line.indexOf('"', 1);
+  return end > 1 ? line.slice(1, end) : null;
+}
+
+/**
+ * The galeo command a profile's launcher runs (#60), on Linux only: the AppImage, else the galeo
+ * package's own desktop entry's command. A dev run has none, except a test naming one
+ * (`GALEO_TEST_PROFILE_LAUNCHER_EXEC`).
+ */
+export async function profileLauncherExec(run: { packaged: boolean; platform: NodeJS.Platform; env: Env; fs: FileSystem; utf8: Utf8 }): Promise<string | null> {
+  const { packaged, platform, env, fs, utf8 } = run;
+  if (platform !== 'linux') return null;
+  if (!packaged) {
+    const test = env['GALEO_TEST_PROFILE_LAUNCHER_EXEC'];
+    return test && path.posix.isAbsolute(test) ? test : null;
+  }
+  const appImage = env['APPIMAGE'];
+  if (appImage) return path.posix.isAbsolute(appImage) ? appImage : null;
+  for (const dir of xdgDataDirs(env)) {
+    const entry = await fs.readFile(path.join(dir, 'applications', 'galeo.desktop'), { maxBytes: 64 * 1024 }).catch(() => null);
+    const command = entry && execCommand(utf8.decode(entry));
+    if (command && path.posix.isAbsolute(command)) return command;
+  }
+  return null;
+}
+
+/** Where the profile's launcher is, in the user's applications folder (#60). */
+export function profileLauncherFile(home: string, env: Env, id: string): string {
+  return profileLauncherPath(path.join(xdgDataHome(home, env), 'applications'), id);
 }
 
 /** `$XDG_DATA_DIRS`, keeping only absolute entries, else the XDG spec's default. */
@@ -73,6 +122,10 @@ export function appHandlers(deps: {
     resourcesDir: string;
     env: Env;
     refreshMime: (database: string) => Promise<void>;
+    /** The sender window's profile. */
+    profileOf: (window: number) => { id: string; name: string } | null;
+    /** The galeo command a profile's launcher runs, or null where there is none (#60). */
+    profileExec: () => Promise<string | null>;
   };
 }): Pick<Handlers, AppChannels> {
   const { info, sandboxChoice, launcher } = deps;
@@ -113,6 +166,26 @@ export function appHandlers(deps: {
       if (!target) throw new Error('no launcher for this run');
       if (target.kind === 'app') return uninstallAppCommand({ fs, utf8 }, appCommandPath(target.platform, target.binDir));
       return uninstallLauncher({ fs, utf8, refreshMime }, launcherPaths(launcherDirs()), await bundledIcon());
+    },
+    // A profile's launcher (#60): in the user's own applications folder, for the sender's profile only.
+    'app.installProfileLauncher': async (_args, event) => {
+      const { input, fs, utf8, profileOf, profileExec } = launcher;
+      if (!input.spend(event.sender.id)) throw new Error('no input');
+      const profile = profileOf(event.sender.id);
+      if (!profile) throw new Error('no profile');
+      const exec = await profileExec();
+      if (!exec) return { ok: false as const, reason: 'this copy of galeo has no command a launcher could run (it runs from source, or not on Linux)' };
+      const file = profileLauncher(exec, profile, launcherDirs().applicationsDir);
+      if (!file.ok) return file;
+      const installed = await installProfileLauncher({ fs, utf8 }, file, profile.id);
+      return installed.ok ? { ok: true as const, path: file.path } : installed;
+    },
+    'app.uninstallProfileLauncher': async (_args, event) => {
+      const { input, fs, utf8, profileOf } = launcher;
+      if (!input.spend(event.sender.id)) throw new Error('no input');
+      const profile = profileOf(event.sender.id);
+      if (!profile) throw new Error('no profile');
+      return uninstallProfileLauncher({ fs, utf8 }, profileLauncherPath(launcherDirs().applicationsDir, profile.id), profile.id);
     },
     'app.resolveSandboxUnavailable': ([choice]) => {
       if (!sandboxChoice.offered()) throw new Error('sandbox choice not offered');

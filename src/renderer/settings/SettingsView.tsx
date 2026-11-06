@@ -61,6 +61,7 @@ export function SettingsView({
   state,
   profile,
   launcher = null,
+  profileLauncher = false,
   version,
   onAbout,
   say,
@@ -69,6 +70,8 @@ export function SettingsView({
   profile: ProfileView;
   /** The system whose command-line launcher this run can install; null: none (UX §6). */
   launcher?: Platform | null;
+  /** This system can give the profile a launcher of its own (#60, Linux). */
+  profileLauncher?: boolean;
   /** galeo's version, and the About dialog it opens (version, licence, notices). */
   version: string;
   onAbout: () => void;
@@ -177,6 +180,7 @@ export function SettingsView({
       </div>
 
       {launcher && <LauncherSection platform={launcher} />}
+      {profileLauncher && <ProfileLauncherSection name={profile.name} />}
 
       <h2>About</h2>
       <div className="setting settings-about" data-setting="about">
@@ -380,6 +384,42 @@ function uninstalled({ removed, kept }: { removed: string[]; kept: string[] }): 
   const keptNote = kept.length === 0 ? '' : ` Kept ${kept.join(', ')}: galeo didn't write ${kept.length === 1 ? 'it' : 'them'}.`;
   if (removed.length > 0) return `Removed the launcher: ${removed.join(', ')}.${keptNote}`;
   return kept.length > 0 ? `Nothing removed.${keptNote}` : 'Nothing removed: the launcher is not installed.';
+}
+
+/** Adds this profile to the applications as "galeo — <name>", or takes it out again (#60). */
+function ProfileLauncherSection({ name }: { name: string }) {
+  const [result, setResult] = useState<string | null>(null);
+  return (
+    <>
+      <h2>Profile launcher</h2>
+      <p className="field-hint">Adds “galeo — {name}” to your applications: it opens galeo in this profile, and files you open with it.</p>
+      <div className="settings-buttons">
+        <Button
+          onPress={() =>
+            void window.galeo.app
+              .installProfileLauncher()
+              .then((outcome) => setResult(outcome.ok ? `Added “galeo — ${name}” to your applications.` : `Not added: ${outcome.reason}.`))
+              .catch(() => setResult("Not added: galeo couldn't write the file."))
+          }
+        >
+          Add to applications
+        </Button>
+        <Button
+          onPress={() =>
+            void window.galeo.app
+              .uninstallProfileLauncher()
+              .then(({ removed, kept }) => setResult(removed.length > 0 ? `Removed “galeo — ${name}” from your applications.` : kept.length > 0 ? `Nothing removed: galeo didn't write ${kept[0]}.` : 'Nothing removed: it is not in your applications.'))
+              .catch(() => setResult("Not removed: galeo couldn't remove the file."))
+          }
+        >
+          Remove from applications
+        </Button>
+      </div>
+      <p className="field-hint" role="status" data-testid="profile-launcher-result">
+        {result}
+      </p>
+    </>
+  );
 }
 
 /** What "Install command-line launcher" adds, per system. */

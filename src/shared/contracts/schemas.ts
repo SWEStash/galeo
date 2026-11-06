@@ -73,6 +73,8 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'app.resolveSandboxUnavailable': z.tuple([z.enum(['quit', 'run-unsandboxed'])]),
   'app.installLauncher': z.tuple([]),
   'app.uninstallLauncher': z.tuple([]),
+  'app.installProfileLauncher': z.tuple([]),
+  'app.uninstallProfileLauncher': z.tuple([]),
   'documents.read': z.tuple([documentId]),
   'documents.setEncoding': z.tuple([documentId, z.enum(CHOSEN_ENCODINGS).nullable()]),
   'documents.followLink': z.tuple([documentId, z.string().min(1).max(8192), z.enum(['current', 'background'])]),
