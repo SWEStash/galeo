@@ -342,7 +342,7 @@ body,
   width: 1px;
   background: var(--galeo-color-border);
 }
-.tab[data-layout='bar']:is([data-selected], [data-hovered], :has(+ [data-selected]), :has(+ [data-hovered]))::after {
+.tab[data-layout='bar']:is([data-selected], [data-hovered], [data-focus-visible], :has(+ [data-selected]), :has(+ [data-hovered]), :has(+ [data-focus-visible]))::after {
   visibility: hidden;
 }
 
@@ -898,7 +898,7 @@ body,
   /* Starts under the text and fades out to the right. */
   background: linear-gradient(to right, var(--galeo-color-border), transparent);
 }
-.side-panel:not([data-collapsed]) .tab:is([data-selected], [data-hovered], :has(+ [data-selected]), :has(+ [data-hovered]), :last-child)::after {
+.side-panel:not([data-collapsed]) .tab:is([data-selected], [data-hovered], [data-focus-visible], :has(+ [data-selected]), :has(+ [data-hovered]), :has(+ [data-focus-visible]), :last-child)::after {
   visibility: hidden;
 }
 /* The name stands out from its folder. */
