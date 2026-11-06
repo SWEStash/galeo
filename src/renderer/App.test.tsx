@@ -80,7 +80,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       toggleTask: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'no-input' }),
       missingLinks: vi.fn().mockResolvedValue([]),
       pathMenu: vi.fn().mockResolvedValue(undefined),
-      contextMenu: vi.fn().mockResolvedValue(undefined),
+      contextMenu: vi.fn().mockResolvedValue(null),
       save: vi.fn().mockResolvedValue({ kind: 'refused', reason: 'not-editable' }),
       dirty: vi.fn().mockResolvedValue(undefined),
       leaveEdit: vi.fn().mockResolvedValue(undefined),
@@ -1165,7 +1165,7 @@ describe('App', () => {
     const click = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, composed: true });
     await act(async () => paragraph.dispatchEvent(click));
     expect(click.defaultPrevented).toBe(true);
-    expect(api.documents.contextMenu).toHaveBeenCalledWith('doc-1');
+    expect(api.documents.contextMenu).toHaveBeenCalledWith('doc-1', { tree: false });
   });
 
   it("offers a state's actions: close the tab, or main's file menu", async () => {
@@ -1173,7 +1173,7 @@ describe('App', () => {
     const container = await renderApp();
     const button = (name: string) => vi.waitFor(() => [...container.querySelectorAll('button')].find((each) => each.textContent === name)!);
     await act(async () => (await button('File actions…')).click());
-    expect(api.documents.contextMenu).toHaveBeenCalledWith('doc-1');
+    expect(api.documents.contextMenu).toHaveBeenCalledWith('doc-1', { tree: false });
     await act(async () => (await button('Close tab')).click());
     expect(api.tabs.close).toHaveBeenCalledWith('doc-1');
   });

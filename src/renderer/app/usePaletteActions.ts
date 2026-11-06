@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { showDocumentMenu } from '../document/document-menu';
 import { useDispatcher } from '../commands/useCommands';
 import type { PaletteEntry } from '../palette/entries';
 import { shownTab, type TabStore } from '../tabs/store';
@@ -16,7 +17,7 @@ export function usePaletteActions(store: TabStore, say: (message: string) => voi
       else if (action.kind === 'hint') say(action.message);
       else if (action.kind === 'openWithDefaultApp') {
         const shown = shownTab(store.getSnapshot());
-        if (shown && shown.kind !== 'settings') void window.galeo.documents.contextMenu(shown.id).catch(reportFailure(say, `${entry.label} didn't work`));
+        if (shown && shown.kind !== 'settings') void showDocumentMenu(shown.id, { tree: false }, (command) => dispatcher.run(command), say);
         else say('No document is shown');
       } else if (action.kind === 'restorePrevious') {
         const failed = reportFailure(say, "Couldn't restore the previous session");

@@ -42,6 +42,15 @@ export interface ProfileView {
 export const TAB_MENU_CHOICES = ['close', 'reopen', 'move-new', 'move-to', 'pin'] as const;
 export type TabMenuChoice = (typeof TAB_MENU_CHOICES)[number];
 
+/** What the document's right-click menu hands back to the page: the command it runs on the shown document. */
+export const DOCUMENT_MENU_CHOICES = ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path'] as const;
+export type DocumentMenuChoice = (typeof DOCUMENT_MENU_CHOICES)[number];
+/** What only the page knows about the document under the menu. */
+export interface DocumentMenuContext {
+  /** A JSON tree shows: Expand all, Collapse all and Copy JSON path apply. */
+  tree: boolean;
+}
+
 export interface OtherWindow {
   window: number;
   profile: string;
@@ -217,7 +226,7 @@ export interface Requests {
    * Asks main for the document's native menu (open with the default app, reveal, copy path). There
    * is no channel that opens a file: only the user's choice in main's menu does (SR-05).
    */
-  'documents.contextMenu': [id: string];
+  'documents.contextMenu': [id: string, context: DocumentMenuContext];
   /**
    * Writes the tab's edited text, if main put the tab in edit mode and the file is still the
    * version the page loaded (`base`, from its read or last save). A null `base` writes a file that
@@ -342,7 +351,7 @@ export interface Responses {
   'documents.toggleTask': TaskToggleResult;
   'documents.missingLinks': string[];
   'documents.pathMenu': void;
-  'documents.contextMenu': void;
+  'documents.contextMenu': DocumentMenuChoice | null;
   'documents.save': SaveResult;
   'documents.dirty': void;
   'documents.leaveEdit': void;

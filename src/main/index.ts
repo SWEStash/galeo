@@ -183,6 +183,12 @@ function start(initialMode: StartupMode): void {
     clipboard,
     showMenu: (windowId, items) => showNativeMenu(windowId, items, app.isPackaged),
     platform: process.platform,
+    editing: (id, windowId) => {
+      const tab = documents.get(id, windowId);
+      return tab !== undefined && grants.allows(id, windowId, tab.path);
+    },
+    edit: (windowId) => toggleEditMode(windowId),
+    shown: (windowId) => documents.snapshot(windowId).active,
   });
   // Real input per window: what lets a request reach beyond the window's own grants (T6).
   const input = new InputCredits(Date.now);

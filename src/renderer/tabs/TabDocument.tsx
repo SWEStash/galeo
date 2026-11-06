@@ -12,6 +12,9 @@ import type { RenderClient } from '../worker/client';
 import { logFailure, unlessClosed } from './closed-tab';
 import type { TabStatus, TabStore } from './store';
 import type { EditRequest } from '../document/requests';
+import type { DocumentMenuContext } from '../../shared/contracts/ipc';
+import { showDocumentMenu } from '../document/document-menu';
+import { useDispatcher } from '../commands/useCommands';
 
 const REFUSALS: Record<RefusalReason, string> = {
   'not-in-document': "This link can't be opened",
@@ -199,7 +202,8 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
   const onRendering = useCallback(() => void window.galeo.tabs.rendering(id).catch(logFailure('the render report')), [id]);
   const onStatus = useCallback((status: TabStatus) => store.setStatus(id, status), [id, store]);
   const onViewState = useCallback((state: TabViewState) => store.setViewState(id, state), [id, store]);
-  const contextMenu = useCallback(() => void window.galeo.documents.contextMenu(id).catch(unlessClosed(onMessage, "The menu couldn't open")), [id, onMessage]);
+  const dispatcher = useDispatcher();
+  const contextMenu = useCallback((context: DocumentMenuContext) => void showDocumentMenu(id, context, (command) => dispatcher.run(command), onMessage), [id, onMessage, dispatcher]);
   const close = useCallback(() => store.close(id), [id, store]);
   const reread = useCallback(() => store.reread(id), [id, store]);
   const chooseEncoding = useCallback(

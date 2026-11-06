@@ -9,12 +9,14 @@ function setup(
   files: Record<string, string> = { '/d/plans/plan.md': '# plan' },
   platform = 'linux',
   answer?: () => Promise<string | null>,
+  { editing = false } = {},
 ) {
   let n = 0;
   const tabs = new TabRegistry(() => `id-${++n}`);
   const shell = new FakeOsShell();
   const fs = new FakeFileSystem(files);
   const copied: string[] = [];
+  const edits: number[] = [];
   const shown: { window: number; items: readonly MenuItem[] }[] = [];
   const menus = new DocumentMenus({
     tabs,
@@ -23,9 +25,12 @@ function setup(
     clipboard: { writeText: (text) => copied.push(text) },
     showMenu: async (window, items) => (shown.push({ window, items }), answer ? answer() : choice),
     platform,
+    editing: () => editing,
+    edit: (window) => void edits.push(window),
+    shown: (window) => tabs.snapshot(window).active,
   });
   const { id } = tabs.open(Object.keys(files)[0] ?? '/d/gone.md', 1);
-  return { menus, tabs, shell, fs, copied, shown, id };
+  return { menus, tabs, shell, fs, copied, shown, edits, id };
 }
 
 describe('DocumentMenus.path', () => {
@@ -63,11 +68,54 @@ describe('DocumentMenus.path', () => {
   });
 });
 
+const READING = { tree: false };
+
+describe('DocumentMenus.document (UX F11)', () => {
+  const labels = (shown: { items: readonly MenuItem[] }[]) => shown[0]!.items.map((item) => `${item.label}${item.enabled === false ? ' (off)' : ''}`);
+
+  it('offers Back and Forward with history, Find, Reload and Edit, then the file entries', async () => {
+    const { menus, tabs, shown, id } = setup(null);
+    await menus.document(id, 1, READING);
+    expect(labels(shown)).toEqual(['Back (off)', 'Forward (off)', 'Find…', 'Reload', 'Edit', 'Open with default app', 'Reveal in Files', 'Copy path']);
+    tabs.navigate(id, 1, { path: '/d/plans/plan.md', anchor: 'intro' });
+    tabs.back(id, 1);
+    await menus.document(id, 1, READING);
+    expect(shown[1]!.items.slice(0, 2).map((item) => item.enabled ?? true)).toEqual([false, true]);
+  });
+
+  it("offers Save while editing, and a JSON tree's entries while one shows", async () => {
+    const { menus, shown, id } = setup(null, undefined, 'linux', undefined, { editing: true });
+    await menus.document(id, 1, { tree: true });
+    expect(labels(shown).slice(4, 8)).toEqual(['Save', 'Expand all', 'Collapse all', 'Copy JSON path']);
+  });
+
+  it("turns on edit mode itself, as Ctrl+E does, only for the window's shown tab", async () => {
+    const shownTab = setup('edit');
+    shownTab.tabs.activate(shownTab.id, 1);
+    expect(await shownTab.menus.document(shownTab.id, 1, READING)).toBeNull();
+    expect(shownTab.edits).toEqual([1]);
+    const hidden = setup('edit');
+    expect(await hidden.menus.document(hidden.id, 1, READING)).toBeNull();
+    expect(hidden.edits).toEqual([]);
+  });
+
+  it('hands the page the commands it runs, and nothing once the tab shows another file', async () => {
+    for (const choice of ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path'] as const) {
+      const each = setup(choice);
+      expect(await each.menus.document(each.id, 1, READING)).toBe(choice);
+    }
+    let move = () => {};
+    const moved = setup(null, undefined, 'linux', async () => (move(), 'reload'));
+    move = () => void moved.tabs.navigate(moved.id, 1, { path: '/d/other.md', anchor: null });
+    expect(await moved.menus.document(moved.id, 1, READING)).toBeNull();
+  });
+});
+
 describe('DocumentMenus.document (SR-05)', () => {
   it('offers to open a plain document with the default app, reveal it or copy its path, and opens it on choice', async () => {
     const { menus, shell, shown, id } = setup('open-default');
-    await menus.document(id, 1);
-    expect(shown[0]!.items).toEqual([
+    await menus.document(id, 1, READING);
+    expect(shown[0]!.items.slice(-3)).toEqual([
       { id: 'open-default', label: 'Open with default app', enabled: true },
       { id: 'reveal', label: 'Reveal in Files' },
       { id: 'copy-path', label: 'Copy path' },
@@ -82,15 +130,15 @@ describe('DocumentMenus.document (SR-05)', () => {
   ] as const)('never opens %s, even when the choice comes back', async (_name, files, executable) => {
     const { menus, shell, shown, fs, id } = setup('open-default', files);
     for (const path of Object.keys(files)) if (executable) fs.makeExecutable(path);
-    await menus.document(id, 1);
-    expect(shown[0]!.items[0]).toMatchObject({ id: 'open-default', enabled: false });
+    await menus.document(id, 1, READING);
+    expect(shown[0]!.items.find((item) => item.id === 'open-default')).toMatchObject({ enabled: false });
     expect(shell.calls).toEqual([]);
   });
 
   it('on Windows offers it only for a known document type (ADR-028)', async () => {
     const { menus, shell, shown, id } = setup('open-default', { '/d/page.html': '<p>' }, 'win32');
-    await menus.document(id, 1);
-    expect(shown[0]!.items[0]).toMatchObject({ id: 'open-default', enabled: false });
+    await menus.document(id, 1, READING);
+    expect(shown[0]!.items.find((item) => item.id === 'open-default')).toMatchObject({ enabled: false });
     expect(shell.calls).toEqual([]);
   });
 
@@ -98,15 +146,15 @@ describe('DocumentMenus.document (SR-05)', () => {
     const { menus, shell, shown, fs, id } = setup('open-default', { '/d/notes.md': '# notes', '/d/run.sh': 'echo' });
     fs.delete('/d/notes.md');
     fs.symlink('/d/notes.md', '/d/run.sh');
-    await menus.document(id, 1);
-    expect(shown[0]!.items[0]).toMatchObject({ id: 'open-default', enabled: false });
+    await menus.document(id, 1, READING);
+    expect(shown[0]!.items.find((item) => item.id === 'open-default')).toMatchObject({ enabled: false });
     expect(shell.calls).toEqual([]);
   });
 
   it('checks the file again when the choice comes, not only when the menu opened', async () => {
     let choose: ((id: string | null) => void) | undefined;
     const { menus, shell, fs, id } = setup(null, undefined, undefined, () => new Promise((resolve) => (choose = resolve)));
-    const done = menus.document(id, 1);
+    const done = menus.document(id, 1, READING);
     await vi.waitFor(() => expect(choose).toBeDefined());
     fs.makeExecutable('/d/plans/plan.md');
     choose!('open-default');
@@ -116,7 +164,7 @@ describe('DocumentMenus.document (SR-05)', () => {
 
   it("refuses another window's tab", async () => {
     const { menus, shown, id } = setup('open-default');
-    await expect(menus.document(id, 2)).rejects.toThrow();
+    await expect(menus.document(id, 2, READING)).rejects.toThrow();
     expect(shown).toEqual([]);
   });
 });

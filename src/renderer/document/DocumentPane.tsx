@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { DocumentMenuContext } from '../../shared/contracts/ipc';
 import type { ChosenEncoding, DocumentContent, Recovered } from '../../shared/contracts';
 import type { ImageResult, SaveResult, TaskToggleResult } from '../../shared/documents';
 import { DiffDialog } from '../edit/DiffDialog';
@@ -71,7 +72,8 @@ export interface DocumentPaneProps {
   onStatus: (status: TabStatus) => void;
   onChooseEncoding: (encoding: ChosenEncoding | null) => void;
   /** Main's menu for the document (right-click, or a state's "File actions…"). */
-  onContextMenu: () => void;
+  /** The document's right-click menu; `tree`: a JSON tree shows. */
+  onContextMenu: (context: DocumentMenuContext) => void;
   onClose: () => void;
   /** The tab's zoom; it scales the document only. */
   zoom: number;
@@ -735,7 +737,8 @@ export function DocumentPane({
   }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, render.tasks, tabular, separatorChoice, shownTable?.table, header, renderable, splittable, wrap, outlined, outlineOpen, views?.follow]);
 
   // Ready content is always shown: no document means the content is a state of its own.
-  if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={onContextMenu} />;
+  const menu = () => onContextMenu({ tree: treeModel !== null && view === 'rendered' });
+  if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={menu} />;
 
   return (
     <>
@@ -790,7 +793,7 @@ export function DocumentPane({
           follow={follow}
           onFollowEnded={endFollow}
           onLink={onLink}
-          onContextMenu={onContextMenu}
+          onContextMenu={menu}
           onResolveImage={onResolveImage}
           scheme={scheme}
           initialPosition={initialPosition}

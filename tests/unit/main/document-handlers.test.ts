@@ -1,4 +1,5 @@
 import path from 'node:path';
+import type { DocumentMenuChoice } from '../../../src/shared/contracts/ipc';
 import { describe, expect, it } from 'vitest';
 import { EditGrants } from '../../../src/core/documents/edit-grants';
 import { TabSearches, findInBytesTask } from '../../../src/core/documents/find-all';
@@ -36,10 +37,10 @@ class SlowFileSystem extends FakeFileSystem {
   }
 }
 
-function setup(files: Record<string, string>, slow = '', { credits = Infinity } = {}) {
+function setup(files: Record<string, string>, slow = '', { credits = Infinity, choice = null as DocumentMenuChoice | null } = {}) {
   const fs = new SlowFileSystem(files, slow);
   const grants = new EditGrants();
-  const input = { left: credits, spend: () => input.left-- > 0 };
+  const input = { left: credits, spend: () => input.left-- > 0, received: () => void input.left++ };
   const reads = new ReadIdentities(fs);
   const answers: string[] = [];
   let n = 0;
@@ -73,7 +74,7 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity } 
     searches: new TabSearches({ records, grants, fs, tasks: new FakeTaskRunner({ findInText: findInTextTask, findInBytes: (input) => findInBytesTask(input, decode) }) }),
     menus: {
       path: async (id, window) => void menus.push(`path ${id} ${window}`),
-      document: async (id, window) => void menus.push(`document ${id} ${window}`),
+      document: async (id, window, context) => (menus.push(`document ${id} ${window} ${JSON.stringify(context)}`), choice),
     },
   });
   return { fs, records, handlers, opened, grants, input, reads, answers, menus, id: records.open(Object.keys(files)[0]!, 1).id };
@@ -96,11 +97,20 @@ describe('documentHandlers', () => {
   it("shows a document's menus, never the settings tab's", async () => {
     const { records, handlers, menus, id } = setup({ '/d/a.md': '# a' });
     await handlers['documents.pathMenu']([id], event);
-    await handlers['documents.contextMenu']([id], event);
+    await handlers['documents.contextMenu']([id, { tree: true }], event);
     const settings = records.openSettings(1);
     expect(() => handlers['documents.pathMenu']([settings.id], event)).toThrow(/not a document/);
-    expect(() => handlers['documents.contextMenu']([settings.id], event)).toThrow(/not a document/);
-    expect(menus).toEqual([`path ${id} 1`, `document ${id} 1`]);
+    await expect(handlers['documents.contextMenu']([settings.id, { tree: false }], event)).rejects.toThrow(/not a document/);
+    expect(menus).toEqual([`path ${id} 1`, `document ${id} 1 {"tree":true}`]);
+  });
+
+  it("counts a choice in the document's menu as input, so the Save the page runs next works", async () => {
+    const chosen = setup({ '/d/a.md': '# a' }, '', { credits: 0, choice: 'save' });
+    expect(await chosen.handlers['documents.contextMenu']([chosen.id, { tree: false }], event)).toBe('save');
+    expect(chosen.input.left).toBe(1);
+    const dismissed = setup({ '/d/a.md': '# a' }, '', { credits: 0 });
+    expect(await dismissed.handlers['documents.contextMenu']([dismissed.id, { tree: false }], event)).toBeNull();
+    expect(dismissed.input.left).toBe(0);
   });
 
   it('keeps the links of the document it read, not of one read earlier that finished later', async () => {

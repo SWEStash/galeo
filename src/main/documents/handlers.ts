@@ -49,7 +49,7 @@ export function documentHandlers(deps: {
   /** The tabs main put in edit mode (ADR-013). */
   grants: EditGrants;
   /** The window's real input: a save spends one (ADR-004). */
-  input: { spend(window: number): boolean };
+  input: { spend(window: number): boolean; received(window: number): void };
   /** Closes and quits waiting on the reader's word about unsaved changes. */
   unsaved: { answer(window: number, answer: CloseAnswer): void };
   /** A file was read (the profile's recent files keep it). */
@@ -152,9 +152,13 @@ export function documentHandlers(deps: {
       assertDocument(id, event.sender.id);
       return menus.path(id, event.sender.id);
     },
-    'documents.contextMenu': ([id], event) => {
+    // A choice in the native menu is the reader's own input (as the tab menu's): Save, which the page
+    // runs next, spends it as Ctrl+S does.
+    'documents.contextMenu': async ([id, context], event) => {
       assertDocument(id, event.sender.id);
-      return menus.document(id, event.sender.id);
+      const choice = await menus.document(id, event.sender.id, context);
+      if (choice) input.received(event.sender.id);
+      return choice;
     },
   };
 }

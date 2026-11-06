@@ -1,4 +1,4 @@
-import { TAB_MENU_CHOICES, type TabMenuChoice } from '../../shared/contracts/ipc';
+import { DOCUMENT_MENU_CHOICES, TAB_MENU_CHOICES, type DocumentMenuChoice, type DocumentMenuContext, type TabMenuChoice } from '../../shared/contracts/ipc';
 import { UNKNOWN_DOCUMENT } from '../../shared/documents';
 import { canOpenWithDefaultApp } from '../links/open-with';
 import type { Clipboard, FileSystem, MenuItem, OsShell } from '../ports';
@@ -13,6 +13,12 @@ interface DocumentMenusDeps {
   showMenu: (window: number, items: readonly MenuItem[]) => Promise<string | null>;
   /** `process.platform`: which rule decides what goes to the default app (ADR-028). */
   platform: string;
+  /** Whether the tab is in edit mode (main's grant, ADR-013). */
+  editing: (id: string, window: number) => boolean;
+  /** Main's own Ctrl+E on the window's shown tab (ADR-013, ADR-015). */
+  edit: (window: number) => void;
+  /** The tab the window shows now. */
+  shown: (window: number) => string | null;
 }
 
 /**
@@ -34,22 +40,49 @@ export class DocumentMenus {
   }
 
   /**
-   * The document's own menu: open it with the default app (only for plain, non-executable files,
-   * SR-05), reveal it, or copy its path. The file is checked again when the choice comes back.
+   * The document's own menu (UX F11): Back and Forward with history, Find…, Reload, Edit (main's own
+   * capability, on the shown tab) or Save while editing, a JSON tree's entries, then open it with the
+   * default app (only for plain, non-executable files, SR-05), reveal it, or copy its path. Main acts
+   * on Edit and the file entries itself, checking the file again when the choice comes back; the
+   * other choices go back to the page, which runs their commands.
    */
-  async document(id: string, window: number): Promise<void> {
+  async document(id: string, window: number, { tree }: DocumentMenuContext): Promise<DocumentMenuChoice | null> {
     const tab = this.deps.tabs.get(id, window);
     if (!tab) throw new Error(UNKNOWN_DOCUMENT);
+    const history = this.deps.tabs.history(id, window);
+    const editing = this.deps.editing(id, window);
     const choice = await this.deps.showMenu(window, [
+      { id: 'back', label: 'Back', enabled: history.back },
+      { id: 'forward', label: 'Forward', enabled: history.forward },
+      { id: 'find', label: 'Find…' },
+      { id: 'reload', label: 'Reload' },
+      editing ? { id: 'save', label: 'Save' } : { id: 'edit', label: 'Edit' },
+      ...(tree
+        ? [
+            { id: 'expand-all', label: 'Expand all' },
+            { id: 'collapse-all', label: 'Collapse all' },
+            { id: 'copy-json-path', label: 'Copy JSON path' },
+          ]
+        : []),
       { id: 'open-default', label: 'Open with default app', enabled: await this.openable(tab.path) },
       { id: 'reveal', label: 'Reveal in Files' },
       { id: 'copy-path', label: 'Copy path' },
     ]);
+    // The tab may have closed, or the file changed, while the menu was open.
+    if (this.deps.tabs.get(id, window)?.path !== tab.path) return null;
     if (choice === 'open-default') {
       if (await this.openable(tab.path)) await this.deps.shell.openPath(tab.path);
-      return;
+      return null;
     }
-    this.act(choice, tab.path);
+    if (choice === 'edit') {
+      if (this.deps.shown(window) === id) this.deps.edit(window);
+      return null;
+    }
+    if (choice === 'copy-path' || choice === 'reveal') {
+      this.act(choice, tab.path);
+      return null;
+    }
+    return DOCUMENT_MENU_CHOICES.find((each) => each === choice) ?? null;
   }
 
   /**

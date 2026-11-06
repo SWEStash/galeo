@@ -42,7 +42,7 @@ test("a right-click shows main's menu, whose Open with default app opens a plain
   try {
     await shownDocument(window).locator('h1').click({ button: 'right' });
     await expect.poll(() => opened(app)).toEqual([file]);
-    expect((await menus(app))[0]!.map((item) => item.id)).toEqual(['open-default', 'reveal', 'copy-path']);
+    expect((await menus(app))[0]!.map((item) => item.id).slice(-3)).toEqual(['open-default', 'reveal', 'copy-path']);
   } finally {
     await close();
   }
@@ -60,7 +60,7 @@ test('an executable is never opened with the default app, and the page has no wa
     await expect(shownDocument(window)).toBeVisible();
     await shownDocument(window).click({ button: 'right' });
     await expect.poll(async () => (await menus(app)).length).toBe(1);
-    expect((await menus(app))[0]![0]).toMatchObject({ id: 'open-default', enabled: false });
+    expect((await menus(app))[0]!.find((item) => item.id === 'open-default')).toMatchObject({ enabled: false });
     // No channel opens a file: the bridge has none, and the page can't reach IPC itself.
     const reachable = await window.evaluate(() => {
       const page = globalThis as unknown as Window & { ipcRenderer?: unknown; require?: unknown };

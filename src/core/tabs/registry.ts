@@ -410,6 +410,12 @@ export class TabRegistry {
     return record?.entries[record.index]!.encoding ?? null;
   }
 
+  /** Whether the tab has a page to go back or forward to. */
+  history(id: string, window: number): { back: boolean; forward: boolean } {
+    const record = this.owned(id, window);
+    return { back: record !== undefined && record.index > 0, forward: record !== undefined && record.index < record.entries.length - 1 };
+  }
+
   back(id: string, window: number): HistoryEntry | null {
     return this.step(id, window, -1);
   }

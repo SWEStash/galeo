@@ -5,7 +5,7 @@ const ID = '0b6c1d2e-8f1a-4c3b-9d4e-5f6a7b8c9d0e';
 const accepts = (channel: keyof typeof requestSchemas, args: unknown[]) => requestSchemas[channel].safeParse(args).success;
 
 describe('document channel arguments (SR-11)', () => {
-  it.each(['documents.read', 'documents.back', 'documents.forward', 'documents.pathMenu', 'documents.contextMenu', 'documents.leaveEdit', 'documents.recover', 'recent.open', 'tabs.activated', 'tabs.rendering', 'tabs.renderAgain', 'tabs.close'] as const)('%s takes one document id', (channel) => {
+  it.each(['documents.read', 'documents.back', 'documents.forward', 'documents.pathMenu', 'documents.leaveEdit', 'documents.recover', 'recent.open', 'tabs.activated', 'tabs.rendering', 'tabs.renderAgain', 'tabs.close'] as const)('%s takes one document id', (channel) => {
     expect(accepts(channel, [ID])).toBe(true);
     for (const bad of [[], [''], ['x'.repeat(65)], [42], [null], [{ id: ID }], [ID, 'extra']]) {
       expect(accepts(channel, bad)).toBe(false);
@@ -92,6 +92,11 @@ describe('document channel arguments (SR-11)', () => {
     for (const bad of [[ID], [ID, 39], [ID, 201], [ID, 72.5], [ID, '72'], [ID, 'wide'], [ID, Number.NaN], [ID, 72, 'x']]) {
       expect(accepts('tabs.width', bad)).toBe(false);
     }
+  });
+
+  it('documents.contextMenu takes an id and whether a JSON tree shows, nothing else', () => {
+    expect(accepts('documents.contextMenu', [ID, { tree: true }])).toBe(true);
+    for (const bad of [[ID], [ID, {}], [ID, { tree: 'yes' }], [ID, { tree: true, path: '/etc/passwd' }]]) expect(accepts('documents.contextMenu', bad)).toBe(false);
   });
 
   it('tabs.pin takes an id and whether to pin', () => {
