@@ -326,14 +326,22 @@ body,
   min-width: 96px;
   max-width: 200px;
   margin-top: var(--galeo-space-sm);
-  margin-right: var(--galeo-space-2xs);
   padding: 0 var(--galeo-space-sm) 0 0;
   border-radius: var(--galeo-radius-md) var(--galeo-radius-md) 0 0;
 }
-/* Tabs not shown: a light edge on three sides, so names don't run together. */
-.tab[data-layout='bar']:not([data-selected]) {
-  box-shadow: inset 0 0 0 1px var(--galeo-chrome-edge);
-  clip-path: inset(0 0 1px 0);
+/* A short separator between neighbouring tabs, so names don't run together; none beside the shown
+   tab or the one under the pointer, which have a background of their own. */
+.tab[data-layout='bar']::after {
+  content: '';
+  position: absolute;
+  top: var(--galeo-space-md);
+  right: 0;
+  bottom: var(--galeo-space-md);
+  width: 1px;
+  background: var(--galeo-color-border);
+}
+.tab[data-layout='bar']:is([data-selected], [data-hovered], :has(+ [data-selected]), :has(+ [data-hovered]))::after {
+  visibility: hidden;
 }
 
 .tab[data-layout='bar'][data-selected] {
