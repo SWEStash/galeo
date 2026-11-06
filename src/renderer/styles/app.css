@@ -818,24 +818,35 @@ body,
   flex: none;
   flex-direction: column;
 }
+/* Rows sit in an inset list, apart from each other, rounded; the shown one is lifted to the surface
+   with the profile's accent along its edge. */
+.side-panel:not([data-collapsed]) .tab-list {
+  gap: var(--galeo-space-2xs);
+  padding: var(--galeo-space-md);
+}
 
 .side-panel .tab {
   flex: none;
   min-width: 0;
   padding: var(--galeo-space-sm) var(--galeo-space-sm) var(--galeo-space-sm) 0;
-  border-right: none;
-  border-bottom: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius-md);
 }
 
 .side-panel .tab[data-selected] {
-  box-shadow: inset 3px 0 0 var(--galeo-color-accent);
+  background: var(--galeo-chrome-surface);
+  box-shadow:
+    inset 3px 0 0 var(--galeo-color-accent),
+    0 0 0 1px var(--galeo-color-border);
 }
 
 .side-panel .tab-grab {
   flex-direction: column;
   gap: var(--galeo-space-2xs);
   align-items: stretch;
-  padding-left: var(--galeo-space-lg);
+  padding-left: var(--galeo-space-md);
+}
+.side-panel:not([data-collapsed]) .tab:not([data-hovered], [data-selected], [data-focus-visible]) .tab-close {
+  visibility: hidden;
 }
 
 .tab-line {
@@ -849,7 +860,7 @@ body,
 .tab-folder {
   overflow: hidden;
   color: var(--galeo-color-muted);
-  font-size: var(--galeo-text-xs);
+  font-size: var(--galeo-text-sm);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -863,7 +874,13 @@ body,
 .side-panel[data-collapsed] .tab {
   justify-content: center;
   padding: var(--galeo-space-xs) 0;
-  border-bottom: none;
+  border-radius: 0;
+}
+.side-panel[data-collapsed] .tab[data-hovered]:not([data-selected]) {
+  background: none;
+}
+.side-panel[data-collapsed] .tab[data-hovered] .tab-marker {
+  background: var(--galeo-chrome-hover);
 }
 .side-panel[data-collapsed] .tab[data-selected] {
   box-shadow: none;
@@ -888,7 +905,7 @@ body,
 }
 .tab[data-selected] .tab-marker {
   border: 2px solid var(--galeo-color-accent);
-  background: var(--galeo-color-bg);
+  background: var(--galeo-chrome-surface);
 }
 
 .tab-marker-mark {
@@ -907,7 +924,7 @@ body,
   overflow: hidden;
   border: 1px solid var(--galeo-color-border);
   border-radius: var(--galeo-radius-md);
-  background: var(--galeo-color-bg);
+  background: var(--galeo-chrome-surface);
   box-shadow: var(--galeo-shadow-1);
   text-overflow: ellipsis;
   white-space: nowrap;
