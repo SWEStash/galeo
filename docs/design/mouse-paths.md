@@ -180,8 +180,8 @@ The tab's right-click menu works the same on a tab, a row and a collapsed marker
 
 1. `⋯` Commands button (opens the palette) and `⌕` Search tabs button, in the bar or title bar
    (built in v0.7).
-2. Settings and New window in the profile menu.
-3. A right-click menu on tabs, rows and markers.
+2. Settings and New window in the profile menu (built in v0.7).
+3. A right-click menu on tabs, rows and markers (built in v0.7, with Pin or Unpin tab).
 4. More entries in the document's right-click menu, which main builds (Edit and Save need a note in the
    threat model, since they reach main's edit capability):
    - Back / Forward;
@@ -189,7 +189,7 @@ The tab's right-click menu works the same on a tab, a row and a collapsed marker
    - Reload;
    - Edit / Save;
    - in a JSON tree: Expand all, Collapse all, Copy JSON path.
-5. Status bar:
+5. Status bar (built in v0.7):
    - the view menu;
    - Follow for logs;
    - a click on zoom or width resets it.

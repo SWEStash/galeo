@@ -391,6 +391,12 @@ closed, by name and folder. Reopening one goes by the id main listed it under in
 closed list (never another window's, never a closed window) and spends an input credit; the
 file is one the window already had open. Ctrl+Shift+T (the last closed tab or window) spends one
 too.
+A tab's right-click menu (v0.7, `tabs.menu`) is a native menu main builds for the sender's own tab;
+main copies the path and reveals the file itself, and hands the page back only which command it
+chose (close, reopen, a move, pin). A choice in that menu is the reader's own click on a menu the
+page can't operate, so it earns the window one input credit, as a key press does: Reopen and the
+moves the page runs next spend it as their shortcuts do. A dismissed menu earns nothing. Pinning
+(`tabs.pin`) only reorders the sender's own tabs and keeps them warm; it reads and writes nothing.
 Find in all tabs (v0.4, ADR-024) searches only the sender's own open tabs: their files, which the
 window already shows, or the unsaved text main keeps for them. It answers with counts and short
 snippets by tab id. It reads nothing the page couldn't already read, so it spends no credit.

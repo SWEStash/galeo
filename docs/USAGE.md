@@ -201,8 +201,10 @@ the file into the window in front of you) when you want it here.
   the palette uses the whole window (run it again to go back). The status bar shows a tab's width
   only while it differs from the setting, and a tab keeps it across restarts. A tab left at the
   setting follows it when the setting changes.
-- **Status bar**: the path (click to copy it or reveal it in Files), the view, the encoding, the
-  line count (in the source view) and, for Markdown and `.txt`, the word count and reading time.
+- **Status bar**: the path (click to copy it or reveal it in Files), the view (click for a menu of
+  the views, Wrap and the outline), the encoding, the
+  line count (in the source view) and, for Markdown and `.txt`, the word count and reading time. A
+  log has a **Follow** button; a click on the zoom or the reader width puts it back.
   Markdown counts its prose only: code blocks, math, diagrams and front matter aren't words.
 - **Open with default app** (in the palette) hands the file to the app your system uses for it. It
   isn't offered for programs and launchers, and on macOS and Windows only for known document types:
@@ -278,7 +280,14 @@ cards, each with its folder, format and marks: the arrows move between them, Ent
 closes it, and Ctrl+Shift+PgUp/PgDn or a drag moves it. Ctrl+Shift+F finds text in all the
 window's tabs, unsaved ones as they are on screen: each tab with matches lists its first ones with
 their line, and Enter shows that tab with its find bar on the match. It searches the files' source
-text, so a rendered page can count differently.
+text, so a rendered page can count differently. The ⌕ and ⋯ buttons at the end of the bar open tab
+search and the command palette.
+
+Right-click a tab (or press Shift+F10 on it) for its menu: close it, reopen the last closed tab, move
+it to a new window or another one, copy its path, reveal it in Files, or pin it. Pinned tabs stay
+first, show a pin, are never put to sleep to save memory, and stay pinned after a restart; *Pin or
+unpin tab* in the palette does the same for the shown tab. The profile menu also opens a new window
+and Settings.
 
 A profile can put its tabs on the left instead (Settings → **Window** → Tabs: Left, or *Put tabs on the left*
 in the palette): one row per tab, with its folder underneath, and the shown tab's name in the title

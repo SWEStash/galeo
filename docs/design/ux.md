@@ -48,7 +48,7 @@ the [decision records](../decisions/)).
 |---|---|---|
 | **Tab bar** (merged with title bar, client-side decorations) | Profile chip (name + accent colour, left edge), tabs, new-tab button after the last tab, (v0.7) the tools `▦` Tab overview, `⌕` Search tabs and `⋯` Commands at the far right, window controls. A tab fits its name (96–200 px) and shows `✕` on hover, when shown or focused; short lines separate the tabs not shown | Always visible |
 | **Document area** | Rendered or source view of the active tab | Always visible |
-| **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; (v0.6) a Markdown document's task items done of all ("7 of 12 tasks", once rendered) and its change marks ("3 changes", F20); (v0.3) a table's options (separator and header, a menu); the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width") | Always visible; can be hidden in settings |
+| **Status bar** | Path (click → copy menu), view mode ((v0.7) a menu of the views, wrap and outline), read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; (v0.6) a Markdown document's task items done of all ("7 of 12 tasks", once rendered) and its change marks ("3 changes", F20); (v0.3) a table's options (separator and header, a menu); the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width"), (v0.7) each reset by a click; (v0.7) a log's Follow toggle | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
 | **Search tabs** (v0.4) | The window's open tabs and recently closed tabs by name and folder (F16) | Ctrl+Shift+A / Esc |
 | **Tab overview** (v0.4) | Every tab of the window as a grid of cards; activate, close, reorder (F17) | Ctrl+Shift+E, the palette / Esc |
@@ -58,7 +58,7 @@ the [decision records](../decisions/)).
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side; (v0.6) a heading with task items under it (up to the next heading) shows them done of all, "2/5", at the end of its row, read as "(2 of 5 tasks done)" | Ctrl+Shift+O (toggle) |
 | **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 % | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
-| **Profile menu** | Switch / new / rename / delete profile, open profile settings, About galeo (v0.3) | Click profile chip or Ctrl+Shift+M |
+| **Profile menu** | Switch / new / rename / delete profile, open profile settings, About galeo (v0.3); (v0.7) New window and Settings | Click profile chip or Ctrl+Shift+M |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
 
 **Window title** (used by GNOME's overview and Alt+Tab): `<file name> — <profile> — galeo`.
@@ -67,10 +67,9 @@ the [decision records](../decisions/)).
 bar's far right, before the window controls, while `+` stays after the last tab (in the tab bar or,
 with tabs on the left, the title bar); the look is [visual-refresh.md](visual-refresh.md).
 
-*Planned (the [mouse paths review](mouse-paths.md), not yet built):* Settings and New window in the
-profile menu; in the status bar, the view
-name as a menu (views, wrap, outline), a Follow toggle for logs, and a click on the zoom or reader
-width resetting it.
+(v0.7, the [mouse paths review](mouse-paths.md)) The profile menu has New window and Settings; the
+status bar's view name is a menu (views, wrap, outline), a log has a Follow toggle, and a click on
+the zoom or reader width resets it; a tab has a right-click menu (F4).
 
 ## 3. Flows
 
@@ -120,9 +119,17 @@ profile. Multiple selected files open as tabs in selection order.
 - (v0.4) Search tabs finds an open or recently closed tab by name (F16); the tab overview shows
   them all at once (F17); a profile can put its tabs in a list on the left (F18); find in all tabs
   searches their text (F19).
-- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* a right-click menu on a tab,
-  a side-panel row or a collapsed marker: Close tab, Reopen closed tab, Move to new window, Move to
-  window…, Copy path, Reveal in Files.
+- (v0.7) A right-click on a tab, a side-panel row or a collapsed marker (or the context-menu key,
+  Shift+F10, on a focused one) opens its menu, which main builds: Close tab, Reopen closed tab, Move
+  to new window, Move to window…, Copy path, Reveal in Files, Pin or Unpin tab, each greyed out where
+  it doesn't apply (the moves need another tab; the Settings tab offers only Close and Reopen). Each
+  runs on that tab as its shortcut or palette command does; Move to window… shows the tab first.
+- (v0.7) **Pinned tabs**: *Pin or unpin tab* (palette, the tab's menu). Pinned tabs stay first, in
+  both layouts and the overview, with a pin before the name; a screen reader hears "pinned". A
+  pinned tab moves only among pinned tabs (and an unpinned one only among the others), new tabs
+  open after them, galeo never hibernates one on its own, and a pinned tab stays pinned after a
+  restart, a reopen or a move to another window. In the tab bar it has no `✕`: Ctrl+W, a middle
+  click or its menu close it. The Settings tab can't be pinned.
 - Hibernation is invisible except that a hibernated tab's label is slightly dimmed. Waking must
   land at the saved scroll position before first paint (no jump).
 - Tabs with duplicate file names show the shortest distinguishing parent (`acme/plan.md`,
@@ -241,9 +248,10 @@ mode closes the replace row and keeps find open.
   JSON lines (the key colour), the text unchanged; follow-end mode:
   pressing End enables it; scrolling up disables it.
 - Alt+Z toggles line wrapping in source/log views.
-- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* the status bar's view name
-  opens a menu of the views (rendered, source, split), wrap and the outline, each where it applies;
-  logs get a Follow toggle there.
+- (v0.7) The status bar's view name opens a menu of the views the document has (Rendered, Source,
+  Split), then Wrap and Outline where they apply; a log shows a Follow toggle (pressed while it
+  follows). They run *Show rendered / source / split view*, *Toggle wrap*, *Toggle outline* and
+  *Toggle follow (logs)*, with the same rules as their keys (no rendered view while editing).
 
 ### F11 — Links and navigation
 
@@ -546,7 +554,9 @@ the native menu on the active tab.
 | Leave the editor with the keyboard (v0.6) | Esc then Tab; Ctrl+M (Control+M on macOS: CodeMirror's Shift+Option+M types a character there) | Edit mode (WCAG 2.1.2). Esc gives Tab back to the focus for 2 s; Ctrl+M switches Tab between indenting and moving the focus until pressed again. With the find bar open the first Esc closes it. The editor's description says so to screen readers |
 | Widen / narrow / reset reader width (v0.3) | Alt++ or Alt+= / Alt+- / Alt+0 | Per tab, like zoom (Ctrl); 8 ch steps, 40–200 ch; rendered Markdown and text only |
 | Full width (v0.3) | palette | Toggles back to the setting |
-| Move tab to new window / to window… (v0.3) | palette | F15 |
+| Move tab to new window / to window… (v0.3) | palette | F15; (v0.7) also the tab's right-click menu |
+| Pin or unpin tab (v0.7) | palette | F4; also the tab's right-click menu |
+| Show rendered / source / split view, Toggle follow (logs) (v0.7) | palette | The status bar's view menu and Follow toggle (F10) |
 | Expand all nodes / Collapse all nodes / Copy JSON path (v0.3) | palette | JSON tree, F14 |
 | Table separator: … / First row is a header / Reset table options / Show as table (v0.3) | palette; also the status bar's Table options | Tables, F14, ADR-021 |
 | Search tabs (v0.4) | Ctrl+Shift+A | F16; Chrome's key |

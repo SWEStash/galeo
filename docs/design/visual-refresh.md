@@ -194,8 +194,8 @@ accessible name; colour is never the only signal.
 - Rows: name (`text-md`, 500) over folder (`text-xs`, muted), 6/8 px padding, `radius-md`. Rows touch;
   a 1 px line under each starts under the text and fades out to the right, hidden beside the shown,
   hovered and focused rows and after the last (owner, 2026-11-06).
-  States as tabs. A **Pinned** group heads the list when any tab is pinned (`text-xs`, 600, muted,
-  upper case), then the rest.
+  States as tabs. Pinned rows come first, each with the pin before its name; no group heading, since
+  a heading can't sit inside the tab list a screen reader reads (as built, 2026-11-06).
 - Collapsed: 32 px wide, markers as today, drawn with the scale; the shown marker filled.
 - The divider: unchanged (7 px handle, double-click resets).
 
