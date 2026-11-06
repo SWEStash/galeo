@@ -155,7 +155,13 @@ profile. Multiple selected files open as tabs in selection order.
   (start them, restoring their session).
 - **Rename / recolour**: Profile menu → Edit. Renaming keeps sessions and settings.
 - **Delete**: confirmation dialog naming what is lost ("the profile's session and settings; your
-  files are not touched"). The `default` profile cannot be deleted.
+  files are not touched"). The `default` profile cannot be deleted. (v0.7) Deleting a profile also
+  removes its launcher, if galeo wrote one.
+- (v0.7, Linux) **Profile launcher**: Settings → Profile launcher → *Add to applications* adds
+  "galeo — <profile>" to the desktop's applications, which opens galeo in that profile (by its id, so
+  a rename doesn't break it; the entry keeps the name it had) and opens files with it; *Remove from
+  applications* takes out only that profile's entry. It runs the AppImage or the galeo package's
+  command; a run from source has none, and says so.
 - Closing the last window of a profile stops the profile and keeps its session for next time
   (Chrome semantics). Closing one of several windows discards that window's tabs, recoverable
   with Ctrl+Shift+T while the profile runs.
@@ -260,7 +266,7 @@ mode closes the replace row and keeps find open.
 - `#anchor` links scroll within the document and are part of back/forward history.
 - (v0.7) The document's right-click menu, which main builds: Back and Forward (greyed out without
   history), Find…, Reload, Edit (main's own Ctrl+E) or Save while editing, in a JSON tree Expand all,
-  Collapse all and Copy JSON path, on rendered Markdown Copy as rich text, then Open with default
+  Collapse all and Copy JSON path, on rendered Markdown Copy as rich text and Export to PDF…, then Open with default
   app, Reveal in Files and Copy path. The page tells main only whether a tree or rendered Markdown
   shows; each choice runs as its key does.
 - `http(s)`/`mailto` links → open in the system browser/mail client. First time per profile, a
@@ -558,7 +564,7 @@ the native menu on the active tab.
 | Full width (v0.3) | palette | Toggles back to the setting |
 | Move tab to new window / to window… (v0.3) | palette | F15; (v0.7) also the tab's right-click menu |
 | Pin or unpin tab (v0.7) | palette | F4; also the tab's right-click menu |
-| Copy as rich text (v0.7) | palette | Rendered Markdown; also the document's menu |
+| Copy as rich text, Export to PDF… (v0.7) | palette | Rendered Markdown; also the document's menu |
 | Show rendered / source / split view, Toggle follow (logs) (v0.7) | palette | The status bar's view menu and Follow toggle (F10) |
 | Expand all nodes / Collapse all nodes / Copy JSON path (v0.3) | palette | JSON tree, F14 |
 | Table separator: … / First row is a header / Reset table options / Show as table (v0.3) | palette; also the status bar's Table options | Tables, F14, ADR-021 |
@@ -589,7 +595,10 @@ this map only.
   the article preview's target site). Line numbers optional in code blocks; (v0.7) a Copy button at a
   rendered code block's corner, on hover and on keyboard focus, copies its code ("Copied" in the
   status); *Copy as rich text* (palette, the document's menu) puts the rendered Markdown document on
-  the clipboard as HTML, without galeo's buttons, with its plain text.
+  the clipboard as HTML, without galeo's buttons, with its plain text. *Export to PDF…* (palette, the
+  document's menu) saves a rendered Markdown document as a PDF where you choose: the document alone,
+  no bars, always in the light theme (diagrams drawn light), A4 (Letter in the US and Canada), code
+  wrapped, and code, tables and diagrams kept whole on a page where they fit.
 - **Custom CSS**: a global `custom.css` and one per profile, applied in that order after the
   bundled theme; changes apply live to every open tab when the file is saved (hand edits to
   `settings.json` and `profile.json` apply live too). galeo documents a small set of
@@ -613,7 +622,8 @@ this map only.
   folder to `PATH`; it refuses while the app runs from its disk image or Downloads), and `galeo.cmd`
   in `%LOCALAPPDATA%\Microsoft\WindowsApps` on Windows. Beside it, "Uninstall
   command-line launcher" (v0.4) removes what it wrote and says what it removed, and names any file
-  it kept because galeo didn't write it.
+  it kept because galeo didn't write it. (v0.7, Linux) "Profile launcher" adds or removes this
+  profile's own entry in the applications (F5).
 
 ## 7. Accessibility (target: WCAG 2.2 AA)
 

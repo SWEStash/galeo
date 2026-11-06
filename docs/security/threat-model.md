@@ -409,6 +409,16 @@ reader picked, atomically, with the usual file permissions (0644), and only for 
 or a PNG's bytes, at most 20 MiB, checked against the format; galeo never opens or runs it. A
 compromised page could write content of its choosing to a file the reader names in that dialog,
 which the reader is choosing to create anyway.
+Exporting to PDF (v0.7, #56) writes the same way: `documents.exportPdf` spends an input credit and
+asks in main's save dialog, then answers the page a one-use token (60 s, this window only) instead of
+the path; `documents.printPdf` prints the window, whose print stylesheet shows only the page's print
+copy of the document (already-sanitized HTML, loading nothing new), into that file atomically. The
+page can choose what it prints, which is what it already shows.
+A profile's launcher (v0.7, #60, Linux) is a desktop entry in the user's own applications folder,
+written for the sender window's profile only and only for real input: it runs galeo's own command
+(the AppImage, or the package entry's command) with `--profile <id>` and files after `--` (SR-13);
+names with control characters are refused. Removing it, and deleting the profile, removes only an
+entry carrying that profile's mark.
 Find in all tabs (v0.4, ADR-024) searches only the sender's own open tabs: their files, which the
 window already shows, or the unsaved text main keeps for them. It answers with counts and short
 snippets by tab id. It reads nothing the page couldn't already read, so it spends no credit.

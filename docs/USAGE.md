@@ -222,6 +222,8 @@ the file into the window in front of you) when you want it here.
 - **Copy**: a code block's copy button (at its corner, on hover or with Tab) copies its code; *Copy
   as rich text* (palette, or the document's right-click menu) copies the whole rendered document, to
   paste with its formatting into another editor.
+- **Export to PDF…** (palette, or the right-click menu) saves the rendered document as a PDF where
+  you choose: the document alone, in the light theme, ready to print or send.
 - **MDX articles** (`.mdx`) render like Markdown, and nothing in them runs: imports and exports
   are hidden, a component shows as a dashed box labelled with its tag and props, with its content
   inside, and `{expressions}` show as code (comment-only ones are hidden). Lowercase HTML tags work
@@ -322,7 +324,8 @@ A profile is a separate set of windows, session, recent files and settings, for 
 client or project. The profile chip at the left of the tab bar (Ctrl+Shift+M) lists them and
 creates, renames, recolours or deletes them. `galeo --profile NAME` creates a profile on first use,
 with an Undo. The `default` profile can't be deleted; deleting another removes its session and
-settings, never your files.
+settings, never your files. On Linux, Settings → **Profile launcher** adds "galeo — <profile>" to
+your applications, which opens galeo straight in that profile; deleting the profile removes it.
 
 ## Settings and custom CSS
 
