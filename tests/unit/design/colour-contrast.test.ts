@@ -52,7 +52,7 @@ describe.each(Object.entries(SCHEMES))('the %s theme (UX §6, WCAG 2.1 AA)', (_s
     for (const surface of CHROME) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(4.5);
   });
 
-  it.each(['focus', 'control-border'])('%s stands out 3:1 or more on the bars and on menus and overlays', (token) => {
+  it.each(['focus', 'chrome-focus', 'control-border'])('%s stands out 3:1 or more on the bars and on menus and overlays', (token) => {
     for (const surface of ['chrome-bar', 'chrome-surface']) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(3);
   });
 });

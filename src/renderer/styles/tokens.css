@@ -88,6 +88,8 @@
   --galeo-chrome-hover: #e9ebed;
   --galeo-chrome-press: #e1e3e5;
   --galeo-chrome-selected: #dae9f9;
+  /* The focus ring around a control: softer than the document's focus colour, still 3:1 on bars and menus. */
+  --galeo-chrome-focus: #218bff;
   /* Tints: a find-in-all-tabs match, a banner, the drop area's veil. */
   --galeo-chrome-match: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
   --galeo-chrome-banner: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));
@@ -129,6 +131,7 @@
   --galeo-chrome-hover: #0f1217;
   --galeo-chrome-press: #181b20;
   --galeo-chrome-selected: #152539;
+  --galeo-chrome-focus: #316dca;
   --galeo-shadow-1: 0 2px 8px rgb(0 0 0 / 40%);
   --galeo-shadow-2: 0 8px 28px rgb(0 0 0 / 55%);
   --galeo-scrim: rgb(0 0 0 / 50%);
