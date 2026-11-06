@@ -178,7 +178,8 @@ The tab's right-click menu works the same on a tab, a row and a collapsed marker
 
 ## Changes for a later release
 
-1. `⋯` Commands button (opens the palette) and `⌕` Search tabs button, in the bar or title bar.
+1. `⋯` Commands button (opens the palette) and `⌕` Search tabs button, in the bar or title bar
+   (built in v0.7).
 2. Settings and New window in the profile menu.
 3. A right-click menu on tabs, rows and markers.
 4. More entries in the document's right-click menu, which main builds (Edit and Save need a note in the

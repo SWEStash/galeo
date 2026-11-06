@@ -32,7 +32,7 @@ the [decision records](../decisions/)).
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│▌acme │ plan.md ● │ handoff.md │ agent.log ⇣ │ ADR-003.md ✕ │ +     ─ □ ✕ │  ← tab bar (title bar)
+│▌acme │ plan.md ● │ handoff.md │ agent.log ⇣ │ ADR-003.md │ + ▦ ⌕ ⋯ ─ □ ✕ │  ← tab bar (title bar)
 ├──────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │            # Execution plan                                              │
@@ -46,7 +46,7 @@ the [decision records](../decisions/)).
 
 | Surface | Role | Summon / dismiss |
 |---|---|---|
-| **Tab bar** (merged with title bar, client-side decorations) | Profile chip (name + accent colour, left edge), tabs, new-tab button, window controls | Always visible |
+| **Tab bar** (merged with title bar, client-side decorations) | Profile chip (name + accent colour, left edge), tabs, new-tab button after the last tab, (v0.7) the tools `▦` Tab overview, `⌕` Search tabs and `⋯` Commands at the far right, window controls. A tab fits its name (96–200 px) and shows `✕` on hover, when shown or focused; short lines separate the tabs not shown | Always visible |
 | **Document area** | Rendered or source view of the active tab | Always visible |
 | **Status bar** | Path (click → copy menu), view mode, read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; (v0.6) a Markdown document's task items done of all ("7 of 12 tasks", once rendered) and its change marks ("3 changes", F20); (v0.3) a table's options (separator and header, a menu); the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width") | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
@@ -63,10 +63,12 @@ the [decision records](../decisions/)).
 
 **Window title** (used by GNOME's overview and Alt+Tab): `<file name> — <profile> — galeo`.
 
-*Planned (the [mouse paths review](mouse-paths.md), not yet built):* a `⌕` Search tabs button and a
-`⋯` Commands button (it opens the command palette) beside `▦` at the bar's far right, before the
-window controls, while `+` stays after the last tab (in the tab bar or, with tabs on the left, the
-title bar); Settings and New window in the profile menu; in the status bar, the view
+(v0.7) `▦` Tab overview, `⌕` Search tabs and `⋯` Commands (it opens the command palette) sit at the
+bar's far right, before the window controls, while `+` stays after the last tab (in the tab bar or,
+with tabs on the left, the title bar); the look is [visual-refresh.md](visual-refresh.md).
+
+*Planned (the [mouse paths review](mouse-paths.md), not yet built):* Settings and New window in the
+profile menu; in the status bar, the view
 name as a menu (views, wrap, outline), a Follow toggle for logs, and a click on the zoom or reader
 width resetting it.
 
@@ -359,8 +361,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 - Unlike quick open (F8), it never lists files that aren't tabs: it answers "where is that tab",
   not "open a file". Closed windows stay with Ctrl+Shift+T.
 - The list holds only tabs of this window, so of one profile.
-- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* a `⌕` button at the bar's
-  far right, beside `▦`, opens it.
+- (v0.7) The `⌕` button at the bar's far right, beside `▦`, opens it.
 
 ### F17 — Tab overview (v0.4)
 
@@ -397,8 +398,8 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   - the shown tab's name and folder, dimmed, on the area that drags the window;
   - the window controls.
 
-  *Planned (the [mouse paths review](mouse-paths.md), not yet built):* the `⌕` and `⋯` buttons after
-  the overview button, so the panel, collapsed or not, keeps its width.
+  (v0.7) The `⌕` and `⋯` buttons follow the overview button at the far right, so the panel,
+  collapsed or not, keeps its width.
 
   See [ADR-023](../decisions/ADR-023-window-layout-with-tabs-on-the-left.md).
 - A divider between the panel and the document sets the panel's width, from 140 to 480 px. The
@@ -563,7 +564,7 @@ this map only.
 - **Theme modes**: Light, Dark, Follow system (default; tracks GNOME's dark-style preference
   live). Per-profile override allowed: each window follows its own profile's mode, so two
   profiles can sit side by side in different modes. Native menus and dialogs follow the desktop.
-- **Profile accent**: a colour chip at the tab bar's left edge and the active-tab underline.
+- **Profile accent**: a colour chip at the tab bar's left edge and the shown tab's top line (the side panel row's left edge).
   Accent is never the only cue (the profile name is always shown). It is one of 8 presets, each
   checked to stand out 3:1 on the tab bar in light and dark; a colour hand-edited into
   `profile.json` is used as it is.
@@ -612,7 +613,7 @@ this map only.
 - **Overlays** (quick open, palette, find, dialogs): dialogs trap focus and restore it to the
   document on close; quick open/palette use the combobox + listbox pattern with
   `aria-activedescendant`; Esc always closes.
-- **Focus**: visible `:focus-visible` rings in every theme; F6 cycles focus between tab bar,
+- **Focus**: visible `:focus-visible` rings in every theme (1 px, 3:1 on every background they meet); F6 cycles focus between tab bar,
   document and status bar; the document area is focusable so keyboard scrolling works
   immediately after opening.
 - **Announcements** (`aria-live="polite"`): find results ("3 of 12"), file reloaded, file missing,

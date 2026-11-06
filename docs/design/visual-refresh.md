@@ -2,7 +2,8 @@
 
 - Date: 2026-11-05
 - Status: accepted by the owner (2026-11-05): direction A with B's Settings cards (§3); the tools at
-  the bar's far right (§6)
+  the bar's far right (§6). Built in v0.7, with the changes from the owner's look checks
+  (2026-11-06) written into §4
 - Scope: the interface around the document: the tab bar or title bar, the side panel, the status bar,
   menus, overlays (palette, quick open, tab search, tab overview, find in all tabs, find bar, outline),
   dialogs and modals, banners, the empty window and Settings. Documents keep their look
@@ -163,17 +164,20 @@ accessible name; colour is never the only signal.
 
 - **Purpose:** switch documents; reach the window's tools. Keeps a drag area at all times (ADR-019).
 - **Order:** profile chip · tabs · `+` New tab (quick open) · drag area · `▦` Tab overview · `⌕` Search
-  tabs · `⋯` Commands · a 1 px divider · window controls. With tabs on the left: `◧` Panel · chip · `+`
-  · the shown tab's name and folder (centred, muted, on the drag area) · `▦` `⌕` `⋯` · divider · window
+  tabs · `⋯` Commands · window controls. With tabs on the left: `◧` Panel · chip · `+`
+  · the shown tab's name and folder (centred, muted, on the drag area) · `▦` `⌕` `⋯` · window
   controls. `+` stays where a new tab appears; the tools keep one place however many tabs are open
   (on macOS, where the window buttons are at the start, the tools end the bar).
 - **Tab states:** default (muted text); hover (`chrome-hover`, fg text, `✕` shown); shown (joins the
-  document, 2 px accent line on top, `✕` shown); focus (the 2 px ring inside); dragged (today's ghost and drop line, recoloured
+  document, 2 px accent line on top, `✕` shown); focus (the ring inside, §2 Focus); dragged (today's ghost and drop line, recoloured
   `focus`); hibernated (muted, as today); updated (a 6 px `link` dot before `✕`, name gains "changed on
   disk"); edited (`●` in place of `✕` until hover, as today); missing file (muted italic, "file missing"
   as today); pinned (§5 pin icon before the name, no `✕`, name gains
   "pinned").
-- **Tab width:** fits its name between 96 and 200 px (today: fixed); the strip scrolls as today.
+- **Tab width:** fits its name between 96 and 200 px (today: fixed); the strip scrolls as today, and
+  while it does `+` sits after the right scroll button.
+- **Separators:** a 1 px line, half the tab's height, at the right of each tab; hidden beside the
+  shown, hovered and focused tabs, as browsers do (owner, 2026-11-06).
 - **Icon buttons:** 28 × 28, `radius-md`, muted icon; hover `chrome-hover` + fg; pressed or menu
   open `chrome-press`; focus ring. Each has a tooltip with its shortcut, as `▦` has today.
 
@@ -187,7 +191,9 @@ accessible name; colour is never the only signal.
 
 ### Side panel (tabs on the left)
 
-- Rows: name (`text-md`) over folder (`text-sm`, muted), 6/8 px padding, `radius-md`, 2 px apart.
+- Rows: name (`text-md`, 500) over folder (`text-xs`, muted), 6/8 px padding, `radius-md`. Rows touch;
+  a 1 px line under each starts under the text and fades out to the right, hidden beside the shown,
+  hovered and focused rows and after the last (owner, 2026-11-06).
   States as tabs. A **Pinned** group heads the list when any tab is pinned (`text-xs`, 600, muted,
   upper case), then the rest.
 - Collapsed: 32 px wide, markers as today, drawn with the scale; the shown marker filled.
