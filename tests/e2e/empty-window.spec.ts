@@ -28,7 +28,7 @@ test('a window without tabs shows how to open files and the recent ones, and pas
     await expect(first.window.getByTestId('quick-open')).toHaveCount(0);
 
     await empty.getByRole('button', { name: /basic\.md/ }).click();
-    await expect(first.window.getByRole('tab')).toHaveText(['basic.md✕']);
+    await expect(first.window.getByRole('tab')).toHaveText(['basic.md']);
     await expect(shownDocument(first.window).locator('h1')).toBeVisible();
     await first.close();
   } finally {

@@ -3,6 +3,7 @@ import { isTextDropItem, Tab, TabList, useDrag, useDrop } from 'react-aria-compo
 import type { TabView } from '../../shared/tabs';
 import { tabLabels } from '../../shared/tab-labels';
 import { editors } from '../edit/editors';
+import { Icon } from '../ui/icons';
 import { watchDragExit } from './drag-exit';
 import { fromGaleo, TAB_TYPE } from './drag-types';
 import { flagsOf, indicators, type TabFlags } from './indicators';
@@ -35,6 +36,7 @@ export function TabStrip({
   stripRef,
   onFilesDropped,
   onMarkerTip,
+  trailing,
 }: {
   view: TabsView;
   store: TabStore;
@@ -43,6 +45,8 @@ export function TabStrip({
   /** Files from the file manager were dropped at the caret: they go after this tab (null: first). */
   onFilesDropped?: (after: string | null) => void;
   onMarkerTip?: (tip: MarkerTip | null) => void;
+  /** Drawn after the last tab, inside the strip (the bar's +), so the strip still takes drops after it. */
+  trailing?: ReactNode;
 }) {
   const axis: Axis = layout === 'bar' ? 'x' : 'y';
   const labels = tabLabels(view.tabs.map((tab) => tab.path));
@@ -127,6 +131,7 @@ export function TabStrip({
           />
         )}
       </TabList>
+      {trailing}
       {caret && <div className="tab-caret" data-testid="tab-caret" style={axis === 'x' ? { left: caret.offset } : { top: caret.offset }} />}
     </div>
   );
@@ -210,7 +215,7 @@ function TabItem({
       }}
       onAuxClick={onAuxClick}
     >
-      ✕
+      <Icon name="close" />
     </span>
   );
 

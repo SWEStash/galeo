@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { appIcon, hardenedWebPreferences, isPermissionAllowed, mainKey, ownArgs, TAB_BAR_HEIGHT, titleBarOverlay, windowTitle } from './policy';
 import { startInfoArg, startInfoFrom } from '../../shared/start-info';
@@ -71,8 +73,11 @@ describe('hardenedWebPreferences', () => {
 
 describe('titleBarOverlay', () => {
   it("draws the window controls over the tab bar, in the tab bar's colours for each scheme", () => {
-    expect(titleBarOverlay('light')).toEqual({ color: '#f6f8fa', symbolColor: '#1f2328', height: TAB_BAR_HEIGHT });
-    expect(titleBarOverlay('dark')).toEqual({ color: '#161b22', symbolColor: '#e6edf3', height: TAB_BAR_HEIGHT });
+    // The page's own bar colour (tokens.css), so the controls' strip and the bar are one surface.
+    const tokens = readFileSync(path.resolve(import.meta.dirname, '../../renderer/styles/tokens.css'), 'utf8');
+    const [light, dark] = [...tokens.matchAll(/--galeo-chrome-bar:\s*(#[0-9a-f]{6});/g)].map((match) => match[1]);
+    expect(titleBarOverlay('light')).toEqual({ color: light, symbolColor: '#1f2328', height: TAB_BAR_HEIGHT });
+    expect(titleBarOverlay('dark')).toEqual({ color: dark, symbolColor: '#e6edf3', height: TAB_BAR_HEIGHT });
   });
 });
 

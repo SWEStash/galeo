@@ -5,7 +5,7 @@ import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
 import { dropFiles } from '../helpers/tab-drag';
 
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
-const tabNames = async (window: Page) => (await window.getByRole('tab').allTextContents()).map((text) => text.replace('✕', '').replace(/,.*$/, ''));
+const tabNames = async (window: Page) => (await window.getByRole('tab').allTextContents()).map((text) => text.replace(/,.*$/, ''));
 
 async function centreOf(window: Page, selector: string) {
   const box = (await window.locator(selector).first().boundingBox())!;

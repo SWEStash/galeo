@@ -146,7 +146,7 @@ test('closing the last window keeps its tabs for next time', async () => {
     await exited;
     const second = await launchApp([], { home });
     try {
-      await expect(second.window.getByRole('tab')).toHaveText(['plan-50k.md✕', 'basic.md✕']);
+      await expect(second.window.getByRole('tab')).toHaveText(['plan-50k.md', 'basic.md']);
     } finally {
       await second.close();
     }
@@ -168,7 +168,7 @@ test('quitting at the sandbox prompt keeps the last session, and its snapshots',
 
     const again = await launchApp([], { home });
     try {
-      await expect(again.window.getByRole('tab')).toHaveText(['plan-50k.md✕', 'basic.md✕']);
+      await expect(again.window.getByRole('tab')).toHaveText(['plan-50k.md', 'basic.md']);
     } finally {
       await again.close();
     }
@@ -186,7 +186,7 @@ test('after kill -9 the session is the last one saved, whole', async () => {
     await exited;
     const second = await launchApp([], { home });
     try {
-      await expect(second.window.getByRole('tab')).toHaveText(['plan-50k.md✕', 'basic.md✕']);
+      await expect(second.window.getByRole('tab')).toHaveText(['plan-50k.md', 'basic.md']);
       await expect(shownDocument(second.window)).toBeVisible();
     } finally {
       await second.close();
@@ -216,7 +216,7 @@ test("Restore previous session brings back the last run's tabs in a new window",
 
     const third = await launchApp([], { home });
     try {
-      await expect(third.window.getByRole('tab')).toHaveText(['basic.md✕']);
+      await expect(third.window.getByRole('tab')).toHaveText(['basic.md']);
       // The run just restored is the current session; the one before it is the first snapshot.
       const previous = await previousSessions(third.window);
       expect(previous.map((each) => ({ snapshot: each.snapshot, windows: each.windows, tabs: each.tabs }))).toEqual([
@@ -224,7 +224,7 @@ test("Restore previous session brings back the last run's tabs in a new window",
       ]);
       await third.window.evaluate(() => window.galeo.session.restorePrevious(1));
       const restored = await third.app.waitForEvent('window');
-      await expect(restored.getByRole('tab')).toHaveText(['plan-50k.md✕']);
+      await expect(restored.getByRole('tab')).toHaveText(['plan-50k.md']);
     } finally {
       await third.close();
     }

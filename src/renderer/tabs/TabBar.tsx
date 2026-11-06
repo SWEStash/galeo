@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Icon } from '../ui/icons';
 import { setMarkerTip, StripHost, type PanelProps } from './SidePanel';
 import { titleText } from './side-panel';
 import type { TabStore, TabsView } from './store';
@@ -25,6 +26,8 @@ export function TabBar({
   start,
   onOpenFile,
   onOverview,
+  onSearchTabs,
+  onCommands,
   onFilesDropped,
   panel,
 }: {
@@ -34,6 +37,10 @@ export function TabBar({
   onOpenFile?: () => void;
   /** Shows the tab overview (UX F17). */
   onOverview?: () => void;
+  /** Opens tab search (UX F16). */
+  onSearchTabs?: () => void;
+  /** Opens the command palette: one click reaches every command (mouse paths review). */
+  onCommands?: () => void;
   /** Files from the file manager were dropped at the caret: they go after this tab (null: first). */
   onFilesDropped?: (after: string | null) => void;
   /** The side panel, when the profile puts its tabs on the left. */
@@ -87,6 +94,12 @@ export function TabBar({
   }, [view.active, view.tabs, panel?.collapsed]);
 
   const toggleName = panel?.collapsed ? 'Expand tab panel' : 'Collapse tab panel';
+  // + goes where a new tab appears: after the last tab, or by the chip with the tabs on the left.
+  const newTab = onOpenFile && (
+    <button type="button" className="tab-new" data-testid="tab-new" aria-label="Open file… (Ctrl+P)" title="Open file… (Ctrl+P)" onClick={onOpenFile}>
+      <Icon name="plus" />
+    </button>
+  );
   return (
     <div className={left ? 'tab-bar title-bar' : 'tab-bar'} data-testid={left ? 'title-bar' : 'tab-bar'} data-tab-drag={view.dragging || undefined}>
       {panel && (
@@ -100,10 +113,11 @@ export function TabBar({
           title={`${toggleName} (Ctrl+Shift+B)`}
           onClick={() => panel.onCollapsed(!panel.collapsed)}
         >
-          <span aria-hidden="true">◧</span>
+          <Icon name="panel" />
         </button>
       )}
       {start}
+      {left && newTab}
       {edges.overflows && <ScrollButton direction={-1} disabled={!edges.canLeft} onScroll={scrollBy} />}
       <StripHost panel={panel ?? null} id={SIDE_PANEL_ID}>
         <TabStrip
@@ -112,20 +126,11 @@ export function TabBar({
           layout={!panel ? 'bar' : panel.collapsed ? 'markers' : 'rows'}
           stripRef={listRef}
           onMarkerTip={setMarkerTip}
+          {...(!left && newTab ? { trailing: newTab } : {})}
           {...(onFilesDropped ? { onFilesDropped } : {})}
         />
       </StripHost>
       {edges.overflows && <ScrollButton direction={1} disabled={!edges.canRight} onScroll={scrollBy} />}
-      {onOpenFile && (
-        <button type="button" className="tab-new" data-testid="tab-new" aria-label="Open file… (Ctrl+P)" title="Open file… (Ctrl+P)" onClick={onOpenFile}>
-          +
-        </button>
-      )}
-      {onOverview && (
-        <button type="button" className="tab-overview-button" data-testid="tab-overview-button" aria-label="Tab overview (Ctrl+Shift+E)" title="Tab overview (Ctrl+Shift+E)" onClick={onOverview}>
-          <span aria-hidden="true">▦</span>
-        </button>
-      )}
       {/* The window title says it already: this is for the eye, and drags the window like the rest. */}
       {left && (
         <span className="title-bar-text" data-testid="title-bar-text" aria-hidden="true">
@@ -134,6 +139,24 @@ export function TabBar({
       )}
       {/* Tabs never cover this: the window can always be dragged, however many are open. */}
       <div className="window-grip" data-testid="window-grip" />
+      {/* The window's tools keep one place, at the end, however many tabs are open. */}
+      <div className="bar-tools" data-testid="bar-tools">
+        {onOverview && (
+          <button type="button" className="bar-tool tab-overview-button" data-testid="tab-overview-button" aria-label="Tab overview (Ctrl+Shift+E)" title="Tab overview (Ctrl+Shift+E)" onClick={onOverview}>
+            <Icon name="grid" />
+          </button>
+        )}
+        {onSearchTabs && (
+          <button type="button" className="bar-tool" data-testid="tab-search-button" aria-label="Search tabs (Ctrl+Shift+A)" title="Search tabs (Ctrl+Shift+A)" onClick={onSearchTabs}>
+            <Icon name="search" />
+          </button>
+        )}
+        {onCommands && (
+          <button type="button" className="bar-tool" data-testid="commands-button" aria-label="Commands (Ctrl+Shift+P)" title="Commands (Ctrl+Shift+P)" onClick={onCommands}>
+            <Icon name="more" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -146,7 +169,7 @@ function ScrollButton({ direction, disabled, onScroll }: { direction: -1 | 1; di
   const name = direction < 0 ? 'Scroll tabs left' : 'Scroll tabs right';
   return (
     <button type="button" className="tab-scroll" tabIndex={-1} aria-label={name} title={name} disabled={disabled} onClick={() => onScroll(direction)}>
-      <span aria-hidden="true">{direction < 0 ? '‹' : '›'}</span>
+      <Icon name={direction < 0 ? 'chevron-left' : 'chevron-right'} />
     </button>
   );
 }

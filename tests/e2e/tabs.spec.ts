@@ -107,7 +107,7 @@ test('Ctrl+W closes the tab and shows its right neighbour; Ctrl+Shift+T brings i
     await expect(selected(window)).toContainText('math.md');
     await window.keyboard.press('ControlOrMeta+Shift+T');
     await expect(window.getByRole('tab')).toHaveCount(5);
-    expect(await tabNames(window)).toEqual(five.map((file) => `${path.basename(file)}✕`));
+    expect(await tabNames(window)).toEqual(five.map((file) => path.basename(file)));
     await expect(selected(window)).toContainText('gfm.md');
   });
 });
@@ -139,7 +139,10 @@ test('clicking a tab shows it; its ✕ and a middle-click close it', async () =>
   await withTabs(async (window) => {
     await window.getByRole('tab').filter({ hasText: 'math.md' }).click();
     await expect(selected(window)).toContainText('math.md');
-    await window.getByRole('tab').filter({ hasText: 'gfm.md' }).locator('.tab-close').click();
+    // ✕ shows on the tab under the pointer (and the shown one).
+    const gfm = window.getByRole('tab').filter({ hasText: 'gfm.md' });
+    await gfm.hover();
+    await gfm.locator('.tab-close').click();
     await expect(window.getByRole('tab')).toHaveCount(4);
     await window.getByRole('tab').filter({ hasText: 'sample.log' }).click({ button: 'middle' });
     await expect(window.getByRole('tab')).toHaveCount(3);
@@ -153,7 +156,7 @@ test('dragging a tab moves it to where it is dropped', async () => {
     const box = (await fourth.boundingBox())!;
     // Past the middle of the fourth tab: the insertion point is after it.
     await window.getByRole('tab').nth(0).locator('.tab-label').dragTo(fourth, { targetPosition: { x: box.width * 0.75, y: box.height / 2 } });
-    await expect.poll(() => tabNames(window)).toEqual(['gfm.md✕', 'math.md✕', 'frontmatter.md✕', 'basic.md✕', 'sample.log✕']);
+    await expect.poll(() => tabNames(window)).toEqual(['gfm.md', 'math.md', 'frontmatter.md', 'basic.md', 'sample.log']);
     await expect(window.getByTestId('tab-caret')).toHaveCount(0);
   });
 });

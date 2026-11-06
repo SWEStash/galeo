@@ -149,12 +149,14 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
   const { overlay, openOverlay, closeOverlay, returnFocusTo } = useOverlay();
   const openQuickOpen = useCallback(() => openOverlay('quickOpen'), [openOverlay]);
   const openOverview = useCallback(() => openOverlay('tabOverview'), [openOverlay]);
+  const openTabSearch = useCallback(() => openOverlay('tabSearch'), [openOverlay]);
+  const openPalette = useCallback(() => openOverlay('palette'), [openOverlay]);
   const { tabsLeft, panelWidth, collapsed, setCollapsed, keepPanelWidth } = useTabsPosition(settings?.settings.tabsPosition, settings?.settings.tabPanelWidth, setMessage);
   useTabShortcuts(store, openQuickOpen, settings?.settings.measure ?? 72, setMessage);
   useUnsavedGuards(store);
   useCommands({
-    commandPalette: () => openOverlay('palette'),
-    searchTabs: () => openOverlay('tabSearch'),
+    commandPalette: openPalette,
+    searchTabs: openTabSearch,
     tabOverview: openOverview,
     findAll: () => openOverlay('findAll'),
     moveTabToWindow: () => {
@@ -220,6 +222,8 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
           start={profiles && <ProfileChip state={profiles} say={setMessage} onAbout={() => openAbout('[data-testid="profile-chip"]')} />}
           onOpenFile={openQuickOpen}
           onOverview={openOverview}
+          onSearchTabs={openTabSearch}
+          onCommands={openPalette}
           onFilesDropped={(after) => landed({ after })}
           panel={tabsLeft ? { width: panelWidth, collapsed, onCollapsed: setCollapsed, onWidth: keepPanelWidth } : null}
         />
