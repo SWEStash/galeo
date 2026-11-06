@@ -560,6 +560,22 @@ export function DocumentPane({
     {
       toggleSource: () => renderable && toggle(afterToggleSource(layout, { editing })),
       toggleSplit: () => ready !== null && toggle(afterToggleSplit(layout, { splittable, editing, lastSingle: lastSingle.current, formatName: FORMAT_NAMES[ready.format] })),
+      viewRendered: () => {
+        if (!renderable) return false;
+        if (view !== 'rendered') toggle(editing ? { refused: 'Leave edit mode (Ctrl+E) to see the rendered view' } : { view: 'rendered' });
+        return true;
+      },
+      viewSource: () => {
+        if (!ready) return false;
+        if (view !== 'source') toggle({ view: 'source' });
+        return true;
+      },
+      viewSplit: () => ready !== null && toggle(splittable ? { view: 'split' } : { refused: `No split view for ${FORMAT_NAMES[ready.format]} files` }),
+      toggleFollow: () => {
+        if (!views?.follow) return false;
+        setFollow((current) => !current);
+        return true;
+      },
       toggleWrap: () => {
         if (view === 'rendered') return false;
         setWrap((current) => !current);
@@ -714,8 +730,9 @@ export function DocumentPane({
       tasks: article ? render.tasks : null,
       // The status bar's Table options read these while a table shows (ADR-021).
       table: tabular && view !== 'source' ? { separator: separatorChoice, found: shownTable?.table?.separator ?? null, header } : null,
+      options: { rendered: renderable, split: splittable, wrap: view === 'rendered' ? null : wrap, outline: outlined ? outlineOpen : null, followable: views?.follow === true },
     });
-  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, render.tasks, tabular, separatorChoice, shownTable?.table, header]);
+  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, render.tasks, tabular, separatorChoice, shownTable?.table, header, renderable, splittable, wrap, outlined, outlineOpen, views?.follow]);
 
   // Ready content is always shown: no document means the content is a state of its own.
   if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={onContextMenu} />;

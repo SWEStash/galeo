@@ -20,6 +20,11 @@ const BASE = {
   /** Logs: jump to the end and keep following it; scrolling up leaves. */
   followEnd: ['End'],
   toggleOutline: ['CmdOrCtrl+Shift+O'],
+  // Palette and the status bar's view menu (mouse paths review).
+  viewRendered: [],
+  viewSource: [],
+  viewSplit: [],
+  toggleFollow: [],
   reload: ['F5', 'CmdOrCtrl+R'],
   back: ['Alt+Left'],
   forward: ['Alt+Right'],

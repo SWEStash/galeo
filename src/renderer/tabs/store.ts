@@ -30,6 +30,11 @@ export interface TabStatus {
   changes?: string | null;
   /** While a table shows: its separator choice, the one the reader found (Auto's pick), its header (ADR-021). */
   table?: { separator: SeparatorChoice; found: Separator | null; header: boolean } | null;
+  /**
+   * What the status bar's view menu offers: the views the document has, and wrap and the outline
+   * where they apply (their state; null where they don't); `followable` for a log.
+   */
+  options?: { rendered: boolean; split: boolean; wrap: boolean | null; outline: boolean | null; followable: boolean };
 }
 
 export interface TabsView {

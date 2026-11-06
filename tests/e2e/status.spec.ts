@@ -181,3 +181,29 @@ test("a log following its end says so in its tab's name; a hibernated tab is dim
     await close();
   }
 });
+
+test("the view's name opens a menu of the views; Follow and a click on the zoom act as their keys do", async () => {
+  const { window, close } = await launchApp(['--', basic, path.join(docs, 'sample.log')]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await window.getByRole('button', { name: 'View: Rendered' }).click();
+    await expect(window.getByRole('menu', { name: 'View' }).getByRole('menuitemradio')).toHaveText(['Rendered', 'Source', 'Split']);
+    await window.getByRole('menuitemradio', { name: 'Source' }).click();
+    await expect(window.getByTestId('status-view')).toHaveText('Source');
+
+    await window.keyboard.press('ControlOrMeta+=');
+    await expect(window.getByTestId('status-zoom')).toHaveText('110%');
+    await window.getByRole('button', { name: 'Zoom 110%, reset' }).click();
+    await expect(window.getByTestId('status-zoom')).toHaveCount(0);
+
+    await window.getByRole('tab', { name: /sample\.log/ }).click();
+    const follow = window.getByRole('button', { name: '⇣ Follow' });
+    await expect(follow).toHaveAttribute('aria-pressed', 'false');
+    await follow.click();
+    await expect(follow).toHaveAttribute('aria-pressed', 'true');
+    await follow.click();
+    await expect(follow).toHaveAttribute('aria-pressed', 'false');
+  } finally {
+    await close();
+  }
+});

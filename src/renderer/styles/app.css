@@ -1362,7 +1362,11 @@ button:focus-visible {
 }
 
 .status-path,
-.status-encoding {
+.status-encoding,
+.status-view,
+.status-follow,
+.status-zoom,
+.status-width {
   height: 20px;
   padding: 0 var(--galeo-space-sm);
   border: 0;
@@ -1395,15 +1399,38 @@ button:focus-visible {
 }
 
 .status-path:hover,
-.status-encoding:hover {
+.status-encoding:hover,
+.status-view:hover,
+.status-follow:hover,
+.status-zoom:hover,
+.status-width:hover {
   background: var(--galeo-chrome-hover);
   color: var(--galeo-color-fg);
 }
 
 .status-path:focus-visible,
-.status-encoding[data-focus-visible] {
+.status-encoding[data-focus-visible],
+.status-view[data-focus-visible],
+.status-follow:focus-visible,
+.status-zoom:focus-visible,
+.status-width:focus-visible {
   outline: var(--galeo-focus-ring);
   box-shadow: var(--galeo-focus-halo);
+}
+
+.status-view {
+  display: inline-flex;
+  gap: var(--galeo-space-2xs);
+  align-items: center;
+}
+.status-view .icon {
+  width: 12px;
+  height: 12px;
+}
+/* Following a log's end: pressed, as a toggle shows it. */
+.status-follow[aria-pressed='true'] {
+  background: var(--galeo-chrome-selected);
+  color: var(--galeo-color-fg);
 }
 
 .status-message {
