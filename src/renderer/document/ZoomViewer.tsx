@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import { pngOf } from './diagram-export';
 import { Button, Dialog, Heading, Modal, ModalOverlay } from 'react-aria-components';
 import { setTrustedHtml } from './host';
 import { actualSize, fit, panBy, zoomAt, type View } from './viewer-math';
@@ -20,7 +21,18 @@ export type ZoomContent = { kind: 'diagram'; svg: string; panel: boolean } | { k
  * + and -, the wheel around the pointer) and pans (dragging, the arrow keys). 0 fits it again, 1
  * shows it at its natural size.
  */
-export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; name: string; onClose: () => void }) {
+export function ZoomViewer({
+  content,
+  name,
+  onClose,
+  onSave,
+}: {
+  content: ZoomContent;
+  name: string;
+  onClose: () => void;
+  /** Saves the diagram (#59): its SVG text, or a PNG drawn from it. */
+  onSave?: (format: 'svg' | 'png', data: string | Uint8Array) => void;
+}) {
   const viewport = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
   const natural = useRef({ width: 1, height: 1 });
@@ -150,6 +162,20 @@ export function ZoomViewer({ content, name, onClose }: { content: ZoomContent; n
                 <Button aria-label="Zoom in (+)" onPress={() => zoomCentred(STEP)}>
                   <Icon name="zoom-in" />
                 </Button>
+                {content.kind === 'diagram' && onSave && (
+                  <>
+                    <Button className="zoom-viewer-save" aria-label="Save as SVG…" onPress={() => onSave('svg', content.svg)}>
+                      <Icon name="download" /> SVG
+                    </Button>
+                    <Button
+                      className="zoom-viewer-save"
+                      aria-label="Save as PNG…"
+                      onPress={() => void pngOf(content.svg, natural.current, { light: content.panel }).then((png) => onSave('png', png), () => onSave('png', new Uint8Array()))}
+                    >
+                      <Icon name="download" /> PNG
+                    </Button>
+                  </>
+                )}
                 <Button aria-label="Close (Esc)" onPress={onClose}>
                   <Icon name="close" />
                 </Button>

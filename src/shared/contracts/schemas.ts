@@ -84,6 +84,11 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'documents.pathMenu': z.tuple([documentId]),
   'documents.contextMenu': z.tuple([documentId, z.strictObject({ tree: z.boolean(), rich: z.boolean() })]),
   'documents.save': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version.nullable()]),
+  // An SVG's text, or a PNG's bytes, at most 20 MiB (DIAGRAM_MAX_BYTES; main checks the bytes again).
+  'diagrams.save': z.union([
+    z.tuple([z.literal('svg'), z.string().min(1).max(20 * 1024 * 1024), z.string().max(200)]),
+    z.tuple([z.literal('png'), z.instanceof(Uint8Array).refine((bytes) => bytes.byteLength > 0 && bytes.byteLength <= 20 * 1024 * 1024, 'size'), z.string().max(200)]),
+  ]),
   'documents.dirty': z.tuple([documentId, z.boolean()]),
   'documents.leaveEdit': z.tuple([documentId]),
   'documents.closeAnswer': z.tuple([z.enum(['asking', 'proceed', 'cancel'])]),

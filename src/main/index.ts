@@ -10,6 +10,8 @@ import { ImageGrants } from '../core/documents/images';
 import { ReadIdentities } from '../core/documents/identities';
 import { DocumentLinks } from '../core/documents/links';
 import { DocumentMenus } from '../core/documents/menus';
+import { DiagramSaves, type DiagramFormat } from '../core/documents/diagram-save';
+import { diagramHandlers } from './documents/diagram-handlers';
 import { DocumentWatches } from '../core/documents/watches';
 import { SelectionGrants } from '../core/documents/selections';
 import { ExternalOpenLimiter } from '../core/links/limiter';
@@ -844,6 +846,7 @@ function start(initialMode: StartupMode): void {
           home: app.getPath('home'),
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, input, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
+        ...diagramHandlers({ saves: new DiagramSaves({ fs, input, encode: (text) => utf8.encode(text), askPath: askSavePath }) }),
         ...dropHandlers({
           drops,
           fs,
@@ -958,6 +961,23 @@ async function ask(windowId: number, options: MessageBoxOptions): Promise<number
   const owner = windowOf(windowId);
   const { response } = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options);
   return response;
+}
+
+/**
+ * Main's own save dialog for a diagram (#59): the path the reader picked, or null. Unpackaged test
+ * runs answer with `GALEO_TEST_SAVE_PATH` (empty: cancelled).
+ */
+async function askSavePath(windowId: number, suggested: string, format: DiagramFormat): Promise<string | null> {
+  const answer = !app.isPackaged ? process.env['GALEO_TEST_SAVE_PATH'] : undefined;
+  if (answer !== undefined) return answer || null;
+  const options = {
+    title: 'Save diagram',
+    defaultPath: path.join(app.getPath('documents'), suggested),
+    filters: [format === 'svg' ? { name: 'SVG image', extensions: ['svg'] } : { name: 'PNG image', extensions: ['png'] }],
+  };
+  const owner = windowOf(windowId);
+  const { canceled, filePath } = owner ? await dialog.showSaveDialog(owner, options) : await dialog.showSaveDialog(options);
+  return canceled || !filePath ? null : filePath;
 }
 
 /** Asks, in a native dialog the page can't answer for itself, whether a burst of opens may go on. */

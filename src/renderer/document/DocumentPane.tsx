@@ -751,6 +751,14 @@ export function DocumentPane({
 
   // Ready content is always shown: no document means the content is a state of its own.
   const menu = () => onContextMenu({ tree: treeModel !== null && view === 'rendered', rich: article && view !== 'source' });
+  const saveDiagram = (format: 'svg' | 'png', data: string | Uint8Array, name: string) =>
+    void window.galeo.diagrams.save(format, data, name).then(
+      (result) => {
+        if (result === 'saved') onMessage('Saved the diagram');
+        else if (result !== 'cancelled') onMessage("Couldn't save the diagram");
+      },
+      () => onMessage("Couldn't save the diagram"),
+    );
   const copyCode = (text: string) =>
     void navigator.clipboard.writeText(text).then(
       () => onMessage('Copied'),
@@ -829,7 +837,7 @@ export function DocumentPane({
           <OutlinePanel entries={sourceOutlined ? sourceEntries : render.outline} empty={sourceOutlined ? 'No keys' : 'No headings'} current={heading} onChoose={goToHeading} onClose={closeOutline} autoFocus={focusOutline} />
         )}
       </div>
-      {viewer && <ZoomViewer content={viewer.content} name={viewer.name} onClose={closeViewer} />}
+      {viewer && <ZoomViewer content={viewer.content} name={viewer.name} onClose={closeViewer} onSave={(format, data) => saveDiagram(format, data, viewer.name)} />}
       {diff !== null && disk === 'disk-changed' && content.state === 'ready' && (
         <DiffDialog
           mine={diff}

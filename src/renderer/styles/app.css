@@ -1851,6 +1851,12 @@ button:focus-visible {
   flex-direction: column;
   height: 100%;
 }
+/* Save as SVG or PNG (#59): the icon and the format's name. */
+.zoom-viewer-save {
+  display: inline-flex;
+  gap: var(--galeo-space-xs);
+  align-items: center;
+}
 .zoom-viewer-bar {
   display: flex;
   gap: var(--galeo-space-sm);

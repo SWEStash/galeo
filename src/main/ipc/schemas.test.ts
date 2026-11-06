@@ -99,6 +99,23 @@ describe('document channel arguments (SR-11)', () => {
     for (const bad of [[ID], [ID, {}], [ID, { tree: 'yes' }], [ID, { tree: true, path: '/etc/passwd' }]]) expect(accepts('documents.contextMenu', bad)).toBe(false);
   });
 
+  it('diagrams.save takes an SVG as text or a PNG as bytes, up to 20 MiB, and a name', () => {
+    expect(accepts('diagrams.save', ['svg', '<svg/>', 'flow'])).toBe(true);
+    expect(accepts('diagrams.save', ['png', new Uint8Array([137, 80]), 'flow'])).toBe(true);
+    for (const bad of [
+      ['svg', new Uint8Array([1]), 'flow'],
+      ['png', '<svg/>', 'flow'],
+      ['svg', '', 'flow'],
+      ['png', new Uint8Array(), 'flow'],
+      ['png', new Uint8Array(20 * 1024 * 1024 + 1), 'flow'],
+      ['gif', '<svg/>', 'flow'],
+      ['svg', '<svg/>', 'x'.repeat(201)],
+      ['svg', '<svg/>', 'flow', '/etc/passwd'],
+    ]) {
+      expect(accepts('diagrams.save', bad)).toBe(false);
+    }
+  });
+
   it('tabs.pin takes an id and whether to pin', () => {
     for (const good of [[ID, true], [ID, false]]) expect(accepts('tabs.pin', good)).toBe(true);
     for (const bad of [[ID], [ID, 'true'], [ID, 1], [ID, true, 'x']]) expect(accepts('tabs.pin', bad)).toBe(false);

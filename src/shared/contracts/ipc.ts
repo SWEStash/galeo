@@ -163,6 +163,7 @@ export const CHANNELS = [
   'recent.open',
   'recent.clear',
   'drops.open',
+  'diagrams.save',
   'quickOpen.start',
   'quickOpen.query',
   'quickOpen.open',
@@ -235,6 +236,8 @@ export interface Requests {
    * was gone, only if it's still gone. A reader's input pays for it (ADR-013).
    */
   'documents.save': [id: string, text: string, base: string | null];
+  /** Saves the diagram the viewer shows, as SVG (its text) or PNG (bytes): main asks where (#59). */
+  'diagrams.save': [format: 'svg' | 'png', data: string | Uint8Array, name: string];
   /** Whether the tab in edit mode has unsaved changes (close and quit ask about them). */
   'documents.dirty': [id: string, dirty: boolean];
   /** The page left edit mode (its text is saved or discarded): main takes the grant back. */
@@ -355,6 +358,8 @@ export interface Responses {
   'documents.pathMenu': void;
   'documents.contextMenu': DocumentMenuChoice | null;
   'documents.save': SaveResult;
+  /** saved; cancelled (no path picked); refused (no input, wrong shape, too big); failed (the write). */
+  'diagrams.save': 'saved' | 'cancelled' | 'refused' | 'failed';
   'documents.dirty': void;
   'documents.leaveEdit': void;
   'documents.closeAnswer': void;
