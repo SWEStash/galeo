@@ -29,6 +29,7 @@ export function TabBar({
   onSearchTabs,
   onCommands,
   onFilesDropped,
+  onTabMenu,
   panel,
 }: {
   view: TabsView;
@@ -43,6 +44,8 @@ export function TabBar({
   onCommands?: () => void;
   /** Files from the file manager were dropped at the caret: they go after this tab (null: first). */
   onFilesDropped?: (after: string | null) => void;
+  /** A tab's right-click menu was asked for (UX F4). */
+  onTabMenu?: (id: string) => void;
   /** The side panel, when the profile puts its tabs on the left. */
   panel?: PanelProps | null;
 }) {
@@ -124,6 +127,7 @@ export function TabBar({
         <TabStrip
           view={view}
           store={store}
+          {...(onTabMenu ? { onTabMenu } : {})}
           layout={!panel ? 'bar' : panel.collapsed ? 'markers' : 'rows'}
           stripRef={listRef}
           onMarkerTip={setMarkerTip}

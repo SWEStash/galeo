@@ -2,6 +2,7 @@ import type { ReadIdentities } from '../../core/documents/identities';
 import type { InputCredits } from '../../core/documents/input-credits';
 import type { CrashRecovery } from '../../core/tabs/crashes';
 import { SETTLE_MS, type TabDrags } from '../../core/tabs/drags';
+import type { DocumentMenus } from '../../core/documents/menus';
 import type { WarmTabs } from '../../core/tabs/lifecycle';
 import { forPage } from '../../core/tabs/page';
 import type { TabRegistry } from '../../core/tabs/registry';
@@ -19,6 +20,7 @@ type TabChannels =
   | 'tabs.zoom'
   | 'tabs.width'
   | 'tabs.pin'
+  | 'tabs.menu'
   | 'tabs.viewState'
   | 'tabs.close'
   | 'tabs.reopenClosed'
@@ -54,7 +56,9 @@ interface TabHandlerDeps {
   drags: TabDrags;
   now: () => number;
   /** Real input per window: starting a drag, listing the windows or a palette move spends one; a drag can spend a held press instead. */
-  input: Pick<InputCredits, 'spend' | 'spendPress'>;
+  input: Pick<InputCredits, 'spend' | 'spendPress' | 'received'>;
+  /** The tab's right-click menu, built and shown by main. */
+  menus: Pick<DocumentMenus, 'tab'>;
   /** Moves a tab to another window, at `position`: false when main refused. */
   move: (id: string, from: number, to: number, position: number) => boolean;
   /** Moves a tab to a new window of its profile. */
@@ -131,6 +135,15 @@ export function tabHandlers(deps: TabHandlerDeps): Pick<Handlers, TabChannels> {
     },
     'tabs.pin': ([id, pinned], event) => {
       if (!tabs.setPinned(id, event.sender.id, pinned)) resync(event.sender.id);
+    },
+    // A choice in a native menu is the reader's own input (the page can't make one): it earns the
+    // window a credit, so Reopen and the moves the page runs next work as their shortcuts do.
+    'tabs.menu': async ([id], event) => {
+      const window = event.sender.id;
+      if (!tabs.get(id, window)) return null;
+      const choice = await deps.menus.tab(id, window, { canReopen: tabs.closedAt(window) !== null || closedWindows.at(window) !== null });
+      if (choice) input.received(window);
+      return choice;
     },
     'tabs.close': ([id], event) => {
       const window = event.sender.id;

@@ -7,6 +7,7 @@ import { WarmTabs } from '../../../src/core/tabs/lifecycle';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
 import { tabHandlers } from '../../../src/main/tabs/handlers';
+import type { TabMenuChoice } from '../../../src/shared/contracts/ipc';
 import type { TabSnapshot } from '../../../src/shared/tabs';
 import { FakeFileSystem } from '../../helpers/fakes';
 
@@ -14,7 +15,7 @@ const from = (id: number) => ({ sender: { id } }) as WindowIpcEvent;
 const tabPaths = (snapshot: TabSnapshot) => snapshot.tabs.map((tab) => tab.path);
 const MB = 1024 * 1024;
 
-function setup(closedWindows: { at: number | null; reopened: number[] } = { at: null, reopened: [] }) {
+function setup(closedWindows: { at: number | null; reopened: number[] } = { at: null, reopened: [] }, menuChoice: TabMenuChoice | null = null) {
   let n = 0;
   const tabs = new TabRegistry(() => `id-${++n}`);
   const fs = new FakeFileSystem({ '/d/a.md': 'a', '/d/b.md': 'b' });
@@ -33,7 +34,9 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
   const dragging: boolean[] = [];
   const told: number[] = [];
   const timers: { at: number; run: () => void }[] = [];
+  const menus: [string, number, { canReopen: boolean }][] = [];
   const handlers = tabHandlers({
+    menus: { tab: async (id, window, options) => (menus.push([id, window, options]), menuChoice) },
     crashes,
     positioned: (window) => positioned.push(window),
     tabs,
@@ -68,8 +71,32 @@ function setup(closedWindows: { at: number | null; reopened: number[] } = { at: 
       timer.run();
     }
   };
-  return { tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, crashes, positioned: () => positioned, input, moved, tornOff, focused, dragging, told, later, setNow: (at: number) => void (now = at) };
+  return { menus, tabs, fs, reads, handlers, resynced, closed, demoted, stale, a, b, crashes, positioned: () => positioned, input, moved, tornOff, focused, dragging, told, later, setNow: (at: number) => void (now = at) };
 }
+
+describe("a tab's right-click menu", () => {
+  it('shows only for the sender\'s own tab, offering Reopen when something closed', async () => {
+    const { handlers, menus, a, tabs } = setup({ at: null, reopened: [] }, 'close');
+    expect(await handlers['tabs.menu']([a], from(2))).toBeNull();
+    expect(menus).toEqual([]);
+    expect(await handlers['tabs.menu']([a], from(1))).toBe('close');
+    tabs.close(tabs.open('/d/c.md', 1).id, 1);
+    await handlers['tabs.menu']([a], from(1));
+    expect(menus.map(([, , options]) => options.canReopen)).toEqual([false, true]);
+  });
+
+  it('counts a choice as input, so the Reopen the page runs next works; a dismissed menu earns nothing', async () => {
+    const chosen = setup({ at: null, reopened: [] }, 'reopen');
+    chosen.tabs.close(chosen.b, 1);
+    expect(await chosen.handlers['tabs.menu']([chosen.a], from(1))).toBe('reopen');
+    expect(chosen.handlers['tabs.reopenClosed']([], from(1))).not.toBeNull();
+
+    const dismissed = setup();
+    dismissed.tabs.close(dismissed.b, 1);
+    expect(await dismissed.handlers['tabs.menu']([dismissed.a], from(1))).toBeNull();
+    expect(dismissed.handlers['tabs.reopenClosed']([], from(1))).toBeNull();
+  });
+});
 
 describe('tabHandlers', () => {
   it('gives a window its own tabs only', async () => {

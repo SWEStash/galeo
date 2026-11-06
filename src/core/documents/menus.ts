@@ -1,3 +1,4 @@
+import { TAB_MENU_CHOICES, type TabMenuChoice } from '../../shared/contracts/ipc';
 import { UNKNOWN_DOCUMENT } from '../../shared/documents';
 import { canOpenWithDefaultApp } from '../links/open-with';
 import type { Clipboard, FileSystem, MenuItem, OsShell } from '../ports';
@@ -49,6 +50,34 @@ export class DocumentMenus {
       return;
     }
     this.act(choice, tab.path);
+  }
+
+  /**
+   * A tab's right-click menu (UX F4): main copies the path and reveals the file itself; the other
+   * choices go back to the page, which runs the same command as their shortcuts on this tab.
+   */
+  async tab(id: string, window: number, { canReopen }: { canReopen: boolean }): Promise<TabMenuChoice | null> {
+    const tab = this.deps.tabs.get(id, window);
+    if (!tab) throw new Error(UNKNOWN_DOCUMENT);
+    const file = tab.kind !== 'settings';
+    const movable = file && this.deps.tabs.list(window).length > 1;
+    const choice = await this.deps.showMenu(window, [
+      { id: 'close', label: 'Close tab' },
+      { id: 'reopen', label: 'Reopen closed tab', enabled: canReopen },
+      { id: 'move-new', label: 'Move to new window', enabled: movable },
+      { id: 'move-to', label: 'Move to window…', enabled: movable },
+      { id: 'copy-path', label: 'Copy path', enabled: file },
+      { id: 'reveal', label: 'Reveal in Files', enabled: file },
+      { id: 'pin', label: this.deps.tabs.pinned(id, window) ? 'Unpin tab' : 'Pin tab', enabled: file },
+    ]);
+    // The tab may have closed while the menu was open.
+    const now = this.deps.tabs.get(id, window);
+    if (!now) return null;
+    if (choice === 'copy-path' || choice === 'reveal') {
+      this.act(choice, now.path);
+      return null;
+    }
+    return TAB_MENU_CHOICES.find((each) => each === choice) ?? null;
   }
 
   private act(choice: string | null, path: string): void {

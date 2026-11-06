@@ -36,6 +36,7 @@ import type { FindAllChoice } from './tabs/FindAll';
 import { MoveTabDialog } from './tabs/MoveTabDialog';
 import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
+import { showTabMenu } from './app/tab-menu';
 import { TabDocument } from './tabs/TabDocument';
 import { TabSearch } from './tabs/TabSearch';
 import { useFileDrops } from './tabs/useFileDrops';
@@ -225,6 +226,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
           onSearchTabs={openTabSearch}
           onCommands={openPalette}
           onFilesDropped={(after) => landed({ after })}
+          onTabMenu={(id) => void showTabMenu(id, { store, say: setMessage, chooseWindow: () => openOverlay('moveTab') })}
           panel={tabsLeft ? { width: panelWidth, collapsed, onCollapsed: setCollapsed, onWidth: keepPanelWidth } : null}
         />
         <div className="window-body">

@@ -38,6 +38,10 @@ export interface ProfileView {
 }
 
 /** Another window a tab can move to (ADR-019): its profile, and the file its shown tab has (null: none). */
+/** What a tab's right-click menu hands back to the page: the command it runs on that tab. */
+export const TAB_MENU_CHOICES = ['close', 'reopen', 'move-new', 'move-to', 'pin'] as const;
+export type TabMenuChoice = (typeof TAB_MENU_CHOICES)[number];
+
 export interface OtherWindow {
   window: number;
   profile: string;
@@ -129,6 +133,7 @@ export const CHANNELS = [
   'tabs.zoom',
   'tabs.width',
   'tabs.pin',
+  'tabs.menu',
   'tabs.viewState',
   'tabs.close',
   'tabs.reopenClosed',
@@ -252,6 +257,8 @@ export interface Requests {
   'tabs.width': [id: string, width: ReaderWidth | null];
   /** Pins or unpins the tab (it moves to the end of the pinned block, or just after it). */
   'tabs.pin': [id: string, pinned: boolean];
+  /** Shows the tab's right-click menu; main copies or reveals itself, the rest comes back here. */
+  'tabs.menu': [id: string];
   'tabs.viewState': [id: string, state: TabViewState];
   'tabs.close': [id: string];
   /** Brings back the window's most recently closed tab. */
@@ -352,6 +359,7 @@ export interface Responses {
   'tabs.zoom': void;
   'tabs.width': void;
   'tabs.pin': void;
+  'tabs.menu': TabMenuChoice | null;
   'tabs.viewState': void;
   'tabs.close': void;
   /** The reopened tab's id, or null when none was closed. */

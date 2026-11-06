@@ -1,0 +1,97 @@
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { appDirs, launchApp, removeTempHome, tempHome } from '../helpers/launch';
+import { saveFile } from '../helpers/save';
+
+// A tab's right-click menu (UX F4, mouse paths review): built by main; the page runs what it hands back.
+const docs = path.resolve(import.meta.dirname, '../fixtures/docs');
+const files = ['basic.md', 'gfm.md', 'math.md'].map((name) => path.join(docs, name));
+
+const answer = (app: ElectronApplication, choice: string) => app.evaluate((_electron, value) => void (process.env['GALEO_TEST_MENU_CHOICE'] = value), choice);
+const menus = (app: ElectronApplication) => app.evaluate(() => (globalThis as { __galeoMenus?: { label: string; enabled?: boolean }[][] }).__galeoMenus ?? []);
+/** The window's tabs in order, by file name, as main holds them. */
+const names = (page: Page) => page.evaluate(async () => (await window.galeo.tabs.snapshot()).tabs.map((tab) => tab.path.split('/').at(-1)));
+
+test('a right-click on a tab offers its commands; each runs on that tab, as its shortcut does', async () => {
+  const { app, window, close } = await launchApp(['--', ...files], { env: { GALEO_TEST_MENU_CHOICE: 'none' } });
+  try {
+    await expect(window.getByRole('tab')).toHaveCount(3);
+    const gfm = window.getByRole('tab', { name: /gfm\.md/ });
+
+    await gfm.click({ button: 'right' });
+    await expect.poll(async () => (await menus(app)).length).toBe(1);
+    expect((await menus(app))[0]!.map((item) => `${item.label}${item.enabled === false ? ' (off)' : ''}`)).toEqual([
+      'Close tab', 'Reopen closed tab (off)', 'Move to new window', 'Move to window…', 'Copy path', 'Reveal in Files', 'Pin tab',
+    ]);
+
+    await answer(app, 'pin');
+    await gfm.click({ button: 'right' });
+    await expect.poll(() => names(window)).toEqual(['gfm.md', 'basic.md', 'math.md']);
+    await expect(window.getByRole('tab').first()).toHaveAccessibleName(/pinned/);
+
+    await answer(app, 'copy-path');
+    await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
+    await window.getByRole('tab', { name: /math\.md/ }).click({ button: 'right' });
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(files[2]);
+
+    // Close takes the right-clicked tab, not the shown one; Reopen brings it back, however long the reader took.
+    await expect(window.getByRole('tab', { selected: true })).toHaveAccessibleName(/basic\.md/);
+    await answer(app, 'close');
+    await window.getByRole('tab', { name: /math\.md/ }).click({ button: 'right' });
+    await expect.poll(() => names(window)).toEqual(['gfm.md', 'basic.md']);
+    await window.waitForTimeout(1200);
+    await answer(app, 'reopen');
+    await window.getByRole('tab', { name: /basic\.md/ }).click({ button: 'right' });
+    await expect.poll(() => names(window)).toEqual(['gfm.md', 'basic.md', 'math.md']);
+
+    // Move to new window takes the right-clicked tab to a window of its own.
+    await answer(app, 'move-new');
+    const opened = app.waitForEvent('window');
+    await window.getByRole('tab', { name: /math\.md/ }).click({ button: 'right' });
+    const moved = await opened;
+    await expect(moved.getByRole('tab')).toHaveCount(1);
+    await expect(moved.getByRole('tab')).toHaveAccessibleName(/math\.md/);
+    await expect.poll(() => names(window)).toEqual(['gfm.md', 'basic.md']);
+  } finally {
+    await close();
+  }
+});
+
+test('the context-menu key on a focused tab opens its menu too', async () => {
+  const { app, window, close } = await launchApp(['--', ...files.slice(0, 2)], { env: { GALEO_TEST_MENU_CHOICE: 'pin' } });
+  try {
+    await window.getByRole('tab', { name: /basic\.md/ }).click();
+    await window.keyboard.press('ArrowRight');
+    await expect(window.getByRole('tab', { name: /gfm\.md/ })).toBeFocused();
+    await window.keyboard.press('Shift+F10');
+    await expect.poll(() => names(window)).toEqual(['gfm.md', 'basic.md']);
+    expect(await menus(app)).toHaveLength(1);
+  } finally {
+    await close();
+  }
+});
+
+test('with the tabs on the left, a row and a collapsed marker offer the same menu', async () => {
+  const home = tempHome();
+  const write = (file: string, content: string) => {
+    const target = path.join(appDirs(home).config, file);
+    mkdirSync(path.dirname(target), { recursive: true });
+    saveFile(target, content);
+  };
+  write('profiles/default/profile.json', '{"schemaVersion":1,"name":"default","settings":{"tabsPosition":"left"}}');
+  const { app, window, close } = await launchApp(['--', ...files], { home, env: { GALEO_TEST_MENU_CHOICE: 'pin' } });
+  try {
+    await expect(window.getByRole('tab')).toHaveCount(3);
+    await window.getByRole('tab', { name: /math\.md/ }).click({ button: 'right' });
+    await expect.poll(() => names(window)).toEqual(['math.md', 'basic.md', 'gfm.md']);
+    await window.getByTestId('panel-toggle').click();
+    await expect(window.getByTestId('side-panel')).toHaveAttribute('data-collapsed', 'true');
+    await window.getByRole('tab', { name: /gfm\.md/ }).click({ button: 'right' });
+    await expect.poll(() => names(window)).toEqual(['math.md', 'gfm.md', 'basic.md']);
+    expect((await menus(app)).map((menu) => menu.at(-1)!.label)).toEqual(['Pin tab', 'Pin tab']);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});

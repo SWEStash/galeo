@@ -25,7 +25,7 @@ function setup(
     platform,
   });
   const { id } = tabs.open(Object.keys(files)[0] ?? '/d/gone.md', 1);
-  return { menus, shell, fs, copied, shown, id };
+  return { menus, tabs, shell, fs, copied, shown, id };
 }
 
 describe('DocumentMenus.path', () => {
@@ -118,5 +118,49 @@ describe('DocumentMenus.document (SR-05)', () => {
     const { menus, shown, id } = setup('open-default');
     await expect(menus.document(id, 2)).rejects.toThrow();
     expect(shown).toEqual([]);
+  });
+});
+
+describe('DocumentMenus.tab (UX F4)', () => {
+  const entries = (shown: { items: readonly MenuItem[] }[]) => shown[0]!.items.map((item) => `${item.label}${item.enabled === false ? ' (off)' : ''}`);
+
+  it('lists the tab commands, Reopen only when something closed and the moves only with another tab', async () => {
+    const { menus, shown, id } = setup(null);
+    expect(await menus.tab(id, 1, { canReopen: false })).toBeNull();
+    expect(entries(shown)).toEqual(['Close tab', 'Reopen closed tab (off)', 'Move to new window (off)', 'Move to window… (off)', 'Copy path', 'Reveal in Files', 'Pin tab']);
+  });
+
+  it('offers Unpin on a pinned tab, and nothing but Close and Reopen on the Settings tab', async () => {
+    const pinned = setup(null);
+    pinned.tabs.open('/d/other.md', 1);
+    pinned.tabs.setPinned(pinned.id, 1, true);
+    await pinned.menus.tab(pinned.id, 1, { canReopen: true });
+    expect(entries(pinned.shown)).toEqual(['Close tab', 'Reopen closed tab', 'Move to new window', 'Move to window…', 'Copy path', 'Reveal in Files', 'Unpin tab']);
+
+    const settings = setup(null);
+    const tab = settings.tabs.openSettings(1);
+    await settings.menus.tab(tab.id, 1, { canReopen: false });
+    expect(entries(settings.shown)).toEqual(['Close tab', 'Reopen closed tab (off)', 'Move to new window (off)', 'Move to window… (off)', 'Copy path (off)', 'Reveal in Files (off)', 'Pin tab (off)']);
+  });
+
+  it('copies the path and reveals the file itself, and hands the other choices to the page', async () => {
+    const copy = setup('copy-path');
+    expect(await copy.menus.tab(copy.id, 1, { canReopen: false })).toBeNull();
+    expect(copy.copied).toEqual(['/d/plans/plan.md']);
+    const reveal = setup('reveal');
+    expect(await reveal.menus.tab(reveal.id, 1, { canReopen: false })).toBeNull();
+    expect(reveal.shell.calls).toEqual([{ method: 'revealInFileManager', target: '/d/plans/plan.md' }]);
+    for (const choice of ['close', 'reopen', 'move-new', 'move-to', 'pin'] as const) {
+      const each = setup(choice);
+      expect(await each.menus.tab(each.id, 1, { canReopen: true })).toBe(choice);
+    }
+  });
+
+  it('does nothing when the tab closed while its menu was open', async () => {
+    let close = () => {};
+    const { menus, tabs, copied, id } = setup(null, undefined, 'linux', async () => (close(), 'copy-path'));
+    close = () => void tabs.close(id, 1);
+    expect(await menus.tab(id, 1, { canReopen: false })).toBeNull();
+    expect(copied).toEqual([]);
   });
 });

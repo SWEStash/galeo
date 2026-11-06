@@ -827,6 +827,7 @@ function start(initialMode: StartupMode): void {
           drags,
           now: Date.now,
           input,
+          menus,
           move: moveTab,
           tearOff,
           windows: otherWindows,

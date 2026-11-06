@@ -121,6 +121,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       zoom: vi.fn().mockResolvedValue(undefined),
       width: vi.fn().mockResolvedValue(undefined),
       pin: vi.fn().mockResolvedValue(undefined),
+      menu: vi.fn().mockResolvedValue(null),
       viewState: vi.fn().mockResolvedValue(undefined),
       openSettings: vi.fn().mockResolvedValue('settings-1'),
       onChanged: vi.fn((listener: (snapshot: TabSnapshot) => void) => {

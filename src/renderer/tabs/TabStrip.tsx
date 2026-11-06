@@ -36,6 +36,7 @@ export function TabStrip({
   stripRef,
   onFilesDropped,
   onMarkerTip,
+  onTabMenu,
   trailing,
 }: {
   view: TabsView;
@@ -45,6 +46,8 @@ export function TabStrip({
   /** Files from the file manager were dropped at the caret: they go after this tab (null: first). */
   onFilesDropped?: (after: string | null) => void;
   onMarkerTip?: (tip: MarkerTip | null) => void;
+  /** A tab's right-click menu (or the context-menu key on it) was asked for. */
+  onTabMenu?: (id: string) => void;
   /** Drawn after the last tab, inside the strip (the bar's +), so the strip still takes drops after it. */
   trailing?: ReactNode;
 }) {
@@ -128,6 +131,7 @@ export function TabStrip({
             onDragStart={dragStarted}
             onDragEnd={dragEnded}
             onMarkerTip={onMarkerTip}
+            onMenu={onTabMenu && (() => onTabMenu(tab.id))}
           />
         )}
       </TabList>
@@ -148,6 +152,7 @@ function TabItem({
   onDragStart,
   onDragEnd,
   onMarkerTip,
+  onMenu,
 }: {
   tab: TabView;
   label: string;
@@ -159,6 +164,7 @@ function TabItem({
   onDragStart: (id: string, token: string) => void;
   onDragEnd: (id: string) => void;
   onMarkerTip: ((tip: MarkerTip | null) => void) | undefined;
+  onMenu: (() => void) | undefined;
 }) {
   // Each drag's single-use token: the drag carries it, not the tab id (ADR-022). React Aria asks for
   // the items after it reports the start.
@@ -232,6 +238,13 @@ function TabItem({
       data-hibernated={hibernated || undefined}
       data-missing={status?.state === 'missing' || undefined}
       {...markerFocus}
+      onContextMenu={
+        onMenu &&
+        ((event: MouseEvent) => {
+          event.preventDefault();
+          onMenu();
+        })
+      }
     >
       {layout === 'markers' ? (
         <MarkerContent tab={tab} label={label} folder={folder} status={status} flags={flags} grab={{ ...dragProps, onAuxClick, onPointerEnter: (event: PointerEvent<Element>) => showTip(event.currentTarget), onPointerLeave: () => onMarkerTip?.(null) }}>
