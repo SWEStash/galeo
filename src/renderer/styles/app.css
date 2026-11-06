@@ -881,11 +881,21 @@ body,
 /* Rows sit in an inset list, apart from each other, rounded; the shown one is lifted to the surface
    with the profile's accent along its edge. */
 .side-panel:not([data-collapsed]) .tab-list {
-  gap: var(--galeo-space-xs);
   padding: var(--galeo-space-md);
 }
-.side-panel:not([data-collapsed]) .tab:not([data-selected]) {
-  box-shadow: inset 0 0 0 1px var(--galeo-chrome-edge);
+/* As in the bar: a short separator between neighbouring rows, none beside the shown row or the one
+   under the pointer. */
+.side-panel:not([data-collapsed]) .tab::after {
+  content: '';
+  position: absolute;
+  right: var(--galeo-space-md);
+  bottom: 0;
+  left: var(--galeo-space-md);
+  height: 1px;
+  background: var(--galeo-color-border);
+}
+.side-panel:not([data-collapsed]) .tab:is([data-selected], [data-hovered], :has(+ [data-selected]), :has(+ [data-hovered]), :last-child)::after {
+  visibility: hidden;
 }
 /* The name stands out from its folder. */
 .side-panel .tab-label {
