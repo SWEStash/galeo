@@ -171,6 +171,11 @@ test('when tabs overflow, they shrink, then the strip scrolls with the shown tab
     expect(width).toBeLessThan(200);
     await window.keyboard.press('ControlOrMeta+9');
     await expect(selected(window)).toBeInViewport();
+    // + stands after the strip while it scrolls, never over a tab.
+    await expect(window.locator('.tab-strip [data-testid="tab-new"]')).toHaveCount(0);
+    const plus = (await window.getByTestId('tab-new').boundingBox())!;
+    const strip = (await window.locator('.tab-strip').boundingBox())!;
+    expect(plus.x).toBeGreaterThanOrEqual(strip.x + strip.width);
     // However many tabs, the end of the bar still drags the window.
     const grip = window.getByTestId('window-grip');
     expect((await grip.boundingBox())!.width).toBeGreaterThanOrEqual(40);

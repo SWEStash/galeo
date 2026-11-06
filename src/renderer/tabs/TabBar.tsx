@@ -94,7 +94,8 @@ export function TabBar({
   }, [view.active, view.tabs, panel?.collapsed]);
 
   const toggleName = panel?.collapsed ? 'Expand tab panel' : 'Collapse tab panel';
-  // + goes where a new tab appears: after the last tab, or by the chip with the tabs on the left.
+  // + goes where a new tab appears: after the last tab (after the strip while it scrolls), or by the
+  // chip with the tabs on the left.
   const newTab = onOpenFile && (
     <button type="button" className="tab-new" data-testid="tab-new" aria-label="Open file… (Ctrl+P)" title="Open file… (Ctrl+P)" onClick={onOpenFile}>
       <Icon name="plus" />
@@ -126,11 +127,13 @@ export function TabBar({
           layout={!panel ? 'bar' : panel.collapsed ? 'markers' : 'rows'}
           stripRef={listRef}
           onMarkerTip={setMarkerTip}
-          {...(!left && newTab ? { trailing: newTab } : {})}
+          {...(!left && !edges.overflows && newTab ? { trailing: newTab } : {})}
           {...(onFilesDropped ? { onFilesDropped } : {})}
         />
       </StripHost>
       {edges.overflows && <ScrollButton direction={1} disabled={!edges.canRight} onScroll={scrollBy} />}
+      {/* While the tabs overflow, + stands after the strip, never over a tab. */}
+      {!left && edges.overflows && newTab}
       {/* The window title says it already: this is for the eye, and drags the window like the rest. */}
       {left && (
         <span className="title-bar-text" data-testid="title-bar-text" aria-hidden="true">

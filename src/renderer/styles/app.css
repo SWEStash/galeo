@@ -435,14 +435,9 @@ body,
 .bar-tools {
   display: flex;
   flex: none;
-  gap: var(--galeo-space-2xs);
+  gap: var(--galeo-space-xs);
   align-items: center;
-  margin-right: var(--galeo-space-sm);
-  padding: 0 var(--galeo-space-sm);
-  border-right: 1px solid var(--galeo-color-border);
-}
-:root[data-platform='darwin'] .bar-tools {
-  border-right: none;
+  margin-right: var(--galeo-space-lg);
 }
 
 .tab-scroll {
@@ -450,8 +445,11 @@ body,
   flex: none;
   place-items: center;
   align-self: stretch;
-  width: 22px;
+  width: 24px;
+  margin: var(--galeo-space-sm) var(--galeo-space-xs) var(--galeo-space-xs);
+  padding: 0;
   border: none;
+  border-radius: var(--galeo-radius-md);
   background: transparent;
   color: var(--galeo-color-fg);
   -webkit-app-region: no-drag;
@@ -474,6 +472,7 @@ body,
   align-self: center;
   width: 28px;
   height: 28px;
+  padding: 0;
   border: none;
   border-radius: var(--galeo-radius-md);
   background: transparent;
@@ -500,12 +499,10 @@ body,
   outline: 2px solid var(--galeo-color-focus);
   outline-offset: 1px;
 }
-/* + follows the last tab inside the strip, and stays in view at its end while the tabs scroll. */
-.tab-strip > .tab-new {
-  position: sticky;
-  right: 0;
+/* + follows the last tab inside the strip; while the tabs overflow it stands after the strip's ›. */
+.tab-strip > .tab-new,
+.tab-scroll + .tab-new {
   margin: var(--galeo-space-sm) var(--galeo-space-xs) 0;
-  box-shadow: 0 0 0 var(--galeo-space-xs) var(--galeo-chrome-bar);
 }
 .title-bar > .tab-new {
   margin-right: var(--galeo-space-xs);
@@ -1450,9 +1447,10 @@ button:focus-visible {
 /* A section's settings form one card; each row has its label and where the value comes from on the
    left, a short control on the right; wide controls (font pickers, lists) take the row's width. */
 .setting {
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: var(--galeo-space-2xs) var(--galeo-space-xl);
+  gap: var(--galeo-space-sm) var(--galeo-space-xl);
   align-items: center;
   padding: var(--galeo-space-lg) var(--galeo-space-xl);
   border-inline: 1px solid var(--galeo-color-border);
