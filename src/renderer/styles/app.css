@@ -1425,47 +1425,129 @@ button:focus-visible {
 }
 
 .settings-view > * {
-  max-width: 640px;
+  max-width: 680px;
+  margin-inline: auto;
 }
-
 .settings-view h1 {
-  margin: 0 0 var(--galeo-space-xl);
+  margin-top: 0;
+  margin-bottom: var(--galeo-space-xl);
   font-size: var(--galeo-text-2xl);
+  font-weight: 600;
 }
-
 .settings-view h2 {
-  margin: var(--galeo-space-2xl) 0 var(--galeo-space-md);
-  padding-bottom: var(--galeo-space-xs);
-  border-bottom: 1px solid var(--galeo-color-border);
-  font-size: var(--galeo-text-lg);
+  margin-top: var(--galeo-space-2xl);
+  margin-bottom: var(--galeo-space-md);
+  font-size: var(--galeo-text-xl);
+  font-weight: 600;
+}
+.settings-scope {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--galeo-space-sm) var(--galeo-space-lg);
+  align-items: center;
 }
 
-.settings-scope,
-.setting .react-aria-RadioGroup {
+/* A section's settings form one card; each row has its label and where the value comes from on the
+   left, a short control on the right; wide controls (font pickers, lists) take the row's width. */
+.setting {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--galeo-space-2xs) var(--galeo-space-xl);
+  align-items: center;
+  padding: var(--galeo-space-lg) var(--galeo-space-xl);
+  border-inline: 1px solid var(--galeo-color-border);
+  background: var(--galeo-chrome-surface);
+}
+.settings-view h2 + .setting {
+  border-top: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius-lg) var(--galeo-radius-lg) 0 0;
+}
+.setting + .setting {
+  border-top: 1px solid var(--galeo-color-border);
+}
+.setting:not(:has(+ .setting)) {
+  border-bottom: 1px solid var(--galeo-color-border);
+  border-bottom-right-radius: var(--galeo-radius-lg);
+  border-bottom-left-radius: var(--galeo-radius-lg);
+}
+.settings-view h2 + .setting:not(:has(+ .setting)) {
+  border-radius: var(--galeo-radius-lg);
+}
+.setting > * {
+  grid-column: 1 / -1;
+}
+.setting .react-aria-Label,
+.setting .field-label {
+  grid-column: 1;
+  font-weight: 600;
+}
+.setting > .setting-source,
+.setting > .setting-reset {
+  grid-column: 1;
+  justify-self: start;
+}
+/* Short controls: their label joins the row's left column, the control its right. */
+.setting > .choice-field,
+.setting > .number-field,
+.setting > .measure-field,
+.setting > .measure-field > .react-aria-RadioGroup {
+  display: contents;
+}
+.setting .choice-options,
+.setting .number-field > input,
+.setting > .swatches {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  justify-self: end;
+}
+.setting > .swatches {
+  margin: 0;
+}
+.setting .number-field > input {
+  width: 120px;
+}
+.setting > .measure-field > .field {
+  grid-column: 2;
+  justify-self: end;
+}
+.choice-options {
   display: flex;
   flex-wrap: wrap;
   gap: var(--galeo-space-xs) var(--galeo-space-xl);
   align-items: center;
 }
 
-.settings-scope .react-aria-Label,
-.setting .react-aria-RadioGroup .react-aria-Label {
-  flex-basis: 100%;
+/* A few short choices as one segmented control: still a radio group, arrows move. */
+.choice-options.segmented {
+  gap: var(--galeo-space-2xs);
+  padding: var(--galeo-space-2xs);
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius-md);
+  background: var(--galeo-chrome-bar);
 }
-
-.setting {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--galeo-space-sm) var(--galeo-space-lg);
-  align-items: flex-end;
-  padding: var(--galeo-space-lg) 0;
+.choice-options.segmented .react-aria-RadioButton {
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
+  border-radius: var(--galeo-radius-sm);
+  color: var(--galeo-color-muted);
+  transition: background var(--galeo-motion-fast) var(--galeo-ease);
 }
-
-.setting > .field,
-.setting > .react-aria-RadioGroup {
-  flex: 1 1 320px;
+.choice-options.segmented .react-aria-RadioButton::before {
+  display: none;
 }
-
+.choice-options.segmented .react-aria-RadioButton[data-hovered]:not([data-selected]) {
+  background: var(--galeo-chrome-hover);
+  color: var(--galeo-color-fg);
+}
+.choice-options.segmented .react-aria-RadioButton[data-selected] {
+  background: var(--galeo-chrome-surface);
+  box-shadow: 0 0 0 1px var(--galeo-color-border);
+  color: var(--galeo-color-fg);
+  font-weight: 600;
+}
+.choice-options.segmented .react-aria-RadioButton[data-focus-visible] {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 1px;
+}
 .field-label {
   flex-basis: 100%;
 }
@@ -1485,7 +1567,9 @@ button:focus-visible {
   min-width: 0;
 }
 .font-open {
-  padding: 0 var(--galeo-space-lg);
+  display: grid;
+  place-items: center;
+  padding: 0 var(--galeo-space-md);
 }
 .font-popover {
   max-height: min(60vh, 420px);

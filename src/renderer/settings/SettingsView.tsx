@@ -29,6 +29,7 @@ import type { ReaderWidth } from '../../shared/tabs';
 import { fontStack } from './tokens';
 import { NumberSetting, RadioSetting, SwitchSetting, useDraft } from './fields';
 import { reportFailure } from '../tabs/closed-tab';
+import { Icon } from '../ui/icons';
 
 const SOURCE_NAMES = { default: 'Default', global: 'All profiles', profile: 'This profile' } as const;
 
@@ -155,7 +156,7 @@ export function SettingsView({
       <h2>Tables</h2>
       {setting(
         'tableSeparator',
-        <RadioSetting label="Separator" value={values.tableSeparator} options={SEPARATOR_CHOICES} onChange={(tableSeparator) => set({ tableSeparator })} />,
+        <RadioSetting label="Separator" value={values.tableSeparator} options={SEPARATOR_CHOICES} segmented={false} onChange={(tableSeparator) => set({ tableSeparator })} />,
       )}
       {setting(
         'tableHeader',
@@ -211,14 +212,16 @@ function MeasureSetting({ value, onChange }: { value: ReaderWidth; onChange: (va
     <div className="field measure-field">
       <RadioGroup value={custom ? 'custom' : String(value)} onChange={choose} orientation="horizontal">
         <Label>Measure</Label>
-        {MEASURE_PRESETS.map(([preset, name]) => (
-          <RadioField key={preset} value={String(preset)}>
-            <RadioButton>{name}</RadioButton>
+        <div className="choice-options segmented">
+          {MEASURE_PRESETS.map(([preset, name]) => (
+            <RadioField key={preset} value={String(preset)}>
+              <RadioButton>{name}</RadioButton>
+            </RadioField>
+          ))}
+          <RadioField value="custom">
+            <RadioButton>Custom</RadioButton>
           </RadioField>
-        ))}
-        <RadioField value="custom">
-          <RadioButton>Custom</RadioButton>
-        </RadioField>
+        </div>
       </RadioGroup>
       <NumberField
         className="field"
@@ -292,7 +295,7 @@ function FontSetting({
         <div className="font-input">
           <Input />
           <Button className="font-open" aria-label={`Show ${kind} fonts`}>
-            ▾
+            <Icon name="chevron-down" />
           </Button>
         </div>
         <Popover className="menu-popover font-popover" placement="bottom start">

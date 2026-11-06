@@ -8,16 +8,19 @@ export function RadioSetting<T extends string>({
   options,
   onChange,
   className = 'field',
+  segmented = true,
 }: {
   label: string;
   value: T;
   options: readonly (readonly [T, string])[];
   onChange: (value: T) => void;
   className?: string;
+  /** A few short choices draw as one segmented control; longer lists stay a row of radio buttons. */
+  segmented?: boolean;
 }) {
   return (
     <RadioGroup
-      className={className}
+      className={`${className} choice-field`}
       value={value}
       onChange={(picked) => {
         const option = options.find(([each]) => each === picked);
@@ -26,11 +29,13 @@ export function RadioSetting<T extends string>({
       orientation="horizontal"
     >
       <Label>{label}</Label>
-      {options.map(([each, name]) => (
-        <RadioField key={each} value={each}>
-          <RadioButton>{name}</RadioButton>
-        </RadioField>
-      ))}
+      <div className={segmented ? 'choice-options segmented' : 'choice-options'}>
+        {options.map(([each, name]) => (
+          <RadioField key={each} value={each}>
+            <RadioButton>{name}</RadioButton>
+          </RadioField>
+        ))}
+      </div>
     </RadioGroup>
   );
 }
@@ -38,7 +43,7 @@ export function RadioSetting<T extends string>({
 /** A number within bounds; a half-typed or unchanged value isn't written. */
 export function NumberSetting({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void }) {
   return (
-    <NumberField className="field" value={value} minValue={min} maxValue={max} {...(step === undefined ? {} : { step })} onChange={(next) => !Number.isNaN(next) && next !== value && onChange(next)}>
+    <NumberField className="field number-field" value={value} minValue={min} maxValue={max} {...(step === undefined ? {} : { step })} onChange={(next) => !Number.isNaN(next) && next !== value && onChange(next)}>
       <Label>{label}</Label>
       <Input />
     </NumberField>
