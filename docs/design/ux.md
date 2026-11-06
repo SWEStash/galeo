@@ -57,7 +57,7 @@ the [decision records](../decisions/)).
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
 | **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
 | **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side; (v0.6) a heading with task items under it (up to the next heading) shows them done of all, "2/5", at the end of its row, read as "(2 of 5 tasks done)" | Ctrl+Shift+O (toggle) |
-| **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 % | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
+| **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 %; (v0.7) a diagram's Save as SVG… or Save as PNG… (main asks where) | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
 | **Profile menu** | Switch / new / rename / delete profile, open profile settings, About galeo (v0.3); (v0.7) New window and Settings | Click profile chip or Ctrl+Shift+M |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
 
@@ -258,9 +258,11 @@ mode closes the replace row and keeps find open.
 - Click a relative link to a supported file → navigates **in the same tab**, with per-tab
   back/forward (Alt+← / Alt+→), like a browser. Ctrl+click or middle-click → new background tab.
 - `#anchor` links scroll within the document and are part of back/forward history.
-- *Planned (the [mouse paths review](mouse-paths.md), not yet built):* the document's right-click
-  menu, which main builds, gains Back and Forward (when there is history), Find…, Reload, Edit and
-  Save, and in a JSON tree Expand all, Collapse all and Copy JSON path.
+- (v0.7) The document's right-click menu, which main builds: Back and Forward (greyed out without
+  history), Find…, Reload, Edit (main's own Ctrl+E) or Save while editing, in a JSON tree Expand all,
+  Collapse all and Copy JSON path, on rendered Markdown Copy as rich text, then Open with default
+  app, Reveal in Files and Copy path. The page tells main only whether a tree or rendered Markdown
+  shows; each choice runs as its key does.
 - `http(s)`/`mailto` links → open in the system browser/mail client. First time per profile, a
   one-line hint appears in the status bar ("External links open in your browser"); no dialog.
   Only links actually present in the document can be opened (ADR-004). **Burst guard**: if one
@@ -556,6 +558,7 @@ the native menu on the active tab.
 | Full width (v0.3) | palette | Toggles back to the setting |
 | Move tab to new window / to window… (v0.3) | palette | F15; (v0.7) also the tab's right-click menu |
 | Pin or unpin tab (v0.7) | palette | F4; also the tab's right-click menu |
+| Copy as rich text (v0.7) | palette | Rendered Markdown; also the document's menu |
 | Show rendered / source / split view, Toggle follow (logs) (v0.7) | palette | The status bar's view menu and Follow toggle (F10) |
 | Expand all nodes / Collapse all nodes / Copy JSON path (v0.3) | palette | JSON tree, F14 |
 | Table separator: … / First row is a header / Reset table options / Show as table (v0.3) | palette; also the status bar's Table options | Tables, F14, ADR-021 |
@@ -583,8 +586,10 @@ this map only.
   left at the setting follows it when it changes), paragraph spacing ≥ 1em, proportional font for prose, monospace for code at 0.9em,
   modular heading scale; fonts vendored in the app (no web fonts), system font as fallback.
 - **Code**: syntax themes follow light/dark (`github-light` / `github-dark` by default, matching
-  the article preview's target site). Line numbers optional in code blocks; copy button on hover
-  and on keyboard focus.
+  the article preview's target site). Line numbers optional in code blocks; (v0.7) a Copy button at a
+  rendered code block's corner, on hover and on keyboard focus, copies its code ("Copied" in the
+  status); *Copy as rich text* (palette, the document's menu) puts the rendered Markdown document on
+  the clipboard as HTML, without galeo's buttons, with its plain text.
 - **Custom CSS**: a global `custom.css` and one per profile, applied in that order after the
   bundled theme; changes apply live to every open tab when the file is saved (hand edits to
   `settings.json` and `profile.json` apply live too). galeo documents a small set of

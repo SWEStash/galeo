@@ -397,6 +397,18 @@ chose (close, reopen, a move, pin). A choice in that menu is the reader's own cl
 page can't operate, so it earns the window one input credit, as a key press does: Reopen and the
 moves the page runs next spend it as their shortcuts do. A dismissed menu earns nothing. Pinning
 (`tabs.pin`) only reorders the sender's own tabs and keeps them warm; it reads and writes nothing.
+The document's right-click menu (v0.7, `documents.contextMenu`) is main's too. The page says only
+whether a JSON tree or rendered Markdown shows. **Edit** is main's own Ctrl+E: main runs it only for
+the window's shown tab, with the same rules and question as the key (ADR-013, ADR-015); the page
+can't name a tab or a file. The other choices come back as commands the page already has; a choice
+earns one input credit, so **Save** spends it as Ctrl+S does and writes only an edit-enabled file.
+Saving a diagram (v0.7, #59, `diagrams.save`) is the one write outside edit mode besides task
+boxes. Main asks where in its own native save dialog, which the page can't answer or prefill beyond
+a suggested file name it cleans (no folders, no control characters); it writes only the path the
+reader picked, atomically, with the usual file permissions (0644), and only for real input. The data is an SVG's text
+or a PNG's bytes, at most 20 MiB, checked against the format; galeo never opens or runs it. A
+compromised page could write content of its choosing to a file the reader names in that dialog,
+which the reader is choosing to create anyway.
 Find in all tabs (v0.4, ADR-024) searches only the sender's own open tabs: their files, which the
 window already shows, or the unsaved text main keeps for them. It answers with counts and short
 snippets by tab id. It reads nothing the page couldn't already read, so it spends no credit.

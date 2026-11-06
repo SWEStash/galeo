@@ -206,7 +206,9 @@ the file into the window in front of you) when you want it here.
   line count (in the source view) and, for Markdown and `.txt`, the word count and reading time. A
   log has a **Follow** button; a click on the zoom or the reader width puts it back.
   Markdown counts its prose only: code blocks, math, diagrams and front matter aren't words.
-- **Open with default app** (in the palette) hands the file to the app your system uses for it. It
+- The document's **right-click menu** has Back, Forward, Find…, Reload, Edit (or Save while editing),
+  a JSON tree's Expand all, Collapse all and Copy JSON path, and the file's entries below.
+- **Open with default app** (in the palette, or the right-click menu) hands the file to the app your system uses for it. It
   isn't offered for programs and launchers, and on macOS and Windows only for known document types:
   images, PDF, office documents, audio and video, and the text formats galeo reads.
 - **Diagrams and math**: math is typeset with the document (KaTeX); Mermaid diagrams draw as you
@@ -215,7 +217,11 @@ the file into the window in front of you) when you want it here.
   on hover, or reached with Tab) opens it in a viewer: + and − or the wheel zoom, drag or the
   arrow keys pan, 0 fits it, 1 shows it at 100 %, Esc closes. Images open in the same viewer: click
   one, or use its ⤢ button (a linked image follows its link on click; icons don't offer it). In dark mode, a diagram that sets
-  its own colours is drawn as written, on a light panel.
+  its own colours is drawn as written, on a light panel. In the viewer, **Save as SVG…** or **Save as
+  PNG…** saves the diagram where you choose.
+- **Copy**: a code block's copy button (at its corner, on hover or with Tab) copies its code; *Copy
+  as rich text* (palette, or the document's right-click menu) copies the whole rendered document, to
+  paste with its formatting into another editor.
 - **MDX articles** (`.mdx`) render like Markdown, and nothing in them runs: imports and exports
   are hidden, a component shows as a dashed box labelled with its tag and props, with its content
   inside, and `{expressions}` show as code (comment-only ones are hidden). Lowercase HTML tags work
