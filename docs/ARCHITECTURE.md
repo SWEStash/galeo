@@ -203,7 +203,7 @@ flowchart LR
 - (v0.7) The tab's and the document's right-click menus are native menus Main builds and shows
   (`DocumentMenus`): Main acts on the path entries and Edit itself and hands the page back only the
   command to run; a choice earns the window one input credit, as a key press does. The writes
-  outside edit mode (a diagram's SVG or PNG, `diagrams.save`; a PDF, `documents.exportPdf` then
+  outside edit mode (a diagram's SVG or PNG, `diagrams.save` then `write`; a PDF, `documents.exportPdf` then
   `printPdf`; a profile's launcher) go only to a path Main's own save dialog returned, or to the
   user's applications folder for that profile, each for real input (threat model SR-12).
 - Main runs one **profile runtime** per running profile: its settings (watching `settings.json`,

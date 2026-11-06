@@ -168,6 +168,7 @@ export const CHANNELS = [
   'recent.clear',
   'drops.open',
   'diagrams.save',
+  'diagrams.write',
   'quickOpen.start',
   'quickOpen.query',
   'quickOpen.open',
@@ -247,8 +248,10 @@ export interface Requests {
   'documents.exportPdf': [id: string];
   /** Prints the window, its print copy ready, into the token's file. */
   'documents.printPdf': [token: string];
-  /** Saves the diagram the viewer shows, as SVG (its text) or PNG (bytes): main asks where (#59). */
-  'diagrams.save': [format: 'svg' | 'png', data: string | Uint8Array, name: string];
+  /** Saving the viewer's diagram (#59): main asks where and answers a one-use token for that file (null: cancelled or no input). */
+  'diagrams.save': [format: 'svg' | 'png', name: string];
+  /** The diagram for the token's file: its SVG text, or PNG bytes. */
+  'diagrams.write': [token: string, data: string | Uint8Array];
   /** Whether the tab in edit mode has unsaved changes (close and quit ask about them). */
   'documents.dirty': [id: string, dirty: boolean];
   /** The page left edit mode (its text is saved or discarded): main takes the grant back. */
@@ -373,8 +376,9 @@ export interface Responses {
   'documents.save': SaveResult;
   'documents.exportPdf': string | null;
   'documents.printPdf': 'saved' | 'refused' | 'failed';
-  /** saved; cancelled (no path picked); refused (no input, wrong shape, too big); failed (the write). */
-  'diagrams.save': 'saved' | 'cancelled' | 'refused' | 'failed';
+  'diagrams.save': string | null;
+  /** saved; refused (unknown or late token, wrong shape, too big); failed (the write). */
+  'diagrams.write': 'saved' | 'refused' | 'failed';
   'documents.dirty': void;
   'documents.leaveEdit': void;
   'documents.closeAnswer': void;

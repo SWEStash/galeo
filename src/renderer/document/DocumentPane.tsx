@@ -761,14 +761,14 @@ export function DocumentPane({
 
   // Ready content is always shown: no document means the content is a state of its own.
   const menu = () => onContextMenu({ tree: treeModel !== null && view === 'rendered', rich: article && view !== 'source' });
-  const saveDiagram = (format: 'svg' | 'png', data: string | Uint8Array, name: string) =>
-    void window.galeo.diagrams.save(format, data, name).then(
-      (result) => {
-        if (result === 'saved') onMessage('Saved the diagram');
-        else if (result !== 'cancelled') onMessage("Couldn't save the diagram");
-      },
-      () => onMessage("Couldn't save the diagram"),
-    );
+  // Main asks where first, on the click's own input; the PNG is drawn after, however long it takes.
+  const saveDiagram = (format: 'svg' | 'png', data: () => Promise<string | Uint8Array>, name: string) =>
+    void (async () => {
+      const token = await window.galeo.diagrams.save(format, name);
+      if (!token) return;
+      const result = await window.galeo.diagrams.write(token, await data());
+      onMessage(result === 'saved' ? 'Saved the diagram' : "Couldn't save the diagram");
+    })().catch(() => onMessage("Couldn't save the diagram"));
   const copyCode = (text: string) =>
     void navigator.clipboard.writeText(text).then(
       () => onMessage('Copied'),

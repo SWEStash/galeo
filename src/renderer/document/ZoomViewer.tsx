@@ -30,8 +30,8 @@ export function ZoomViewer({
   content: ZoomContent;
   name: string;
   onClose: () => void;
-  /** Saves the diagram (#59): its SVG text, or a PNG drawn from it. */
-  onSave?: (format: 'svg' | 'png', data: string | Uint8Array) => void;
+  /** Saves the diagram (#59): `data` makes its SVG text, or a PNG drawn from it, once main has asked where. */
+  onSave?: (format: 'svg' | 'png', data: () => Promise<string | Uint8Array>) => void;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const holder = useRef<HTMLDivElement>(null);
@@ -164,13 +164,13 @@ export function ZoomViewer({
                 </Button>
                 {content.kind === 'diagram' && onSave && (
                   <>
-                    <Button className="zoom-viewer-save" aria-label="Save as SVG…" onPress={() => onSave('svg', content.svg)}>
+                    <Button className="zoom-viewer-save" aria-label="Save as SVG…" onPress={() => onSave('svg', async () => content.svg)}>
                       <Icon name="download" /> SVG
                     </Button>
                     <Button
                       className="zoom-viewer-save"
                       aria-label="Save as PNG…"
-                      onPress={() => void pngOf(content.svg, natural.current, { light: content.panel }).then((png) => onSave('png', png), () => onSave('png', new Uint8Array()))}
+                      onPress={() => onSave('png', () => pngOf(content.svg, natural.current, { light: content.panel }))}
                     >
                       <Icon name="download" /> PNG
                     </Button>

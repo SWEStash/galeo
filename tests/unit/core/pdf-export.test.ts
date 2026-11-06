@@ -29,6 +29,8 @@ describe('PdfExports (#56)', () => {
     expect(asked).toEqual([[1, 'notes.pdf']]);
     expect(await exports.print(1, token!)).toBe('saved');
     expect([...(await fs.readFile('/d/notes.pdf', { maxBytes: 10 }))]).toEqual([...PDF]);
+    // As a document save writes (SR-15): an existing file keeps its mode, owner and links.
+    expect(fs.saves).toEqual(['/d/notes.pdf']);
     expect(printed).toEqual([1]);
     expect(await exports.print(1, token!)).toBe('refused');
   });

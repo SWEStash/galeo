@@ -14,8 +14,8 @@ interface Rendered {
  * Which tabs of each window keep their rendered DOM (ADR-002). The active tab always does; up to
  * `count` others stay warm while they fit in `bytes`, and the least recently shown go first. The
  * returned ids are the tabs the window must hibernate. Weight is what the window reports for a
- * tab's rendered content. A kept tab (pinned) never hibernates on its own and counts toward neither
- * limit.
+ * tab's rendered content. A kept tab (pinned) counts toward neither limit and hibernates only under
+ * memory pressure, once no other warm tab is left (SR-14).
  */
 export class WarmTabs {
   /** Per window, most recently shown first; the first one is the active tab. */
@@ -52,7 +52,8 @@ export class WarmTabs {
     for (let at = tabs.length - 1; at > 0; at--) {
       if (!this.kept(window, tabs[at]!.id)) return [tabs.splice(at, 1)[0]!.id];
     }
-    return [];
+    // Only kept tabs are warm besides the active one: the least recently shown goes after all.
+    return tabs.length > 1 ? [tabs.pop()!.id] : [];
   }
 
   /**

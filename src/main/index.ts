@@ -212,6 +212,9 @@ function start(initialMode: StartupMode): void {
     now: Date.now,
   });
   cleanups.add((windowId) => pdf.closeWindow(windowId));
+  // Saving a diagram (#59): the same two steps.
+  const diagramSaves = new DiagramSaves({ fs, input, encode: (text) => utf8.encode(text), askPath: askSavePath, randomId: randomUUID, now: Date.now });
+  cleanups.add((windowId) => diagramSaves.closeWindow(windowId));
   // One worker for main's parsing and searches; it starts on the first task, not at launch.
   const tasks = new WorkerThreadTaskRunner(path.join(import.meta.dirname, 'task-worker.js'));
   const searches = new TabSearches({ records: documents, grants, fs, tasks });
@@ -873,7 +876,7 @@ function start(initialMode: StartupMode): void {
           home: app.getPath('home'),
         }),
         ...recentHandlers({ recent: (windowId) => profileOf(windowId)?.recent, input, selections, open: (windowId, file) => openInWindow(windowId, [file]) }),
-        ...diagramHandlers({ saves: new DiagramSaves({ fs, input, encode: (text) => utf8.encode(text), askPath: askSavePath }) }),
+        ...diagramHandlers({ saves: diagramSaves }),
         ...dropHandlers({
           drops,
           fs,
@@ -994,7 +997,7 @@ async function ask(windowId: number, options: MessageBoxOptions): Promise<number
 async function askPdfPath(windowId: number, suggested: string): Promise<string | null> {
   const answer = !app.isPackaged ? process.env['GALEO_TEST_SAVE_PATH'] : undefined;
   if (answer !== undefined) return answer || null;
-  const options = { title: 'Export to PDF', defaultPath: path.join(app.getPath('documents'), suggested), filters: [{ name: 'PDF document', extensions: ['pdf'] }] };
+  const options = { title: 'Export to PDF', defaultPath: path.join(app.getPath('documents'), suggested), filters: [{ name: 'PDF document', extensions: ['pdf'] }], properties: ['showOverwriteConfirmation' as const] };
   const owner = windowOf(windowId);
   const { canceled, filePath } = owner ? await dialog.showSaveDialog(owner, options) : await dialog.showSaveDialog(options);
   return canceled || !filePath ? null : filePath;
@@ -1011,6 +1014,8 @@ async function askSavePath(windowId: number, suggested: string, format: DiagramF
     title: 'Save diagram',
     defaultPath: path.join(app.getPath('documents'), suggested),
     filters: [format === 'svg' ? { name: 'SVG image', extensions: ['svg'] } : { name: 'PNG image', extensions: ['png'] }],
+    // Linux asks before replacing a file only when told to (macOS and Windows always do).
+    properties: ['showOverwriteConfirmation' as const],
   };
   const owner = windowOf(windowId);
   const { canceled, filePath } = owner ? await dialog.showSaveDialog(owner, options) : await dialog.showSaveDialog(options);

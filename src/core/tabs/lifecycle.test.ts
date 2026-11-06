@@ -133,12 +133,13 @@ describe('WarmTabs', () => {
       expect(warm.activated(1, 'd', MB)).toEqual(['a']);
     });
 
-    it('is passed over under memory pressure', () => {
+    it('goes under memory pressure only once no other warm tab is left (SR-14)', () => {
       const warm = keeping({ count: 3, bytes: 20 * MB });
       for (const id of ['a', 'p', 'b']) warm.activated(1, id, MB);
       expect(warm.pressure(1)).toEqual(['a']);
+      expect(warm.pressure(1)).toEqual(['p']);
       expect(warm.pressure(1)).toEqual([]);
-      expect(warm.warm(1)).toEqual(['b', 'p']);
+      expect(warm.warm(1)).toEqual(['b']);
     });
   });
 });

@@ -221,7 +221,7 @@ the file into the window in front of you) when you want it here.
   PNG…** saves the diagram where you choose.
 - **Copy**: a code block's copy button (at its corner, on hover or with Tab) copies its code; *Copy
   as rich text* (palette, or the document's right-click menu) copies the whole rendered document, to
-  paste with its formatting into another editor.
+  paste with its formatting into another editor (which may load the document's web images).
 - **Export to PDF…** (palette, or the right-click menu) saves the rendered document as a PDF where
   you choose: the document alone, in the light theme, ready to print or send.
 - **MDX articles** (`.mdx`) render like Markdown, and nothing in them runs: imports and exports
@@ -293,7 +293,7 @@ search and the command palette.
 
 Right-click a tab or its card in the overview (or press Shift+F10 on a tab) for its menu: close it, reopen the last closed tab, move
 it to a new window or another one, copy its path, reveal it in Files, or pin it. Pinned tabs stay
-first, show a pin, are never put to sleep to save memory, and stay pinned after a restart; *Pin or
+first, show a pin, stay loaded (unless memory runs short), and stay pinned after a restart; *Pin or
 unpin tab* in the palette does the same for the shown tab. The profile menu also opens a new window
 and Settings.
 

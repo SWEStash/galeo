@@ -99,20 +99,14 @@ describe('document channel arguments (SR-11)', () => {
     for (const bad of [[ID], [ID, {}], [ID, { tree: 'yes' }], [ID, { tree: true, path: '/etc/passwd' }]]) expect(accepts('documents.contextMenu', bad)).toBe(false);
   });
 
-  it('diagrams.save takes an SVG as text or a PNG as bytes, up to 20 MiB, and a name', () => {
-    expect(accepts('diagrams.save', ['svg', '<svg/>', 'flow'])).toBe(true);
-    expect(accepts('diagrams.save', ['png', new Uint8Array([137, 80]), 'flow'])).toBe(true);
-    for (const bad of [
-      ['svg', new Uint8Array([1]), 'flow'],
-      ['png', '<svg/>', 'flow'],
-      ['svg', '', 'flow'],
-      ['png', new Uint8Array(), 'flow'],
-      ['png', new Uint8Array(20 * 1024 * 1024 + 1), 'flow'],
-      ['gif', '<svg/>', 'flow'],
-      ['svg', '<svg/>', 'x'.repeat(201)],
-      ['svg', '<svg/>', 'flow', '/etc/passwd'],
-    ]) {
-      expect(accepts('diagrams.save', bad)).toBe(false);
+  it('diagrams.save takes a format and a name; diagrams.write a token and an SVG as text or a PNG as bytes, up to 20 MiB', () => {
+    expect(accepts('diagrams.save', ['svg', 'flow'])).toBe(true);
+    expect(accepts('diagrams.save', ['png', 'flow'])).toBe(true);
+    for (const bad of [['gif', 'flow'], ['svg', 'x'.repeat(201)], ['svg', 'flow', '/etc/passwd'], ['svg']]) expect(accepts('diagrams.save', bad)).toBe(false);
+    expect(accepts('diagrams.write', ['token', '<svg/>'])).toBe(true);
+    expect(accepts('diagrams.write', ['token', new Uint8Array([137, 80])])).toBe(true);
+    for (const bad of [['token', ''], ['token', new Uint8Array()], ['token', new Uint8Array(20 * 1024 * 1024 + 1)], ['', '<svg/>'], ['token', 3], ['token', '<svg/>', '/etc/passwd']]) {
+      expect(accepts('diagrams.write', bad)).toBe(false);
     }
   });
 

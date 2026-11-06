@@ -127,7 +127,8 @@ profile. Multiple selected files open as tabs in selection order.
 - (v0.7) **Pinned tabs**: *Pin or unpin tab* (palette, the tab's menu). Pinned tabs stay first, in
   both layouts and the overview, with a pin before the name; a screen reader hears "pinned". A
   pinned tab moves only among pinned tabs (and an unpinned one only among the others), new tabs
-  open after them, galeo never hibernates one on its own, and a pinned tab stays pinned after a
+  open after them, galeo hibernates one only when memory runs short and no other tab is left to
+  hibernate, and a pinned tab stays pinned after a
   restart, a reopen or a move to another window. In the tab bar it has no `✕`: Ctrl+W, a middle
   click or its menu close it. The Settings tab can't be pinned.
 - Hibernation is invisible except that a hibernated tab's label is slightly dimmed. Waking must

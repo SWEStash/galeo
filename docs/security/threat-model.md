@@ -396,23 +396,32 @@ main copies the path and reveals the file itself, and hands the page back only w
 chose (close, reopen, a move, pin). A choice in that menu is the reader's own click on a menu the
 page can't operate, so it earns the window one input credit, as a key press does: Reopen and the
 moves the page runs next spend it as their shortcuts do. A dismissed menu earns nothing. Pinning
-(`tabs.pin`) only reorders the sender's own tabs and keeps them warm; it reads and writes nothing.
+(`tabs.pin`) only reorders the sender's own tabs and keeps them warm (they count toward no warm
+limit, and go under memory pressure only once no other warm tab is left, SR-14); it reads and writes
+nothing. *Copy as rich text* puts the rendered document's HTML on the clipboard as galeo shows it,
+sanitized; web images keep their URLs, which the app it is pasted into may load (galeo never does);
+local images are `galeo://` URLs that name no path.
 The document's right-click menu (v0.7, `documents.contextMenu`) is main's too. The page says only
 whether a JSON tree or rendered Markdown shows. **Edit** is main's own Ctrl+E: main runs it only for
 the window's shown tab, with the same rules and question as the key (ADR-013, ADR-015); the page
 can't name a tab or a file. The other choices come back as commands the page already has; a choice
 earns one input credit, so **Save** spends it as Ctrl+S does and writes only an edit-enabled file.
-Saving a diagram (v0.7, #59, `diagrams.save`) is the one write outside edit mode besides task
-boxes. Main asks where in its own native save dialog, which the page can't answer or prefill beyond
-a suggested file name it cleans (no folders, no control characters); it writes only the path the
-reader picked, atomically, with the usual file permissions (0644), and only for real input. The data is an SVG's text
+Saving a diagram (v0.7, #59) is the one write outside edit mode besides task boxes and PDF
+export. On the click, `diagrams.save` spends the input credit and main asks where in its own native
+save dialog, then answers the page a one-use token (60 s, this window only) for that file; the page
+sends the data with it (`diagrams.write`), so a PNG may take longer to draw than a credit lasts. The page can't answer the dialog or prefill
+more than a suggested file name main cleans (no folders, no control characters). Main writes only the
+path the reader picked, as a document save writes (SR-15): a new file under the user's umask, an existing
+one keeping its mode, owner and links, a symlink written through, and the dialog asks before replacing a
+file. The data is an SVG's text
 or a PNG's bytes, at most 20 MiB, checked against the format; galeo never opens or runs it. A
 compromised page could write content of its choosing to a file the reader names in that dialog,
 which the reader is choosing to create anyway.
 Exporting to PDF (v0.7, #56) writes the same way: `documents.exportPdf` spends an input credit and
 asks in main's save dialog, then answers the page a one-use token (60 s, this window only) instead of
 the path; `documents.printPdf` prints the window, whose print stylesheet shows only the page's print
-copy of the document (already-sanitized HTML, loading nothing new), into that file atomically. The
+copy of the document (already-sanitized HTML, loading nothing new), into that file, written as a
+document save is (SR-15). The
 page can choose what it prints, which is what it already shows.
 A profile's launcher (v0.7, #60, Linux) is a desktop entry in the user's own applications folder,
 written for the sender window's profile only and only for real input: it runs galeo's own command

@@ -533,7 +533,8 @@ as fast and as keyboard- and screen-reader-friendly as before.
     document as galeo shows it, with its plain text alongside; galeo never reads the clipboard.
 - **Pinned tabs.** A tab can be pinned, so that the documents I keep coming back to stay put.
   - AC: Pinned tabs stay first, in both layouts, show a pin, and a screen reader hears "pinned".
-    galeo never hibernates them on its own, and they stay pinned after a restart.
+    galeo never hibernates them on its own, except when memory runs short and no other tab is left
+    (v0.7 audit, 2026-11-06), and they stay pinned after a restart.
 - **Save a diagram.** The diagram viewer saves the diagram as SVG or PNG, so that I can use it in
   another document.
   - AC: galeo asks where to save, and writes only that file. The SVG is the one galeo shows, already

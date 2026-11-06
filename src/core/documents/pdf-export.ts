@@ -4,7 +4,8 @@ import type { FileSystem } from '../ports';
 const TOKEN_MS = 60_000;
 
 interface PdfExportDeps {
-  fs: Pick<FileSystem, 'writeFileAtomic'>;
+  /** Writes as a document save does (SR-15): an existing file keeps its mode, owner and links. */
+  fs: Pick<FileSystem, 'saveFile'>;
   /** Main's own save dialog over the window: the path the reader picked, or null when cancelled. */
   askPath: (window: number, suggested: string) => Promise<string | null>;
   /** Prints the window's page (its print stylesheet shows only the document) to PDF bytes. */
@@ -42,7 +43,7 @@ export class PdfExports {
     this.pending.delete(token);
     if (this.deps.now() - chosen.at > TOKEN_MS) return 'refused';
     try {
-      await this.deps.fs.writeFileAtomic(chosen.path, await this.deps.print(window), { mode: 0o644 });
+      await this.deps.fs.saveFile(chosen.path, await this.deps.print(window));
       return 'saved';
     } catch {
       return 'failed';
