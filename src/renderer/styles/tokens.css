@@ -90,6 +90,7 @@
   --galeo-chrome-selected: #dae9f9;
   /* The focus ring around a control: softer than the document's focus colour, still 3:1 on bars and menus. */
   --galeo-chrome-focus: #218bff;
+  --galeo-chrome-focus-ring: 1px solid var(--galeo-chrome-focus);
   /* Tints: a find-in-all-tabs match, a banner, the drop area's veil. */
   --galeo-chrome-match: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
   --galeo-chrome-banner: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));

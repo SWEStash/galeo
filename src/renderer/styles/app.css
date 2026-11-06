@@ -71,7 +71,7 @@ body,
 }
 
 .profile-chip[data-focus-visible] {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: 1px;
 }
 
@@ -256,7 +256,7 @@ body,
 }
 
 .swatch-item[data-focus-visible] {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: 1px;
 }
 
@@ -353,8 +353,8 @@ body,
 }
 
 .tab[data-focus-visible] {
-  outline: 2px solid var(--galeo-chrome-focus);
-  outline-offset: -2px;
+  outline: var(--galeo-chrome-focus-ring);
+  outline-offset: -1px;
 }
 
 .tab[data-dragging] {
@@ -510,7 +510,7 @@ body,
 .tab-new:focus-visible,
 .bar-tool:focus-visible,
 .panel-toggle:focus-visible {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: 1px;
 }
 /* + follows the last tab inside the strip; while the tabs overflow it stands after the strip's ›. */
@@ -718,7 +718,7 @@ body,
   box-shadow: inset 0 2px 0 var(--galeo-color-accent);
 }
 .tab-overview-card[data-focus-visible] {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: -1px;
 }
 .tab-overview-card[data-dragging] {
@@ -888,11 +888,12 @@ body,
 .side-panel:not([data-collapsed]) .tab::after {
   content: '';
   position: absolute;
-  right: 25%; /* the line is half the row's width */
+  right: 30%;
   bottom: 0;
-  left: 25%;
+  left: var(--galeo-space-md);
   height: 1px;
-  background: var(--galeo-color-border);
+  /* Starts under the text and fades out to the right. */
+  background: linear-gradient(to right, var(--galeo-color-border), transparent);
 }
 .side-panel:not([data-collapsed]) .tab:is([data-selected], [data-hovered], :has(+ [data-selected]), :has(+ [data-hovered]), :last-child)::after {
   visibility: hidden;
@@ -1144,8 +1145,8 @@ main {
   background: var(--galeo-chrome-hover);
 }
 .outline-item:focus-visible {
-  outline: 2px solid var(--galeo-chrome-focus);
-  outline-offset: -2px;
+  outline: var(--galeo-chrome-focus-ring);
+  outline-offset: -1px;
 }
 .outline-item[aria-current='location'] {
   box-shadow: inset 2px 0 0 var(--galeo-color-accent);
@@ -1184,7 +1185,7 @@ button {
   cursor: pointer;
 }
 button:focus-visible {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: 1px;
 }
 
@@ -1288,7 +1289,7 @@ button:focus-visible {
   font: inherit;
 }
 .find-bar input:focus-visible {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: 0;
 }
 .find-count {
@@ -1313,8 +1314,8 @@ button:focus-visible {
 }
 
 .document-view:focus-visible {
-  outline: 2px solid var(--galeo-chrome-focus);
-  outline-offset: -2px;
+  outline: var(--galeo-chrome-focus-ring);
+  outline-offset: -1px;
 }
 
 /* The status bar (UX §2): path first, then the document's facts, then the window's messages. */
@@ -1374,7 +1375,7 @@ button:focus-visible {
 
 .status-path:focus-visible,
 .status-encoding[data-focus-visible] {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
 }
 
 .status-message {
@@ -1574,7 +1575,7 @@ button:focus-visible {
   font-weight: 600;
 }
 .choice-options.segmented .react-aria-RadioButton[data-focus-visible] {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: 1px;
 }
 .field-label {
@@ -1663,7 +1664,7 @@ button:focus-visible {
 
 .react-aria-RadioButton[data-focus-visible]::before,
 .react-aria-SwitchButton[data-focus-visible] .switch-track {
-  outline: 2px solid var(--galeo-chrome-focus);
+  outline: var(--galeo-chrome-focus-ring);
   outline-offset: 2px;
 }
 
