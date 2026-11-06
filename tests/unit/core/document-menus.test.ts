@@ -68,7 +68,7 @@ describe('DocumentMenus.path', () => {
   });
 });
 
-const READING = { tree: false };
+const READING = { tree: false, rich: false };
 
 describe('DocumentMenus.document (UX F11)', () => {
   const labels = (shown: { items: readonly MenuItem[] }[]) => shown[0]!.items.map((item) => `${item.label}${item.enabled === false ? ' (off)' : ''}`);
@@ -85,8 +85,14 @@ describe('DocumentMenus.document (UX F11)', () => {
 
   it("offers Save while editing, and a JSON tree's entries while one shows", async () => {
     const { menus, shown, id } = setup(null, undefined, 'linux', undefined, { editing: true });
-    await menus.document(id, 1, { tree: true });
+    await menus.document(id, 1, { tree: true, rich: false });
     expect(labels(shown).slice(4, 8)).toEqual(['Save', 'Expand all', 'Collapse all', 'Copy JSON path']);
+  });
+
+  it('offers Copy as rich text while a rendered Markdown document shows', async () => {
+    const { menus, shown, id } = setup(null);
+    await menus.document(id, 1, { tree: false, rich: true });
+    expect(labels(shown).slice(5, 7)).toEqual(['Copy as rich text', 'Open with default app']);
   });
 
   it("turns on edit mode itself, as Ctrl+E does, only for the window's shown tab", async () => {
@@ -100,7 +106,7 @@ describe('DocumentMenus.document (UX F11)', () => {
   });
 
   it('hands the page the commands it runs, and nothing once the tab shows another file', async () => {
-    for (const choice of ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path'] as const) {
+    for (const choice of ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path', 'copy-rich'] as const) {
       const each = setup(choice);
       expect(await each.menus.document(each.id, 1, READING)).toBe(choice);
     }

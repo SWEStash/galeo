@@ -46,7 +46,7 @@ export class DocumentMenus {
    * on Edit and the file entries itself, checking the file again when the choice comes back; the
    * other choices go back to the page, which runs their commands.
    */
-  async document(id: string, window: number, { tree }: DocumentMenuContext): Promise<DocumentMenuChoice | null> {
+  async document(id: string, window: number, { tree, rich }: DocumentMenuContext): Promise<DocumentMenuChoice | null> {
     const tab = this.deps.tabs.get(id, window);
     if (!tab) throw new Error(UNKNOWN_DOCUMENT);
     const history = this.deps.tabs.history(id, window);
@@ -64,6 +64,7 @@ export class DocumentMenus {
             { id: 'copy-json-path', label: 'Copy JSON path' },
           ]
         : []),
+      ...(rich ? [{ id: 'copy-rich', label: 'Copy as rich text' }] : []),
       { id: 'open-default', label: 'Open with default app', enabled: await this.openable(tab.path) },
       { id: 'reveal', label: 'Reveal in Files' },
       { id: 'copy-path', label: 'Copy path' },

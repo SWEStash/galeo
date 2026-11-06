@@ -633,6 +633,19 @@ export function DocumentPane({
         return true;
       },
       ...tableCommands,
+      copyRichText: () => {
+        const rich = article && view !== 'source' ? documentHandle.current?.richText() : null;
+        if (!rich) {
+          if (ready) onMessage('Copy as rich text works on a rendered Markdown document');
+          return ready !== null;
+        }
+        const item = new ClipboardItem({ 'text/html': new Blob([rich.html], { type: 'text/html' }), 'text/plain': new Blob([rich.text], { type: 'text/plain' }) });
+        void navigator.clipboard.write([item]).then(
+          () => onMessage('Copied as rich text'),
+          () => onMessage("Couldn't copy the document"),
+        );
+        return true;
+      },
       copyJsonPath: () => {
         const tree = view === 'rendered' ? documentHandle.current?.tree() : null;
         if (!tree || !treeModel) return false;
@@ -737,7 +750,12 @@ export function DocumentPane({
   }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, render.tasks, tabular, separatorChoice, shownTable?.table, header, renderable, splittable, wrap, outlined, outlineOpen, views?.follow]);
 
   // Ready content is always shown: no document means the content is a state of its own.
-  const menu = () => onContextMenu({ tree: treeModel !== null && view === 'rendered' });
+  const menu = () => onContextMenu({ tree: treeModel !== null && view === 'rendered', rich: article && view !== 'source' });
+  const copyCode = (text: string) =>
+    void navigator.clipboard.writeText(text).then(
+      () => onMessage('Copied'),
+      () => onMessage("Couldn't copy the code"),
+    );
   if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={menu} />;
 
   return (
@@ -794,6 +812,7 @@ export function DocumentPane({
           onFollowEnded={endFollow}
           onLink={onLink}
           onContextMenu={menu}
+          onCopyCode={copyCode}
           onResolveImage={onResolveImage}
           scheme={scheme}
           initialPosition={initialPosition}

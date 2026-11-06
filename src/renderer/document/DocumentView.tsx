@@ -4,6 +4,7 @@ import type { ChangedRanges } from './change-ranges';
 import { useLatest } from './useLatest';
 import type { ImageResult } from '../../shared/documents';
 import { offerZoom, type ImageExpand } from './images';
+import { offerCodeCopy, richTextOf } from './code-copy';
 import type { ViewMode } from '../../shared/formats';
 import { ID_PREFIX } from '../../shared/markdown/ids';
 import type { CsvTable } from '../../shared/csv';
@@ -43,6 +44,8 @@ export interface DocumentViewProps {
   onLink?: (href: string, options: { background: boolean }) => void;
   /** A right-click: main shows the document's menu (ADR-004); the page shows none of its own. */
   onContextMenu?: (() => void) | undefined;
+  /** A code block's Copy button was pressed (#58): its text. */
+  onCopyCode?: ((text: string) => void) | undefined;
   /** Where to be once the content is in (a tab waking up); the view stays hidden until it's there. */
   initialPosition?: ScrollAnchor | null;
   /** Where the reader is, once scrolling settles. */
@@ -133,6 +136,8 @@ export interface DocumentHandle extends Finder {
   replaceAll(text: string): number;
   /** The JSON tree shown, or null. */
   tree(): JsonTreeView | null;
+  /** The rendered document as rich text (its HTML and plain text), or null when none is rendered. */
+  richText(): { html: string; text: string } | null;
   /** Goes to the next (1) or previous (-1) change mark, wrapping round; null when there is none. */
   stepChange(direction: 1 | -1): { index: number; count: number } | null;
 }
@@ -169,6 +174,7 @@ export function DocumentView({
   onFollowEnded,
   onLink,
   onContextMenu,
+  onCopyCode,
   onResolveImage,
   scheme,
   initialPosition = null,
@@ -242,6 +248,7 @@ export function DocumentView({
       replace: (text) => host().source?.replace(text) ?? NO_MATCHES,
       replaceAll: (text) => host().source?.replaceAll(text) ?? 0,
       tree: () => host().tree,
+      richText: () => (host().article.childElementCount > 0 ? richTextOf(host().article) : null),
       stepChange: (direction) => {
         const marks = changeMarks.current;
         const inSource = view === 'source';
@@ -315,6 +322,7 @@ export function DocumentView({
   const diagrams = useRef<Diagrams | null>(null);
   const expandListener = useLatest(onExpandDiagram);
   const imageListener = useLatest(onExpandImage);
+  const copyListener = useLatest(onCopyCode);
   const shownScheme = useRef(scheme);
   useEffect(() => () => diagrams.current?.dispose(), []);
   useLayoutEffect(() => {
@@ -332,6 +340,7 @@ export function DocumentView({
     if ('html' in rendered) {
       documentHost.setContent(rendered.html);
       // Diagrams drawn before come back at once, before the place is kept below.
+      offerCodeCopy(documentHost.article, (text) => copyListener.current?.(text));
       diagrams.current = attachDiagrams(documentHost.article, {
         scheme: shownScheme.current,
         onExpand: (diagram) => expandListener.current?.(diagram),

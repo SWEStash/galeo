@@ -97,19 +97,19 @@ describe('documentHandlers', () => {
   it("shows a document's menus, never the settings tab's", async () => {
     const { records, handlers, menus, id } = setup({ '/d/a.md': '# a' });
     await handlers['documents.pathMenu']([id], event);
-    await handlers['documents.contextMenu']([id, { tree: true }], event);
+    await handlers['documents.contextMenu']([id, { tree: true, rich: false }], event);
     const settings = records.openSettings(1);
     expect(() => handlers['documents.pathMenu']([settings.id], event)).toThrow(/not a document/);
-    await expect(handlers['documents.contextMenu']([settings.id, { tree: false }], event)).rejects.toThrow(/not a document/);
-    expect(menus).toEqual([`path ${id} 1`, `document ${id} 1 {"tree":true}`]);
+    await expect(handlers['documents.contextMenu']([settings.id, { tree: false, rich: false }], event)).rejects.toThrow(/not a document/);
+    expect(menus).toEqual([`path ${id} 1`, `document ${id} 1 {"tree":true,"rich":false}`]);
   });
 
   it("counts a choice in the document's menu as input, so the Save the page runs next works", async () => {
     const chosen = setup({ '/d/a.md': '# a' }, '', { credits: 0, choice: 'save' });
-    expect(await chosen.handlers['documents.contextMenu']([chosen.id, { tree: false }], event)).toBe('save');
+    expect(await chosen.handlers['documents.contextMenu']([chosen.id, { tree: false, rich: false }], event)).toBe('save');
     expect(chosen.input.left).toBe(1);
     const dismissed = setup({ '/d/a.md': '# a' }, '', { credits: 0 });
-    expect(await dismissed.handlers['documents.contextMenu']([dismissed.id, { tree: false }], event)).toBeNull();
+    expect(await dismissed.handlers['documents.contextMenu']([dismissed.id, { tree: false, rich: false }], event)).toBeNull();
     expect(dismissed.input.left).toBe(0);
   });
 

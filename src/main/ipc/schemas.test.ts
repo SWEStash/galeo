@@ -95,7 +95,7 @@ describe('document channel arguments (SR-11)', () => {
   });
 
   it('documents.contextMenu takes an id and whether a JSON tree shows, nothing else', () => {
-    expect(accepts('documents.contextMenu', [ID, { tree: true }])).toBe(true);
+    expect(accepts('documents.contextMenu', [ID, { tree: true, rich: false }])).toBe(true);
     for (const bad of [[ID], [ID, {}], [ID, { tree: 'yes' }], [ID, { tree: true, path: '/etc/passwd' }]]) expect(accepts('documents.contextMenu', bad)).toBe(false);
   });
 

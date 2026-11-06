@@ -25,7 +25,7 @@ test('Back, Find and Edit, then Save, from the menu run as their keys do', async
     await expect(shownDocument(window).locator('h1')).toHaveText('Other');
 
     await shownDocument(window).click({ button: 'right' });
-    await expect.poll(() => lastMenu(app)).toEqual(['Back', 'Forward (off)', 'Find…', 'Reload', 'Edit', 'Open with default app', 'Reveal in Files', 'Copy path']);
+    await expect.poll(() => lastMenu(app)).toEqual(['Back', 'Forward (off)', 'Find…', 'Reload', 'Edit', 'Copy as rich text', 'Open with default app', 'Reveal in Files', 'Copy path']);
     await answer(app, 'back');
     await shownDocument(window).click({ button: 'right' });
     await expect(shownDocument(window).locator('h1')).toHaveText('Notes');

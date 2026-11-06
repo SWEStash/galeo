@@ -32,6 +32,7 @@ export const COMMANDS = {
   viewSplit: { label: 'Show split view', group: 'View', runs: 'page' },
   toggleFollow: { label: 'Toggle follow (logs)', group: 'View', runs: 'page' },
   reload: { label: 'Reload from disk', group: 'File', runs: 'page' },
+  copyRichText: { label: 'Copy as rich text', group: 'File', runs: 'page' },
   back: { label: 'Back', group: 'Go', runs: 'page' },
   forward: { label: 'Forward', group: 'Go', runs: 'page' },
   newWindow: { label: 'New window', group: 'Window', runs: 'main' },

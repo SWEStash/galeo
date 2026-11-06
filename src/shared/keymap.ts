@@ -51,6 +51,7 @@ const BASE = {
   moveTabToNewWindow: [],
   moveTabToWindow: [],
   togglePin: [],
+  copyRichText: [],
   profileMenu: ['CmdOrCtrl+Shift+M'],
   settings: ['CmdOrCtrl+,'],
   /** Ctrl++ as most apps; Ctrl+= too, on layouts where = needs no Shift. */

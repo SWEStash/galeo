@@ -358,6 +358,37 @@ pre {
 pre code {
   font-size: 1em;
 }
+/* A code block's Copy button (#58): after the block, at its top-right corner, so it stays put while
+   wide code scrolls; shown on hover and keyboard focus, as a diagram's Expand button is. */
+pre {
+  anchor-name: --galeo-code;
+}
+.galeo-code-copy {
+  position: absolute;
+  position-anchor: --galeo-code;
+  top: calc(anchor(top) + 4px);
+  right: calc(anchor(right) + 4px);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--galeo-color-border);
+  border-radius: 4px;
+  background: var(--galeo-color-bg);
+  color: var(--galeo-color-fg);
+  cursor: pointer;
+  opacity: 0;
+}
+.galeo-code-copy svg {
+  width: 16px;
+  height: 16px;
+}
+pre:hover + .galeo-code-copy,
+.galeo-code-copy:hover,
+.galeo-code-copy:focus-visible {
+  opacity: 1;
+}
 
 /* Shiki emits both themes as variables; the shadow host's scheme picks one without a re-render. */
 .shiki, .shiki span {

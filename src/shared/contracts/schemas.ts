@@ -82,7 +82,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'documents.missingLinks': z.tuple([documentId]),
   'documents.toggleTask': z.tuple([documentId, z.number().int().min(1).max(100_000_000), z.string().min(1).max(256)]),
   'documents.pathMenu': z.tuple([documentId]),
-  'documents.contextMenu': z.tuple([documentId, z.strictObject({ tree: z.boolean() })]),
+  'documents.contextMenu': z.tuple([documentId, z.strictObject({ tree: z.boolean(), rich: z.boolean() })]),
   'documents.save': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version.nullable()]),
   'documents.dirty': z.tuple([documentId, z.boolean()]),
   'documents.leaveEdit': z.tuple([documentId]),

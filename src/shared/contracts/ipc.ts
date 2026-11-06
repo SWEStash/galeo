@@ -43,12 +43,14 @@ export const TAB_MENU_CHOICES = ['close', 'reopen', 'move-new', 'move-to', 'pin'
 export type TabMenuChoice = (typeof TAB_MENU_CHOICES)[number];
 
 /** What the document's right-click menu hands back to the page: the command it runs on the shown document. */
-export const DOCUMENT_MENU_CHOICES = ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path'] as const;
+export const DOCUMENT_MENU_CHOICES = ['back', 'forward', 'find', 'reload', 'save', 'expand-all', 'collapse-all', 'copy-json-path', 'copy-rich'] as const;
 export type DocumentMenuChoice = (typeof DOCUMENT_MENU_CHOICES)[number];
 /** What only the page knows about the document under the menu. */
 export interface DocumentMenuContext {
   /** A JSON tree shows: Expand all, Collapse all and Copy JSON path apply. */
   tree: boolean;
+  /** A rendered Markdown document shows: Copy as rich text applies. */
+  rich: boolean;
 }
 
 export interface OtherWindow {
