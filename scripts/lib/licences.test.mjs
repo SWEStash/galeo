@@ -57,6 +57,14 @@ describe('collectNotices', () => {
     ]);
   });
 
+  it('adds the source notice when the excepted licence is one of an either-or', () => {
+    const notices = collectNotices(
+      lock({ 'node_modules/elkjs': { version: '0.12.1', license: 'EPL-2.0 OR GPL-3.0-or-later' } }),
+      files({ 'node_modules/elkjs': { 'package.json': '{}', LICENSE: 'EPL text' } }),
+    );
+    expect(notices[0].texts).toEqual(['EPL text', 'The source code of elkjs 0.12.1, unmodified, is available at https://github.com/kieler/elkjs.']);
+  });
+
   it("takes an old-style `licenses` list, and states the licence and author when a package ships no text", () => {
     const notices = collectNotices(
       lock({ 'node_modules/f': { version: '0.2.2' } }),
@@ -90,6 +98,10 @@ describe('licenceProblems: named exceptions', () => {
   it('allows elkjs under EPL-2.0 only: not another licence for it, nor EPL-2.0 for another package', () => {
     expect(licenceProblems([notice('elkjs', 'EPL-2.0')])).toEqual([]);
     expect(licenceProblems([notice('elkjs', 'GPL-3.0'), notice('other', 'EPL-2.0')])).toEqual(['elkjs@1.0.0: GPL-3.0', 'other@1.0.0: EPL-2.0']);
+  });
+
+  it('allows elkjs when EPL-2.0 is one of its either-or licences', () => {
+    expect(licenceProblems([notice('elkjs', 'EPL-2.0 OR GPL-3.0-or-later'), notice('elkjs', '(GPL-3.0-or-later OR EPL-2.0)')])).toEqual([]);
   });
 });
 

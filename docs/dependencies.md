@@ -23,7 +23,7 @@ rejected, so later additions follow the same bar.
 4. **Licence.** Runtime dependencies must be permissive and MIT-compatible (MIT, ISC, BSD,
    Apache-2.0; OFL for fonts). Copyleft (GPL, LGPL) is not allowed at runtime. MPL-2.0 is allowed
    only as a dev dependency. **Named exceptions** (owner, one package and one licence each, shipped
-   unmodified, enforced by `scripts/lib/licences.mjs`): `elkjs` under EPL-2.0, Mermaid 12's layout
+   unmodified, enforced by `scripts/lib/licences.mjs`): `elkjs` under EPL-2.0 (alone or as one option of an either-or), Mermaid 12's layout
    engine (2026-10-06); About tells where its source is, as EPL-2.0 asks.
 5. **Weight.** Anything heavy loads lazily in the renderer (ADR-003). Packages with native
    modules are avoided, since they need rebuilding for Electron.
@@ -65,7 +65,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | `rehype-raw`, `rehype-sanitize`, `rehype-slug`, `rehype-stringify` | 7 / 6 / 6 / 10 | MIT | 2023–2024 | 4–17 M | Raw HTML → allowlist sanitize (SR-02) → slugs → HTML string |
 | `shiki`, `@shikijs/rehype` | 4.6.x | MIT | 2026-11-02 | 21 M / 680 k | Code highlighting with the GitHub themes; grammars loaded per document |
 | `katex`, `rehype-katex` | 0.19.x / 7.0.x | MIT | 2026-10-23 / 2024-08-19 | 24 M / 6.8 M | Math (`trust: false`, limits; SR-03). **Exact version pin**; `rehype-katex`, Mermaid and `micromark-extension-math` ask for `^0.16`, so `overrides` in `package.json` give them the pinned `katex` (without them, math ran on a nested 0.16 copy, under a KaTeX advisory fixed in 0.18.2, and only the stylesheet followed the pin) |
-| `mermaid` | 12.2.0 | MIT | 2026-10-13 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. On 12.x since 2026-10-06 (owner): ELK layout (12's default; brings `elkjs`, EPL-2.0, allowed by name under "Licence"), `look: 'classic'` |
+| `mermaid` | 12.3.0 | MIT | 2026-11-03 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. On 12.x since 2026-10-06 (owner): ELK layout (12's default; brings `elkjs`, EPL-2.0, allowed by name under "Licence"; since 0.12 `EPL-2.0 OR GPL-3.0-or-later`, taken under EPL-2.0), `look: 'classic'` |
 | `dompurify` | 3.4.17 | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
 
 ### Runtime: source views (CodeMirror 6, ADR-003)
