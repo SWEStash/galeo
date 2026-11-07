@@ -1,10 +1,10 @@
 # PRD: galeo
 
 - **Author**: project owner
-- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29, apt updates 2026-11-04)
+- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29, apt updates 2026-11-04, v0.6 2026-11-04, v0.7 2026-11-05, v0.8 2026-11-07)
 - **Status**: Approved (2026-09-26)
-- **Target release**: v0.1 "reader", then v0.2 "editor", v0.3 "formats", v0.4 "tabs" and v0.5
-  "platforms"
+- **Target release**: v0.1 "reader", then v0.2 "editor", v0.3 "formats", v0.4 "tabs", v0.5
+  "platforms", v0.6 "agent companion", v0.7 "polish" and v0.8 "watching an agent's work, part 2"
 - **Related**: the decision records, UX specification, threat model, architecture —
   see [References](#references)
 
@@ -559,6 +559,63 @@ as fast and as keyboard- and screen-reader-friendly as before.
 - Watching a folder for new files.
 - Drag between windows checked on X11.
 - Removing the Windows command (`galeo.cmd`) when galeo is uninstalled.
+
+## User Stories — v0.8 "watching an agent's work, part 2"
+
+v0.8 keeps up with files that change while I read them: a large log followed without lag, and a folder
+watched for new or changed files. Linux gets arm64 packages, and the apt repository keeps its key on a plain
+remove. Each story links its issue, which holds the full acceptance criteria (*Done when*).
+
+### Must Have
+
+1. **Follow a large log without lag** ([#42](https://github.com/SWEStash/galeo/issues/42)). As someone
+   watching an agent's or a build's log, I want new lines to show at once even in a large file, so that I can
+   follow it live.
+   - AC: On a 100 MB log growing by 10 lines a second, each new line shows within half a second.
+   - AC: An edit anywhere else in the file still shows the right text, and saving still detects a file changed
+     on disk.
+2. **Linux on arm64** ([#53](https://github.com/SWEStash/galeo/issues/53)). As a Linux user on an ARM
+   machine, I want a `.deb` and an AppImage for arm64, and the apt repository to serve it, so that I can
+   install galeo as on x64.
+   - AC: The packages are checked and attested like the x64 ones.
+3. **Reinstall after a remove** ([#36](https://github.com/SWEStash/galeo/issues/36)). As a user of the apt
+   repository, I want `apt remove galeo` to keep the repository's key, so that installing galeo again works.
+   - AC: Only `apt purge` deletes the key.
+4. **Upgrades through apt** ([#37](https://github.com/SWEStash/galeo/issues/37)). The release checks that
+   `apt upgrade` installs 0.8.0 over a 0.7.0 installed from the repository.
+5. **Split view keeps its place** ([#43](https://github.com/SWEStash/galeo/issues/43)). Reordering tabs
+   never moves the editor's scroll position in split view.
+
+### Should Have
+
+- **Watch a folder** ([#49](https://github.com/SWEStash/galeo/issues/49)). As someone whose agent or build
+  writes reports into a folder, I want galeo to list the files created or changed there, so that I can open
+  the new ones without looking for them.
+  - AC: Settled by a design pass first: where the list shows, which files count, and what galeo may read in
+    the folder. It lists and opens on request; it is not a file browser.
+- **Close others** ([#39](https://github.com/SWEStash/galeo/issues/39)). The tab menu closes every other
+  unpinned tab in the window, asking first for unsaved edits.
+- **Launcher names follow profile names** ([#38](https://github.com/SWEStash/galeo/issues/38)).
+- **The Windows uninstaller removes `galeo.cmd`** ([#47](https://github.com/SWEStash/galeo/issues/47)),
+  when the file carries galeo's mark.
+- **The viewer's 100 % for an SVG with only a viewBox** ([#44](https://github.com/SWEStash/galeo/issues/44))
+  shows the size the viewBox gives.
+
+### Could Have
+
+- Windows test reliability: what holds a test's files after a forced quit, and whether a closed galeo can
+  linger ([#45](https://github.com/SWEStash/galeo/issues/45), [#46](https://github.com/SWEStash/galeo/issues/46)).
+
+### Won't Have (v0.8)
+
+- Profile launchers on macOS and Windows ([#40](https://github.com/SWEStash/galeo/issues/40)).
+- A live demo on the website ([#41](https://github.com/SWEStash/galeo/issues/41)).
+- Drag between windows checked on X11 ([#48](https://github.com/SWEStash/galeo/issues/48)).
+- More diagram engines, Vim keybindings and spell check in edit mode
+  ([#50](https://github.com/SWEStash/galeo/issues/50), [#51](https://github.com/SWEStash/galeo/issues/51),
+  [#52](https://github.com/SWEStash/galeo/issues/52)).
+- `.rpm` packages and winget ([#54](https://github.com/SWEStash/galeo/issues/54),
+  [#55](https://github.com/SWEStash/galeo/issues/55)).
 
 ## User Experience
 
