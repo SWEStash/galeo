@@ -1,0 +1,35 @@
+name: Bug
+description: Something galeo does wrong
+type: Bug
+body:
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps
+      description: What you did, one step per line. Attach a small file that shows it if you can.
+      placeholder: |
+        1. Open a 50 MB log
+        2. Press Ctrl+F, search "error"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What happened. Error text or a screenshot helps.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version and OS
+      description: "**About galeo** shows the version: end of Settings, the profile menu or the palette."
+      placeholder: galeo 0.7.0, Ubuntu 26.04 (Wayland), installed from the apt repository
+    validations:
+      required: true

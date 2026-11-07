@@ -4,6 +4,11 @@ on:
   pull_request:
   push:
     branches: [main]
+    # Docs-only pushes: `npm run check` covers them before the commit.
+    paths-ignore:
+      - 'docs/**'
+      - 'site/**'
+      - '*.md'
 
 permissions:
   contents: read
@@ -18,6 +23,8 @@ env:
 jobs:
   linux:
     name: Linux (full)
+    # Dependabot's updates are applied by hand on main, where CI runs; its pull requests never merge.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
