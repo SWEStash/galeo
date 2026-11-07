@@ -598,7 +598,8 @@ this map only.
   status); *Copy as rich text* (palette, the document's menu) puts the rendered Markdown document on
   the clipboard as HTML, without galeo's buttons, with its plain text. *Export to PDF…* (palette, the
   document's menu) saves a rendered Markdown document as a PDF where you choose: the document alone,
-  no bars, always in the light theme (diagrams drawn light), A4 (Letter in the US and Canada), code
+  no bars, always in the light theme (diagrams drawn light), A4 (Letter in the US and Canada), text
+  at 10.5 pt across the page's width, wide tables, images and diagrams fitted to it, code
   wrapped, and code, tables and diagrams kept whole on a page where they fit.
 - **Custom CSS**: a global `custom.css` and one per profile, applied in that order after the
   bundled theme; changes apply live to every open tab when the file is saved (hand edits to

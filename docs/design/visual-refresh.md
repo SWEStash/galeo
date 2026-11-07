@@ -132,6 +132,13 @@ it has a faint halo (the colour at 18 %); inside one (tabs, list rows, the docum
 it sits on the edge, without a halo. The colour is the softest blue that still stands out 3:1 on every
 background it meets (light `#218bff`, dark `#2d65b9`; owner, 2026-11-06).
 
+### Tooltips
+
+galeo draws its own tooltips (the system's are a dark box in another font): the `title` of what the
+pointer rests on, after 450 ms, below it (above near the window's foot), in `text-sm` on the chrome's
+surface at 90 % with a border, `radius-sm` and `shadow-1`; the text between fg and muted; long text
+wraps, up to 480 px wide. The side panel's marker tooltip looks the same (owner, 2026-11-07).
+
 ## 3. Two directions
 
 Both use §2's scale, the same layout and the same icons; they differ in how much the chrome shows

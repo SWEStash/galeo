@@ -37,6 +37,7 @@ import { MoveTabDialog } from './tabs/MoveTabDialog';
 import { StatusBar } from './tabs/StatusBar';
 import { TabBar } from './tabs/TabBar';
 import { showTabMenu } from './app/tab-menu';
+import { installTooltips } from './app/tooltips';
 import { TabDocument } from './tabs/TabDocument';
 import { TabSearch } from './tabs/TabSearch';
 import { useFileDrops } from './tabs/useFileDrops';
@@ -53,6 +54,8 @@ const TabOverview = lazy(() => import('./tabs/TabOverview').then((module) => ({ 
 const FindAll = lazy(() => import('./tabs/FindAll').then((module) => ({ default: module.FindAll })));
 
 export function App() {
+  // galeo's own tooltips, in the chrome's style, in place of the system's.
+  useEffect(() => installTooltips(), []);
   // What the window's creation told the page, so a new window paints without waiting on main;
   // `app.info` follows with the crash loop, which only main knows. Main brings a crashed window back
   // by reloading it, and that page waits for `app.info`, so a crash loop never shows its tabs.

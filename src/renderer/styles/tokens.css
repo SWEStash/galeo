@@ -97,6 +97,10 @@
   --galeo-chrome-match: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
   --galeo-chrome-banner: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));
   --galeo-chrome-veil: color-mix(in srgb, var(--galeo-color-bg) 85%, transparent);
+  /* A tooltip's ground: the chrome's surface, a little see-through. */
+  --galeo-chrome-tooltip: color-mix(in srgb, var(--galeo-chrome-surface) 90%, transparent);
+  /* Its text: between the text and muted colours, both 4.5:1 on it, so it is too. */
+  --galeo-chrome-tooltip-fg: color-mix(in srgb, var(--galeo-color-fg) 50%, var(--galeo-color-muted));
   color-scheme: light;
 }
 

@@ -27,8 +27,11 @@ body,
   body > :not(.galeo-print) {
     display: none !important;
   }
+  /* Paper sizes: a book's text size, and the page's width as the reading column. */
   .galeo-print {
     display: block;
+    --galeo-font-size: 10.5pt;
+    --galeo-measure: none;
   }
 }
 
@@ -1040,18 +1043,40 @@ body,
   line-height: 1;
 }
 
+/* galeo's tooltips (the system's are a dark box in another font): the chrome's surface and text. */
+.galeo-tooltip {
+  position: fixed;
+  z-index: 100;
+  max-width: 480px;
+  padding: var(--galeo-space-2xs) var(--galeo-space-sm);
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius-sm);
+  background: var(--galeo-chrome-tooltip);
+  box-shadow: var(--galeo-shadow-1);
+  backdrop-filter: blur(6px);
+  color: var(--galeo-chrome-tooltip-fg);
+  font: var(--galeo-text-sm) var(--galeo-font-ui);
+  /* All of it: a long path wraps rather than being cut. */
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  animation: galeo-fade var(--galeo-motion-fast) var(--galeo-ease);
+}
+.galeo-tooltip[hidden] {
+  display: none;
+}
 .marker-tip {
   position: fixed;
   z-index: 10;
-  max-width: 320px;
-  padding: var(--galeo-space-xs) var(--galeo-space-md);
-  overflow: hidden;
+  max-width: 480px;
+  padding: var(--galeo-space-2xs) var(--galeo-space-sm);
   border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-md);
-  background: var(--galeo-chrome-surface);
+  border-radius: var(--galeo-radius-sm);
+  background: var(--galeo-chrome-tooltip);
   box-shadow: var(--galeo-shadow-1);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  backdrop-filter: blur(6px);
+  font: var(--galeo-text-sm) var(--galeo-font-ui);
+  color: var(--galeo-chrome-tooltip-fg);
+  overflow-wrap: anywhere;
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -1457,11 +1482,8 @@ button:focus-visible {
 .status-message {
   margin-left: auto;
 }
-/* A message is news (Copied, Saved the diagram, Exported to PDF): it stands out until it goes. */
+/* A message is news (Copied, Saved the diagram, Exported to PDF): in the text colour, as it arrives. */
 .status-message:not(:empty) {
-  padding: 0 var(--galeo-space-sm);
-  border-radius: var(--galeo-radius-sm);
-  background: var(--galeo-chrome-selected);
   color: var(--galeo-color-fg);
   font-weight: 500;
   animation: galeo-fade var(--galeo-motion-base) var(--galeo-ease);
