@@ -33,6 +33,15 @@ export async function preparePrint({ html, images }: Printable, documentRoot: Do
   const drawn = () => [...host.article.querySelectorAll<HTMLElement>('.galeo-diagram')].every((each) => each.dataset['state'] === 'rendered' || each.dataset['state'] === 'error');
   const until = Date.now() + DIAGRAMS_MS;
   while (!drawn() && Date.now() < until) await new Promise((resolve) => setTimeout(resolve, 50));
+  // A wide diagram keeps a minimum width on screen (it scrolls); on paper it shrinks to the page.
+  for (const drawing of host.article.querySelectorAll<HTMLElement>('.galeo-diagram-svg')) {
+    const svg = drawing.shadowRoot?.querySelector<SVGSVGElement>('svg');
+    if (svg) {
+      svg.style.removeProperty('min-width');
+      svg.style.setProperty('max-width', '100%');
+      svg.style.setProperty('height', 'auto');
+    }
+  }
   await Promise.all([...host.article.querySelectorAll('img')].map((image) => image.decode().catch(() => undefined)));
   return () => {
     diagrams.dispose();

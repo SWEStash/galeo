@@ -46,7 +46,7 @@ export interface DocumentViewProps {
   /** A right-click: main shows the document's menu (ADR-004); the page shows none of its own. */
   onContextMenu?: (() => void) | undefined;
   /** A code block's Copy button was pressed (#58): its text. */
-  onCopyCode?: ((text: string) => void) | undefined;
+  onCopyCode?: ((text: string) => Promise<boolean>) | undefined;
   /** Where to be once the content is in (a tab waking up); the view stays hidden until it's there. */
   initialPosition?: ScrollAnchor | null;
   /** Where the reader is, once scrolling settles. */
@@ -351,7 +351,7 @@ export function DocumentView({
     if ('html' in rendered) {
       documentHost.setContent(rendered.html);
       // Diagrams drawn before come back at once, before the place is kept below.
-      offerCodeCopy(documentHost.article, (text) => copyListener.current?.(text));
+      offerCodeCopy(documentHost.article, (text) => copyListener.current?.(text) ?? Promise.resolve(false));
       diagrams.current = attachDiagrams(documentHost.article, {
         scheme: shownScheme.current,
         onExpand: (diagram) => expandListener.current?.(diagram),

@@ -24,6 +24,9 @@ test('a code block has a Copy button, by mouse and by keyboard, that copies its 
     // Windows' clipboard gives text back with its own line endings.
     await expect.poll(async () => (await app.evaluate(({ clipboard }) => clipboard.readText())).replaceAll('\r\n', '\n')).toBe(code);
     await expect(window.getByTestId('status-message')).toHaveText('Copied');
+    // The button says so too, where the reader looks, then goes back.
+    await expect(shownDocument(window).getByRole('button', { name: 'Copied' })).toBeVisible();
+    await expect(copy).toBeAttached({ timeout: 3000 });
 
     await app.evaluate(({ clipboard }) => clipboard.writeText('before'));
     await copy.focus();

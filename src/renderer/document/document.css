@@ -386,7 +386,8 @@ pre {
 }
 pre:hover + .galeo-code-copy,
 .galeo-code-copy:hover,
-.galeo-code-copy:focus-visible {
+.galeo-code-copy:focus-visible,
+.galeo-code-copy[data-copied] {
   opacity: 1;
 }
 
@@ -642,8 +643,22 @@ a .galeo-image > img {
   h1, h2, h3, h4, h5, h6 {
     break-after: avoid;
   }
+  /* A page doesn't scroll: wide tables, images and diagrams fit its width instead of being cut. */
   table {
     display: table;
     width: 100%;
+    table-layout: fixed;
+    font-size: 0.85em;
+  }
+  th, td {
+    padding: 0.3em 0.45em;
+    overflow-wrap: anywhere;
+  }
+  img {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .galeo-diagram-scroll {
+    overflow: visible;
   }
 }

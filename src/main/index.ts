@@ -362,6 +362,10 @@ function start(initialMode: StartupMode): void {
   const lockdown = networkLockdown(runtime);
   registerSchemes();
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
+  // Documents hold no video (the sanitizer keeps no <video>), so Chromium needn't probe the GPU's video
+  // decoder and encoder at start; where the driver refuses (VA-API), the probe only logs an error.
+  app.commandLine.appendSwitch('disable-accelerated-video-decode');
+  app.commandLine.appendSwitch('disable-accelerated-video-encode');
 
   /** The name of the window's shown tab: its file's, or Settings. */
   const shownFile = (windowId: number) => {

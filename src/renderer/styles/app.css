@@ -1457,6 +1457,15 @@ button:focus-visible {
 .status-message {
   margin-left: auto;
 }
+/* A message is news (Copied, Saved the diagram, Exported to PDF): it stands out until it goes. */
+.status-message:not(:empty) {
+  padding: 0 var(--galeo-space-sm);
+  border-radius: var(--galeo-radius-sm);
+  background: var(--galeo-chrome-selected);
+  color: var(--galeo-color-fg);
+  font-weight: 500;
+  animation: galeo-fade var(--galeo-motion-base) var(--galeo-ease);
+}
 
 /* A window without tabs (UX §4). */
 .empty-window {

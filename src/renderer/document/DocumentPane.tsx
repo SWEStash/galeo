@@ -770,9 +770,9 @@ export function DocumentPane({
       onMessage(result === 'saved' ? 'Saved the diagram' : "Couldn't save the diagram");
     })().catch(() => onMessage("Couldn't save the diagram"));
   const copyCode = (text: string) =>
-    void navigator.clipboard.writeText(text).then(
-      () => onMessage('Copied'),
-      () => onMessage("Couldn't copy the code"),
+    navigator.clipboard.writeText(text).then(
+      () => (onMessage('Copied'), true),
+      () => (onMessage("Couldn't copy the code"), false),
     );
   if (!ready) return content.state === 'ready' ? null : <DocumentState content={content} onClose={onClose} onFileActions={menu} />;
 
