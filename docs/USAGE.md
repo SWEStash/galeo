@@ -53,9 +53,9 @@ alone a `gal` command that belongs to another package), adds galeo to *Open With
 MDX, text, log, JSON, YAML, TOML, CSV and TSV files and source code (it adds an MDX file type, since
 Ubuntu takes `.mdx` for a game ROM), and installs the AppArmor profile Chromium's sandbox needs on
 Ubuntu.
-`sudo apt remove galeo` removes it, and the repository's key: delete
-`/etc/apt/sources.list.d/galeo.sources` too, or `apt update` reports the missing key. Your settings
-and sessions stay in your home folder.
+`sudo apt remove galeo` removes it and keeps the repository's key, so installing it again works.
+`sudo apt purge galeo` deletes the key too: delete `/etc/apt/sources.list.d/galeo.sources` as well, or
+`apt update` reports the missing key. Your settings and sessions stay in your home folder.
 
 ### The AppImage
 

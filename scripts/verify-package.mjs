@@ -123,8 +123,9 @@ if (process.platform === 'linux') {
     const keyring = '/usr/share/keyrings/galeo-archive-keyring.asc';
     if (!resourceKey?.equals(key)) failures.push('apt key: resources/galeo-archive-keyring.asc is not packaging/linux/galeo-archive-keyring.asc');
     else if (!script('postinst').includes(`cp -f '/opt/galeo/resources/galeo-archive-keyring.asc' '${keyring}'`)) failures.push(`apt key: postinst doesn't copy it to ${keyring}`);
-    else if (!/remove\|purge\) rm -f '\/usr\/share\/keyrings\/galeo-archive-keyring\.asc'/.test(script('postrm'))) failures.push(`apt key: postrm doesn't remove ${keyring} on remove and purge only`);
-    else console.log('apt key: in resources, installed to /usr/share/keyrings, removed only with galeo');
+    else if (!/^\s*purge\) rm -f '\/usr\/share\/keyrings\/galeo-archive-keyring\.asc' ;;$/m.test(script('postrm')) || script('postrm').split(keyring).length !== 2) {
+      failures.push(`apt key: postrm doesn't remove ${keyring} on purge only`);
+    } else console.log('apt key: in resources, installed to /usr/share/keyrings, removed only on purge');
   }
 }
 

@@ -2,6 +2,7 @@
 
 - Status: Accepted (2026-11-04, owner)
 - Date: 2026-11-04
+- Amended: 2026-11-07 (owner, in place): the key is deleted on purge only, not on remove (decision 6).
 - Deciders: project owner
 - Supersedes: in [ADR-008](ADR-008-packaging-and-distribution.md), "an apt repository" in the "Not in v0.1"
   list, and the "Updates" bullet's "Users update by installing a new `.deb`/AppImage" for users of the `.deb`
@@ -51,7 +52,9 @@ What shapes the choice:
    carries the new key is signed with the standby, which users already trust.
 6. **The package keeps the key current.** The `.deb` carries the public key, and its post-install script copies
    it to `/usr/share/keyrings/galeo-archive-keyring.asc`, the file the user's sources entry names in `Signed-By`;
-   removing galeo deletes it (an upgrade doesn't). Because apt trusts only the key file on disk and never
+   purging galeo deletes it; removing or upgrading it doesn't. (*Amended 2026-11-07:* this read "removing galeo
+   deletes it". A remove keeps the user's sources entry, which then names a missing key, so installing galeo
+   again failed with `NO_PUBKEY`.) Because apt trusts only the key file on disk and never
    refreshes it, this is how a new subkey or a revocation reaches users: with the next upgrade. This is the
    vendor-keyring pattern (Debian's `debian-archive-keyring`, Brave's `brave-keyring`), without a separate
    package. The repository is published only for a release whose `.deb` contains the key.
