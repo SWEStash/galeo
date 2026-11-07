@@ -63,9 +63,9 @@ Record the date, the build and the result of each row.
 | Orca: callouts, front matter and task counts (v0.6) | A `> [!WARNING]` reads its title, then its text; flat front matter reads as a list of terms and values; Ctrl+Shift+O reads a heading as "Plan (2 of 5 tasks done)"; the status bar says "7 of 12 tasks" | Pass (2026-11-05, `.deb` 0.6.0) |
 | Task boxes and Tab by keyboard, then Orca (v0.6) | Reading: Tab to a task box, Space ticks it in the file (`cat` shows `[x]`), Orca reads "checkbox, checked". Edit mode: Tab indents a list line, Shift+Tab un-indents; Esc then Tab, and Ctrl+M then Tab, move the focus out of the editor; Orca reads the editor's description | Pass (2026-11-05, `.deb` 0.6.0) |
 | Orca: broken links (v0.6) | A link to a file that doesn't exist has a wavy underline; Orca reads it with "file not found" | Pass (2026-11-05, `.deb` 0.6.0) |
-| The new look by keyboard, then Orca (v0.7) | In light and dark, both tab layouts: Tab reaches `+`, `▦`, `⌕`, `⋯` and the status bar's view menu, Follow, zoom and width, each with a visible 1 px ring; Orca reads each button's name with its shortcut ("Search tabs (Ctrl+Shift+A)") | Not run (0.7.0) |
-| Menus by keyboard, then Orca (v0.7) | Shift+F10 on a tab opens its menu (Pin, Move…, Copy path…), on a document the document's (Back, Find…, Edit, Export to PDF…); Orca reads each entry; a pinned tab reads "…, pinned" | Not run (0.7.0) |
-| Copy buttons, then Orca (v0.7) | Tab to a code block's Copy button: it shows, Orca reads "Copy code"; Enter copies and Orca says "Copied" | Not run (0.7.0) |
+| The new look by keyboard, then Orca (v0.7) | In light and dark, both tab layouts: Tab reaches `+`, `▦`, `⌕`, `⋯` and the status bar's view menu, Follow, zoom and width, each with a visible 1 px ring; Orca reads each button's name with its shortcut ("Search tabs (Ctrl+Shift+A)") | Pass (2026-11-07, `.deb` 0.7.0) |
+| Menus by keyboard, then Orca (v0.7) | Shift+F10 on a tab opens its menu (Pin, Move…, Copy path…), on a document the document's (Back, Find…, Edit, Export to PDF…); Orca reads each entry; a pinned tab reads "…, pinned" | Pass (2026-11-07, `.deb` 0.7.0) |
+| Copy buttons, then Orca (v0.7) | Tab to a code block's Copy button: it shows, Orca reads "Copy code"; Enter copies and Orca says "Copied" | Pass (2026-11-07, `.deb` 0.7.0) |
 
 ## Performance
 
@@ -81,6 +81,9 @@ Mermaid 12.1.0, headless), with a new 50 KB reference document of the same size 
 0.5.0 on 2026-11-03 (Electron 45.2.1, Mermaid 12.2.0, headless, load average 0.15 before the run).
 0.5.1 on 2026-11-04 (Electron 45.2.1, Mermaid 12.2.0, headless, load average 0.5 before the run; the app
 is 0.5.0's, with the apt repository's key added to the package).
+0.7.0 on 2026-11-06 (Electron 45.2.3, Mermaid 12.2.0, headless, load average 0.4 before the run, on the
+version commit `b81dc15`; the fixes after it changed styles, tooltips and print only, and preflight's
+performance pass held on the tagged commit).
 0.6.0 on 2026-11-05 (Electron 45.2.3, Mermaid 12.2.0, headless). A first run, under a load average that
 rose from 0.8 to 2.7, measured 812 ms and 1356 ms for the two cold starts, over their budgets; the two
 cold-start rows and the change-marks row are from a re-run at a load average of 1.1 to 1.35, the others
@@ -93,23 +96,23 @@ in both runs, within their budgets; these are medians of 3.
 The memory baseline (1377 MB) was set by the owner on 2026-10-06, on Electron 44.5.1, after the
 Electron and Mermaid updates (1257 → 1377 MB).
 
-| Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 | 0.3.0 | 0.4.0 | 0.5.0 | 0.5.1 | 0.6.0 |
-|---|---|---|---|---|---|---|---|---|---|
-| Cold start → window painted | 650 ms (2026-10-21; 850 ms until then; PRD target 500 ms) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) | 811 ms (p95 841) | 569 ms (p95 657) | 525 ms (p95 905) | 414 ms (p95 672) | 451 ms (p95 495) |
-| Cold start → 50 KB document painted | 1250 ms (2026-10-21; 1300 ms until then; PRD target 500 ms) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) | 1264 ms (p95 1306) | 1148 ms (p95 1279) | 935 ms (p95 997) | 886 ms (p95 1390) | 916 ms (p95 1118) |
-| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) | 16.3 ms (p95 17.7) | 14.9 ms (p95 15.9) | 15.9 ms (p95 16.7) | 16.4 ms (p95 18.0) | 15.6 ms (p95 16.5) |
-| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) | 54 ms (p95 84) | 86 ms (p95 97) | 34 ms (p95 79) | 34 ms (p95 68) | 103 ms (p95 126) |
-| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 1 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 8 of 432 frames over 34 ms |
-| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB | 1426 MB | 1435 MB (+4.2 %) | 1395 MB (+1.3 %) | 1429 MB (+3.8 %) | 1413 MB (+2.6 %) | 1488 MB (+8.1 %) |
-| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) | 275 ms (p95 319) | 265 ms (p95 300) | 281 ms (p95 358) | 268 ms (p95 299) | 257 ms (p95 281) | 246 ms (p95 276) |
-| Open a 10 MB / 200,000-node JSON as a tree: launch → first row painted (v0.3) | 3000 ms (starting value) | — | — | — | 1462 ms | 2102 ms | 1446 ms | 1367 ms | 1804 ms |
-| Open a 99 MB CSV as a table: launch → first row painted (v0.3) | 5000 ms (ADR-020) | — | — | — | 2722 ms | 3232 ms | 2588 ms | 2578 ms | 3237 ms |
-| Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.8) both |
-| Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB | 1004 MB | 1220 MB | 1011 MB | 1025 MB |
-| Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — | 16.7 ms (p95 33.4) | 16.7 ms (p95 33.3) | 16.7 ms (p95 33.3) | 16.7 ms (p95 33.4) |
-| A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — | 1567 ms (p95 1947) | 1358 ms (p95 1401) | 1324 ms (p95 1489) | 1664 ms (p95 1765) |
-| Find in all tabs over three 100 MB tabs: the longest main is busy at once (v0.5) | 100 ms (2026-11-02) | — | — | — | — | — | 19 ms; the other window 8 ms; a query 1830 ms | 17 ms; the other window 12 ms; a query 1375 ms | 23 ms; the other window 15 ms; a query 1856 ms |
-| Coming back to a 1 MB plan with 50 scattered changes: new text shown → all marks drawn (v0.6) | 100 ms (2026-11-05) | — | — | — | — | — | — | — | 19 ms (min 15, max 31) |
+| Metric | Budget | 0.1.0 | 0.2.0 candidate | 0.2.0 | 0.3.0 | 0.4.0 | 0.5.0 | 0.5.1 | 0.6.0 | 0.7.0 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Cold start → window painted | 650 ms (2026-10-21; 850 ms until then; PRD target 500 ms) | 473 ms (p95 738) | 750 ms (p95 901) | 813 ms (p95 916) | 811 ms (p95 841) | 569 ms (p95 657) | 525 ms (p95 905) | 414 ms (p95 672) | 451 ms (p95 495) | 464 ms (p95 711) |
+| Cold start → 50 KB document painted | 1250 ms (2026-10-21; 1300 ms until then; PRD target 500 ms) | 1198 ms (p95 1514) | 1255 ms (p95 1344) | 1263 ms (p95 1356) | 1264 ms (p95 1306) | 1148 ms (p95 1279) | 935 ms (p95 997) | 886 ms (p95 1390) | 916 ms (p95 1118) | 937 ms (p95 998) |
+| Switch to a warm tab | 17 ms (one frame) | 16.1 ms (p95 17.3) | 15.2 ms (p95 25.3) | 15.5 ms (p95 17.4) | 16.3 ms (p95 17.7) | 14.9 ms (p95 15.9) | 15.9 ms (p95 16.7) | 16.4 ms (p95 18.0) | 15.6 ms (p95 16.5) | 13.1 ms (p95 15.6) |
+| Wake a hibernated tab | 150 ms | 54 ms (p95 92) | 37 ms (p95 106) | 75 ms (p95 89) | 54 ms (p95 84) | 86 ms (p95 97) | 34 ms (p95 79) | 34 ms (p95 68) | 103 ms (p95 126) | 96 ms (p95 134) |
+| Reading past 40 diagrams (a screen, then a pause) | reported | p95 16.7 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 1 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms | p95 16.8 ms; 8 of 432 frames over 34 ms | p95 16.8 ms; 0 of 432 frames over 34 ms |
+| Memory, 3 profiles / 20 tabs / ≤ 3 warm per window | baseline, + 10 % fails | 1384 MB (baseline 1377 MB, `tests/perf/memory-baseline.json`) | 1386 MB | 1426 MB | 1435 MB (+4.2 %) | 1395 MB (+1.3 %) | 1429 MB (+3.8 %) | 1413 MB (+2.6 %) | 1488 MB (+8.1 %) | 1424 MB (+3.4 %) |
+| Typing in split, 5,000-word article: last keystroke → preview painted (v0.2) | 300 ms (owner, 2026-10-09) | — | 255 ms (p95 286) | 275 ms (p95 319) | 265 ms (p95 300) | 281 ms (p95 358) | 268 ms (p95 299) | 257 ms (p95 281) | 246 ms (p95 276) | 257 ms (p95 349) |
+| Open a 10 MB / 200,000-node JSON as a tree: launch → first row painted (v0.3) | 3000 ms (starting value) | — | — | — | 1462 ms | 2102 ms | 1446 ms | 1367 ms | 1804 ms | 1473 ms |
+| Open a 99 MB CSV as a table: launch → first row painted (v0.3) | 5000 ms (ADR-020) | — | — | — | 2722 ms | 3232 ms | 2588 ms | 2578 ms | 3237 ms | 2654 ms |
+| Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.7) both |
+| Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB | 1004 MB | 1220 MB | 1011 MB | 1025 MB | 979 MB |
+| Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — | 16.7 ms (p95 33.4) | 16.7 ms (p95 33.3) | 16.7 ms (p95 33.3) | 16.7 ms (p95 33.4) | 16.7 ms (p95 16.8) |
+| A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — | 1567 ms (p95 1947) | 1358 ms (p95 1401) | 1324 ms (p95 1489) | 1664 ms (p95 1765) | 1363 ms (p95 1389) |
+| Find in all tabs over three 100 MB tabs: the longest main is busy at once (v0.5) | 100 ms (2026-11-02) | — | — | — | — | — | 19 ms; the other window 8 ms; a query 1830 ms | 17 ms; the other window 12 ms; a query 1375 ms | 23 ms; the other window 15 ms; a query 1856 ms | 18 ms; the other window 11 ms; a query 1362 ms |
+| Coming back to a 1 MB plan with 50 scattered changes: new text shown → all marks drawn (v0.6) | 100 ms (2026-11-05) | — | — | — | — | — | — | — | 19 ms (min 15, max 31) | 20 ms (min 12, max 26) |
 
 The v0.3 rows were first measured on 2026-10-16 during development (headless, Electron 44.8.0, the
 machine under a load average of 2–3, so not release figures): the JSON tree opened in 1550–1986 ms and
@@ -198,9 +201,9 @@ these.
 | `galeo file.md` while galeo is on another workspace: GNOME's "galeo is ready" notice, no workspace switch | Pass (2026-10-05, Ubuntu 26.04; 0.2.0 `.deb`, 2026-10-15; 0.4.0 `.deb`, 2026-10-28) |
 | Live reload from a real editor or agent: in place, no jump, `↻` for about a second | Pass (2026-10-05) |
 | Following an agent (v0.6): an agent rewriting a plan in a background tab gives it the blue `•`; showing it marks what changed, the plan's task count follows, and ticking a box while reading writes the file (an editor open on it reloads) | Pass (2026-11-05, `.deb` 0.6.0) |
-| Pinned tabs (v0.7): pin a tab from its right-click menu; it moves first with a pin, in both layouts; it stays pinned after quitting and starting again; Unpin puts it back among the others | Not run (0.7.0) |
-| Copy and share (v0.7): a code block's Copy pastes into a terminal; *Copy as rich text* pastes into LibreOffice Writer with headings, bold and code; the viewer's Save as SVG… and Save as PNG… open in an image viewer; *Export to PDF…* in dark mode opens in the document viewer as a light page with no bars | Not run (0.7.0) |
-| Profile launcher (v0.7): Settings → Profile launcher → Add to applications: "galeo — <profile>" shows in the GNOME app grid and opens that profile; Remove takes it out; deleting the profile removes it | Not run (0.7.0) |
+| Pinned tabs (v0.7): pin a tab from its right-click menu; it moves first with a pin, in both layouts; it stays pinned after quitting and starting again; Unpin puts it back among the others | Pass (2026-11-07, `.deb` 0.7.0) |
+| Copy and share (v0.7): a code block's Copy pastes into a terminal; *Copy as rich text* pastes into LibreOffice Writer with headings, bold and code; the viewer's Save as SVG… and Save as PNG… open in an image viewer; *Export to PDF…* in dark mode opens in the document viewer as a light page with no bars | Pass (2026-11-07, `.deb` 0.7.0) |
+| Profile launcher (v0.7): Settings → Profile launcher → Add to applications: "galeo — <profile>" shows in the GNOME app grid and opens that profile; Remove takes it out; deleting the profile removes it | Pass (2026-11-07, `.deb` 0.7.0) |
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
@@ -243,3 +246,4 @@ runs in three shards on macOS arm64 and Windows x64 only, to save the minutes qu
 | Release 0.5.0: release workflow 41723206000 (2026-11-03, tag `v0.5.0` on `e9c2800`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
 | 0.6.0 candidate: Platforms 42043373888 (2026-11-05, `9bf3a72`) | Pass, Fail: Shift+Option+M types a character on macOS, so the editor's way out never worked; fixed in `aa7d4ef` (Control+M), and the failed test re-run on it, 42048291129: Pass | Pass | Pass, Pass | Pass |
 | Release 0.6.0: release workflow 42066951847 (2026-11-05, tag `v0.6.0` on `ef707b8`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
+| 0.7.0 candidate: Platforms 42311587698 (2026-11-06, `b05efb3`) | Pass, Fail: the context-menu key test ran on macOS, which has no such key | Pass | Fail (a profile-launcher unit test with POSIX paths), Fail: a middle click on a scrolling tab strip started autoscroll, so it didn't close the tab; tests split Windows paths and line endings wrongly; fixed in `7276525`, re-run 42314113951: Pass | Fail (the same unit test), fixed in `7276525`: Pass |
