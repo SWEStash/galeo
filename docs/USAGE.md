@@ -43,6 +43,11 @@ sudo apt install ./galeo_<version>_amd64.deb
 Adding the sources file above afterwards turns on updates: from galeo 0.5.1 the package has already
 put the key in place.
 
+Up to galeo 0.7, removing galeo (`sudo apt remove galeo`) also deletes the repository's key while the
+sources file stays, so installing it again fails with `NO_PUBKEY 8D6C14A47CC81C1B` (and may then ask for
+an older package that is gone). Download the key again with the first command above, then
+`sudo apt update && sudo apt install galeo`. From galeo 0.8, only `sudo apt purge galeo` deletes the key.
+
 Either way, it installs galeo in `/opt/galeo`, puts `galeo` and the shorter `gal` on your `PATH` (it leaves
 alone a `gal` command that belongs to another package), adds galeo to *Open With* for Markdown,
 MDX, text, log, JSON, YAML, TOML, CSV and TSV files and source code (it adds an MDX file type, since
