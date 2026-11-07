@@ -2,6 +2,8 @@
 
 - Status: Accepted (2026-10-29, owner)
 - Date: 2026-10-29
+- Amended: 2026-11-07 (owner, in place): the reasons for few runs. Minutes on this public repository are free,
+  not a quota; the decision stands on run time, queueing and flakiness.
 - Deciders: project owner
 - Supersedes: [ADR-011](ADR-011-defer-macos-windows-ci.md); in
   [ADR-008](ADR-008-packaging-and-distribution.md), the macOS and Windows previews bullet. ADR-008's deferral of
@@ -18,8 +20,10 @@ Three facts shape how:
 - **No machines.** The owner has neither a Mac nor a Windows PC. Apple's licence allows macOS virtual machines
   only on Apple hardware, so the owner's Linux laptop can't run one. A Windows virtual machine would work, but
   needs setting up and keeping licensed.
-- **CI minutes are a quota.** GitHub Actions minutes for this repository come from a quota, and a macOS minute
-  counts about ten Linux minutes, a Windows minute about two.
+- **Platform runs are slow.** A run takes far longer than the Linux job, and the free plan runs at most five
+  macOS jobs at once, so its jobs queue. (*Amended 2026-11-07:* this read "CI minutes are a quota". Standard
+  runners are free on a public repository: the billing page shows all of galeo's macOS and Windows minutes
+  discounted.)
 - **The runners were costly before.** In v0.1 most of the time spent on CI went to failures only the macOS and
   Windows runners showed: timing, platform quirks in the tests, slow new windows (ADR-011).
 
@@ -60,9 +64,9 @@ bar, per-system data folders and the packaging config exist. What nothing checks
 | Option | Pros | Cons | Verdict |
 |---|---|---|---|
 | **Previews; macOS/Windows CI on demand and at release** | Few runs (fixes in batches, one gate per release); every release is checked on every platform | Platform bugs surface only on a `ci/platforms` run or at release, perhaps weeks after the change | **Chosen** |
-| CI on every push to `main`, not blocking | Platform bugs show within a push | The most minutes (four platform jobs per push, macOS at ~10×); red runs on `main` | Rejected: quota |
-| Weekly scheduled run plus the release gate | A bug surfaces within a week | Still about four runs a month when nothing changed | Rejected: quota |
-| A local Windows virtual machine for checks before a push | Real Windows without CI minutes | Setup and licence upkeep; covers Windows only, macOS still needs CI | Rejected for previews |
+| CI on every push to `main`, not blocking | Platform bugs show within a push | Four slow platform jobs per push, queueing behind each other; flaky red runs on `main` | Rejected: run time, noise |
+| Weekly scheduled run plus the release gate | A bug surfaces within a week | Still about four runs a month when nothing changed; failures found by nobody waiting on them | Rejected: noise |
+| A local Windows virtual machine for checks before a push | Real Windows without a CI run | Setup and licence upkeep; covers Windows only, macOS still needs CI | Rejected for previews |
 | Official support on all three | macOS and Windows users get a supported app | Needs manual release checks on real macOS hardware every release | Rejected: no hardware |
 | Signed and notarised builds | No Gatekeeper or SmartScreen warnings | Apple Developer ID (US$99 a year) and a Windows signing service; secrets in CI | Deferred (ADR-008) |
 
@@ -71,7 +75,7 @@ bar, per-system data folders and the packaging config exist. What nothing checks
 ### Positive
 - macOS and Windows users get galeo again, from the same release, with checksums and attestations.
 - Every release is tested on all three systems, and the simulated tests catch most porting mistakes on every push
-  without spending macOS or Windows minutes.
+  without waiting for a macOS or Windows run.
 
 ### Negative
 - Between releases nothing runs on real macOS or Windows unless someone pushes to `ci/platforms`. A change can
@@ -89,5 +93,5 @@ bar, per-system data folders and the packaging config exist. What nothing checks
 ## Revisit triggers
 - A user or contributor on macOS or Windows who can run manual checks, or asks for official support.
 - Signing becomes worth its cost.
-- The minutes quota changes.
+- GitHub starts charging this repository for Actions minutes, or platform runs get fast enough to run on every push.
 - A release fails on a platform bug that the simulated tests should have caught.

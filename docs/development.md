@@ -85,13 +85,69 @@ npm run build
 GALEO_SHOTS_DIR=/tmp/before npm run headless -- npx playwright test --project=screenshots tests/screenshots/chrome.spec.ts
 ```
 
+## How we work
+
+galeo has one maintainer. GitHub holds what is planned and what is done; the repository holds how and why.
+
+| What | Where |
+|---|---|
+| Bugs, feature requests, tasks, and whether each is open or done | [Issues](https://github.com/SWEStash/galeo/issues) |
+| What a release ships | Its milestone (`v0.8`) |
+| Decisions | ADRs in [`docs/decisions/`](decisions/) |
+| Release evidence | [VALIDATION](VALIDATION.md) |
+
+Working plans stay outside the repository. They refer to issues by number and never track an issue's
+status: the issue does.
+
+**Writing.** Issues and comments are short and precise, like commit messages: bullets and short lines, no
+prose, no filler. Enough context to understand the issue at a glance; detail that only matters while
+working stays in the working plan. Name files and functions in code spans, commits by hash, CI runs by
+link.
+
+**Filing.** One issue per problem or change.
+
+- Type: *Bug*, *Feature* or *Task* (the repository's issue types, not labels).
+- Title: the symptom for a bug ("Renaming a profile keeps the launcher's old name"), the outcome otherwise
+  ("Close others in the tab menu"). Under about 70 characters.
+- Body, bug: *Steps*, *Expected*, *Actual*, *Version and OS*. Feature or task: *Problem*, *Proposal*,
+  *Notes* (constraints, risks, out of scope). The issue forms ask for these.
+- Labels only for what a type can't say: `platform: macos`, `platform: windows`, `platform: x11`,
+  `needs decision` (the maintainer chooses before work starts), `good first issue`.
+- Security problems never go in a public issue: see [CONTRIBUTING](../CONTRIBUTING.md).
+
+**Planning and claiming.** No milestone: not planned. A milestone: that release ships it. Assigned: in
+progress. Nothing else marks progress, so no "working on it" comments. Moving an issue to another release
+changes its milestone, with a one-line comment saying why.
+
+**Comments.** New facts only: a repro, a finding, a decision with its reason, the commit or run that
+changes things. One fact per comment, a few lines; never restate the issue or report status. A decision
+that changes the design is an ADR, and the comment links it.
+
+**Closing.** The commit on `main` that resolves an issue says so in its footer: `Fixes #72` for a bug,
+`Closes #72` otherwise. An issue closed without code is closed as *not planned* with one line why; a
+duplicate links the other issue. Done means: on `main`, CI green, a regression test for a bug, and the
+[change checklist](#change-checklist).
+
+**Releases.** The release plan picks its issues into the milestone. At the release, issues still open move
+to the next milestone or to none, and the milestone closes with the tag.
+
+**Pull requests.** Outside pull requests aren't accepted yet (CONTRIBUTING). The maintainer commits to
+`main` and pushes after the preflight ([Before pushing](#before-pushing)). Dependabot's updates are
+applied by hand on `main`, one commit each, and its pull request is closed; CI skips Dependabot's pull
+requests, and docs-only pushes.
+
+**Agents** follow this section and act through the maintainer's account (`gh`). They draft issues,
+comments, closes, labels and milestone changes, and post them only after the maintainer approves: every
+post is public.
+
 ## Before pushing
 
 Run `npm run preflight` and push only when it ends with "all green". On a busy machine it may end
 with "all green except the performance smoke": push then only if its medians are close to the ones
 recorded before, since CI's runner is faster. A push to `main` runs CI on Linux only. macOS and Windows
-run in the *Platforms* workflow (`.github/workflows/platforms.yml`, ADR-027), whose minutes come from a
-quota: it runs when a commit is pushed to the `ci/platforms` branch (`git push --force origin
+run in the *Platforms* workflow (`.github/workflows/platforms.yml`, ADR-027). Its runs are long and its
+jobs queue (the free plan runs at most five macOS jobs at once), so it runs only when a commit is pushed
+to the `ci/platforms` branch (`git push --force origin
 HEAD:ci/platforms`; the branch only points at the commit under test, nothing is committed on it), when
 started by hand, and in the release workflow. One run shows every failure: packaging jobs for the four
 builds, and the end-to-end suite split across three jobs per system, each test tried twice so a flake shows

@@ -32,7 +32,7 @@ ten packages and drafts a GitHub Release. Nothing built on a workstation is publ
 
 Before the version commit, run the Platforms workflow once on the release candidate (push it to
 `ci/platforms`, or `gh workflow run platforms.yml --ref main`), so the tag finds nothing new on
-macOS or Windows. Its minutes come from a quota (macOS ~10×, Windows ~2×): one run per fix batch,
+macOS or Windows. A run is long and its macOS jobs queue: one run per fix batch,
 and `rerun_of=<run id>` runs only the end-to-end tests that failed. The previews get no manual
 checks.
 
@@ -52,7 +52,7 @@ The version commit comes first, so every check below runs on the exact commit th
    the last release.
 6. **Dry run** (optional, recommended after a workflow change): run the release workflow by hand
    from the Actions tab (*Run workflow* on `main`). It builds, tests and attests on every system,
-   and drafts nothing; it costs a full Platforms run's minutes.
+   and drafts nothing; it takes as long as a full Platforms run.
 
 If a check fails, fix it in a new commit (`main` takes no force-push, so the version commit
 stays) and start again from step 2 on the fix: that commit is now the one that gets tagged.

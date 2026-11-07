@@ -237,7 +237,7 @@ and again by the release workflow on the tag. A package job runs the typecheck, 
 build, `npm run package` and `npm run verify:package` (the fuses, ASAR integrity among them, read back from the binary; the
 *Open With* types read back from the package; and a start of the packaged app that parses its
 arguments). The end-to-end suite
-runs in three shards on macOS arm64 and Windows x64 only, to save the minutes quota.
+runs in three shards on macOS arm64 and Windows x64 only, to keep a run short.
 
 | Run | macOS arm64 (`macos-15`): package, e2e | macOS x64 (`macos-15-intel`): package | Windows x64 (`windows-2025`): package, e2e | Windows arm64 (`windows-11-arm`): package |
 |---|---|---|---|---|
