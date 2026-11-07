@@ -102,7 +102,8 @@ status: the issue does.
 **Writing.** Issues and comments are short and precise, like commit messages: bullets and short lines, no
 prose, no filler. Enough context to understand the issue at a glance; detail that only matters while
 working stays in the working plan. Name files and functions in code spans, commits by hash, CI runs by
-link.
+link. Don't hard-wrap issue text: GitHub keeps every line break. Keys and paths go in code spans, since
+`\)` outside one is a Markdown escape (`Ctrl+\` would lose its backslash).
 
 **Filing.** One issue per problem or change.
 
