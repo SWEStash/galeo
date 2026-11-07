@@ -109,15 +109,24 @@ link.
 - Type: *Bug*, *Feature* or *Task* (the repository's issue types, not labels).
 - Title: the symptom for a bug ("Renaming a profile keeps the launcher's old name"), the outcome otherwise
   ("Close others in the tab menu"). Under about 70 characters.
-- Body, bug: *Steps*, *Expected*, *Actual*, *Version and OS*. Feature or task: *Problem*, *Proposal*,
-  *Notes* (constraints, risks, out of scope). The issue forms ask for these.
+- Body, written for someone who doesn't know the code:
+  - **Context**: the feature involved, where it shows in the app, why it matters. One to three lines.
+  - Bug: *Steps*, *Expected*, *Actual*, *Version and OS*, *Impact* (who is hit, how badly, any workaround).
+  - Feature or task: *Problem*, *Proposal*, *Out of scope* when it helps.
+  - **Done when**: a checklist of observable results, a regression test among them for a bug. It's this
+    issue's acceptance criteria; the project-wide definition of done is under *Closing*.
+  - *Notes*: leads, constraints, links. Optional.
+
+  The issue forms ask the public for the essentials; the maintainer adds Context and Done when on triage.
+- An issue labelled `needs decision` lists the options instead of *Done when*. The decision is recorded in a
+  comment and *Done when* is added before the issue is claimed.
 - Labels only for what a type can't say: `platform: macos`, `platform: windows`, `platform: x11`,
   `needs decision` (the maintainer chooses before work starts), `good first issue`.
 - Security problems never go in a public issue: see [CONTRIBUTING](../CONTRIBUTING.md).
 
 **Planning and claiming.** No milestone: not planned. A milestone: that release ships it. Assigned: in
-progress. Nothing else marks progress, so no "working on it" comments. Moving an issue to another release
-changes its milestone, with a one-line comment saying why.
+progress; an issue is claimed only once it has *Done when*. Nothing else marks progress, so no "working on
+it" comments. Moving an issue to another release changes its milestone, with a one-line comment saying why.
 
 **Comments.** New facts only: a repro, a finding, a decision with its reason, the commit or run that
 changes things. One fact per comment, a few lines; never restate the issue or report status. A decision
