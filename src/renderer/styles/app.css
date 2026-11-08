@@ -1352,8 +1352,7 @@ main {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.watch-meta,
-.watch-dir {
+.watch-meta {
   grid-column: 2;
   overflow: hidden;
   color: var(--galeo-color-muted);
@@ -1363,6 +1362,7 @@ main {
 }
 .watch-footer {
   display: flex;
+  margin-top: auto;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--galeo-space-sm);

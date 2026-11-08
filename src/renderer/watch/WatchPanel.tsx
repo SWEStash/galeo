@@ -64,7 +64,8 @@ export function WatchPanel({ state, platform, onClose, say, autoFocus = false }:
       <header className="watch-header">
         <h2 className="watch-title">Watching</h2>
         <span className="watch-folder" data-testid="watch-folder" title={state.shown}>
-          {state.shown}
+          {/* Isolated, so the right-to-left overflow keeps the path's characters in order. */}
+          <bdi>{state.shown}</bdi>
         </span>
         {state.polling && <span className="watch-note">checked every few seconds</span>}
         <button type="button" className="watch-close" aria-label="Close watched folder (Ctrl+Shift+D)" title="Close (Ctrl+Shift+D)" onClick={onClose}>
@@ -104,9 +105,8 @@ export function WatchPanel({ state, platform, onClose, say, autoFocus = false }:
                 <span className="watch-mark" aria-hidden="true" />
                 <span className="watch-name">{entry.name}</span>
                 <span className="watch-meta">
-                  {kindText(entry)} · {time(entry.at)}
+                  {kindText(entry)} · {time(entry.at)} · {entry.folder ? `${entry.folder}/` : './'}
                 </span>
-                <span className="watch-dir">{entry.folder ? `${entry.folder}/` : './'}</span>
               </ListBoxItem>
             )}
           </ListBox>
