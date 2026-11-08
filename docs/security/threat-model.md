@@ -479,6 +479,9 @@ font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens
   table only the columns in view, each cell at most 1,000 characters.
 - The own file watcher watches only open files (via their parent directories), coalesces events,
   and caps its rate.
+- Re-reads of a changed file (ADR-033) run one at a time per tab. Main keeps a copy of the bytes it
+  last sent only for files of 1 MiB or more, at most 512 MiB for all tabs, dropping the least recently
+  read first; an append is sent only after an exact byte compare of the file's start.
 - `fc-list` (the font pickers' list) gets 5 s and 4 MB of output; past either it is stopped and the
   pickers offer the bundled fonts only. A list is kept for the app's life, so it runs once; a
   failure is logged and stands for a minute before `fc-list` runs again.
