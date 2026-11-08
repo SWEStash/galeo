@@ -130,9 +130,10 @@ test('Delete on a card with unsaved changes asks first; Cancel keeps the tab and
   }
 });
 
-/** Every scrolled element in the shown panel, shadow roots included: what a moved panel would lose. */
+/** Every scrolled element in the shown panel, shadow roots included: what a moved panel would lose. Read two frames on. */
 const shownScrolls = (window: Page) =>
-  window.locator('[data-testid="tab-panel"][data-active="true"]').evaluate((panel) => {
+  window.locator('[data-testid="tab-panel"][data-active="true"]').evaluate(async (panel) => {
+    for (let frame = 0; frame < 2; frame++) await new Promise(requestAnimationFrame);
     const tops: number[] = [];
     const names: string[] = [];
     const walk = (root: Element | ShadowRoot) => {
@@ -145,6 +146,24 @@ const shownScrolls = (window: Page) =>
     walk(panel);
     return { tops, names };
   });
+
+/**
+ * The scrolls once nothing moves them any more: two reads agree. In split view the panes, scrolled
+ * apart by `scrollShown`, are brought onto one line a few frames later, and a slow machine reads
+ * before that.
+ */
+async function settledScrolls(window: Page) {
+  let last = await shownScrolls(window);
+  await expect
+    .poll(async () => {
+      const now = await shownScrolls(window);
+      const same = now.tops.join() === last.tops.join();
+      last = now;
+      return same;
+    })
+    .toBe(true);
+  return last;
+}
 
 const scrollShown = (window: Page) =>
   window.locator('[data-testid="tab-panel"][data-active="true"]').evaluate((panel) => {
@@ -175,7 +194,7 @@ for (const mode of ['reading', 'editing', 'split'] as const) {
         await expect(view.locator('.cm-content')).toBeFocused();
       }
       await scrollShown(window);
-      const { tops: left, names } = await shownScrolls(window);
+      const { tops: left, names } = await settledScrolls(window);
       expect(left.filter((top) => top > 0)).toHaveLength(mode === 'split' ? 2 : 1);
 
       await openOverview(window);
@@ -187,7 +206,7 @@ for (const mode of ['reading', 'editing', 'split'] as const) {
       await expect(overview(window)).toHaveCount(0);
 
       await expect(selected(window)).toContainText('plan-50k.md');
-      const { tops: now } = await shownScrolls(window);
+      const { tops: now } = await settledScrolls(window);
       expect(now).toHaveLength(left.length);
       now.forEach((top, index) => expect(Math.abs(top - left[index]!), `${names[index]} was at ${left[index]}, now ${top} (all: ${left} → ${now})`).toBeLessThanOrEqual(2));
     } finally {
