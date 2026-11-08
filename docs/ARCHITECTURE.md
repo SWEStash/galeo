@@ -51,7 +51,7 @@ Every diagram uses these names exactly.
 | **Launcher** | The `gal` shell script (`galeo.cmd` on Windows, §8). Passes `-- <absolute paths>` to the app binary. On Linux the binary sits behind a `galeo` wrapper that routes every launch through `gal`'s argument handling and relaunches into the "sandbox unavailable" window after a real sandbox failure (ADR-009) |
 | **Main** | The Electron main process (Node). Hosts the Core and the Adapters |
 | **Core** | Pure TypeScript domain logic: routing, tab registry, lifecycle policy, sessions, settings, capability checks, argv parsing, link extraction (ADR-007) |
-| **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher`, `InstanceChannel`, `OsShell`, `Clipboard`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `FontCatalog`, `Clock`. Window code is Main's own (`src/main/window/`), not a port (ADR-025) |
+| **Adapters** | Electron and Node implementations of Core's ports: `FileSystem`, `FileWatcher` (and `FolderWatcher`), `InstanceChannel`, `OsShell`, `Clipboard`, `AppPaths`, `SystemMetrics`, `TaskRunner`, `FontCatalog`, `Clock`. Window code is Main's own (`src/main/window/`), not a port (ADR-025) |
 | **Network Guard** | The part of Main that cancels every non-`galeo:`/`data:` request, makes every host unresolvable in the network stack, and registers the `galeo:` protocol (ADR-004) |
 | **Preload** | The only bridge. Exposes the typed `window.galeo` API from Contracts |
 | **Contracts** | Shared IPC and domain types plus runtime schemas (`src/shared`) |
@@ -163,6 +163,7 @@ flowchart LR
     fmt[Format detection<br/>extension · sniff · limits]
     coal[Coalescing watcher<br/>quiet window · rate cap · poll fallback]
     dw[Document watches<br/>open tabs' files → stale]
+    fw[Folder watches<br/>a window's watched folder · entry ids]
     qoc[Quick open<br/>git root · bounded walk · fuzzy match]
     grants[Grants<br/>quick-open ids · drop tokens · images · input credits · tab drag]
   end
@@ -170,7 +171,7 @@ flowchart LR
     inst[InstanceChannel<br/>requestSingleInstanceLock]
     win[Windows · main/window<br/>BrowserWindow · focus events · menus/accelerators]
     fsys[FileSystem<br/>caps · atomic write]
-    watch[FileWatcher<br/>one fs.watch per folder]
+    watch[FileWatcher · FolderWatcher<br/>one fs.watch per folder]
     shellp[OsShell<br/>openExternal · openPath · reveal]
     fonts[FontCatalog<br/>fc-list · fixed args · cached]
     paths[AppPaths<br/>XDG]
@@ -186,6 +187,7 @@ flowchart LR
   prof --> fsys
   fmt --> fsys
   watch --> coal --> dw --> reg
+  watch --> fw --> grants
   ipc --> qoc --> grants
   ipc --> fonts
   caps --> grants
@@ -317,6 +319,12 @@ re-reads and updates in place, keeping its view, find and follow state; the head
 keeps its distance, else the block at the top does. A warm tab takes the change when it is shown
 again; hibernated tabs refresh on their next wake. Rename or delete puts the tab in the *missing*
 state; if the path reappears, the tab reads it again.
+
+A window can also watch a folder (UX F21, [ADR-034](decisions/ADR-034-watching-a-folder.md)). Core's
+folder watch records what the folder holds (the quick-open walker), then hears every entry of it and
+its subfolders through the same per-folder system watch, folding bursts as above; folders past the
+limit are polled. It lists names and times only, and the page gets an id per entry, which opens
+through the normal open path as a quick-open result does (`watch.*` channels, `watch.changed`).
 
 (v0.8, ADR-033) A re-read names the version the page shows (`documents.read(id, held)`). For a file of
 1 MiB or more that isn't Markdown or MDX, main keeps the bytes it last sent the tab (512 MiB for all

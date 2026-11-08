@@ -593,8 +593,10 @@ is updated.
 - **Watch a folder** ([#49](https://github.com/SWEStash/galeo/issues/49)). As someone whose agent or build
   writes reports into a folder, I want galeo to list the files created or changed there, so that I can open
   the new ones without looking for them.
-  - AC: Settled by a design pass first: where the list shows, which files count, and what galeo may read in
-    the folder. It lists and opens on request; it is not a file browser.
+  - AC: `galeo --watch <dir>` or *Watch folder…* makes the window watch a folder; a panel on the right lists
+    what was created or changed there since, newest first, and opens a file on request (it is not a file
+    browser); the watch comes back with its window. Design: [watch-folder.md](design/watch-folder.md); what
+    galeo may read: [ADR-034](decisions/ADR-034-watching-a-folder.md).
 - **Close others** ([#39](https://github.com/SWEStash/galeo/issues/39)). The tab menu closes every other
   unpinned tab in the window, asking first for unsaved edits.
 - **Launcher names follow profile names** ([#38](https://github.com/SWEStash/galeo/issues/38)).

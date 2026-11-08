@@ -120,6 +120,7 @@ gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo
   galeo notes.md plan.md
   galeo --new-window plan.md          # a new window instead of the last one used
   galeo --profile acme plan.md        # the "acme" profile (created on first use)
+  galeo --watch reports/              # list what arrives in reports/ (see below)
   galeo -- -odd-name.md               # after --, everything is a file
   ```
 
@@ -149,6 +150,31 @@ On GNOME Wayland an application can't tell which workspace you're on. If the las
 sits on another workspace, galeo adds the tabs there without moving you: GNOME shows a
 "galeo is ready" notice and the taskbar entry asks for attention. Use `--new-window` (or drag
 the file into the window in front of you) when you want it here.
+
+## Watching a folder
+
+When an agent or a build writes reports into a folder, galeo can list them as they arrive:
+`galeo --watch <folder>` from a terminal, or *Watch folder…* in the palette (a folder picker). A
+window watches one folder; watching another replaces it.
+
+- A **panel on the right** lists the files created or changed there since watching started, newest
+  first: *new* or *changed*, the time, and the subfolder they are in. Files that were there before
+  aren't listed until they change. Only the types galeo opens count, in subfolders up to 4 levels
+  deep; the folders quick open skips (`.git`, `node_modules`, the `quickOpenExclude` setting…) and
+  symlinked folders are left out, and so is anything whose real path is outside the folder.
+- **Click or Enter** opens a file (Ctrl+Enter or a middle click: in a new window); it is then marked
+  *opened*, and a later change marks it *changed* again. **Open all new** opens every file not
+  opened yet, oldest first. The list keeps the newest 200.
+- The panel shares the right side with the outline: opening one closes the other. **Ctrl+Shift+D**,
+  the folder button in the title bar or the status bar's "Watching reports/" toggles it; while it is
+  closed, the button shows how many files aren't opened yet.
+- If the folder is deleted, the panel says so and keeps its list; watching resumes once the folder is
+  back. Past 1,000 subfolders, or where the system won't watch one, folders are checked every few
+  seconds instead, and the panel says so.
+- **Stop watching** (in the panel or the palette) ends it. Otherwise the watched folder comes back
+  with its window after a restart, with the list empty.
+
+galeo reads nothing in the folder until you open a file: the list comes from file names and times.
 
 ## Reading
 

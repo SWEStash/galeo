@@ -78,7 +78,7 @@ the zoom or reader width resets it; a tab has a right-click menu (F4).
 
 ```mermaid
 flowchart TD
-  cmd["$ galeo [--profile P] [--new-window] [--no-sandbox] file…"] --> running{galeo running?}
+  cmd["$ galeo [--profile P] [--new-window] [--watch DIR] [--no-sandbox] file…"] --> running{galeo running?}
   running -- no --> start[start in profile P, else the last used, else the default<br/>→ restore P's session, hibernated<br/>→ open the files as new tabs, the first one shown]
   running -- yes --> forward[forward the arguments to the running instance;<br/>the command exits at once]
   forward -- "--new-window" --> newwin[a new window in the target profile]
