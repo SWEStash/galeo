@@ -16,7 +16,8 @@ const RELEASE = path.resolve(import.meta.dirname, '../release');
 /** The binary that carries the fuses, the entry point a user starts, and the resources folder. */
 function packagedApp() {
   if (process.platform === 'linux') {
-    const dir = path.join(RELEASE, 'linux-unpacked');
+    // The build for this machine's architecture (electron-builder: `linux-unpacked` is x64, `linux-arm64-unpacked` arm64).
+    const dir = path.join(RELEASE, process.arch === 'arm64' ? 'linux-arm64-unpacked' : 'linux-unpacked');
     return { fuses: path.join(dir, 'galeo-bin'), entry: path.join(dir, 'galeo'), resources: path.join(dir, 'resources') };
   }
   if (process.platform === 'darwin') {
