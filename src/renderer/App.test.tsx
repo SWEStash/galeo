@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AppInfo, GaleoApi, StartInfo, DocumentContent, DocumentRecord, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/settings';
+import type { WatchState } from '../shared/watch';
 import type { FormatId } from '../shared/formats';
 import { fillInput } from './testing/dom';
 
@@ -59,6 +60,7 @@ const events: {
   confirmClose?: (ids: string[]) => void;
   settings?: (state: SettingsState) => void;
   profiles?: (state: ProfilesState) => void;
+  watch?: (state: WatchState | null) => void;
 } = {};
 
 function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: DocumentRecord[]; content?: DocumentContent } = {}, startInfo: StartInfo | null = null) {
@@ -157,6 +159,18 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
       open: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
       onResults: vi.fn(() => () => {}),
+    },
+    watch: {
+      choose: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockResolvedValue(undefined),
+      open: vi.fn().mockResolvedValue(undefined),
+      openAllNew: vi.fn().mockResolvedValue(undefined),
+      state: vi.fn().mockResolvedValue(null),
+      panel: vi.fn().mockResolvedValue(undefined),
+      onChanged: vi.fn((listener: (state: WatchState | null) => void) => {
+        events.watch = listener;
+        return () => {};
+      }),
     },
     session: {
       previous: vi.fn().mockResolvedValue([]),

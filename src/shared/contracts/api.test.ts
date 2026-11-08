@@ -36,12 +36,14 @@ describe('buildApi', () => {
   it('exposes no generic invoke, subscription or channel access', () => {
     const api = buildApi(vi.fn(), noSubscribe);
 
-    expect(Object.keys(api)).toEqual(['app', 'documents', 'tabs', 'settings', 'session', 'recent', 'drops', 'diagrams', 'quickOpen', 'profiles', 'window']);
+    expect(Object.keys(api)).toEqual(['app', 'documents', 'tabs', 'settings', 'session', 'recent', 'drops', 'diagrams', 'quickOpen', 'watch', 'profiles', 'window']);
     expect(Object.keys(api.window)).toEqual(['command', 'retryAfterCrashes']);
     // Registered by the preload only: the page never gets a way to name dropped paths (SR-12).
     expect(Object.keys(api.drops)).toEqual(['open', 'onReceived']);
     expect(Object.keys(api.diagrams)).toEqual(['save', 'write']);
     expect(Object.keys(api.quickOpen)).toEqual(['start', 'query', 'open', 'close', 'onResults']);
+    // No channel takes a path: entries open by the id main offered (ADR-034).
+    expect(Object.keys(api.watch)).toEqual(['choose', 'stop', 'open', 'openAllNew', 'state', 'panel', 'onChanged']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable', 'installLauncher', 'installProfileLauncher', 'uninstallProfileLauncher', 'uninstallLauncher', 'startInfo']);
     expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'toggleTask', 'missingLinks', 'pathMenu', 'contextMenu', 'save', 'exportPdf', 'printPdf', 'dirty', 'leaveEdit', 'closeAnswer', 'keep', 'recover', 'findAll', 'onEditMode', 'onConfirmClose']);
     expect(Object.keys(api.tabs)).toEqual([

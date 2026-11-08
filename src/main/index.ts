@@ -23,7 +23,7 @@ import { ThemeGate } from '../core/desktop/theme-gate';
 import { openFiles, spelledAsOpen } from '../core/routing/open-files';
 import { editToggle } from '../core/documents/edit-toggle';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
-import type { SessionFile, WindowBounds } from '../core/session/model';
+import type { SessionFile, WindowBounds, WindowWatch } from '../core/session/model';
 import { CrashRecovery } from '../core/tabs/crashes';
 import { TabDrags } from '../core/tabs/drags';
 import { WarmTabs } from '../core/tabs/lifecycle';
@@ -36,6 +36,7 @@ import type { Command } from '../shared/keymap';
 import { DEFAULT_SETTINGS, type Settings, type SettingsNotice } from '../shared/settings';
 import { startupMode, type StartupMode } from '../core/startup';
 import { CoalescingWatcher } from '../core/watch/coalescing';
+import { FolderWatches } from '../core/watch/watches';
 import { QuickOpen } from '../core/quick-open/session';
 import { DropGrants } from '../core/documents/drops';
 import { asksForAttention, attentionRequest } from '../core/routing/attention';
@@ -62,6 +63,7 @@ import { perfMark, reportColdStart } from './perf';
 import { serveImage } from './protocol/file-images';
 import { recentHandlers } from './session/recent-handlers';
 import { quickOpenHandlers } from './quick-open/handlers';
+import { watchHandlers } from './watch/handlers';
 import { dropHandlers } from './drops/handlers';
 import { profileHandlers } from './profiles/handlers';
 import { RunningProfiles } from './profiles/lifecycle';
@@ -159,6 +161,7 @@ function start(initialMode: StartupMode): void {
     pushSnapshot(windowId);
     documentWatches.sync(windowId, documents.list(windowId));
     grants.sync(windowId, documents.list(windowId));
+    folderWatches.tabsChanged(windowId);
     const profile = profileOf(windowId);
     if (profile) {
       profile.keeper.changed();
@@ -168,7 +171,9 @@ function start(initialMode: StartupMode): void {
   const fs = new NodeFileSystem();
   const grants = new EditGrants();
   cleanups.add((windowId) => grants.closeWindow(windowId));
-  const watcher = new CoalescingWatcher({ inner: new NodeFileWatcher(), clock: systemClock, fs });
+  // One system watch per folder, shared by open files and a watched folder (ADR-034).
+  const nodeWatcher = new NodeFileWatcher();
+  const watcher = new CoalescingWatcher({ inner: nodeWatcher, clock: systemClock, fs });
   // A tab whose file changed since the page read it reads it again (live reload, UX F7).
   const documentWatches = new DocumentWatches({
     watcher,
@@ -333,6 +338,21 @@ function start(initialMode: StartupMode): void {
     onUpdate: (windowId, results) => sendTo(windowId, 'quickOpen.results', results),
   });
   cleanups.add((windowId) => quickOpen.close(windowId));
+  const folderWatches = new FolderWatches({
+    fs,
+    watcher: nodeWatcher,
+    clock: systemClock,
+    grants: selections,
+    home: app.getPath('home'),
+    exclude: (windowId) => profileOf(windowId)?.settings.current.quickOpenExclude ?? [],
+    tabs: (windowId) => documents.list(windowId).filter((tab) => tab.kind !== 'settings').map((tab) => tab.path),
+    send: (windowId, state) => sendTo(windowId, 'watch.changed', state),
+    changed: (windowId) => profileOf(windowId)?.keeper.changed(),
+  });
+  cleanups.add((windowId) => folderWatches.closeWindow(windowId));
+  /** Watches the folder in the window; a folder that isn't there shows as missing in its panel. */
+  const watchFolder = (windowId: number, folder: string) =>
+    void folderWatches.start(windowId, folder).catch((error: unknown) => console.warn('galeo: folder not watched', error));
   const drops = new DropGrants(randomUUID);
   cleanups.add((windowId) => drops.closeWindow(windowId));
   /** A folder dropped on the window, which its next quick open searches. */
@@ -367,6 +387,12 @@ function start(initialMode: StartupMode): void {
   app.commandLine.appendSwitch('disable-accelerated-video-decode');
   app.commandLine.appendSwitch('disable-accelerated-video-encode');
 
+  /** The folder of the file the window shows, where its folder dialog starts; null for none. */
+  const activeFolder = (windowId: number) => {
+    const { tabs, active } = documents.snapshot(windowId);
+    const shown = tabs.find((tab) => tab.id === active);
+    return shown && shown.kind !== 'settings' ? path.dirname(shown.path) : null;
+  };
   /** The name of the window's shown tab: its file's, or Settings. */
   const shownFile = (windowId: number) => {
     const { tabs, active } = documents.snapshot(windowId);
@@ -432,7 +458,7 @@ function start(initialMode: StartupMode): void {
 
   const openMainWindow = (
     profile: ProfileRuntime,
-    { bounds = null, state, size }: { bounds?: WindowBounds | null; state?: WindowState; size?: { width: number; height: number } } = {},
+    { bounds = null, state, size, watch }: { bounds?: WindowBounds | null; state?: WindowState; size?: { width: number; height: number }; watch?: WindowWatch | undefined } = {},
   ) => {
     const window: BrowserWindow = createAppWindow({
       url: rendererUrl(runtime),
@@ -458,6 +484,8 @@ function start(initialMode: StartupMode): void {
       const active = documents.snapshot(windowId).active;
       if (active) warm.activated(windowId, active);
     }
+    // A watched folder comes back with its window, while it still is one (ADR-034, SR-17).
+    if (watch) void folderWatches.restore(windowId, watch).catch((error: unknown) => console.warn('galeo: watched folder not restored', error));
     followBounds(window, () => profile.keeper.changed());
     trackFocus(window, {
       order: focusOrder,
@@ -524,7 +552,7 @@ function start(initialMode: StartupMode): void {
   /** A profile's runtime, with its settings' listeners. */
   const createRuntime = async (id: string): Promise<ProfileRuntime> => {
     const name = (await catalog.list()).find((each) => each.id === id)?.name ?? id;
-    const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder.ids() });
+    const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder.ids(), watchOf: (windowId) => folderWatches.saved(windowId) });
     profile.settings.onChange((current) => {
       for (const window of profile.windows) followScheme(window);
       for (const [windowId, ids] of warm.setLimits(warmLimits(current), idsOf(profile))) demote(windowId, ids);
@@ -565,7 +593,7 @@ function start(initialMode: StartupMode): void {
     let front: BrowserWindow | null = null;
     if (session && session.windows.length > 0) {
       const order = [...session.windows.keys()].sort((a, b) => rank(session, b) - rank(session, a));
-      const opened = new Map(order.map((index) => [index, openMainWindow(profile, { bounds: session.windows[index]!.bounds, state: session.windows[index]! })]));
+      const opened = new Map(order.map((index) => [index, openMainWindow(profile, { bounds: session.windows[index]!.bounds, state: session.windows[index]!, watch: session.windows[index]!.watch })]));
       front = opened.get(session.focusOrder[0] ?? order.at(-1)!)!;
     }
     profile.keeper.start();
@@ -624,7 +652,7 @@ function start(initialMode: StartupMode): void {
    * Opens files where ADR-005 says. An existing window gets the tabs without being raised (no
    * focus stealing); a request without files asks for the window itself, so that one is focused.
    */
-  const openRouted = async (request: RouteRequest, files: readonly string[], { without, chosen = false }: { without?: string; chosen?: boolean } = {}): Promise<Route> => {
+  const openRouted = async (request: RouteRequest, files: readonly string[], { without, chosen = false, watch = null }: { without?: string; chosen?: boolean; watch?: string | null } = {}): Promise<Route> => {
     const decision = route(request, await world(without));
     if (decision.kind === 'invalid') return decision;
     if (decision.create !== null) {
@@ -643,6 +671,7 @@ function start(initialMode: StartupMode): void {
     }
     const windowId = window.webContents.id;
     await openInWindow(windowId, files, undefined, chosen);
+    if (watch !== null) watchFolder(windowId, watch);
     // Files added behind the reader's back, maybe on another workspace: the window asks for
     // attention, and is never raised for it (ADR-005).
     if (asksForAttention({ fresh, files: files.length, focused: window.isFocused() })) requestAttention(window);
@@ -656,9 +685,9 @@ function start(initialMode: StartupMode): void {
   const openRequest = async (request: OpenRequest) => {
     const parsedRequest = parseArgv(request.argv, { cwd: request.cwd, forwarded: request.source !== 'launch', resolve: path.resolve });
     if (!parsedRequest.ok) return void console.warn(`galeo: open request ignored: ${parsedRequest.error}`);
-    const { profile, newWindow, files } = parsedRequest.args;
+    const { profile, newWindow, files, watch } = parsedRequest.args;
     // The command line, Files or a second launch: files the reader handed over (ADR-015).
-    const routed = await openRouted({ profile, newWindow }, files, { chosen: true });
+    const routed = await openRouted({ profile, newWindow }, files, { chosen: true, watch });
     if (routed.kind === 'invalid') console.warn(`galeo: open request ignored: --profile name ${routed.reason}`);
   };
 
@@ -890,6 +919,17 @@ function start(initialMode: StartupMode): void {
           open: (windowId, files, after) => openInWindow(windowId, files, after),
           searchFolder: (windowId, folder) => droppedFolders.set(windowId, folder),
         }),
+        ...watchHandlers({
+          watches: folderWatches,
+          input,
+          askFolder: (windowId) => askFolder(windowId, activeFolder(windowId)),
+          open: async (windowId, paths, newWindow) => {
+            const profile = profileOf(windowId);
+            if (!profile) return;
+            if (newWindow) await enqueue(() => openRouted({ profile: profile.id, newWindow: true }, paths));
+            else await openInWindow(windowId, paths);
+          },
+        }),
         ...quickOpenHandlers({
           quickOpen,
           input,
@@ -1026,6 +1066,19 @@ async function askSavePath(windowId: number, suggested: string, format: DiagramF
   const owner = windowOf(windowId);
   const { canceled, filePath } = owner ? await dialog.showSaveDialog(owner, options) : await dialog.showSaveDialog(options);
   return canceled || !filePath ? null : filePath;
+}
+
+/**
+ * Main's own folder dialog for *Watch folder…* (ADR-034): the folder the reader picked, or null.
+ * Unpackaged test runs answer with `GALEO_TEST_WATCH_FOLDER` (empty: cancelled).
+ */
+async function askFolder(windowId: number, start: string | null): Promise<string | null> {
+  const answer = !app.isPackaged ? process.env['GALEO_TEST_WATCH_FOLDER'] : undefined;
+  if (answer !== undefined) return answer || null;
+  const options = { title: 'Watch folder', ...(start ? { defaultPath: start } : {}), properties: ['openDirectory' as const, 'createDirectory' as const] };
+  const owner = windowOf(windowId);
+  const { canceled, filePaths } = owner ? await dialog.showOpenDialog(owner, options) : await dialog.showOpenDialog(options);
+  return canceled ? null : (filePaths[0] ?? null);
 }
 
 /** Asks, in a native dialog the page can't answer for itself, whether a burst of opens may go on. */

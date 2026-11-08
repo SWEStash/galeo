@@ -1,5 +1,5 @@
 /** The lists main offers the page to pick a file from. */
-type SelectionList = 'recent' | 'quick-open';
+type SelectionList = 'recent' | 'quick-open' | 'watch';
 
 /**
  * Picks the page makes from lists main offered (ADR-004): main hands out opaque ids, and a pick

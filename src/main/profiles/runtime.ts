@@ -6,7 +6,7 @@ import { RecentFiles } from '../../core/session/recent';
 import { SessionStore } from '../../core/session/store';
 import type { Utf8 } from '../../core/settings/json-file';
 import { ProfileSettings } from '../../core/settings/profile-settings';
-import type { WindowBounds } from '../../core/session/model';
+import type { WindowBounds, WindowWatch } from '../../core/session/model';
 import type { SettingsNotice } from '../../shared/settings';
 import type { TabRegistry, WindowState } from '../../core/tabs/registry';
 import { parseRecentFiles, parseSession } from '../session/schemas';
@@ -24,6 +24,8 @@ interface RuntimeDeps {
   tabs: TabRegistry;
   /** Window ids, the last focused first, across all profiles. */
   focusOrder: () => readonly number[];
+  /** The folder a window watches, for its session (ADR-034). */
+  watchOf: (windowId: number) => WindowWatch | null;
 }
 
 /**
@@ -66,7 +68,7 @@ export class ProfileRuntime {
       tabs: deps.tabs,
       clock: deps.clock,
       save: (session) => this.sessions.save(session).catch((error: unknown) => console.warn(`galeo: session of ${id} not saved`, error)),
-      windows: () => this.windows.map((window) => ({ id: window.webContents.id, bounds: windowBounds(window) })),
+      windows: () => this.windows.map((window) => ({ id: window.webContents.id, bounds: windowBounds(window), watch: deps.watchOf(window.webContents.id) })),
       focusOrder: deps.focusOrder,
       // Nothing is saved before the session is restored and its windows are open.
       running: false,

@@ -8,6 +8,7 @@ import type { SystemFont } from '../fonts';
 import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from '../settings';
 import type { ReaderWidth, ScrollAnchor, TabSearchResults, TabSnapshot, TabViewState } from '../tabs';
 import type { QuickOpenResults, QuickOpenStart } from '../quick-open';
+import type { WatchState } from '../watch';
 
 export type { DocumentContent, DocumentRecord, ReadReply, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
 
@@ -173,6 +174,12 @@ export const CHANNELS = [
   'quickOpen.query',
   'quickOpen.open',
   'quickOpen.close',
+  'watch.choose',
+  'watch.stop',
+  'watch.open',
+  'watch.openAllNew',
+  'watch.state',
+  'watch.panel',
   'profiles.created',
   'profiles.undoCreate',
   'profiles.list',
@@ -326,6 +333,16 @@ export interface Requests {
   'quickOpen.query': [token: string, query: string];
   'quickOpen.open': [token: string, id: string, newWindow: boolean];
   'quickOpen.close': [token: string];
+  /** Asks main's folder dialog for a folder to watch (ADR-034); spends an input credit. */
+  'watch.choose': [];
+  'watch.stop': [];
+  /** Opens an entry main offered, by its id; spends an input credit. */
+  'watch.open': [id: string, newWindow: boolean];
+  /** Opens every entry not opened yet, oldest first; spends an input credit. */
+  'watch.openAllNew': [];
+  'watch.state': [];
+  /** The panel opened or closed: the session keeps it. */
+  'watch.panel': [open: boolean];
   /** `--profile` created the sender's profile for it: the notice to show, with the token Undo takes (ADR-005). */
   'profiles.created': [];
   /** Undoes a profile `--profile` just created (by the token its notice carried): its files go where they would have without it. */
@@ -427,6 +444,12 @@ export interface Responses {
   'quickOpen.query': QuickOpenResults;
   'quickOpen.open': void;
   'quickOpen.close': void;
+  'watch.choose': void;
+  'watch.stop': void;
+  'watch.open': void;
+  'watch.openAllNew': void;
+  'watch.state': WatchState | null;
+  'watch.panel': void;
   'profiles.created': { name: string; token: string } | null;
   'profiles.undoCreate': void;
   'profiles.list': ProfilesState;
@@ -445,7 +468,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'tabs.dragging', 'documents.editMode', 'documents.confirmClose', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'tabs.dragging', 'documents.editMode', 'documents.confirmClose', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received', 'watch.changed'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -473,6 +496,8 @@ export interface Events {
   'quickOpen.results': QuickOpenResults;
   /** Files were dropped on the window: open them where the drop landed with this token. */
   'drops.received': { token: string; count: number };
+  /** The window's watched folder panel changed; null: the window stopped watching. */
+  'watch.changed': WatchState | null;
 }
 
 type Group<C extends string> = C extends `${infer G}.${string}` ? G : never;
