@@ -22,6 +22,7 @@ export function runTabMenuChoice(choice: TabMenuChoice | null, id: string, { sto
   const tab = store.getSnapshot().tabs.find((each) => each.id === id);
   if (!choice || !tab) return;
   if (choice === 'close') store.close(id);
+  else if (choice === 'close-others') void store.closeOthers(id);
   else if (choice === 'reopen') store.reopenClosed();
   else if (choice === 'pin') store.pin(id, !tab.pinned);
   else if (choice === 'move-new') moveShownTab(id, 'new', say);

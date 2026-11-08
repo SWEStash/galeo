@@ -6,6 +6,7 @@ function setup() {
   const store = {
     getSnapshot: () => ({ tabs: [{ id: 'a', path: '/d/a.md' }, { id: 'b', path: '/d/b.md', pinned: true }] }),
     close: vi.fn(),
+    closeOthers: vi.fn(),
     reopenClosed: vi.fn(),
     pin: vi.fn(),
     activate: vi.fn(),
@@ -18,10 +19,12 @@ describe('runTabMenuChoice', () => {
   it('closes, reopens and pins or unpins the right-clicked tab', () => {
     const { store, deps } = setup();
     runTabMenuChoice('close', 'a', deps);
+    runTabMenuChoice('close-others', 'b', deps);
     runTabMenuChoice('reopen', 'a', deps);
     runTabMenuChoice('pin', 'a', deps);
     runTabMenuChoice('pin', 'b', deps);
     expect(store.close).toHaveBeenCalledWith('a');
+    expect(store.closeOthers).toHaveBeenCalledWith('b');
     expect(store.reopenClosed).toHaveBeenCalledOnce();
     expect(vi.mocked(store.pin).mock.calls).toEqual([['a', true], ['b', false]]);
   });

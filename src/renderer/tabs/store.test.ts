@@ -507,3 +507,43 @@ describe('createTabStore', () => {
     });
   });
 });
+
+describe('closeOthers (#39)', () => {
+  const status = { state: 'ready' as const, format: 'markdown' as const, view: 'rendered' as const, encoding: 'utf-8' as const, lines: 1, words: null, follow: false, editing: true, dirty: false };
+  const start = async () => {
+    const page = setup({ revision: 1, active: 'a', tabs: [{ ...tab('p'), pinned: true }, tab('a'), tab('b'), tab('c'), tab('d')] });
+    await page.store.start();
+    return page;
+  };
+  const ids = (page: Awaited<ReturnType<typeof start>>) => page.store.getSnapshot().tabs.map((each) => each.id);
+
+  it('closes every other unpinned tab and shows this one; pinned tabs stay', async () => {
+    const page = await start();
+    await page.store.closeOthers('c');
+    expect(ids(page)).toEqual(['p', 'c']);
+    expect(page.store.getSnapshot().active).toBe('c');
+    expect(page.api.close.mock.calls.map(([id]) => id).sort()).toEqual(['a', 'b', 'd']);
+  });
+
+  it('shows each tab with unsaved changes and asks; a Cancel keeps it and the ones after it', async () => {
+    const page = await start();
+    for (const id of ['b', 'd']) page.store.setStatus(id, { ...status, dirty: true });
+    const asked: { id: string; shown: string | null }[] = [];
+    const answers = [true, false];
+    page.store.setCloseGuard(async (id) => (asked.push({ id, shown: page.store.getSnapshot().active }), answers.shift()!));
+    page.store.setStatus('c', status);
+    await page.store.closeOthers('c');
+    expect(asked).toEqual([{ id: 'b', shown: 'b' }, { id: 'd', shown: 'd' }]);
+    expect(ids(page)).toEqual(['p', 'c', 'd']);
+    expect(page.store.getSnapshot().active).toBe('c');
+  });
+
+  it('asks nothing without a guard, and does nothing for a tab that is gone', async () => {
+    const page = await start();
+    page.store.setStatus('b', { ...status, dirty: true });
+    await page.store.closeOthers('gone');
+    expect(ids(page)).toEqual(['p', 'a', 'b', 'c', 'd']);
+    await page.store.closeOthers('a');
+    expect(ids(page)).toEqual(['p', 'a']);
+  });
+});

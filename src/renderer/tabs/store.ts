@@ -102,6 +102,11 @@ export interface TabStore {
   activate(id: string): void;
   /** Closes the tab; one with unsaved changes closes only if the guard agrees (ADR-013). */
   close(id: string): void;
+  /**
+   * Closes every other unpinned tab (#39), showing this one. Each with unsaved changes is shown and
+   * asked about in turn, as closing the window does; a Cancel keeps it and the rest.
+   */
+  closeOthers(id: string): Promise<void>;
   /** What `close` asks before closing a tab with unsaved changes. */
   setCloseGuard(guard: ((id: string) => Promise<boolean>) | null): void;
   /** Main owns the order: the new order shows once its snapshot arrives. */
@@ -297,6 +302,21 @@ export function createTabStore(api: TabsApi): TabStore {
         return;
       }
       closeNow(id);
+    },
+    async closeOthers(id) {
+      if (!view.tabs.some((tab) => tab.id === id)) return;
+      store.activate(id);
+      const guard = closeGuard;
+      const others = view.tabs.filter((tab) => tab.id !== id && !tab.pinned).map((tab) => tab.id);
+      const unsaved = guard ? others.filter((other) => view.statuses.get(other)?.dirty) : [];
+      for (const other of others) if (!unsaved.includes(other)) closeNow(other);
+      for (const other of unsaved) {
+        if (!view.tabs.some((tab) => tab.id === other)) continue;
+        store.activate(other);
+        if (!(await guard!(other))) break;
+        closeNow(other);
+      }
+      store.activate(id);
     },
     move(id, position) {
       void api.move(id, position);

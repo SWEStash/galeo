@@ -40,7 +40,7 @@ export interface ProfileView {
 
 /** Another window a tab can move to (ADR-019): its profile, and the file its shown tab has (null: none). */
 /** What a tab's right-click menu hands back to the page: the command it runs on that tab. */
-export const TAB_MENU_CHOICES = ['close', 'reopen', 'move-new', 'move-to', 'pin'] as const;
+export const TAB_MENU_CHOICES = ['close', 'close-others', 'reopen', 'move-new', 'move-to', 'pin'] as const;
 export type TabMenuChoice = (typeof TAB_MENU_CHOICES)[number];
 
 /** What the document's right-click menu hands back to the page: the command it runs on the shown document. */

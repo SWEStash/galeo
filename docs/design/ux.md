@@ -121,10 +121,13 @@ profile. Multiple selected files open as tabs in selection order.
   them all at once (F17); a profile can put its tabs in a list on the left (F18); find in all tabs
   searches their text (F19).
 - (v0.7) A right-click on a tab, a side-panel row, a collapsed marker or an overview card (or the context-menu key,
-  Shift+F10, on a focused one) opens its menu, which main builds: Close tab, Reopen closed tab, Move
-  to new window, Move to window…, Copy path, Reveal in Files, Pin or Unpin tab, each greyed out where
-  it doesn't apply (the moves need another tab; the Settings tab offers only Close and Reopen). Each
-  runs on that tab as its shortcut or palette command does; Move to window… shows the tab first.
+  Shift+F10, on a focused one) opens its menu, which main builds: Close tab, Close others, Reopen
+  closed tab, Move to new window, Move to window…, Copy path, Reveal in Files, Pin or Unpin tab, each
+  greyed out where it doesn't apply (the moves need another tab, Close others another unpinned one;
+  the Settings tab offers only the closes and Reopen). Each runs on that tab as its shortcut or
+  palette command does; Move to window… shows the tab first. (v0.8) Close others closes the window's
+  other unpinned tabs; each with unsaved changes is shown and asks first, and Cancel keeps it and
+  the ones after it.
 - (v0.7) **Pinned tabs**: *Pin or unpin tab* (palette, the tab's menu). Pinned tabs stay first, in
   both layouts and the overview, with a pin before the name; a screen reader hears "pinned". A
   pinned tab moves only among pinned tabs (and an unpinned one only among the others), new tabs

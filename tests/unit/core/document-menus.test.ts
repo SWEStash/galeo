@@ -181,20 +181,32 @@ describe('DocumentMenus.tab (UX F4)', () => {
   it('lists the tab commands, Reopen only when something closed and the moves only with another tab', async () => {
     const { menus, shown, id } = setup(null);
     expect(await menus.tab(id, 1, { canReopen: false })).toBeNull();
-    expect(entries(shown)).toEqual(['Close tab', 'Reopen closed tab (off)', 'Move to new window (off)', 'Move to window… (off)', 'Copy path', 'Reveal in Files', 'Pin tab']);
+    expect(entries(shown)).toEqual(['Close tab', 'Close others (off)', 'Reopen closed tab (off)', 'Move to new window (off)', 'Move to window… (off)', 'Copy path', 'Reveal in Files', 'Pin tab']);
   });
 
-  it('offers Unpin on a pinned tab, and nothing but Close and Reopen on the Settings tab', async () => {
+  it('offers Close others only while another unpinned tab is open', async () => {
+    const menu = async (pinOther: boolean) => {
+      const each = setup(null);
+      const other = each.tabs.open('/d/other.md', 1);
+      if (pinOther) each.tabs.setPinned(other.id, 1, true);
+      await each.menus.tab(each.id, 1, { canReopen: false });
+      return each.shown[0]!.items.find((item) => item.id === 'close-others');
+    };
+    expect(await menu(false)).toMatchObject({ label: 'Close others', enabled: true });
+    expect(await menu(true)).toMatchObject({ enabled: false });
+  });
+
+  it('offers Unpin on a pinned tab, and nothing but the closes and Reopen on the Settings tab', async () => {
     const pinned = setup(null);
     pinned.tabs.open('/d/other.md', 1);
     pinned.tabs.setPinned(pinned.id, 1, true);
     await pinned.menus.tab(pinned.id, 1, { canReopen: true });
-    expect(entries(pinned.shown)).toEqual(['Close tab', 'Reopen closed tab', 'Move to new window', 'Move to window…', 'Copy path', 'Reveal in Files', 'Unpin tab']);
+    expect(entries(pinned.shown)).toEqual(['Close tab', 'Close others', 'Reopen closed tab', 'Move to new window', 'Move to window…', 'Copy path', 'Reveal in Files', 'Unpin tab']);
 
     const settings = setup(null);
     const tab = settings.tabs.openSettings(1);
     await settings.menus.tab(tab.id, 1, { canReopen: false });
-    expect(entries(settings.shown)).toEqual(['Close tab', 'Reopen closed tab (off)', 'Move to new window (off)', 'Move to window… (off)', 'Copy path (off)', 'Reveal in Files (off)', 'Pin tab (off)']);
+    expect(entries(settings.shown)).toEqual(['Close tab', 'Close others', 'Reopen closed tab (off)', 'Move to new window (off)', 'Move to window… (off)', 'Copy path (off)', 'Reveal in Files (off)', 'Pin tab (off)']);
   });
 
   it('copies the path and reveals the file itself, and hands the other choices to the page', async () => {
@@ -204,7 +216,7 @@ describe('DocumentMenus.tab (UX F4)', () => {
     const reveal = setup('reveal');
     expect(await reveal.menus.tab(reveal.id, 1, { canReopen: false })).toBeNull();
     expect(reveal.shell.calls).toEqual([{ method: 'revealInFileManager', target: '/d/plans/plan.md' }]);
-    for (const choice of ['close', 'reopen', 'move-new', 'move-to', 'pin'] as const) {
+    for (const choice of ['close', 'close-others', 'reopen', 'move-new', 'move-to', 'pin'] as const) {
       const each = setup(choice);
       expect(await each.menus.tab(each.id, 1, { canReopen: true })).toBe(choice);
     }

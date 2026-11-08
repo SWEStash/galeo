@@ -93,15 +93,18 @@ export class DocumentMenus {
 
   /**
    * A tab's right-click menu (UX F4): main copies the path and reveals the file itself; the other
-   * choices go back to the page, which runs the same command as their shortcuts on this tab.
+   * choices go back to the page, which runs the same command as their shortcuts on this tab. Close
+   * others closes the window's other unpinned tabs.
    */
   async tab(id: string, window: number, { canReopen }: { canReopen: boolean }): Promise<TabMenuChoice | null> {
     const tab = this.deps.tabs.get(id, window);
     if (!tab) throw new Error(UNKNOWN_DOCUMENT);
     const file = tab.kind !== 'settings';
     const movable = file && this.deps.tabs.list(window).length > 1;
+    const others = this.deps.tabs.list(window).some((other) => other.id !== id && !this.deps.tabs.pinned(other.id, window));
     const choice = await this.deps.showMenu(window, [
       { id: 'close', label: 'Close tab' },
+      { id: 'close-others', label: 'Close others', enabled: others },
       { id: 'reopen', label: 'Reopen closed tab', enabled: canReopen },
       { id: 'move-new', label: 'Move to new window', enabled: movable },
       { id: 'move-to', label: 'Move to window…', enabled: movable },
