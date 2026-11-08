@@ -31,6 +31,7 @@ export function TabBar({
   onFilesDropped,
   onTabMenu,
   panel,
+  watch,
 }: {
   view: TabsView;
   store: TabStore;
@@ -48,6 +49,8 @@ export function TabBar({
   onTabMenu?: (id: string) => void;
   /** The side panel, when the profile puts its tabs on the left. */
   panel?: PanelProps | null;
+  /** The watched folder's button, while the window watches one (ADR-034). */
+  watch?: WatchButtonProps | null;
 }) {
   const left = Boolean(panel);
   const listRef = useRef<HTMLDivElement>(null);
@@ -148,6 +151,7 @@ export function TabBar({
       <div className="window-grip" data-testid="window-grip" />
       {/* The window's tools keep one place, at the end, however many tabs are open. */}
       <div className="bar-tools" data-testid="bar-tools">
+        {watch && <WatchButton {...watch} />}
         {onOverview && (
           <button type="button" className="bar-tool tab-overview-button" data-testid="tab-overview-button" aria-label="Tab overview (Ctrl+Shift+E)" title="Tab overview (Ctrl+Shift+E)" onClick={onOverview}>
             <Icon name="grid" />
@@ -177,6 +181,39 @@ function ScrollButton({ direction, disabled, onScroll }: { direction: -1 | 1; di
   return (
     <button type="button" className="tab-scroll" tabIndex={-1} aria-label={name} title={name} disabled={disabled} onClick={() => onScroll(direction)}>
       <Icon name={direction < 0 ? 'chevron-left' : 'chevron-right'} />
+    </button>
+  );
+}
+
+interface WatchButtonProps {
+  /** Entries not opened yet; shown while the panel is closed. */
+  count: number;
+  open: boolean;
+  /** The panel's id, which the button controls while it is open. */
+  controls: string;
+  onToggle: () => void;
+}
+
+/** Finds the watched folder panel, and says while it is closed that something arrived (UX F21). */
+function WatchButton({ count, open, controls, onToggle }: WatchButtonProps) {
+  const shown = open ? 0 : count;
+  return (
+    <button
+      type="button"
+      className="bar-tool watch-button"
+      data-testid="watch-button"
+      aria-expanded={open}
+      {...(open ? { 'aria-controls': controls } : {})}
+      aria-label={shown > 0 ? `Watched folder, ${shown} new` : 'Watched folder'}
+      title="Watched folder (Ctrl+Shift+D)"
+      onClick={onToggle}
+    >
+      <Icon name="folder" />
+      {shown > 0 && (
+        <span className="watch-count" data-testid="watch-count" aria-hidden="true">
+          {shown > 99 ? '99+' : shown}
+        </span>
+      )}
     </button>
   );
 }

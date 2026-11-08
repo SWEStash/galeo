@@ -1,13 +1,22 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 
-type OutlineState = readonly [open: boolean, setOpen: (open: boolean) => void];
+/** What the window's right side shows: the outline or the watched folder, one at a time. */
+type RightPanel = 'outline' | 'watch' | null;
 
-const OutlineContext = createContext<OutlineState>([false, () => {}]);
+const RightPanelContext = createContext<readonly [RightPanel, Dispatch<SetStateAction<RightPanel>>]>([null, () => {}]);
 
-/** Whether the outline panel is open: one setting for the window, so it stays open across tabs. */
-export function OutlineProvider({ children }: { children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return <OutlineContext value={[open, setOpen]}>{children}</OutlineContext>;
+/** The right panel: one setting for the window, so the outline stays open across tabs. */
+export function RightPanelProvider({ children }: { children: ReactNode }) {
+  const [panel, setPanel] = useState<RightPanel>(null);
+  return <RightPanelContext value={[panel, setPanel]}>{children}</RightPanelContext>;
 }
 
-export const useOutline = (): OutlineState => useContext(OutlineContext);
+/** Whether `name` shows on the right; opening it closes the other. */
+function usePanel(name: Exclude<RightPanel, null>): readonly [open: boolean, setOpen: (open: boolean) => void] {
+  const [panel, setPanel] = useContext(RightPanelContext);
+  const setOpen = useCallback((open: boolean) => setPanel((current) => (open ? name : current === name ? null : current)), [name, setPanel]);
+  return [panel === name, setOpen];
+}
+
+export const useOutline = () => usePanel('outline');
+export const useWatchPanel = () => usePanel('watch');

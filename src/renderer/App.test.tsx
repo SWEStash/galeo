@@ -1666,3 +1666,85 @@ describe('App editing', () => {
     await vi.waitFor(() => expect(api.documents.closeAnswer).toHaveBeenLastCalledWith('proceed'));
   });
 });
+
+describe('App: a watched folder (UX F21)', () => {
+  afterEach(cleanUp);
+
+  const watched = (overrides: Partial<WatchState> = {}): WatchState => ({
+    shown: '~/acme/reports',
+    name: 'reports',
+    status: 'watching',
+    polling: false,
+    panel: true,
+    entries: [{ id: 'w-1', name: 'review.md', folder: '', kind: 'new', at: 0, opened: false }],
+    truncated: false,
+    ...overrides,
+  });
+  const q = (container: HTMLElement, id: string) => container.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+
+  it('shows nothing of it while the window watches no folder', async () => {
+    stubBridge();
+    const container = await renderApp();
+    expect(q(container, 'watch-button')).toBeNull();
+    expect(q(container, 'status-watch')).toBeNull();
+    expect(q(container, 'watch-panel')).toBeNull();
+  });
+
+  it('opens the panel as main says, and counts what is not opened on the button and status bar while it is closed', async () => {
+    const api = stubBridge();
+    const container = await renderApp();
+    await act(async () => events.watch!(watched({ status: 'starting', entries: [] })));
+    expect(q(container, 'watch-panel')).not.toBeNull();
+    await act(async () => events.watch!(watched()));
+    const button = q(container, 'watch-button')!;
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.getAttribute('aria-label')).toBe('Watched folder');
+    expect(q(container, 'watch-count')).toBeNull();
+    expect(q(container, 'status-watch')!.textContent).toBe('Watching reports/ · 1 new');
+    await act(async () => button.click());
+    expect(q(container, 'watch-panel')).toBeNull();
+    expect(button.getAttribute('aria-label')).toBe('Watched folder, 1 new');
+    expect(q(container, 'watch-count')!.textContent).toBe('1');
+    expect(api.watch.panel).toHaveBeenLastCalledWith(false);
+    await act(async () => events.watch!(watched({ entries: [{ ...watched().entries[0]!, opened: true }] })));
+    expect(q(container, 'watch-count')).toBeNull();
+    expect(q(container, 'status-watch')!.textContent).toBe('Watching reports/');
+  });
+
+  it('restores the panel closed when it was left closed, and Ctrl+Shift+D toggles it', async () => {
+    const api = stubBridge();
+    const container = await renderApp();
+    await act(async () => events.watch!(watched({ panel: false })));
+    expect(q(container, 'watch-panel')).toBeNull();
+    await press({ key: 'D', code: 'KeyD', ctrlKey: true, shiftKey: true });
+    expect(q(container, 'watch-panel')).not.toBeNull();
+    expect(api.watch.panel).toHaveBeenLastCalledWith(true);
+    await press({ key: 'D', code: 'KeyD', ctrlKey: true, shiftKey: true });
+    expect(q(container, 'watch-panel')).toBeNull();
+  });
+
+  it('shares the right side with the outline: opening one closes the other', async () => {
+    oneDoc('/d/a.md', readyContent('markdown', 'rendered', '# a'));
+    const container = await renderApp();
+    await documentShadow(container);
+    await act(async () => events.watch!(watched({ panel: false })));
+    await press({ key: 'O', code: 'KeyO', ctrlKey: true, shiftKey: true });
+    await vi.waitFor(() => expect(q(container, 'outline')).not.toBeNull());
+    await press({ key: 'D', code: 'KeyD', ctrlKey: true, shiftKey: true });
+    expect(q(container, 'outline')).toBeNull();
+    expect(q(container, 'watch-panel')).not.toBeNull();
+    await press({ key: 'O', code: 'KeyO', ctrlKey: true, shiftKey: true });
+    await vi.waitFor(() => expect(q(container, 'outline')).not.toBeNull());
+    expect(q(container, 'watch-panel')).toBeNull();
+  });
+
+  it('hides it all once main says the window stopped watching', async () => {
+    stubBridge();
+    const container = await renderApp();
+    await act(async () => events.watch!(watched()));
+    await act(async () => events.watch!(null));
+    expect(q(container, 'watch-button')).toBeNull();
+    expect(q(container, 'status-watch')).toBeNull();
+    expect(q(container, 'watch-panel')).toBeNull();
+  });
+});

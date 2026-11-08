@@ -1,5 +1,5 @@
 /** One file in the watched folder's list (ADR-034): opened by `id`; the page never gets its path. */
-interface WatchEntry {
+export interface WatchEntry {
   id: string;
   name: string;
   /** Its folder inside the watched one, `/`-separated; '' for the watched folder itself. */

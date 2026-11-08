@@ -1229,6 +1229,188 @@ main {
   color: var(--galeo-color-muted);
 }
 
+/* The watched folder (UX F21): on the right like the outline, one of them at a time. */
+.watch-slot {
+  display: flex;
+}
+.watch-slot:empty {
+  display: none;
+}
+.watch-panel {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: min(260px, 35vw); /* literal: as wide as the outline */
+  min-height: 0;
+  border-left: 1px solid var(--galeo-color-border);
+  background: var(--galeo-chrome-bar);
+  font: var(--galeo-text-md) var(--galeo-font-ui);
+}
+.watch-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0 var(--galeo-space-sm);
+  padding: var(--galeo-space-md) var(--galeo-space-sm) var(--galeo-space-sm) var(--galeo-space-lg);
+}
+.watch-title {
+  margin: 0;
+  color: var(--galeo-color-muted);
+  font-size: var(--galeo-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.watch-folder,
+.watch-note {
+  grid-column: 1;
+  overflow: hidden;
+  color: var(--galeo-color-muted);
+  font-size: var(--galeo-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.watch-folder {
+  direction: rtl; /* the end of a long path, the folder's own name, stays in view */
+  text-align: left;
+}
+.watch-close {
+  display: grid;
+  grid-row: 1;
+  grid-column: 2;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--galeo-radius-md);
+  background: none;
+  color: var(--galeo-color-muted);
+  cursor: pointer;
+}
+.watch-close:hover {
+  background: var(--galeo-chrome-hover);
+  color: var(--galeo-color-fg);
+}
+.watch-close:focus-visible,
+.watch-action:focus-visible {
+  outline: var(--galeo-focus-ring);
+  outline-offset: 1px;
+}
+.watch-empty,
+.watch-state {
+  margin: 0;
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
+  color: var(--galeo-color-muted);
+}
+.watch-state {
+  color: var(--galeo-color-fg);
+  font-weight: 600;
+}
+.watch-list-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.watch-list {
+  outline: none;
+}
+.watch-entry {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 var(--galeo-space-sm);
+  padding: var(--galeo-space-xs) var(--galeo-space-lg);
+  color: var(--galeo-color-fg);
+  cursor: pointer;
+}
+.watch-entry[data-hovered] {
+  background: var(--galeo-chrome-hover);
+}
+.watch-entry[data-focus-visible] {
+  outline: var(--galeo-focus-ring);
+  outline-offset: -1px;
+}
+/* The mark repeats what the text says: green new, amber changed, an outline once opened. */
+.watch-mark {
+  grid-row: span 2;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid var(--galeo-color-callout-tip);
+  border-radius: 50%;
+  background: var(--galeo-color-callout-tip);
+}
+.watch-entry[data-kind='changed'] .watch-mark {
+  border-color: var(--galeo-color-changed);
+  background: var(--galeo-color-changed);
+}
+.watch-entry[data-opened] .watch-mark {
+  background: none;
+}
+.watch-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.watch-meta,
+.watch-dir {
+  grid-column: 2;
+  overflow: hidden;
+  color: var(--galeo-color-muted);
+  font-size: var(--galeo-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.watch-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--galeo-space-sm);
+  padding: var(--galeo-space-sm) var(--galeo-space-lg) var(--galeo-space-md);
+  border-top: 1px solid var(--galeo-color-border);
+}
+.watch-truncated {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--galeo-color-muted);
+  font-size: var(--galeo-text-xs);
+}
+.watch-action {
+  padding: var(--galeo-space-2xs) var(--galeo-space-sm);
+  border: 1px solid var(--galeo-color-control-border);
+  border-radius: var(--galeo-radius-sm);
+  background: none;
+  color: var(--galeo-color-fg);
+  font: inherit;
+  cursor: pointer;
+}
+.watch-action:hover:not(:disabled) {
+  background: var(--galeo-chrome-hover);
+}
+.watch-action:disabled {
+  color: var(--galeo-color-muted);
+  cursor: default;
+}
+/* The title-bar button's count of entries not opened, while the panel is closed. */
+.watch-button {
+  position: relative;
+}
+.watch-count {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  min-width: 14px;
+  padding: 0 var(--galeo-space-2xs);
+  border-radius: var(--galeo-radius-sm);
+  /* Not the accent: any profile's colour stays readable this way. */
+  background: var(--galeo-color-fg);
+  color: var(--galeo-color-bg);
+  font-size: var(--galeo-text-xs);
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+}
+
 body {
   background: var(--galeo-color-bg);
   color: var(--galeo-color-fg);
@@ -1411,6 +1593,7 @@ button:focus-visible {
 .status-encoding,
 .status-view,
 .status-follow,
+.status-watch,
 .status-zoom,
 .status-width {
   height: 20px;
@@ -1448,6 +1631,7 @@ button:focus-visible {
 .status-encoding:hover,
 .status-view:hover,
 .status-follow:hover,
+.status-watch:hover,
 .status-zoom:hover,
 .status-width:hover {
   background: var(--galeo-chrome-hover);
@@ -1458,6 +1642,7 @@ button:focus-visible {
 .status-encoding[data-focus-visible],
 .status-view[data-focus-visible],
 .status-follow:focus-visible,
+.status-watch:focus-visible,
 .status-zoom:focus-visible,
 .status-width:focus-visible {
   outline: var(--galeo-focus-ring);

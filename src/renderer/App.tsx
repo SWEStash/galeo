@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { TabPanel, Tabs } from 'react-aria-components';
 import { accentOf } from '../shared/accents';
 import type { AppInfo, SandboxChoice } from '../shared/contracts';
@@ -18,7 +19,7 @@ import type { FindRequest } from './document/requests';
 import { useColorScheme } from './document/theme';
 import { readerWidthStyle } from './document/width';
 import { UnsavedPrompt } from './edit/UnsavedPrompt';
-import { OutlineProvider } from './outline/useOutline';
+import { RightPanelProvider, useWatchPanel } from './outline/useOutline';
 import type { PaletteEntry } from './palette/entries';
 import { Palette } from './palette/Palette';
 import { markFirstPaint, markStart } from './perf';
@@ -44,8 +45,10 @@ import { useFileDrops } from './tabs/useFileDrops';
 import { useTabs } from './tabs/useTabs';
 import { createRenderClient, type RenderClient } from './worker/client';
 import { spawnRenderWorker } from './worker/spawn';
-import { logFailure } from './tabs/closed-tab';
+import { logFailure, reportFailure } from './tabs/closed-tab';
 import { panelOrder } from './tabs/panel-order';
+import { unopenedCount, useWatch } from './watch/useWatch';
+import { WATCH_PANEL_ID, WatchPanel } from './watch/WatchPanel';
 
 // The Settings tab loads when first shown: its pickers are nothing a window needs to start.
 const SettingsView = lazy(() => import('./settings/SettingsView').then((module) => ({ default: module.SettingsView })));
@@ -84,13 +87,64 @@ export function App() {
   if (shown.crashLoop) return <CrashLoop onRetry={() => void window.galeo.window.retryAfterCrashes().catch(logFailure('trying again'))} onClose={() => void window.galeo.window.command('closeWindow').catch(logFailure('closing the window'))} />;
   return (
     <CommandsProvider platform={shown.platform}>
-      <OutlineProvider>
+      <RightPanelProvider>
         <UnsavedPrompt>
           <MainView sandboxed={shown.sandboxed} platform={shown.platform} commandLauncher={shown.commandLauncher} version={shown.version} />
         </UnsavedPrompt>
-      </OutlineProvider>
+      </RightPanelProvider>
     </CommandsProvider>
   );
+}
+
+/**
+ * The window's watched folder (UX F21): its state from main, whether its panel shows, and its
+ * commands. A folder just watched opens the panel as main says (a restored one as it was left); the
+ * panel's state goes back to main for the session.
+ */
+function useWatchedFolder(say: (message: string) => void) {
+  const state = useWatch();
+  const [open, setOpen] = useWatchPanel();
+  const [focus, setFocus] = useState(false);
+  const returnTo = useRef<HTMLElement | null>(null);
+  const previous = useRef<typeof state>(null);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = state;
+    if (state && (before === null || (state.status === 'starting' && before.status !== 'starting'))) setOpen(state.panel);
+    else if (!state && before) setOpen(false);
+  }, [state, setOpen]);
+  const watching = state !== null;
+  useEffect(() => {
+    if (watching) void window.galeo.watch.panel(open).catch(logFailure('keeping the panel state'));
+  }, [watching, open]);
+  const show = (next: boolean) => {
+    if (next) returnTo.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setFocus(next);
+    setOpen(next);
+  };
+  const close = () => {
+    show(false);
+    // Back where the reader was, if it is still there.
+    if (returnTo.current?.isConnected) returnTo.current.focus();
+  };
+  const toggle = () => (open ? close() : show(true));
+  useCommands({
+    watchFolder: () => {
+      void window.galeo.watch.choose().catch(reportFailure(say, "The folder couldn't be watched"));
+      return true;
+    },
+    stopWatching: () => {
+      if (!watching) return false;
+      void window.galeo.watch.stop().catch(reportFailure(say, "Watching didn't stop"));
+      return true;
+    },
+    toggleWatchPanel: () => {
+      if (!watching) return false;
+      toggle();
+      return true;
+    },
+  });
+  return { state, open, focus, toggle, close };
 }
 
 function reloaded(): boolean {
@@ -208,6 +262,14 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
     [closeOverlay, runEntry],
   );
   const { landed } = useFileDrops(openQuickOpen, setMessage);
+  const watch = useWatchedFolder(setMessage);
+  // Only the slot on the page: the tabs' collection pass draws a copy that is not.
+  const [watchSlot, setWatchSlot] = useState<HTMLElement | null>(null);
+  const keepWatchSlot = useCallback((node: HTMLDivElement | null) => {
+    if (node?.isConnected) setWatchSlot(node);
+    // The copy going away must not take the slot with it.
+    else if (node === null) setWatchSlot((slot) => (slot?.isConnected ? slot : null));
+  }, []);
 
   return (
     <>
@@ -231,6 +293,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
           onFilesDropped={(after) => landed({ after })}
           onTabMenu={(id) => void showTabMenu(id, { store, say: setMessage, chooseWindow: () => openOverlay('moveTab') })}
           panel={tabsLeft ? { width: panelWidth, collapsed, onCollapsed: setCollapsed, onWidth: keepPanelWidth } : null}
+          watch={watch.state && { count: unopenedCount(watch.state), open: watch.open, controls: WATCH_PANEL_ID, onToggle: watch.toggle }}
         />
         <div className="window-body">
           {/* The side panel's room: the panel itself is drawn from the title bar, where the tab list always is. */}
@@ -285,17 +348,25 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
               </DropArea>
             </main>
           </div>
+          {/* The watched folder panel's place; the panel is drawn from outside the tabs (below). */}
+          <div className="watch-slot" ref={keepWatchSlot} />
         </div>
         {settings?.settings.statusBar !== false && (
           <StatusBar view={view} store={store} say={setMessage}>
             <span className="status-message" data-testid="status-message" role="status">
               {message ?? ''}
             </span>
+            {watch.state && (
+              <button type="button" className="status-watch" data-testid="status-watch" title="Watched folder (Ctrl+Shift+D)" onClick={watch.toggle}>
+                Watching {watch.state.name}/{unopenedCount(watch.state) > 0 ? ` · ${unopenedCount(watch.state)} new` : ''}
+              </button>
+            )}
             {!sandboxed && <UnsandboxedBadge />}
           </StatusBar>
         )}
       </Tabs>
       {/* Outside the tabs: their collection is built by rendering their children once more. */}
+      {watch.state && watch.open && watchSlot && createPortal(<WatchPanel state={watch.state} platform={platform} onClose={watch.close} say={setMessage} autoFocus={watch.focus} />, watchSlot)}
       {overlay === 'quickOpen' && <QuickOpen platform={platform} onClose={closeOverlay} say={setMessage} />}
       {overlay === 'tabSearch' && <TabSearch onShow={store.activate} onReopen={store.reopenClosedTab} onClose={closeOverlay} say={setMessage} updated={view.updated} />}
       {overlay === 'tabOverview' && (

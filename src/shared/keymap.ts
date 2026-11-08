@@ -20,6 +20,10 @@ const BASE = {
   /** Logs: jump to the end and keep following it; scrolling up leaves. */
   followEnd: ['End'],
   toggleOutline: ['CmdOrCtrl+Shift+O'],
+  /** A watched folder (ADR-034): Ctrl+Shift+D, as Ctrl+Shift+W closes the window. */
+  watchFolder: [],
+  stopWatching: [],
+  toggleWatchPanel: ['CmdOrCtrl+Shift+D'],
   // Palette and the status bar's view menu (mouse paths review).
   viewRendered: [],
   viewSource: [],
