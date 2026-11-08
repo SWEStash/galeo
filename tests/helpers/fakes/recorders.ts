@@ -1,12 +1,15 @@
-import type {
-  AppPaths,
-  FileWatcher,
-  InstanceChannel,
-  OpenRequest,
-  OsShell,
-  SystemMetrics,
-  Unsubscribe,
-  WatchEvent,
+import {
+  FsError,
+  type AppPaths,
+  type FileWatcher,
+  type FolderEvent,
+  type FolderWatcher,
+  type InstanceChannel,
+  type OpenRequest,
+  type OsShell,
+  type SystemMetrics,
+  type Unsubscribe,
+  type WatchEvent,
 } from '../../../src/core/ports';
 
 /** A listener set with an `emit` for tests to drive events. */
@@ -19,12 +22,39 @@ class Emitter<Args extends unknown[]> {
   }
 
   emit(...args: Args): void {
-    for (const listener of this.listeners) listener(...args);
+    for (const listener of [...this.listeners]) listener(...args);
+  }
+
+  get size(): number {
+    return this.listeners.size;
   }
 }
 
-export class FakeFileWatcher implements FileWatcher {
+export class FakeFileWatcher implements FileWatcher, FolderWatcher {
   private readonly emitters = new Map<string, Emitter<[WatchEvent]>>();
+  private readonly folders = new Map<string, Emitter<[FolderEvent]>>();
+  /** Folders whose watch throws, as past the system's watch limit. */
+  readonly unwatchable = new Set<string>();
+
+  watchFolder(folder: string, listener: (event: FolderEvent) => void): Unsubscribe {
+    if (this.unwatchable.has(folder)) throw new FsError('EOTHER', folder);
+    const emitter = this.folders.get(folder) ?? new Emitter<[FolderEvent]>();
+    this.folders.set(folder, emitter);
+    const off = emitter.on(listener);
+    return () => {
+      off();
+      if (emitter.size === 0) this.folders.delete(folder);
+    };
+  }
+
+  /** The folders watched now. */
+  watchedFolders(): string[] {
+    return [...this.folders.keys()].sort();
+  }
+
+  emitFolder(folder: string, event: FolderEvent): void {
+    this.folders.get(folder)?.emit(event);
+  }
 
   watch(path: string, listener: (event: WatchEvent) => void): Unsubscribe {
     const emitter = this.emitters.get(path) ?? new Emitter<[WatchEvent]>();

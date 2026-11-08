@@ -1,11 +1,5 @@
 import { FsError, type Clock, type FileSystem, type FileWatcher, type Unsubscribe, type WatchEvent } from '../ports';
-
-/** A burst is delivered once the file has been quiet this long… */
-const QUIET_MS = 75;
-/** …or this long after its first event, whichever comes first. */
-const MAX_WAIT_MS = 250;
-/** At most one delivery per interval: 4 a second while an agent streams into the file. */
-const MIN_INTERVAL_MS = 250;
+import { burst } from './burst';
 /** How often a file is polled while its folder can't be watched. */
 const POLL_MS = 1000;
 
@@ -28,34 +22,18 @@ export class CoalescingWatcher implements FileWatcher {
     const { clock, fs, inner } = this.deps;
     let stopped = false;
     let kind: WatchEvent['kind'] = 'change';
-    let firstAt: number | null = null;
-    let lastAt = -Infinity;
-    let lastDelivered = -Infinity;
-    let cancelDelivery: Unsubscribe | null = null;
     let unwatch: Unsubscribe | null = null;
     let cancelPoll: Unsubscribe | null = null;
     let identity: string | null = null;
 
-    const deliver = (): void => {
-      cancelDelivery = null;
-      firstAt = null;
-      lastDelivered = clock.now();
+    const delivery = burst(clock, () => {
       if (!stopped) listener({ path, kind });
-    };
-
-    const schedule = (): void => {
-      if (firstAt === null) return;
-      const due = Math.max(Math.min(lastAt + QUIET_MS, firstAt + MAX_WAIT_MS), lastDelivered + MIN_INTERVAL_MS);
-      cancelDelivery?.();
-      cancelDelivery = clock.setTimeout(deliver, Math.max(0, due - clock.now()));
-    };
+    });
 
     const note = (next: WatchEvent['kind']): void => {
       if (stopped) return;
       kind = next;
-      lastAt = clock.now();
-      firstAt ??= lastAt;
-      schedule();
+      delivery.note();
     };
 
     const identify = async (): Promise<string> => {
@@ -106,7 +84,7 @@ export class CoalescingWatcher implements FileWatcher {
 
     return () => {
       stopped = true;
-      cancelDelivery?.();
+      delivery.cancel();
       cancelPoll?.();
       unwatch?.();
     };

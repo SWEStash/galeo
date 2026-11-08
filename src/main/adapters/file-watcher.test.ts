@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, renameSync, watch as fsWatch, rmSync, unlinkSyn
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
-import { FsError, type WatchEvent } from '../../core/ports';
+import { FsError, type FolderEvent, type WatchEvent } from '../../core/ports';
 import { NodeFileWatcher } from './file-watcher';
 
 function tempDir(): string {
@@ -148,5 +148,51 @@ describe('NodeFileWatcher', () => {
     );
     rmSync(dir, { recursive: true, force: true });
     await vi.waitFor(() => expect(events.at(-1)).toEqual({ path: target, kind: 'lost' }), { timeout: 5_000 });
+  });
+
+  it('tells a folder listener about any entry, and shares the folder watch with its files', async () => {
+    const dir = tempDir();
+    let opened = 0;
+    let closed = 0;
+    const watcher = new NodeFileWatcher((folder, listener) => {
+      opened++;
+      const inner = fsWatch(folder, { persistent: false }, listener);
+      const close = inner.close.bind(inner);
+      inner.close = () => {
+        closed++;
+        close();
+      };
+      return inner;
+    });
+    const seen: FolderEvent[] = [];
+    const stopFile = watcher.watch(path.join(dir, 'a.md'), () => {});
+    const stopFolder = watcher.watchFolder(dir, (event) => seen.push(event));
+    expect(opened).toBe(1);
+    await until(
+      () => writeFileSync(path.join(dir, 'report.md'), '# r'),
+      () => expect(seen).toContainEqual({ kind: 'entry', name: 'report.md' }),
+    );
+    stopFile();
+    expect(closed).toBe(0);
+    stopFolder();
+    expect(closed).toBe(1);
+  });
+
+  it('tells a folder listener once its folder is removed', async () => {
+    const dir = path.join(tempDir(), 'reports');
+    mkdirSync(dir);
+    const seen: FolderEvent[] = [];
+    const stop = new NodeFileWatcher().watchFolder(dir, (event) => seen.push(event));
+    onTestFinished(stop);
+    await until(
+      () => writeFileSync(path.join(dir, 'a.md'), 'a'),
+      () => expect(seen.length).toBeGreaterThan(0),
+    );
+    rmSync(dir, { recursive: true, force: true });
+    await vi.waitFor(() => expect(seen.at(-1)).toEqual({ kind: 'lost' }), { timeout: 5_000 });
+  });
+
+  it('refuses a folder that does not exist', () => {
+    expect(() => new NodeFileWatcher().watchFolder(path.join(tempDir(), 'no'), () => {})).toThrow(FsError);
   });
 });

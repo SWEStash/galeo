@@ -51,6 +51,14 @@ describe('findGitRoot', () => {
 });
 
 describe('walk', () => {
+  it('tells onFolder each folder it enters, the root first, and none it skips', async () => {
+    const fs = new FakeFileSystem({ '/r/a.md': '', '/r/docs/b.md': '', '/r/docs/deep/c.md': '', '/r/node_modules/x/d.md': '', '/t/e.md': '' });
+    fs.symlink('/r/linked', '/t');
+    const folders: string[] = [];
+    await collect(fs, '/r', { onFolder: (relative) => folders.push(relative) });
+    expect(folders).toEqual(['', 'docs', 'docs/deep']);
+  });
+
   it('lists files relative to the root, shallow ones first, dot folders and git-ignored files included', async () => {
     const fs = new FakeFileSystem({
       '/r/README.md': '',

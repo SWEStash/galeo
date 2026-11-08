@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseView, detectFormat, JSON_TREE_MAX_BYTES, MARKDOWN_RENDER_MAX_BYTES, TABLE_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
+import { chooseView, detectFormat, isKnownType, JSON_TREE_MAX_BYTES, MARKDOWN_RENDER_MAX_BYTES, TABLE_MAX_BYTES, TEXT_READER_MAX_BYTES } from './registry';
 
 describe('detectFormat', () => {
   it.each([
@@ -40,6 +40,13 @@ describe('detectFormat', () => {
   it('uses only the file name, not the directories', () => {
     expect(detectFormat('/logs.md/readme')).toBe('plain');
     expect(detectFormat('C:\\docs\\a.md')).toBe('markdown');
+  });
+});
+
+describe('isKnownType', () => {
+  it('is true for the names a format claims, false for the plain-text fallback', () => {
+    for (const path of ['/d/r.md', '/d/a.log.2', '/d/Dockerfile', '/d/x.csv', '/d/notes.txt']) expect(isKnownType(path)).toBe(true);
+    for (const path of ['/d/photo.png', '/d/a.out', '/d/README', '/d/archive.tar.gz']) expect(isKnownType(path)).toBe(false);
   });
 });
 

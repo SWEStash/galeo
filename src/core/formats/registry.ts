@@ -74,13 +74,23 @@ export const FORMATS: Readonly<Record<FormatId, FormatSpec>> = {
   },
 };
 
-/** The format of a file by its name; anything unrecognised is `plain` text. */
-export function detectFormat(path: string): FormatId {
+/** The format a file's name names, or null when none does. */
+function namedFormat(path: string): FormatId | null {
   const name = fileName(path).toLowerCase();
   for (const [id, spec] of Object.entries(FORMATS) as [FormatId, FormatSpec][]) {
     if (spec.extensions.some((extension) => name.endsWith(extension)) || spec.matchesName?.(name)) return id;
   }
-  return 'plain';
+  return null;
+}
+
+/** The format of a file by its name; anything unrecognised is `plain` text. */
+export function detectFormat(path: string): FormatId {
+  return namedFormat(path) ?? 'plain';
+}
+
+/** Whether the file's name is one of the types galeo opens (a watched folder lists only these, ADR-034). */
+export function isKnownType(path: string): boolean {
+  return namedFormat(path) !== null;
 }
 
 interface ViewChoice {

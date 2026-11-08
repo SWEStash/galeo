@@ -3,7 +3,7 @@ export type { Clipboard } from './clipboard';
 export type { Clock } from './clock';
 export type { Unsubscribe } from './common';
 export { FsError, isMissing, type DirEntry, type EntryKind, type FileStat, type FileSystem, type FsErrorCode } from './file-system';
-export type { FileWatcher, WatchEvent } from './file-watcher';
+export type { FileWatcher, FolderEvent, FolderWatcher, WatchEvent } from './file-watcher';
 export type { FontCatalog } from './font-catalog';
 export type { InstanceChannel, OpenRequest } from './instance-channel';
 export type { MenuItem } from './menu-item';

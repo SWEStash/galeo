@@ -29,6 +29,8 @@ interface WalkOptions {
   maxDepth?: number;
   budgetMs?: number;
   batchSize?: number;
+  /** Told of each folder the walk enters, the root (`''`) first, relative as files are. */
+  onFolder?: (relative: string) => void;
 }
 
 /** Why a walk ended early, if it did: a limit was reached, so the list is incomplete. */
@@ -62,6 +64,7 @@ export async function* walk(fs: Pick<FileSystem, 'readDir' | 'stat'>, root: stri
   };
 
   await enter(root);
+  options.onFolder?.('');
   while (queue.length > 0) {
     const next: typeof queue = [];
     for (const folder of queue) {
@@ -103,7 +106,10 @@ export async function* walk(fs: Pick<FileSystem, 'readDir' | 'stat'>, root: stri
           continue;
         }
         try {
-          if (await enter(child.path)) next.push(child);
+          if (await enter(child.path)) {
+            next.push(child);
+            options.onFolder?.(child.relative);
+          }
         } catch (error) {
           if (!(error instanceof FsError)) throw error;
         }
