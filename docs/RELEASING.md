@@ -15,9 +15,13 @@ repository get it with `apt upgrade`; publishing a release updates the repositor
 - **Dependabot** (`.github/dependabot.yml`) checks npm daily and GitHub Actions weekly. Electron,
   electron-builder and `@electron/*` come as one grouped PR with no waiting period; other updates
   wait 3 days after publication (a compromised release is usually caught by then), and development
-  tooling is grouped. Runtime updates are committed as `fix(deps)`, tooling as `build(deps-dev)`.
-- A PR is merged once CI is green (Linux on `main`; macOS and Windows run in the Platforms workflow, ADR-027). Mermaid, KaTeX, DOMPurify and the sanitizer stay on
-  exact versions; read their changelogs before taking an update
+  tooling is grouped. Runtime updates are committed as `fix(deps)`, tooling as `build(deps-dev)`, GitHub
+  Actions as `ci(deps)`. Electron is a devDependency but ships in the app, so its updates are `fix(deps)`
+  whatever Dependabot's PR says.
+- Each update is applied by hand on `main`, one commit each, and Dependabot's PR is closed
+  ([development → How we work](development.md#how-we-work), *Pull requests*); the commit is kept once CI is green (Linux on
+  `main`; macOS and Windows run in the Platforms workflow, ADR-027). Mermaid, KaTeX, DOMPurify and the
+  sanitizer stay on exact versions; read their changelogs before taking an update
   ([dependencies](dependencies.md)).
 
 ## Release checklist
@@ -68,13 +72,15 @@ Then cut it:
    `gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo` (GitHub CLI 2.49 or
    later; the same for the AppImage and for one macOS and one Windows file). The notes end with the
    previews' Gatekeeper and SmartScreen steps. Edit the draft's notes (a list of commit subjects to start from) for readers, then
-   publish it.
+   publish it. The version is now **released**.
 10. **Website**: if the UI changed visibly, retake the [website's screenshots](development.md#website)
     and commit them; the page links to the latest release, so nothing else changes.
 11. **apt repository**: publishing starts the Pages workflow, which starts a second run on `main` (only
     `main` may deploy); that one checks the new `.deb` and signs the repository. When it is green, `sudo apt update && apt policy galeo` on the reference machine shows the
     new version as the candidate. If the release was published by a token rather than by hand, the
     workflow doesn't start: run it with `gh workflow run pages.yml --ref main`.
+12. **Milestone**: move each issue still open in the release's milestone to the next milestone or to
+    none, with a one-line comment saying why, then close the milestone.
 
 ## The apt repository's key
 
@@ -101,8 +107,19 @@ To work with the offline key: `export GNUPGHOME=<media>/galeo-apt-gnupg`.
    `gpg --armor --export-secret-subkeys '<standby subkey fingerprint>!'` and `APT_SIGNING_PASSPHRASE` to the
    offline key's passphrase (both with `gh secret set … --env github-pages --repo SWEStash/galeo`).
 4. Once that deploy is green, delete `APT_SIGNING_PASSPHRASE`, set the new CI subkey as `APT_SIGNING_KEY`
-   (exported without a passphrase, as in the first key procedure), and add a new standby subkey for the next
-   time (its public key goes out with the next release).
+   exported without a passphrase, and add a new standby subkey for the next time (its public key goes out
+   with the next release). The export is made from a copy of the key in memory, never on the laptop's
+   disk, the way the key was first made: the CI copy carries no passphrase, since one stored beside it in
+   the same secret store would add nothing.
+   ```sh
+   RAM=$(mktemp -d -p /dev/shm) && chmod 700 "$RAM"
+   cp -a /media/$USER/<stick>/galeo-apt-gnupg/. "$RAM" && export GNUPGHOME="$RAM"
+   gpg --change-passphrase <fingerprint>      # in the copy only: enter the passphrase, then an empty one
+   gpg --armor --export-secret-subkeys '<new CI subkey fingerprint>!' \
+     | gh secret set APT_SIGNING_KEY --env github-pages --repo SWEStash/galeo
+   gpgconf --kill all && rm -r -- "${RAM:?}" && unset GNUPGHOME
+   ```
+   The trailing `!` exports that subkey alone; the stick's key keeps its passphrase.
 5. Say in the release notes what happened, which subkey was revoked, and that users should upgrade now.
 
 **If the primary key or both signing subkeys are lost or leak:** delete the secret, publish the revocation

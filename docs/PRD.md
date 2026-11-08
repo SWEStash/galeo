@@ -564,7 +564,9 @@ as fast and as keyboard- and screen-reader-friendly as before.
 
 v0.8 keeps up with files that change while I read them: a large log followed without lag, and a folder
 watched for new or changed files. Linux gets arm64 packages, and the apt repository keeps its key on a plain
-remove. Each story links its issue, which holds the full acceptance criteria (*Done when*).
+remove. Each story links its issue, which holds the full acceptance criteria (*Done when*). The v0.8
+milestone decides what ships; where this list and the milestone or an issue differ, they win and this list
+is updated.
 
 ### Must Have
 
@@ -642,7 +644,7 @@ live in the [UX specification](design/ux.md).
   | Scrolling a long document with Mermaid diagrams | no dropped-frame jank at 60 Hz (v0.1: reported, see below) |
   | Memory, 3 profiles / ~20 tabs / ≤3 warm per window | baseline recorded in v0.1, must not regress |
 
-  v0.1 budgets (owner, 2026-10-05): on the reference laptop (Intel i7-8565U, Ubuntu 26.04), a typical
+  v0.1 budgets (owner, 2026-10-05): on the reference machine (Intel i7-8565U, Ubuntu 26.04), a typical
   cold start (galeo not running, its caches from earlier launches kept) paints the window in
   about 750 ms and the 50 KB document in about 1170 ms, so v0.1 holds 850 ms and 1300 ms; the
   500 ms target needs cold-start profiling, planned for v0.4 (owner, 2026-10-15), and until then no
@@ -684,6 +686,9 @@ live in the [UX specification](design/ux.md).
 | (v0.2) Articles edited in galeo before publishing | 0 | Next article | Owner's use |
 
 ## Open Questions
+
+All settled; this list is history. A new open question is a GitHub issue labelled `needs decision`
+([How we work](development.md#how-we-work)).
 
 - [x] **GNOME Wayland workspace awareness.** Decided in ADR-005: accepted limitation; route to the
       last-focused window without stealing focus.

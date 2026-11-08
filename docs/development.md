@@ -87,17 +87,24 @@ GALEO_SHOTS_DIR=/tmp/before npm run headless -- npx playwright test --project=sc
 
 ## How we work
 
-galeo has one maintainer. GitHub holds what is planned and what is done; the repository holds how and why.
+galeo has one maintainer (the owner; other docs say "owner"). GitHub holds what is planned and what is done;
+the repository holds how and why.
 
 | What | Where |
 |---|---|
 | Bugs, feature requests, tasks, and whether each is open or done | [Issues](https://github.com/SWEStash/galeo/issues) |
-| What a release ships | Its milestone (`v0.8`) |
-| Decisions | ADRs in [`docs/decisions/`](decisions/) |
-| Release evidence | [VALIDATION](VALIDATION.md) |
+| What a release ships | Its milestone (`v0.8`); the [PRD](PRD.md)'s stories describe the release, and where they differ the milestone and each story's issue win |
+| How the project runs: filing, claiming, done, releases, what agents may do | This section |
+| Decisions | A design decision (architecture, a dependency, a security or process rule that lasts) is an ADR in [`docs/decisions/`](decisions/); a smaller choice is the issue comment that settles it |
+| Release evidence | [VALIDATION](VALIDATION.md); a check not yet run names the issue that owns it |
+| Anything else | The doc the README's *Documentation* list gives for that topic |
 
-Working plans stay outside the repository. They refer to issues by number and never track an issue's
-status: the issue does.
+Working plans stay outside the repository, in a git-ignored `.local/` folder. They refer to issues by
+number and never track an issue's status: the issue does.
+
+**When two documents disagree**, the owner in the table above wins and the other document is fixed in the
+same commit. When this section and practice disagree, this section is fixed first, in its own commit, and
+then the work follows it.
 
 **Writing.** Issues and comments are short and precise, like commit messages: bullets and short lines, no
 prose, no filler. Enough context to understand the issue at a glance; detail that only matters while
@@ -113,21 +120,48 @@ link. Don't hard-wrap issue text: GitHub keeps every line break. Keys and paths 
 - Body, written for someone who doesn't know the code:
   - **Context**: the feature involved, where it shows in the app, why it matters. One to three lines.
   - Bug: *Steps*, *Expected*, *Actual*, *Version and OS*, *Impact* (who is hit, how badly, any workaround).
-  - Feature or task: *Problem*, *Proposal*, *Out of scope* when it helps.
+  - Feature: *Problem*; *Proposal* and *Out of scope* when they help.
+  - Task: *Context* and *Proposal*.
   - **Done when**: a checklist of observable results, a regression test among them for a bug. It's this
     issue's acceptance criteria; the project-wide definition of done is under *Closing*.
   - *Notes*: leads, constraints, links. Optional.
 
-  The issue forms ask the public for the essentials; the maintainer adds Context and Done when on triage.
+  The issue forms ask the public for the essentials; the maintainer adds Context, Done when and any
+  `platform:` label on triage, when first reading a new issue. Outside reporters use the *Bug* or *Feature request* form, whichever is
+  closer, also for a question; the *Task* form is for the maintainer.
 - An issue labelled `needs decision` lists the options instead of *Done when*. The decision is recorded in a
   comment and *Done when* is added before the issue is claimed.
 - Labels only for what a type can't say: `platform: macos`, `platform: windows`, `platform: x11`,
-  `needs decision` (the maintainer chooses before work starts), `good first issue`.
+  `needs decision` (the maintainer chooses before work starts). Bugs on the macOS and Windows previews are
+  welcome; the previews are unsupported in the sense that releases run no manual checks on them
+  ([RELEASING](RELEASING.md)).
 - Security problems never go in a public issue: see [CONTRIBUTING](../CONTRIBUTING.md).
 
-**Planning and claiming.** No milestone: not planned. A milestone: that release ships it. Assigned: in
+**Found while working on something else.** A follow-up that is its own change is a new issue that links
+the one it came from; a fact about the issue you're on is a comment there. A question that blocks an issue
+is a comment on that issue; a choice the maintainer has to make is an issue labelled `needs decision`; any
+other question becomes a *Task* whose *Done when* is the answer, recorded.
+
+**Scope changes.** The issue body is edited to the new scope (*Done when* included), with a one-line
+comment saying what changed and why. Moving it to another release is a milestone change (below).
+
+**Work only the maintainer can do** (a secret, the signing key, a release, an approval) is a *Task*
+assigned to the maintainer, written as a runbook: what is needed, where it lives, what to run, what to look
+for, and what to send back. It waits there, visible, not in a private note.
+
+**Planning and claiming.** No milestone: not scheduled. A milestone: that release ships it. Assigned: in
 progress; an issue is claimed only once it has *Done when*. Nothing else marks progress, so no "working on
 it" comments. Moving an issue to another release changes its milestone, with a one-line comment saying why.
+
+- **Picking the next issue**: unassigned, with *Done when*, not `needs decision`. The milestone's issues
+  of the next release first, bugs before features and tasks, then oldest first; issues with no milestone after
+  that. A comment
+  from the maintainer on an issue overrides this order.
+- **Claiming**: the issue is assigned to the maintainer when work starts (agents working for the maintainer
+  do this too) and unassigned when work on it stops (parked, blocked, or handed back), not when a session
+  ends.
+- **Work in progress** stays in the working tree or in local commits until it passes the preflight; nothing
+  is pushed half done. Context for the next session goes in the working plan, never in a status comment.
 
 **Comments.** New facts only: a repro, a finding, a decision with its reason, the commit or run that
 changes things. One fact per comment, a few lines; never restate the issue or report status. A decision
@@ -135,20 +169,31 @@ that changes the design is an ADR, and the comment links it.
 
 **Closing.** The commit on `main` that resolves an issue says so in its footer: `Fixes #72` for a bug,
 `Closes #72` otherwise. An issue closed without code is closed as *not planned* with one line why; a
-duplicate links the other issue. Done means: on `main`, CI green, a regression test for a bug, and the
-[change checklist](#change-checklist).
+duplicate links the other issue. Done means: the issue's *Done when* is met, on `main`, CI green, a
+regression test for a bug, and the [change checklist](#change-checklist). For an issue labelled `platform: macos` or `platform: windows`, also a
+green *Platforms* run on the fixing commit ([Before pushing](#before-pushing)); for `platform: x11`, a manual
+check on the reference platform under X11. A comment on the closed issue links the run or states the check
+(agents draft it, as any post).
 
-**Releases.** The release plan picks its issues into the milestone. At the release, issues still open move
-to the next milestone or to none, and the milestone closes with the tag.
+**Releases.** The maintainer picks a release's issues into its milestone; a patch release gets a milestone
+only when issues are planned for it. At the release, issues still open move to the next milestone or to
+none, and the milestone closes; [RELEASING](RELEASING.md) has the order. A
+version is **released** once its GitHub release is published (RELEASING step 9); apt users get it when the
+Pages deploy after it is green (step 11). A closed issue alone means on `main`, not released.
 
-**Pull requests.** Outside pull requests aren't accepted yet (CONTRIBUTING). The maintainer commits to
-`main` and pushes after the preflight ([Before pushing](#before-pushing)). Dependabot's updates are
+**Pull requests.** galeo takes issues from anyone, not code: outside pull requests aren't accepted yet
+(CONTRIBUTING), and one that arrives is closed with a pointer to CONTRIBUTING. The maintainer commits
+straight to `main` and pushes after the preflight ([Before pushing](#before-pushing)), which keeps CI
+minutes down; pull requests will come in with outside contributions. Dependabot's updates are
 applied by hand on `main`, one commit each, and its pull request is closed; CI skips Dependabot's pull
 requests, and docs-only pushes.
 
 **Agents** follow this section and act through the maintainer's account (`gh`). They draft issues,
 comments, closes, labels and milestone changes, and post them only after the maintainer approves: every
-post is public.
+post is public. Assigning or unassigning an issue when work on it starts or stops needs no approval.
+Pushing needs the maintainer's approval each time, after the preflight; agents open no pull requests.
+They also ask first before adding a dependency not in [dependencies](dependencies.md), departing from an
+accepted ADR, or changing the repository's settings or visibility.
 
 ## Before pushing
 
@@ -204,7 +249,9 @@ requirements are in [`docs/security/threat-model.md`](security/threat-model.md),
   `main` → `core`, `shared`; `preload`/`renderer` → `shared`). zod runs in main only: the preload
   and renderer must not reach it through any value import, so they use `import type` for schema
   modules. `npm run boundaries` enforces all of this.
-- **Decisions**: never edit an accepted ADR's decision. Record a new ADR that supersedes it.
+- **Decisions**: never edit an accepted ADR's decision. Record a new ADR that supersedes it: its header
+  says `Supersedes:` and what, and the old ADR's status becomes `Superseded by` the new one (ADR-012
+  shows both).
 - **Diagrams** in the docs are Mermaid, so GitHub and galeo both draw them. UI mock-ups and
   directory trees stay as text, which Mermaid can't lay out.
 - **Docs placement**: PRD, ADRs and official docs go in `docs/`. Working notes stay out of the

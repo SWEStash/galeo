@@ -2,7 +2,8 @@
 
 What was checked for a release, how, and the result. Automated checks run in CI and in
 `npm run preflight`; the manual ones are done on the reference platform (Ubuntu 26.04 LTS, GNOME,
-Wayland) before each release.
+Wayland) before each release. Performance runs use the reference machine: the owner's laptop (Intel
+i7-8565U) on that platform.
 
 ## Accessibility (WCAG 2.1 AA)
 
@@ -192,8 +193,8 @@ these.
 | Find in all tabs over three 100 MB logs (v0.5): while it searches, the tab bar, scrolling the shown log and Esc respond at once; it ends with a total | Pass (2026-11-03, `.deb` 0.5.0; `.deb` 0.5.1, 2026-11-04) |
 | The apt repository's key (v0.5.1): after `sudo apt install ./galeo_0.5.1_amd64.deb`, `/usr/share/keyrings/galeo-archive-keyring.asc` is the same file as `packaging/linux/galeo-archive-keyring.asc`; `sudo apt remove galeo` deletes it; installing again puts it back | Pass (2026-11-04, `.deb` 0.5.1) |
 | Install from the apt repository (v0.5.1): the setup block in the README, run as written, ends with galeo installed; `apt policy galeo` shows it installed from `https://swestash.github.io/galeo/apt`, and the keyring is the committed key | Pass (2026-11-05, 0.5.1; deploy run 41959569152) |
-| The apt repository's key on remove (v0.8): `sudo apt remove galeo` keeps `/usr/share/keyrings/galeo-archive-keyring.asc`, and `sudo apt install galeo` then works; `sudo apt purge galeo` deletes it | Not yet run: needs the 0.8 `.deb` |
-| Upgrade from the apt repository: with an older galeo installed from the repository, `sudo apt update && sudo apt upgrade` installs the new release | Not yet run: needs the release after 0.5.1 |
+| The apt repository's key on remove (v0.8): `sudo apt remove galeo` keeps `/usr/share/keyrings/galeo-archive-keyring.asc`, and `sudo apt install galeo` then works; `sudo apt purge galeo` deletes it | Not yet run: needs the 0.8 `.deb` ([#36](https://github.com/SWEStash/galeo/issues/36)) |
+| Upgrade from the apt repository: with an older galeo installed from the repository, `sudo apt update && sudo apt upgrade` installs the new release | Not yet run: needs the release after 0.5.1 ([#37](https://github.com/SWEStash/galeo/issues/37)) |
 | Two profiles' windows open: `galeo --profile acme a.md`, a double-click in Files, a drop from Files and a plain `galeo` each land in the right window (a plain one in the window focused last) | Pass (2026-10-07; 0.2.0 `.deb`, 2026-10-15) |
 | Drop files from Files onto the document area: they open after the shown tab, the first one shown | Pass (2026-10-05) |
 | Drop onto a tab (the caret between tabs): they open at the caret | Pass (2026-10-05) |

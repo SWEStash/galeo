@@ -79,7 +79,7 @@ The [usage guide](docs/USAGE.md) covers all of it.
 - [Threat model](docs/security/threat-model.md) and [dependencies](docs/dependencies.md)
 - [Development](docs/development.md), [releasing](docs/RELEASING.md) and the
   [validation record](docs/VALIDATION.md)
-- [Contributing](CONTRIBUTING.md)
+- [Contributing](CONTRIBUTING.md) and the [guide for coding agents](AGENTS.md)
 
 ## Licence
 
