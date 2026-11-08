@@ -14,7 +14,10 @@ export function useZoomViewer(active: boolean) {
     ({ svg, name, panel, returnFocus }: DiagramExpand) => setViewer({ content: { kind: 'diagram', svg, panel }, name, returnFocus }),
     [],
   );
-  const expandImage = useCallback(({ url, name, returnFocus }: ImageExpand) => setViewer({ content: { kind: 'image', url }, name, returnFocus }), []);
+  const expandImage = useCallback(
+    ({ url, name, size, returnFocus }: ImageExpand) => setViewer({ content: { kind: 'image', url, ...(size ? { size } : {}) }, name, returnFocus }),
+    [],
+  );
   const closeViewer = useCallback(() => setViewer(null), []);
   useEffect(() => {
     if (!active) setViewer(null);

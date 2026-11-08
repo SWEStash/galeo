@@ -6,6 +6,7 @@ import { classifyLink, type LinkContext } from '../links/classify';
 import type { ExternalOpenLimiter } from '../links/limiter';
 import { FsError, isMissing, type FileSystem, type OsShell, type TaskRunner } from '../ports';
 import { IMAGE_MAX_BYTES, imageTypeOf, type ImageGrants } from './images';
+import { SVG_SIZE_MAX_BYTES, svgSize } from './svg-size';
 import type { InputCredits } from './input-credits';
 import type { HistoryEntry, TabRegistry } from '../tabs/registry';
 
@@ -120,15 +121,29 @@ export class DocumentLinks {
     if (!found || !found.references.images.includes(src)) return { kind: 'refused', reason: 'not-in-document' };
     const target = classifyLink(src, { ...this.deps, documentPath: found.record.path });
     if (target.kind !== 'file' || !imageTypeOf(target.path)) return { kind: 'refused', reason: 'not-an-image' };
+    let size: number;
     try {
       const stat = await this.deps.fs.stat(target.path);
       if (stat.kind !== 'file') return { kind: 'refused', reason: 'not-an-image' };
       if (stat.size > IMAGE_MAX_BYTES) return { kind: 'refused', reason: 'too-large' };
+      size = stat.size;
     } catch (error) {
       if (error instanceof FsError) return { kind: 'refused', reason: 'missing' };
       throw error;
     }
-    return { kind: 'image', url: `galeo://file/${this.deps.images.grant(target.path, window)}` };
+    const url = `galeo://file/${this.deps.images.grant(target.path, window)}`;
+    const natural = imageTypeOf(target.path) === 'image/svg+xml' && size <= SVG_SIZE_MAX_BYTES ? await this.svgSizeOf(target.path) : null;
+    return natural ? { kind: 'image', url, size: natural } : { kind: 'image', url };
+  }
+
+  /** The size an SVG's viewBox gives it, when the browser engine can't tell (#44). */
+  private async svgSizeOf(path: string): Promise<{ width: number; height: number } | null> {
+    try {
+      return svgSize(await this.deps.fs.readFile(path, { maxBytes: SVG_SIZE_MAX_BYTES }));
+    } catch (error) {
+      if (error instanceof FsError) return null;
+      throw error;
+    }
   }
 
   back(id: string, window: number): Promise<HistoryResult> {

@@ -271,6 +271,20 @@ describe('DocumentLinks.resolveImage', () => {
     expect(await links.resolveImage(id, 1, src)).toEqual({ kind: 'refused', reason });
   });
 
+  it('gives an SVG with only a viewBox its size, and no other image one', async () => {
+    const { links, id, fs } = setup();
+    fs.write('/d/pics/box.svg', '<svg viewBox="0 0 120 60"/>');
+    fs.write('/d/pics/sized.svg', '<svg width="10" height="10" viewBox="0 0 120 60"/>');
+    fs.write('/d/pics/huge.svg', `<svg viewBox="0 0 120 60"/>${' '.repeat(1024 * 1024)}`);
+    links.remember(id, 1, '/d/plan.md', `${IMAGES} ![b](pics/box.svg) ![s](pics/sized.svg) ![h](pics/huge.svg)`, 'markdown');
+    expect(await links.resolveImage(id, 1, 'pics/box.svg')).toMatchObject({ kind: 'image', size: { width: 120, height: 60 } });
+    for (const src of ['pics/sized.svg', 'pics/huge.svg', 'pics/dot.png']) {
+      const result = await links.resolveImage(id, 1, src);
+      expect(result.kind, src).toBe('image');
+      expect(result, src).not.toHaveProperty('size');
+    }
+  });
+
   it("refuses images of another window's document", async () => {
     const { links, id } = setup();
     links.remember(id, 1, '/d/plan.md', IMAGES, 'markdown');

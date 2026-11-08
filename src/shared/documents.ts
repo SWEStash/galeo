@@ -108,5 +108,6 @@ export type HistoryResult =
 
 /** A local image the page may show: an opaque `galeo://file/…` URL, or why not. */
 export type ImageResult =
-  | { kind: 'image'; url: string }
+  /** `size`: what an SVG with only a viewBox measures, which the browser engine can't tell (#44). */
+  | { kind: 'image'; url: string; size?: { width: number; height: number } }
   | { kind: 'refused'; reason: 'not-in-document' | 'missing' | 'not-an-image' | 'too-large' | 'unavailable' };

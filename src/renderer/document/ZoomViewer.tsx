@@ -12,9 +12,10 @@ const ARROW_PAN = 40;
 /**
  * What the viewer shows: a diagram's SVG (the one already checked and drawn in the document; with
  * `panel`, drawn light for its own colours, on its light panel in dark mode), or a document image
- * by the opaque URL main granted it (ADR-004).
+ * by the opaque URL main granted it (ADR-004), with the size main read from an SVG that has only a
+ * viewBox (the engine gives it a default one).
  */
-export type ZoomContent = { kind: 'diagram'; svg: string; panel: boolean } | { kind: 'image'; url: string };
+export type ZoomContent = { kind: 'diagram'; svg: string; panel: boolean } | { kind: 'image'; url: string; size?: { width: number; height: number } };
 
 /**
  * A diagram or image in a full-window viewer: it opens fitted to the window, then zooms (buttons,
@@ -56,12 +57,13 @@ export function ZoomViewer({
       const image = document.createElement('img');
       image.alt = '';
       image.draggable = false;
+      const size = content.size;
       image.addEventListener('load', () => {
-        natural.current = { width: image.naturalWidth, height: image.naturalHeight };
+        natural.current = size ?? { width: image.naturalWidth, height: image.naturalHeight };
         // Sized explicitly, as the stage shrinks to its content: an image with no size of its own
         // (an SVG with only a viewBox) would otherwise take none.
-        image.width = image.naturalWidth;
-        image.height = image.naturalHeight;
+        image.width = natural.current.width;
+        image.height = natural.current.height;
         fitted();
       });
       image.src = content.url;

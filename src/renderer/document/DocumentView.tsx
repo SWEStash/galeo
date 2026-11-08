@@ -401,7 +401,7 @@ export function DocumentView({
         if (!current || !image.isConnected) return;
         if (result.kind === 'image') {
           // Larger than an icon, it can open in the viewer once its size is known.
-          image.addEventListener('load', () => offerZoom(image, (expand) => imageListener.current?.(expand)), { once: true });
+          image.addEventListener('load', () => offerZoom(image, (expand) => imageListener.current?.(expand), result.size), { once: true });
           image.src = result.url;
           return;
         }

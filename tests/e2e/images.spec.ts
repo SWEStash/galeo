@@ -140,6 +140,10 @@ test('an SVG with only a viewBox shows in the page and in the viewer, its Expand
     await expect(viewer.getByTestId('zoom-stage').locator('img')).toBeVisible();
     const shown = (await viewer.getByTestId('zoom-stage').locator('img').boundingBox())!;
     expect(shown.width / shown.height).toBeCloseTo(2, 1);
+    // 100 % is the size its viewBox gives (120 × 60), not the engine's default 300 × 150.
+    await viewer.getByRole('button', { name: /^100 %/ }).click();
+    await expect.poll(async () => (await viewer.getByTestId('zoom-stage').locator('img').boundingBox())?.width).toBeCloseTo(120, 0);
+    expect((await viewer.getByTestId('zoom-stage').locator('img').boundingBox())?.height).toBeCloseTo(60, 0);
   } finally {
     await close();
   }

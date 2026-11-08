@@ -63,4 +63,17 @@ describe('offerZoom', () => {
     expect(image.parentElement!.tagName).toBe('P');
     expect(document.querySelector('button')).toBeNull();
   });
+
+  it("takes main's size over the engine's default for an SVG with only a viewBox, and hands it to the viewer", () => {
+    // The engine's default, 300 × 150, is not what the SVG measures.
+    const icon = loaded('<p><img alt="icon" src="galeo://file/i"></p>', 300, 150);
+    offerZoom(icon, vi.fn(), { width: 16, height: 16 });
+    expect(document.querySelector('button')).toBeNull();
+
+    const drawing = loaded('<p><img alt="A box" src="galeo://file/b"></p>', 300, 150);
+    const onExpand = vi.fn();
+    offerZoom(drawing, onExpand, { width: 120, height: 60 });
+    drawing.click();
+    expect(onExpand).toHaveBeenCalledWith(expect.objectContaining({ size: { width: 120, height: 60 } }));
+  });
 });
