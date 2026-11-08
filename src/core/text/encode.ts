@@ -25,12 +25,22 @@ const BOM: Record<TextEncoding, readonly number[]> = {
 
 /** CRLF when more lines end with it than with a bare LF; a file without breaks is LF. */
 export function lineEndingOf(text: string): LineEnding {
+  return majorityEnding(lineEndingCounts(text));
+}
+
+/** How many lines of `text` end in CRLF and in LF alone; `afterCr`: the text before it ended in CR. */
+export function lineEndingCounts(text: string, afterCr = false): { crlf: number; lf: number } {
   let crlf = 0;
   let lf = 0;
   for (let at = text.indexOf('\n'); at !== -1; at = text.indexOf('\n', at + 1)) {
-    if (at > 0 && text[at - 1] === '\r') crlf++;
+    if (at > 0 ? text[at - 1] === '\r' : afterCr) crlf++;
     else lf++;
   }
+  return { crlf, lf };
+}
+
+/** The line ending most lines use, LF on a tie. */
+export function majorityEnding({ crlf, lf }: { crlf: number; lf: number }): LineEnding {
   return crlf > lf ? 'crlf' : 'lf';
 }
 

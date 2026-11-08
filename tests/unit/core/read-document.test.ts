@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readDocument, READ_MAX_BYTES } from '../../../src/core/documents/read';
+import type { ChainedHash, SentCopy } from '../../../src/core/documents/incremental';
 import type { Decode } from '../../../src/core/text/decode';
 import { FakeFileSystem } from '../../helpers/fakes/file-system';
 
@@ -109,5 +110,66 @@ describe('readDocument', () => {
     });
     await read(spy, '/d/a.md');
     expect(seen).toEqual([READ_MAX_BYTES]);
+  });
+});
+
+describe('readDocument: reads after a change (ADR-033)', () => {
+  /** A stand-in chained hash: the bytes seen so far, the same text `hash` gives for them. */
+  const chained = (seen: readonly number[] = []): ChainedHash => ({ update: (bytes) => chained([...seen, ...bytes]), digest: () => `#${seen.join('.')}` });
+  const samePrefix = (prefix: Uint8Array, bytes: Uint8Array) => prefix.every((value, i) => bytes[i] === value);
+
+  /** Reads `path`, offering `copy` for `held`; returns the reply and the copy main would keep next. */
+  async function reread(fs: FakeFileSystem, path: string, copy: SentCopy | null, held: string | null) {
+    let kept: SentCopy | null | undefined;
+    const shapes: unknown[] = [];
+    const reply = await readDocument(path, {
+      fs,
+      decode,
+      hash,
+      shaped: (shape) => shapes.push(shape),
+      incremental: { copy, held, chain: (bytes) => chained([...bytes]), samePrefix, keep: (next) => (kept = next) },
+    });
+    return { reply, kept, shapes };
+  }
+
+  it('reads in full the first time, and hands over the copy to keep', async () => {
+    const fs = new FakeFileSystem({ '/d/a.log': 'a\r\nb\n' });
+    const { reply, kept } = await reread(fs, '/d/a.log', null, null);
+    expect(reply).toMatchObject({ state: 'ready', text: 'a\r\nb\n', version: hash(new TextEncoder().encode('a\r\nb\n')) });
+    expect(kept).toMatchObject({ version: hash(new TextEncoder().encode('a\r\nb\n')), encoding: 'utf-8', lines: { crlf: 1, lf: 1 }, endsWithCr: false, endsClean: true });
+  });
+
+  it('sends only the new text when the page holds the copy and the start is unchanged', async () => {
+    const fs = new FakeFileSystem({ '/d/a.log': 'a\n' });
+    const first = await reread(fs, '/d/a.log', null, null);
+    fs.write('/d/a.log', 'a\nb\r\nc\r\n');
+    const { reply, kept, shapes } = await reread(fs, '/d/a.log', first.kept ?? null, first.kept?.version ?? null);
+    const version = hash(new TextEncoder().encode('a\nb\r\nc\r\n'));
+    expect(reply).toEqual({ state: 'appended', path: '/d/a.log', base: first.kept?.version, text: 'b\r\nc\r\n', size: 8, version });
+    expect(kept?.version).toBe(version);
+    expect(shapes).toEqual([{ encoding: 'utf-8', bom: false, lineEnding: 'crlf' }]);
+  });
+
+  it('reads in full when the page holds another version, or the start changed', async () => {
+    const fs = new FakeFileSystem({ '/d/a.log': 'a\n' });
+    const first = await reread(fs, '/d/a.log', null, null);
+    fs.write('/d/a.log', 'a\nb\n');
+    expect((await reread(fs, '/d/a.log', first.kept ?? null, 'other')).reply.state).toBe('ready');
+    fs.write('/d/a.log', 'x\nb\n');
+    expect((await reread(fs, '/d/a.log', first.kept ?? null, first.kept?.version ?? null)).reply).toMatchObject({ state: 'ready', text: 'x\nb\n' });
+  });
+
+  it('reads in full when the growth changes how the file opens (Markdown past its render limit)', async () => {
+    const limit = 5 * 1024 * 1024;
+    const fs = new FakeFileSystem({ '/d/a.md': 'a'.repeat(limit) });
+    const first = await reread(fs, '/d/a.md', null, null);
+    fs.write('/d/a.md', 'a'.repeat(limit) + 'b');
+    expect((await reread(fs, '/d/a.md', first.kept ?? null, first.kept?.version ?? null)).reply).toMatchObject({ state: 'ready', view: 'source', banner: 'too-large' });
+  });
+
+  it('keeps no copy when the file can\'t be shown', async () => {
+    const fs = new FakeFileSystem({ '/d/a.log': '' });
+    expect((await reread(fs, '/d/a.log', null, null)).kept).toBeNull();
+    expect((await reread(fs, '/d/gone.log', null, null)).kept).toBeNull();
   });
 });

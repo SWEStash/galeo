@@ -53,6 +53,8 @@ export interface SourceView {
   /** Settles once the language's grammar is in (at once for Markdown, logs and plain text). */
   readonly grammar: Promise<void>;
   setText(text: string): void;
+  /** Adds a grown file's new text at the end (ADR-033): no copy or compare of the document. */
+  appendText(text: string): void;
   setWrap(wrap: boolean): void;
   /** The line at the top of the viewport. */
   topLine(): number;
@@ -347,6 +349,14 @@ export function createSourceView(options: {
       if (old === text) return;
       view.dispatch({
         changes: diffSpan(old, text),
+        effects: view.scrollSnapshot(),
+        annotations: [fromFile.of(true), Transaction.addToHistory.of(false)],
+      });
+    },
+    appendText(text) {
+      if (text === '') return;
+      view.dispatch({
+        changes: { from: view.state.doc.length, insert: text },
         effects: view.scrollSnapshot(),
         annotations: [fromFile.of(true), Transaction.addToHistory.of(false)],
       });

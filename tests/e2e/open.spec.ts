@@ -35,7 +35,7 @@ test('reads documents only by the ids main handed out, never by path (SR-12)', a
     const result = await page.evaluate(async () => {
       const { tabs: [record] } = await window.galeo.tabs.snapshot();
       const attempt = (id: string) =>
-        window.galeo.documents.read(id).then(
+        window.galeo.documents.read(id, null).then(
           () => 'read',
           () => 'refused',
         );

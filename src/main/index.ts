@@ -51,7 +51,7 @@ import { WorkerThreadTaskRunner } from './adapters/task-runner';
 import { EmptyFontCatalog, FcListFontCatalog } from './adapters/font-catalog';
 import { runFile } from './adapters/run-file';
 import { decodeWithPlatform } from './adapters/text-decoder';
-import { sha256 } from './adapters/content-hash';
+import { chainedSha256, samePrefix, sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
 import { appHandlers, launcherTarget, profileLauncherExec, profileLauncherFile } from './app/handlers';
 import { uninstallProfileLauncher } from '../core/desktop/launcher';
@@ -839,6 +839,8 @@ function start(initialMode: StartupMode): void {
           fs,
           decode: decodeWithPlatform,
           hash: sha256,
+          chain: chainedSha256,
+          samePrefix,
           grants,
           input,
           unsaved,

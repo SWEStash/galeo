@@ -331,7 +331,7 @@ describe('App', () => {
       const shadow = container.querySelector('[data-testid="document"]')?.shadowRoot;
       expect(shadow?.querySelector('article')?.innerHTML).toBe('<p>hello</p>');
     });
-    expect(api.documents.read).toHaveBeenCalledWith('doc-1');
+    expect(api.documents.read).toHaveBeenCalledWith('doc-1', null);
   });
 
   it('renders an MDX article through the worker as MDX, and opens it in split', async () => {
@@ -900,7 +900,7 @@ describe('App', () => {
       expect(api.tabs.renderAgain).toHaveBeenCalledWith('doc-1');
       expect(api.tabs.viewState).not.toHaveBeenCalled();
       await act(async () => events.tabs!({ revision: 2, active: 'doc-1', tabs: [{ id: 'doc-1', path: '/d/a.md' }] }));
-      await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledWith('doc-1'));
+      await vi.waitFor(() => expect(api.documents.read).toHaveBeenCalledWith('doc-1', null));
     });
 
     it('opens in the source view on Open as source', async () => {

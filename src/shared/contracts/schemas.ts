@@ -75,7 +75,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'app.uninstallLauncher': z.tuple([]),
   'app.installProfileLauncher': z.tuple([]),
   'app.uninstallProfileLauncher': z.tuple([]),
-  'documents.read': z.tuple([documentId]),
+  'documents.read': z.tuple([documentId, version.nullable()]),
   'documents.setEncoding': z.tuple([documentId, z.enum(CHOSEN_ENCODINGS).nullable()]),
   'documents.followLink': z.tuple([documentId, z.string().min(1).max(8192), z.enum(['current', 'background'])]),
   'documents.back': z.tuple([documentId]),

@@ -1,7 +1,7 @@
 // The IPC contract between main and the renderer (ADR-007, SR-11). Only names and types live
 // here: main validates every request with its own schemas, and the preload builds
 // `window.galeo` from `CHANNELS` and `EVENTS`, one fixed method per channel or event.
-import type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, SaveResult, TaskToggleResult } from '../documents';
+import type { DocumentContent, DocumentRecord, ReadReply, FollowResult, HistoryResult, ImageResult, SaveResult, TaskToggleResult } from '../documents';
 import type { FindAllResult } from '../find';
 import type { Platform, WindowCommand } from '../keymap';
 import type { SystemFont } from '../fonts';
@@ -9,7 +9,7 @@ import type { Settings, SettingSource, SettingsNotice, SettingsOverrides } from 
 import type { ReaderWidth, ScrollAnchor, TabSearchResults, TabSnapshot, TabViewState } from '../tabs';
 import type { QuickOpenResults, QuickOpenStart } from '../quick-open';
 
-export type { DocumentContent, DocumentRecord, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
+export type { DocumentContent, DocumentRecord, ReadReply, FollowResult, HistoryResult, ImageResult, ScrollAnchor, TabSnapshot };
 
 /** The window's resolved settings, and the config files it couldn't use (SR-17). */
 export interface SettingsState {
@@ -217,8 +217,11 @@ export interface Requests {
   /** Adds or removes the sender profile's own launcher, "galeo — <profile>" (#60, Linux). */
   'app.installProfileLauncher': [];
   'app.uninstallProfileLauncher': [];
-  /** Reads one of them by id; there is no way to read by path (SR-12). */
-  'documents.read': [id: string];
+  /**
+   * Reads one of them by id; there is no way to read by path (SR-12). `held`: the version the page shows, so main
+   * can send only what was added since (ADR-033); null for none.
+   */
+  'documents.read': [id: string, held: string | null];
   /** Reads the document with this encoding from now on ("Reopen with encoding…"); null detects it again. */
   'documents.setEncoding': [id: string, encoding: ChosenEncoding | null];
   /** Follows a link of the document, as written in it; main checks it against the file (SR-04). */
@@ -363,7 +366,7 @@ export interface Responses {
   'app.uninstallLauncher': { removed: string[]; kept: string[] };
   'app.installProfileLauncher': { ok: true; path: string } | { ok: false; reason: string };
   'app.uninstallProfileLauncher': { removed: string[]; kept: string[] };
-  'documents.read': DocumentContent;
+  'documents.read': ReadReply;
   'documents.setEncoding': void;
   'documents.followLink': FollowResult;
   'documents.back': HistoryResult;

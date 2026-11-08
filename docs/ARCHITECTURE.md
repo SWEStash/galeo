@@ -317,6 +317,12 @@ keeps its distance, else the block at the top does. A warm tab takes the change 
 again; hibernated tabs refresh on their next wake. Rename or delete puts the tab in the *missing*
 state; if the path reappears, the tab reads it again.
 
+(v0.8, ADR-033) A re-read names the version the page shows (`documents.read(id, held)`). For a file of
+1 MiB or more that isn't Markdown or MDX, main keeps the bytes it last sent the tab (512 MiB for all
+tabs); when the file's start is unchanged byte for byte it replies `appended` with only the new text and
+the whole file's version, and the source view inserts it at the end. Any other change is a full read.
+A tab's reads of one file never overlap.
+
 (v0.6) A `tabs.stale` for a tab that isn't shown also marks it *changed on disk* in the renderer's
 tab store, until it is shown. Change marks (ADR-030) live in the renderer only: a per-window
 store keeps the text each tab showed when the reader left it (capped), and the pane diffs a new

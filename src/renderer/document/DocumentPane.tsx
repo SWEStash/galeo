@@ -814,7 +814,12 @@ export function DocumentPane({
           onToggleTask={article ? toggleTask : undefined}
           onMissingLinks={article ? onMissingLinks : undefined}
           rendered={rendered}
-          source={{ text: dirty ? pinnedText : ready.text, language: sourceLanguage(ready.format, ready.path) }}
+          source={{
+            text: dirty ? pinnedText : ready.text,
+            language: sourceLanguage(ready.format, ready.path),
+            // While reading, the editor shows the last text read, so a grown file's text only adds to it (ADR-033).
+            ...(!editing && ready.grownFrom !== undefined ? { grownFrom: ready.grownFrom } : {}),
+          }}
           editable={editing}
           onEdit={edited}
           replacing={find.open && find.replace}

@@ -6,6 +6,7 @@ import { TabSearches, findInBytesTask } from '../../../src/core/documents/find-a
 import { ImageGrants } from '../../../src/core/documents/images';
 import { DocumentLinks } from '../../../src/core/documents/links';
 import { ReadIdentities } from '../../../src/core/documents/identities';
+import type { ChainedHash } from '../../../src/core/documents/incremental';
 import { TabRegistry } from '../../../src/core/tabs/registry';
 import { ExternalOpenLimiter } from '../../../src/core/links/limiter';
 import type { Decode } from '../../../src/core/text/decode';
@@ -37,12 +38,19 @@ class SlowFileSystem extends FakeFileSystem {
   }
 }
 
+/** A stand-in chained hash giving the same text as the handlers' `hash`: `#` and the bytes as text. */
+const textHash = (seen: number[]): ChainedHash => ({
+  update: (bytes) => textHash([...seen, ...bytes]),
+  digest: () => `#${new TextDecoder().decode(Uint8Array.from(seen))}`,
+});
+
 function setup(files: Record<string, string>, slow = '', { credits = Infinity, choice = null as DocumentMenuChoice | null } = {}) {
   const fs = new SlowFileSystem(files, slow);
   const grants = new EditGrants();
   const pdfs: string[] = [];
   const input = { left: credits, spend: () => input.left-- > 0, received: () => void input.left++ };
-  const reads = new ReadIdentities(fs);
+  // Copies of what was sent are kept from 1 byte, so small files show the appends of ADR-033.
+  const reads = new ReadIdentities(fs, { minBytes: 1, maxTotalBytes: 1024 * 1024 });
   const answers: string[] = [];
   let n = 0;
   const records = new TabRegistry(() => `id-${++n}`);
@@ -68,6 +76,8 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity, c
     fs,
     decode,
     hash: (bytes) => `#${new TextDecoder().decode(bytes)}`,
+    chain: (bytes) => textHash([...bytes]),
+    samePrefix: (prefix, bytes) => prefix.every((value, i) => bytes[i] === value),
     grants,
     input,
     unsaved: { answer: (window, answer) => void answers.push(`${window}:${answer}`) },
@@ -93,7 +103,7 @@ describe('documentHandlers', () => {
   it('refuses to read the settings tab as a file', async () => {
     const { records, handlers } = setup({ '/d/a.md': '# a' });
     const settings = records.openSettings(1);
-    expect(() => handlers['documents.read']([settings.id], event)).toThrow(/not a document/);
+    expect(() => handlers['documents.read']([settings.id, null], event)).toThrow(/not a document/);
   });
 
   it("shows a document's menus, never the settings tab's", async () => {
@@ -126,9 +136,9 @@ describe('documentHandlers', () => {
 
   it('keeps the links of the document it read, not of one read earlier that finished later', async () => {
     const { fs, records, handlers, id } = setup({ '/d/x.md': '[from x](x-target.md)', '/d/y.md': '[from y](y-target.md)' }, '/d/x.md');
-    const slowRead = handlers['documents.read']([id], event);
+    const slowRead = handlers['documents.read']([id, null], event);
     records.navigate(id, 1, { path: '/d/y.md', anchor: null });
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     fs.finishSlowRead();
     await slowRead;
     expect(await handlers['documents.followLink']([id, 'y-target.md', 'current'], event)).toEqual({ kind: 'navigated', anchor: null });
@@ -141,7 +151,7 @@ describe('documentHandlers', () => {
 
   it('keeps the links of an MDX article, parsed as MDX', async () => {
     const { handlers, id } = setup({ '/d/post.mdx': 'see [x](x.md)\n\n{"[y](y.md)"}', '/d/x.md': '# x' });
-    expect(await handlers['documents.read']([id], event)).toMatchObject({ state: 'ready', format: 'mdx' });
+    expect(await handlers['documents.read']([id, null], event)).toMatchObject({ state: 'ready', format: 'mdx' });
     // As Markdown the expression would be a link; in MDX it is code.
     expect(await handlers['documents.followLink']([id, 'y.md', 'current'], event)).toEqual({ kind: 'refused', reason: 'not-in-document' });
     expect(await handlers['documents.followLink']([id, 'x.md', 'current'], event)).toEqual({ kind: 'navigated', anchor: null });
@@ -149,13 +159,42 @@ describe('documentHandlers', () => {
 
   it('keeps no text for documents without links: logs and plain text', async () => {
     const { handlers, id } = setup({ '/d/app.log': 'INFO see [x](x.md)' });
-    expect(await handlers['documents.read']([id], event)).toMatchObject({ state: 'ready', format: 'log' });
+    expect(await handlers['documents.read']([id, null], event)).toMatchObject({ state: 'ready', format: 'log' });
     expect(await handlers['documents.followLink']([id, 'x.md', 'current'], event)).toEqual({ kind: 'refused', reason: 'not-in-document' });
+  });
+
+  it('sends only what was added when the page holds the version it last got (ADR-033)', async () => {
+    const { fs, handlers, id } = setup({ '/d/a.log': 'one\n' });
+    expect(await handlers['documents.read']([id, null], event)).toMatchObject({ state: 'ready', text: 'one\n', version: '#one\n' });
+    fs.write('/d/a.log', 'one\ntwo\n');
+    expect(await handlers['documents.read']([id, '#one\n'], event)).toEqual({ state: 'appended', path: '/d/a.log', base: '#one\n', text: 'two\n', size: 8, version: '#one\ntwo\n' });
+    fs.write('/d/a.log', 'one\ntwo\nthree\n');
+    expect(await handlers['documents.read']([id, 'not what was sent'], event)).toMatchObject({ state: 'ready', text: 'one\ntwo\nthree\n' });
+  });
+
+  it('reads in full once the reader chose another encoding', async () => {
+    const { fs, handlers, id } = setup({ '/d/a.log': 'one\n' });
+    await handlers['documents.read']([id, null], event);
+    handlers['documents.setEncoding']([id, 'windows-1252'], event);
+    fs.write('/d/a.log', 'one\ntwo\n');
+    expect(await handlers['documents.read']([id, '#one\n'], event)).toMatchObject({ state: 'ready', encoding: 'windows-1252' });
+  });
+
+  it('never lets two reads of one tab overlap: a request waits for the one running', async () => {
+    const { fs, handlers, id } = setup({ '/d/a.log': 'one\n' }, '/d/a.log');
+    const first = handlers['documents.read']([id, null], event);
+    const second = handlers['documents.read']([id, '#one\n'], event);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fs.reads).toBe(1);
+    fs.finishSlowRead();
+    expect(await first).toMatchObject({ state: 'ready' });
+    expect(await second).toMatchObject({ state: 'appended', text: '' });
+    expect(fs.reads).toBe(2);
   });
 
   it('shares one read between concurrent requests for the same document', async () => {
     const { fs, handlers, id } = setup({ '/d/a.md': '# a' }, '/d/a.md');
-    const reads = [1, 2, 3, 4].map(() => handlers['documents.read']([id], event));
+    const reads = [1, 2, 3, 4].map(() => handlers['documents.read']([id, null], event));
     fs.finishSlowRead();
     const results = await Promise.all(reads);
     expect(fs.reads).toBe(1);
@@ -166,18 +205,18 @@ describe('documentHandlers', () => {
 describe('recent files', () => {
   it('count a file once it was read, and not a missing one', async () => {
     const { fs, handlers, opened, id } = setup({ '/d/a.md': '# a' });
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     fs.delete('/d/a.md');
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     expect(opened).toEqual(['1:/d/a.md']);
   });
 
   it("count a tab's file once, not again on every re-read (a wake, a changed file)", async () => {
     const { handlers, records, opened, id } = setup({ '/d/a.md': '# a', '/d/b.md': '# b' });
-    await handlers['documents.read']([id], event);
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
+    await handlers['documents.read']([id, null], event);
     records.navigate(id, 1, { path: '/d/b.md', anchor: null });
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     expect(opened).toEqual(['1:/d/a.md', '1:/d/b.md']);
   });
 });
@@ -186,11 +225,11 @@ describe('documents.setEncoding', () => {
   it('reads the document with the chosen encoding from then on, and back to detection with null', async () => {
     const { fs, handlers, id } = setup({ '/d/a.txt': 'x' });
     fs.write('/d/a.txt', new Uint8Array([0x43, 0x61, 0x66, 0xe9]));
-    expect(await handlers['documents.read']([id], event)).toMatchObject({ text: 'Café', encoding: 'windows-1252', guessedEncoding: true });
+    expect(await handlers['documents.read']([id, null], event)).toMatchObject({ text: 'Café', encoding: 'windows-1252', guessedEncoding: true });
     handlers['documents.setEncoding']([id, 'utf-8'], event);
-    expect(await handlers['documents.read']([id], event)).toMatchObject({ text: 'Caf�', encoding: 'utf-8', guessedEncoding: false });
+    expect(await handlers['documents.read']([id, null], event)).toMatchObject({ text: 'Caf�', encoding: 'utf-8', guessedEncoding: false });
     handlers['documents.setEncoding']([id, null], event);
-    expect(await handlers['documents.read']([id], event)).toMatchObject({ encoding: 'windows-1252', guessedEncoding: true });
+    expect(await handlers['documents.read']([id, null], event)).toMatchObject({ encoding: 'windows-1252', guessedEncoding: true });
   });
 
   it("refuses another window's document", () => {
@@ -205,7 +244,7 @@ describe('documentHandlers saving', () => {
 
   it('saves a tab in edit mode, and the save is not reported as a change on disk', async () => {
     const { fs, handlers, grants, reads, id } = setup({ '/d/a.md': 'old' });
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     grants.grant(id, 1, '/d/a.md');
 
     // A longer text: the file's identity (size) changes, as it would on disk.
@@ -244,7 +283,7 @@ describe('documentHandlers saving', () => {
 
   it('writes a file deleted while edited again, with no base, in the line endings it was read with', async () => {
     const { fs, handlers, grants, id } = setup({ '/d/a.md': 'a\r\nb\r\n' });
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     grants.grant(id, 1, '/d/a.md');
     fs.delete('/d/a.md');
     expect(await handlers['documents.save']([id, 'a\nb\nc\n', null], event)).toEqual({ kind: 'saved', version: '#a\r\nb\r\nc\r\n' });
@@ -306,7 +345,7 @@ describe('documents.toggleTask (ADR-031)', () => {
 
   it("ticks a task item's box while reading, on the reader's input, as a save that isn't a change on disk", async () => {
     const { fs, handlers, reads, id } = setup({ '/d/plan.md': plan });
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     expect(await handlers['documents.toggleTask']([id, 1, `#${plan}`], event)).toEqual({ kind: 'saved', version: '#- [x] one\n- [x] two\n' });
     expect(await text(fs, '/d/plan.md')).toBe('- [x] one\n- [x] two\n');
     expect(await reads.changed(id, '/d/plan.md')).toBe(false);
@@ -333,7 +372,7 @@ describe('documents.toggleTask (ADR-031)', () => {
 describe('documents.missingLinks', () => {
   it("answers the read document's links to files that don't exist", async () => {
     const { handlers, id } = setup({ '/d/plan.md': '[here](notes.md) [gone](gone.md) [web](https://example.com)\n', '/d/notes.md': 'x' });
-    await handlers['documents.read']([id], event);
+    await handlers['documents.read']([id, null], event);
     expect(await handlers['documents.missingLinks']([id], event)).toEqual(['gone.md']);
   });
 });

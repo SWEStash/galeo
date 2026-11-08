@@ -49,7 +49,8 @@ export interface DocumentHost {
   /** The tree or table shown, which answers for the place; null for other content. */
   readonly placed: PlacedView | null;
   /** The source view, created on first use and updated in place afterwards (after `loadSourceView`). */
-  showSource(text: string, language: SourceLanguage, wrap: boolean): SourceView;
+  /** `grownFrom`: `text` is the shown text, up to there, plus what was added (ADR-033), so only that is inserted. */
+  showSource(text: string, language: SourceLanguage, wrap: boolean, grownFrom?: number): SourceView;
   readonly source: SourceView | null;
   /** Shows one view, the other mounted but hidden so switching back is instant; or both, in split. */
   showView(view: ViewMode): void;
@@ -264,12 +265,13 @@ export function mountDocumentHost(container: HTMLElement): DocumentHost {
       }
       table.setTable(text, next, options);
     },
-    showSource(text, language, wrap) {
+    showSource(text, language, wrap, grownFrom) {
       if (!source) {
         if (!sourceViews) throw new Error('showSource needs loadSourceView first');
         source = sourceViews.createSourceView({ root, parent: sourceParent, text, language, wrap });
       } else {
-        if (text !== sourceText) source.setText(text);
+        if (grownFrom !== undefined && grownFrom === sourceText?.length) source.appendText(text.slice(grownFrom));
+        else if (text !== sourceText) source.setText(text);
         source.setWrap(wrap);
       }
       sourceText = text;

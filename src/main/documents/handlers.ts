@@ -13,7 +13,8 @@ import type { TabRegistry } from '../../core/tabs/registry';
 import type { FileSystem } from '../../core/ports';
 import type { Decode, WhatwgEncoding } from '../../core/text/decode';
 import type { Hash } from '../../core/documents/read';
-import { UNKNOWN_DOCUMENT, type DocumentContent } from '../../shared/documents';
+import type { ChainedHash } from '../../core/documents/incremental';
+import { UNKNOWN_DOCUMENT, type ReadReply } from '../../shared/documents';
 import { fileName } from '../../shared/paths';
 import { workerFormat } from '../../shared/formats';
 import type { Handlers } from '../ipc/register';
@@ -50,6 +51,9 @@ export function documentHandlers(deps: {
   fs: FileSystem;
   decode: Decode;
   hash: Hash;
+  /** A hash that can go on from where it stopped, and an exact compare of a file's start (ADR-033). */
+  chain: (bytes: Uint8Array) => ChainedHash;
+  samePrefix: (prefix: Uint8Array, bytes: Uint8Array) => boolean;
   /** The tabs main put in edit mode (ADR-013). */
   grants: EditGrants;
   /** The window's real input: a save spends one (ADR-004). */
@@ -65,20 +69,33 @@ export function documentHandlers(deps: {
   /** Export to PDF (#56). */
   pdf: Pick<PdfExports, 'choose' | 'print'>;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, hash, grants, input, unsaved, opened, searches, menus, pdf } = deps;
+  const { records, links, reads, fs, decode, hash, chain, samePrefix, grants, input, unsaved, opened, searches, menus, pdf } = deps;
   /** The id names a document of the sender's, not its Settings tab. */
   const assertDocument = (id: string, window: number) => {
     if (records.get(id, window)?.kind === 'settings') throw new Error('not a document');
   };
   // The file each tab last counted as opened: re-reads of it (a wake, a changed file) aren't opens.
   const counted = new Map<string, string>();
-  // Concurrent reads of one document share a single read, so repeated requests can't multiply it.
-  const reading = new Map<string, Promise<DocumentContent>>();
+  // Concurrent requests alike share a single read, so repeated requests can't multiply it.
+  const reading = new Map<string, Promise<ReadReply>>();
+  // Each tab's last read of a file, running or waiting: the next waits for it, so they never overlap (ADR-033).
+  const lastRead = new Map<string, Promise<unknown>>();
 
-  const read = async (id: string, window: number, path: string, encoding: WhatwgEncoding | null): Promise<DocumentContent> => {
+  const read = async (id: string, window: number, path: string, encoding: WhatwgEncoding | null, held: string | null): Promise<ReadReply> => {
     // The identity is taken first: a change during the read then shows as a change afterwards.
     await reads.remember(id, path);
-    const content = await readDocument(path, { fs, decode, hash, encoding: encoding ?? undefined, shaped: (shape) => reads.saw(id, path, shape) });
+    const source = `${path}\0${encoding ?? ''}`;
+    const content = await readDocument(path, {
+      fs,
+      decode,
+      hash,
+      encoding: encoding ?? undefined,
+      shaped: (shape) => reads.saw(id, path, shape),
+      // Articles always read in full: main keeps their links from the whole text it read (SR-04).
+      ...(workerFormat(detectFormat(path))
+        ? {}
+        : { incremental: { copy: reads.sentCopy(id, source), held, chain, samePrefix, keep: (copy) => reads.sent(id, source, copy) } }),
+    });
     if ((content.state === 'ready' || content.state === 'empty') && counted.get(id) !== path) {
       counted.set(id, path);
       opened(path, window);
@@ -95,16 +112,20 @@ export function documentHandlers(deps: {
   };
 
   return {
-    'documents.read': ([id], event) => {
+    'documents.read': ([id, held], event) => {
       const record = records.get(id, event.sender.id);
       if (!record) throw new Error(UNKNOWN_DOCUMENT);
       if (record.kind === 'settings') throw new Error('not a document');
       const encoding = records.encoding(id, event.sender.id);
-      const key = `${id}\0${record.path}\0${encoding ?? ''}`;
+      const key = `${id}\0${record.path}\0${encoding ?? ''}\0${held ?? ''}`;
       let pending = reading.get(key);
       if (!pending) {
-        pending = read(id, event.sender.id, record.path, encoding).finally(() => reading.delete(key));
+        const file = `${id}\0${record.path}`;
+        const before = lastRead.get(file) ?? Promise.resolve();
+        pending = before.then(() => read(id, event.sender.id, record.path, encoding, held)).finally(() => reading.delete(key));
         reading.set(key, pending);
+        const settled = pending.catch(() => undefined).finally(() => lastRead.get(file) === settled && lastRead.delete(file));
+        lastRead.set(file, settled);
       }
       return pending;
     },

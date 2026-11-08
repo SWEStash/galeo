@@ -110,7 +110,7 @@ Electron and Mermaid updates (1257 → 1377 MB).
 | Scrolling that tree or that table (v0.3) | median ≤ 34 ms per frame | — | — | — | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.7) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.8) both | 16.7 ms (p95 16.7) both |
 | Memory, a 99 MB CSV table and a 10 MB JSON tree open in one window (v0.3) | baseline, + 10 % fails | — | — | — | 1026 MB | 1004 MB | 1220 MB | 1011 MB | 1025 MB | 979 MB |
 | Paging through a 100 MB log (v0.4) | 17 ms per frame (2026-10-26) | — | — | — | — | 16.7 ms (p95 33.4) | 16.7 ms (p95 33.3) | 16.7 ms (p95 33.3) | 16.7 ms (p95 33.4) | 16.7 ms (p95 16.8) |
-| A line appended to a followed 100 MB log, painted (v0.4) | 2000 ms (2026-10-26) | — | — | — | — | 1567 ms (p95 1947) | 1358 ms (p95 1401) | 1324 ms (p95 1489) | 1664 ms (p95 1765) | 1363 ms (p95 1389) |
+| A line appended to a followed 100 MB log, painted (v0.4) | 500 ms (2026-11-07; 2000 ms from 2026-10-26) | — | — | — | — | 1567 ms (p95 1947) | 1358 ms (p95 1401) | 1324 ms (p95 1489) | 1664 ms (p95 1765) | 1363 ms (p95 1389) |
 | Find in all tabs over three 100 MB tabs: the longest main is busy at once (v0.5) | 100 ms (2026-11-02) | — | — | — | — | — | 19 ms; the other window 8 ms; a query 1830 ms | 17 ms; the other window 12 ms; a query 1375 ms | 23 ms; the other window 15 ms; a query 1856 ms | 18 ms; the other window 11 ms; a query 1362 ms |
 | Coming back to a 1 MB plan with 50 scattered changes: new text shown → all marks drawn (v0.6) | 100 ms (2026-11-05) | — | — | — | — | — | — | — | 19 ms (min 15, max 31) | 20 ms (min 12, max 26) |
 

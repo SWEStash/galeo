@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ReadIdentities } from '../../../src/core/documents/identities';
+import type { SentCopy } from '../../../src/core/documents/incremental';
 import { FakeFileSystem } from '../../helpers/fakes';
 
 describe('ReadIdentities', () => {
@@ -51,5 +52,38 @@ describe('ReadIdentities', () => {
     expect(reads.shapeOf('t1', '/d/b.md')).toBeNull();
     reads.forget('t1');
     expect(reads.shapeOf('t1', '/d/a.md')).toBeNull();
+  });
+});
+
+describe('ReadIdentities: what main last sent each tab (ADR-033)', () => {
+  const copy = (size: number): SentCopy => ({
+    bytes: new Uint8Array(size),
+    version: `v${size}`,
+    state: { update: () => { throw new Error('unused'); }, digest: () => `v${size}` },
+    encoding: 'utf-8',
+    bom: false,
+    guessed: false,
+    endsClean: true,
+    lines: { crlf: 0, lf: 0 },
+    endsWithCr: false,
+  });
+
+  it('gives a tab its copy only for the file and encoding it was read from', () => {
+    const reads = new ReadIdentities(new FakeFileSystem(), { minBytes: 1, maxTotalBytes: 100 });
+    reads.sent('t1', '/d/a.log\0', copy(10));
+    expect(reads.sentCopy('t1', '/d/a.log\0')?.version).toBe('v10');
+    expect(reads.sentCopy('t1', '/d/b.log\0')).toBeNull();
+    expect(reads.sentCopy('t1', '/d/a.log\0windows-1252')).toBeNull();
+    expect(reads.sentCopy('t2', '/d/a.log\0')).toBeNull();
+  });
+
+  it('drops a tab\'s copy when told there is none, and when the tab is forgotten', () => {
+    const reads = new ReadIdentities(new FakeFileSystem(), { minBytes: 1, maxTotalBytes: 100 });
+    reads.sent('t1', '/d/a.log\0', copy(10));
+    reads.sent('t1', '/d/a.log\0', null);
+    expect(reads.sentCopy('t1', '/d/a.log\0')).toBeNull();
+    reads.sent('t1', '/d/a.log\0', copy(10));
+    reads.forget('t1');
+    expect(reads.sentCopy('t1', '/d/a.log\0')).toBeNull();
   });
 });

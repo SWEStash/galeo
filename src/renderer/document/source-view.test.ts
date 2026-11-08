@@ -1,4 +1,4 @@
-import { addCursorAbove, addCursorBelow, historyField, toggleTabFocusMode } from '@codemirror/commands';
+import { addCursorAbove, addCursorBelow, historyField, toggleTabFocusMode, undoDepth } from '@codemirror/commands';
 import { selectNextOccurrence, selectSelectionMatches } from '@codemirror/search';
 import { foldCode, syntaxTree, unfoldCode } from '@codemirror/language';
 import { EditorSelection, EditorState } from '@codemirror/state';
@@ -87,6 +87,25 @@ describe('createSourceView', () => {
     expect(source.view.state.doc.toString()).toBe('a\nB\nc\nd\n');
     source.setText('x');
     expect(source.view.state.doc.toString()).toBe('x');
+    source.destroy();
+  });
+
+  it("adds a grown file's new text at the end, as the file's own text that can't be undone (ADR-033)", () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'a\nb\n', language: null, wrap: false });
+    const changes: [number, number, string][] = [];
+    const dispatch = source.view.dispatch.bind(source.view);
+    source.view.dispatch = ((...specs: Parameters<typeof dispatch>) => {
+      for (const spec of specs as { changes?: { from: number; to?: number; insert: string } }[]) {
+        if (spec.changes) changes.push([spec.changes.from, spec.changes.to ?? spec.changes.from, spec.changes.insert]);
+      }
+      return dispatch(...specs);
+    }) as typeof dispatch;
+    source.appendText('c\n');
+    source.appendText('');
+    expect(changes).toEqual([[4, 4, 'c\n']]);
+    expect(source.view.state.doc.toString()).toBe('a\nb\nc\n');
+    expect(undoDepth(source.view.state)).toBe(0);
     source.destroy();
   });
 

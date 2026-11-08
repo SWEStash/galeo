@@ -36,13 +36,15 @@ version. The answer has to be exact for any change.
 2. **Main keeps the bytes it last sent**, per tab: the bytes, their version, and the SHA-256 state after them.
    Only for files of 1 MiB or more (below that a full read is cheap), and at most 512 MiB for all tabs
    together; the copy read least recently goes first. Without a copy, a read is a full read. A tab's copy goes
-   when the tab closes, hibernates or shows another file.
+   when the tab or its window closes; a copy is used only for the file and encoding it was read from, and the
+   next read replaces it.
 3. **An append reply when, and only when, the start is unchanged.** Main reads the whole file, as today. If
    `held` is the copy's version, the file is at least as long, and its first bytes equal the copy byte for
    byte, main decodes only the new bytes and replies `{ state: 'appended', base, text, size, version }`;
    otherwise it replies with the full document, as today, and keeps the new bytes as the copy. The version is
    the SHA-256 of the whole new file, computed by continuing the saved state with the new bytes: the same
-   value a full read gives, so saves and their conflict checks (ADR-013) don't change.
+   value a full read gives, so saves and their conflict checks (ADR-013) don't change. Markdown and MDX always
+   read in full: main keeps the links a rendered article may follow from the whole text it read (SR-04).
 4. **Decoding stays exact.** The new bytes are decoded in the copy's encoding, and only when that gives the
    same text a full decode would: never for UTF-32 or a guessed encoding; for UTF-8 only if the new bytes are
    valid on their own (decoded with `fatal`); for UTF-16 only from an even offset; never when the shown text
@@ -50,9 +52,9 @@ version. The answer has to be exact for any change.
 5. **One read at a time per tab.** A request that arrives while a read runs waits for it, then reads once
    more; requests in between share that one read. Reads never overlap or pile up.
 6. **The page applies an append only to the text it holds.** If it still shows `base`, it joins the new text
-   to its own, and the source view inserts it at the end without copying or comparing the document; views
-   that render (Markdown, tables) take the joined text as a new text, as today. If the page no longer shows
-   `base`, it asks again with `held = null`.
+   to its own, and while reading (not editing) the source view inserts it at the end without copying or
+   comparing the document; the other views (JSON tree, tables) take the joined text as a new text, as today.
+   If the page no longer shows `base`, it asks again with `held = null`.
 
 ## Consequences
 

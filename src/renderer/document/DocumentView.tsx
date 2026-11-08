@@ -32,7 +32,8 @@ export type RenderedContent = { html: string } | { text: string } | { tree: Tree
 export interface DocumentViewProps {
   /** The rendered view's content, or null while it isn't needed or ready. */
   rendered: RenderedContent | null;
-  source: { text: string; language: SourceLanguage };
+  /** `grownFrom`: the text is the one shown before, up to there, plus what was added (ADR-033). */
+  source: { text: string; language: SourceLanguage; grownFrom?: number };
   view: ViewMode;
   wrap: boolean;
   /** Logs: keep the source view at the end; `onFollowEnded` fires when the user scrolls up. */
@@ -429,11 +430,14 @@ export function DocumentView({
   const shownSource = useRef<string | null>(null);
   useLayoutEffect(() => {
     if (!sourceReady || (!showsSource(view) && !host().source)) return;
-    host().showSource(source.text, source.language, wrap);
-    if (shownSource.current !== null && shownSource.current !== source.text) container.current!.dataset['reloadedAt'] = String(Date.now());
+    const { grownFrom } = source;
+    host().showSource(source.text, source.language, wrap, grownFrom);
+    const grown = grownFrom !== undefined && shownSource.current?.length === grownFrom;
+    const changed = grown ? source.text.length > grownFrom : shownSource.current !== source.text;
+    if (shownSource.current !== null && changed) container.current!.dataset['reloadedAt'] = String(Date.now());
     shownSource.current = source.text;
     if (view === 'source') markDocumentPaint();
-  }, [source.text, source.language, view, wrap, sourceReady]);
+  }, [source.text, source.language, source.grownFrom, view, wrap, sourceReady]);
 
   useLayoutEffect(() => {
     const documentHost = host();

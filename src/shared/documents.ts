@@ -30,11 +30,29 @@ export type DocumentContent =
       size: number;
       /** The content hash of the bytes read: a save names it, and main refuses if the file moved on (ADR-013). */
       version: string;
+      /** Set by the page only: the text is the one it showed, up to here, plus what main sent as added (ADR-033). */
+      grownFrom?: number;
     }
   | { state: 'empty'; path: string; format: FormatId }
   | { state: 'binary'; path: string; size: number }
   | { state: 'too-large'; path: string; maxBytes: number }
   | { state: 'missing' | 'no-permission' | 'not-a-file' | 'unreadable'; path: string };
+
+/**
+ * A re-read's reply when the page holds version `base` and the file only grew (ADR-033): the new text, to join
+ * to the page's own, with the whole file's size and version. The page turns it into a full `DocumentContent`.
+ */
+interface AppendedContent {
+  state: 'appended';
+  path: string;
+  base: string;
+  text: string;
+  size: number;
+  version: string;
+}
+
+/** What `documents.read` replies: the document, or what was added to the version the page holds. */
+export type ReadReply = DocumentContent | AppendedContent;
 
 /**
  * What a save did (ADR-013). `conflict`: the file is no longer the version the page loaded (null:
