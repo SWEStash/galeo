@@ -8,7 +8,7 @@ GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"
 
 die() {
   printf 'galeo: %s\n' "$1" >&2
-  printf 'usage: galeo [--profile NAME] [--new-window] [--no-sandbox] [file...] [-- file...]\n' >&2
+  printf 'usage: galeo [--profile NAME] [--new-window] [--watch DIR] [--no-sandbox] [file...] [-- file...]\n' >&2
   exit 2
 }
 
@@ -46,6 +46,20 @@ while [ "$remaining" -gt 0 ]; do
         remaining=$((remaining - 1))
         case $value in -* | '') die '--profile needs a value' ;; esac
         set -- "$@" o--profile "o$value"
+        continue
+        ;;
+      --watch=* | --watch)
+        if [ "$arg" = --watch ]; then
+          [ "$remaining" -gt 0 ] || die '--watch needs a folder'
+          value=$1
+          shift
+          remaining=$((remaining - 1))
+        else
+          value=${arg#--watch=}
+        fi
+        case $value in -* | '') die '--watch needs a folder' ;; esac
+        case $value in /*) ;; *) value="$cwd/$value" ;; esac
+        set -- "$@" o--watch "o$value"
         continue
         ;;
       -*)

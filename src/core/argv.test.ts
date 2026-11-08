@@ -4,7 +4,7 @@ import { parseArgv } from './argv';
 const resolve = (cwd: string, file: string) => (file.startsWith('/') ? file : `${cwd}/${file}`);
 const parse = (argv: string[], forwarded = false) => parseArgv(argv, { cwd: '/work', forwarded, resolve });
 
-const defaults = { profile: null, newWindow: false, noSandbox: false, sandboxUnavailable: null, files: [] };
+const defaults = { profile: null, newWindow: false, noSandbox: false, sandboxUnavailable: null, files: [], watch: null };
 
 describe('parseArgv', () => {
   it('treats empty argv as a plain launch with no files (focus)', () => {
@@ -113,6 +113,31 @@ describe('parseArgv', () => {
       ok: true,
       args: { noSandbox: false, sandboxUnavailable: null },
     });
+  });
+});
+
+describe('parseArgv --watch', () => {
+  it('takes the next argument, or the value after =, as the folder, resolved like a file', () => {
+    expect(parse(['--watch', 'reports', '--', 'a.md'])).toEqual({ ok: true, args: { ...defaults, watch: '/work/reports', files: ['/work/a.md'] } });
+    expect(parse(['--watch=/abs/reports'])).toEqual({ ok: true, args: { ...defaults, watch: '/abs/reports' } });
+    expect(parse(['--new-window', '--watch', '.reports'], true)).toEqual({ ok: true, args: { ...defaults, newWindow: true, watch: '/work/.reports' } });
+  });
+
+  it.each([[['--watch']], [['--watch=']], [['--watch', '--new-window']], [['--watch=-x']]])('refuses %j: no folder', (argv) => {
+    expect(parse(argv)).toEqual({ ok: false, error: '--watch needs a folder' });
+  });
+
+  it('refuses a second --watch, and reads one after -- as a file', () => {
+    expect(parse(['--watch', 'a', '--watch=b'])).toEqual({ ok: false, error: '--watch given twice' });
+    expect(parse(['--', '--watch', 'a'])).toEqual({ ok: true, args: { ...defaults, files: ['/work/--watch', '/work/a'] } });
+  });
+
+  it('reads it from the Windows galeo command, with Windows paths', () => {
+    const windowsResolve = (cwd: string, file: string) => (/^[A-Za-z]:\\/.test(file) ? file : `${cwd}\\${file}`);
+    const windows = parseArgv(['--galeo-command', '--', 'a.md', '--watch', 'reports', '--', 'D:\\b.md'], { cwd: 'C:\\Users\\me', forwarded: true, resolve: windowsResolve });
+    expect(windows).toEqual({ ok: true, args: { ...defaults, watch: 'C:\\Users\\me\\reports', files: ['C:\\Users\\me\\a.md', 'D:\\b.md'] } });
+    expect(parseArgv(['--galeo-command', '--', '--watch=D:\\out'], { cwd: 'C:\\Users\\me', forwarded: false, resolve: windowsResolve })).toMatchObject({ ok: true, args: { watch: 'D:\\out' } });
+    expect(parse(['--galeo-command', '--', '--watch'])).toEqual({ ok: false, error: '--watch needs a folder' });
   });
 });
 

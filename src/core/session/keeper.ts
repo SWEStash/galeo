@@ -1,6 +1,6 @@
 import type { Clock } from '../ports';
 import type { TabRegistry } from '../tabs/registry';
-import type { SessionFile, WindowBounds } from './model';
+import type { SessionFile, WindowBounds, WindowWatch } from './model';
 import { SaveScheduler } from './scheduler';
 
 interface SessionKeeperDeps {
@@ -8,7 +8,7 @@ interface SessionKeeperDeps {
   clock: Clock;
   save: (session: SessionFile) => Promise<void>;
   /** The profile's windows, in the order they were opened. */
-  windows: () => readonly { id: number; bounds: WindowBounds | null }[];
+  windows: () => readonly { id: number; bounds: WindowBounds | null; watch?: WindowWatch | null }[];
   /** Window ids, the last focused first. */
   focusOrder: () => readonly number[];
   /** False until the session was restored and windows opened; nothing is saved before (default true). */
@@ -46,7 +46,7 @@ export class SessionKeeper {
     const ids = windows.map((window) => window.id);
     return {
       savedAt: this.deps.clock.now(),
-      windows: windows.map((window) => ({ bounds: window.bounds, ...this.deps.tabs.exportWindow(window.id) })),
+      windows: windows.map((window) => ({ bounds: window.bounds, ...this.deps.tabs.exportWindow(window.id), ...(window.watch ? { watch: window.watch } : {}) })),
       focusOrder: this.deps.focusOrder().map((id) => ids.indexOf(id)).filter((index) => index >= 0),
     };
   }

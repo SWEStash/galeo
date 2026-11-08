@@ -9,6 +9,7 @@ const valid = {
   windows: [
     {
       bounds: { x: 0, y: 0, width: 1100, height: 800, maximized: false },
+      watch: { folder: '/home/me/reports', panel: true },
       active: 0,
       tabs: [
         tab,
@@ -49,6 +50,9 @@ describe('parseSession (SR-17)', () => {
     ['a reader width out of range', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, width: 300 }] }] }],
     ['an unknown reader width', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, width: 'wide' }] }] }],
     ['document text smuggled in', { ...valid, windows: [{ ...valid.windows[0]!, tabs: [{ ...tab, text: '# secret' }] }] }],
+    ['a watched folder given as a relative path', { ...valid, windows: [{ ...valid.windows[0]!, watch: { folder: 'reports', panel: true } }] }],
+    ['a watched folder without its panel state', { ...valid, windows: [{ ...valid.windows[0]!, watch: { folder: '/r' } }] }],
+    ['a watched folder carrying more than its path', { ...valid, windows: [{ ...valid.windows[0]!, watch: { folder: '/r', panel: false, entries: ['a.md'] } }] }],
     ['too many windows', { ...valid, windows: Array.from({ length: 51 }, () => valid.windows[0]!), focusOrder: [] }],
   ])('refuses %s', (_name, session) => {
     expect(parseSession(session).ok).toBe(false);

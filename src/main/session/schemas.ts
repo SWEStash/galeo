@@ -52,6 +52,8 @@ const window = z
       .nullable(),
     active: z.int().min(0).nullable(),
     tabs: z.array(tab).max(1000),
+    // Whether it still is a folder is checked when the window is restored (ADR-034).
+    watch: z.strictObject({ folder: path, panel: z.boolean() }).optional(),
   })
   .refine((value) => value.active === null || value.active < value.tabs.length, 'active tab outside the tabs');
 

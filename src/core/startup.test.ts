@@ -8,6 +8,7 @@ const args = (overrides: Partial<LaunchArgs> = {}): LaunchArgs => ({
   noSandbox: false,
   sandboxUnavailable: null,
   files: [],
+  watch: null,
   ...overrides,
 });
 

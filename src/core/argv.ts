@@ -15,6 +15,8 @@ export interface LaunchArgs {
   sandboxUnavailable: SandboxCause | null;
   /** Absolute paths; empty means "just focus". */
   files: string[];
+  /** The folder the window is to watch (`--watch DIR`, ADR-034), absolute; null for none. */
+  watch: string | null;
 }
 
 type ParseResult = { ok: true; args: LaunchArgs } | { ok: false; error: string };
@@ -29,7 +31,7 @@ interface ParseContext {
 }
 
 function noArgs(): LaunchArgs {
-  return { profile: null, newWindow: false, noSandbox: false, sandboxUnavailable: null, files: [] };
+  return { profile: null, newWindow: false, noSandbox: false, sandboxUnavailable: null, files: [], watch: null };
 }
 
 /** Reads `--profile NAME` or `--profile=NAME` at `argv[i]` into `args`; the index of its last argument. */
@@ -46,6 +48,19 @@ function readProfile(argv: readonly string[], i: number, args: LaunchArgs): { ok
 }
 
 const isProfile = (arg: string) => arg === '--profile' || arg.startsWith('--profile=');
+
+/** Reads `--watch DIR` or `--watch=DIR` at `argv[i]`: the folder is the next argument as data (SR-13). */
+function readWatch(argv: readonly string[], i: number, args: LaunchArgs, context: ParseContext): { ok: true; last: number } | { ok: false; error: string } {
+  const arg = argv[i]!;
+  const last = arg === '--watch' ? i + 1 : i;
+  const value = arg === '--watch' ? argv[last] : arg.slice('--watch='.length);
+  if (!value || value.startsWith('-')) return { ok: false, error: '--watch needs a folder' };
+  if (args.watch !== null) return { ok: false, error: '--watch given twice' };
+  args.watch = context.resolve(context.cwd, value);
+  return { ok: true, last };
+}
+
+const isWatch = (arg: string) => arg === '--watch' || arg.startsWith('--watch=');
 
 /**
  * Parses galeo's own arguments strictly: the documented flags, then files. Everything after
@@ -76,6 +91,10 @@ export function parseArgv(argv: readonly string[], context: ParseContext): Parse
       }
     } else if (isProfile(arg)) {
       const read = readProfile(argv, i, args);
+      if (!read.ok) return read;
+      i = read.last;
+    } else if (isWatch(arg)) {
+      const read = readWatch(argv, i, args, context);
       if (!read.ok) return read;
       i = read.last;
     } else {
@@ -109,6 +128,10 @@ function parseCommandArgs(argv: readonly string[], context: ParseContext): Parse
       args.newWindow = true;
     } else if (isProfile(arg)) {
       const read = readProfile(argv, i, args);
+      if (!read.ok) return read;
+      i = read.last;
+    } else if (isWatch(arg)) {
+      const read = readWatch(argv, i, args, context);
       if (!read.ok) return read;
       i = read.last;
     } else if (arg.startsWith('-')) {

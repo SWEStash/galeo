@@ -54,6 +54,11 @@ describe.skipIf(process.platform === 'win32')('bin/gal', () => {
     expect(gal('a.md', '--', '--new-window').argv).toEqual(['--', path.join(dir, 'a.md'), path.join(dir, '--new-window')]);
   });
 
+  it('passes --watch with its folder made absolute, as files are', () => {
+    expect(gal('a.md', '--watch', 'reports').argv).toEqual(['--watch', path.join(dir, 'reports'), '--', path.join(dir, 'a.md')]);
+    expect(gal('--watch=/abs/my reports').argv).toEqual(['--watch', '/abs/my reports', '--']);
+  });
+
   it("passes the launcher wrapper's relaunch flag through", () => {
     expect(gal('--no-sandbox', '--galeo-sandbox-unavailable=suid-helper', 'a.md').argv).toEqual([
       '--no-sandbox',
@@ -75,7 +80,7 @@ describe.skipIf(process.platform === 'win32')('bin/gal', () => {
     expect(gal().argv).toEqual(['--']);
   });
 
-  it.each([[['--inspect', 'a.md']], [['a.md', '--inspect']], [['a.md', '--profile']], [['--profile']], [['--profile=']]])('refuses %j without starting the app', (args) => {
+  it.each([[['--inspect', 'a.md']], [['a.md', '--inspect']], [['a.md', '--profile']], [['--profile']], [['--profile=']], [['--watch']], [['--watch=']], [['--watch', '-x']]])('refuses %j without starting the app', (args) => {
     const result = gal(...args);
     expect(result.status).toBe(2);
     expect(result.argv).toEqual([]);

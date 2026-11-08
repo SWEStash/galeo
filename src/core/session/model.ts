@@ -9,8 +9,15 @@ export interface WindowBounds {
   maximized: boolean;
 }
 
+/** The folder a window watches (ADR-034), and whether its panel is open. */
+export interface WindowWatch {
+  folder: string;
+  panel: boolean;
+}
+
 interface SessionWindow extends WindowState {
   bounds: WindowBounds | null;
+  watch?: WindowWatch;
 }
 
 /**
@@ -25,6 +32,10 @@ export interface SessionFile {
   focusOrder: number[];
 }
 
-/** 2 (v0.7): a tab may be pinned. A version 1 file has no pins, so it reads as it is. */
-export const SESSION_VERSION = 2;
-export const SESSION_MIGRATIONS = { 1: (data: Record<string, unknown>) => data };
+/**
+ * 2 (v0.7): a tab may be pinned. 3 (v0.8): a window may watch a folder. Older files have neither,
+ * so they read as they are.
+ */
+export const SESSION_VERSION = 3;
+const asIs = (data: Record<string, unknown>) => data;
+export const SESSION_MIGRATIONS = { 1: asIs, 2: asIs };

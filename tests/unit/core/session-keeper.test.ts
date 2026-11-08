@@ -11,7 +11,7 @@ function setup() {
   const saved: SessionFile[] = [];
   const windows = [
     { id: 1, bounds: { x: 0, y: 0, width: 800, height: 600, maximized: false } },
-    { id: 2, bounds: null },
+    { id: 2, bounds: null, watch: null as { folder: string; panel: boolean } | null },
   ];
   let focused = [2, 1];
   const keeper = new SessionKeeper({
@@ -37,6 +37,13 @@ describe('SessionKeeper (ADR-005)', () => {
         { bounds: null, active: null, tabs: [{ entries: [{ path: '/d/b.md', anchor: null }], index: 0 }] },
       ],
     });
+  });
+
+  it("saves a window's watched folder with it, and nothing for a window that watches none", () => {
+    const { keeper, windows } = setup();
+    windows[1]!.watch = { folder: '/d/reports', panel: false };
+    expect(keeper.capture().windows.map((window) => window.watch)).toEqual([undefined, { folder: '/d/reports', panel: false }]);
+    expect('watch' in keeper.capture().windows[0]!).toBe(false);
   });
 
   it('saves 2 s after a change', () => {
