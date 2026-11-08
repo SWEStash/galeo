@@ -30,6 +30,36 @@ test("Settings adds this profile's launcher to the applications and removes it a
   }
 });
 
+test("renaming the profile renames its launcher; without one, none is made", async () => {
+  const home = tempHome();
+  const entry = path.join(home, 'data', 'applications', 'galeo-profile-default.desktop');
+  const { window, close } = await launchApp(['--', basic], { home, env: { GALEO_TEST_PROFILE_LAUNCHER_EXEC: '/opt/galeo/galeo' } });
+  const rename = async (name: string) => {
+    await window.getByTestId('profile-chip').click();
+    await window.getByRole('menuitem', { name: /Edit profile/ }).click();
+    await window.getByLabel('Name').fill(name);
+    await window.getByRole('button', { name: 'Save' }).click();
+    await expect(window.getByTestId('profile-chip')).toHaveAccessibleName(`Profile: ${name}`);
+  };
+  try {
+    await expect(window.getByRole('tab')).toHaveCount(1);
+    await window.keyboard.press('ControlOrMeta+Comma');
+    await window.getByRole('button', { name: 'Add to applications' }).click();
+    await expect(window.getByTestId('profile-launcher-result')).toHaveText('Added “galeo — default” to your applications.');
+    await rename('Personal');
+    await expect.poll(() => readFileSync(entry, 'utf8')).toContain('Name=galeo — Personal\nComment=Opens galeo in the Personal profile\n');
+    expect(readFileSync(entry, 'utf8')).toContain('Exec=/opt/galeo/galeo --profile default -- %F');
+
+    await window.getByRole('button', { name: 'Remove from applications' }).click();
+    await expect(window.getByTestId('profile-launcher-result')).toHaveText('Removed “galeo — Personal” from your applications.');
+    await rename('Home');
+    expect(existsSync(entry)).toBe(false);
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});
+
 test('without a galeo command to run, Settings says why it adds nothing', async () => {
   const home = tempHome();
   const { window, close } = await launchApp(['--', basic], { home });

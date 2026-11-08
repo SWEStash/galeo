@@ -4,6 +4,7 @@ import {
   appCommand,
   appImageLauncher,
   profileLauncher,
+  renameProfileLauncher,
   installAppCommand,
   installLauncher,
   launcherPaths,
@@ -314,5 +315,49 @@ describe('profileLauncher (#60)', () => {
     const entry = profileLauncher('/home/me/my apps/galeo.AppImage', { id: 'work', name: 'Work' }, '/apps');
     expect(entry).toMatchObject({ ok: true, path: '/apps/galeo-profile-work.desktop' });
     expect(entry.ok && entry.content).toContain('Exec="/home/me/my apps/galeo.AppImage" --profile work -- %F');
+  });
+});
+
+describe('renameProfileLauncher (#38)', () => {
+  const FILE = '/apps/galeo-profile-acme.desktop';
+  const installed = (name: string) => {
+    const entry = profileLauncher('/opt/my apps/galeo.AppImage', { id: 'acme', name }, '/apps');
+    if (!entry.ok) throw new Error(entry.reason);
+    return entry.content;
+  };
+  const text = async (fs: FakeFileSystem, path: string) => new TextDecoder().decode(await fs.readFile(path, { maxBytes: 1e6 }));
+
+  it("renames the profile's entry: its Name and Comment, the rest as installed", async () => {
+    const fs = new FakeFileSystem({ [FILE]: installed('acme') });
+    expect(await renameProfileLauncher({ fs, utf8 }, FILE, { id: 'acme', name: 'beta' })).toBe(true);
+    // Exactly what installing it as "beta" would have written: the New Window action keeps its own Name.
+    expect(await text(fs, FILE)).toBe(installed('beta'));
+    expect(await text(fs, FILE)).toContain('Name=galeo — beta\nComment=Opens galeo in the beta profile\n');
+    expect(await text(fs, FILE)).toContain('[Desktop Action new-window]\nName=New Window\n');
+  });
+
+  it('writes a name with a backslash as the Desktop Entry spec asks', async () => {
+    const fs = new FakeFileSystem({ [FILE]: installed('acme') });
+    expect(await renameProfileLauncher({ fs, utf8 }, FILE, { id: 'acme', name: 'a\\b' })).toBe(true);
+    expect(await text(fs, FILE)).toContain('Name=galeo — a\\\\b\n');
+  });
+
+  it('makes no entry where there was none', async () => {
+    const fs = new FakeFileSystem({});
+    expect(await renameProfileLauncher({ fs, utf8 }, FILE, { id: 'acme', name: 'beta' })).toBe(false);
+    expect(await fs.stat(FILE).catch(() => null)).toBeNull();
+  });
+
+  it("leaves a file that isn't this profile's entry as it is, and refuses a control character", async () => {
+    const foreign = '[Desktop Entry]\nName=mine\n';
+    const other = installed('acme').replace('X-galeo-Profile=acme', 'X-galeo-Profile=acme2');
+    for (const content of [foreign, other]) {
+      const fs = new FakeFileSystem({ [FILE]: content });
+      expect(await renameProfileLauncher({ fs, utf8 }, FILE, { id: 'acme', name: 'beta' })).toBe(false);
+      expect(await text(fs, FILE)).toBe(content);
+    }
+    const fs = new FakeFileSystem({ [FILE]: installed('acme') });
+    expect(await renameProfileLauncher({ fs, utf8 }, FILE, { id: 'acme', name: 'beta\nExec=/bin/sh' })).toBe(false);
+    expect(await text(fs, FILE)).toBe(installed('acme'));
   });
 });

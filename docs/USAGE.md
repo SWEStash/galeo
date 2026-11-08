@@ -356,7 +356,8 @@ client or project. The profile chip at the left of the tab bar (Ctrl+Shift+M) li
 creates, renames, recolours or deletes them. `galeo --profile NAME` creates a profile on first use,
 with an Undo. The `default` profile can't be deleted; deleting another removes its session and
 settings, never your files. On Linux, Settings → **Profile launcher** adds "galeo — <profile>" to
-your applications, which opens galeo straight in that profile; deleting the profile removes it.
+your applications, which opens galeo straight in that profile; renaming the profile renames it, and
+deleting the profile removes it.
 
 ## Settings and custom CSS
 

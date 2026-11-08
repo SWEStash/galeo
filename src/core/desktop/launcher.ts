@@ -1,7 +1,7 @@
 import { COMMAND_MARKER } from '../argv';
 import { isProfileId } from '../profiles/names';
 import { folderOf, joinPath } from '../../shared/paths';
-import type { FileSystem } from '../ports';
+import { FsError, type FileSystem } from '../ports';
 import { kindOf, type Utf8 } from '../settings/json-file';
 
 /** What every installed `galeo` command carries, on every system, so galeo only ever replaces its own. */
@@ -256,6 +256,11 @@ function entryString(value: string): string {
   return value.replace(/\\/g, '\\\\');
 }
 
+/** The launcher's Name and Comment lines for a profile called `name`. */
+function profileEntryNames(name: string): { name: string; comment: string } {
+  return { name: `Name=${entryString(`galeo — ${name}`)}`, comment: `Comment=${entryString(`Opens galeo in the ${name} profile`)}` };
+}
+
 /**
  * A profile's own launcher (#60): an application entry "galeo — <name>" that opens galeo in that
  * profile, by its id (a name could match another profile later, an unknown one would create it),
@@ -266,10 +271,11 @@ export function profileLauncher(exec: string, profile: { id: string; name: strin
   if (!exec.startsWith('/')) return { ok: false, reason: "galeo's command is not an absolute path" };
   if (!isProfileId(profile.id)) return { ok: false, reason: 'not a profile id' };
   const run = `${execArgument(exec)} --profile ${profile.id}`;
+  const names = profileEntryNames(profile.name);
   const content = [
     '[Desktop Entry]',
-    `Name=${entryString(`galeo — ${profile.name}`)}`,
-    `Comment=${entryString(`Opens galeo in the ${profile.name} profile`)}`,
+    names.name,
+    names.comment,
     `Exec=${run} -- %F`,
     'Icon=galeo',
     'Type=Application',
@@ -295,6 +301,32 @@ export async function installProfileLauncher(deps: { fs: FileSystem; utf8: Utf8 
   if ((await kindOf(deps.fs, dir)) !== 'directory') await deps.fs.mkdir(dir, { mode: 0o755 });
   await deps.fs.writeFileAtomic(file.path, deps.utf8.encode(file.content), { mode: 0o644 });
   return { ok: true };
+}
+
+/**
+ * A renamed profile's launcher takes its new name (#38): only the entry's Name and Comment change,
+ * the rest (its Exec, as installed) stays. Only while the file carries that profile's mark; true
+ * when it was renamed. No file, no launcher: none is made.
+ */
+export async function renameProfileLauncher(deps: { fs: FileSystem; utf8: Utf8 }, path: string, profile: { id: string; name: string }): Promise<boolean> {
+  if (/\p{Cc}/u.test(profile.name)) return false;
+  let lines: string[];
+  try {
+    lines = deps.utf8.decode(await deps.fs.readFile(path, { maxBytes: 64 * 1024 })).split('\n');
+  } catch (error) {
+    if (error instanceof FsError) return false;
+    throw error;
+  }
+  if (!lines.includes(profileMark(profile.id))) return false;
+  const names = profileEntryNames(profile.name);
+  let group = '';
+  const renamed = lines.map((line) => {
+    if (line.startsWith('[')) group = line;
+    if (group !== '[Desktop Entry]') return line;
+    return line.startsWith('Name=') ? names.name : line.startsWith('Comment=') ? names.comment : line;
+  });
+  await deps.fs.writeFileAtomic(path, deps.utf8.encode(renamed.join('\n')), { mode: 0o644 });
+  return true;
 }
 
 /** Removes a profile's launcher while it carries that profile's mark; anything else there is kept. */

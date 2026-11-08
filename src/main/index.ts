@@ -55,7 +55,7 @@ import { decodeWithPlatform } from './adapters/text-decoder';
 import { chainedSha256, samePrefix, sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
 import { appHandlers, launcherTarget, profileLauncherExec, profileLauncherFile } from './app/handlers';
-import { uninstallProfileLauncher } from '../core/desktop/launcher';
+import { renameProfileLauncher, uninstallProfileLauncher } from '../core/desktop/launcher';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { sendEvent } from './ipc/send';
@@ -747,7 +747,12 @@ function start(initialMode: StartupMode): void {
   const updateProfile = async (profile: ProfileRuntime, name: string, accent: string | null): Promise<ProfileResult> => {
     const updated = await catalog.update(profile.id, accent === null ? { name } : { name, accent });
     if (!updated.ok) return { ok: false, reason: updated.reason };
+    const renamed = updated.profile.name !== profile.name;
     profile.name = updated.profile.name;
+    if (renamed) {
+      const launcher = profileLauncherFile(app.getPath('home'), process.env, profile.id);
+      await renameProfileLauncher({ fs, utf8 }, launcher, updated.profile).catch((error: unknown) => console.warn('galeo: profile launcher not renamed', error));
+    }
     for (const windowId of idsOf(profile)) updateTitle(profile, windowId);
     await broadcastProfiles();
     return { ok: true };
