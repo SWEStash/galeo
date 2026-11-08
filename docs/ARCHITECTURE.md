@@ -35,7 +35,8 @@
   [030](decisions/ADR-030-change-marks.md) ·
   [031](decisions/ADR-031-ticking-task-boxes.md) ·
   [032](decisions/ADR-032-design-tokens-v2.md) ·
-  [033](decisions/ADR-033-incremental-reads.md)
+  [033](decisions/ADR-033-incremental-reads.md) ·
+  [034](decisions/ADR-034-watching-a-folder.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in

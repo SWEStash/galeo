@@ -439,11 +439,18 @@ palette move or list the other windows without input, or reopen a closed tab or 
 input, or a closed tab by id from another window
 (`tab-handlers.test`).
 
+(v0.8, ADR-034) A window may watch one folder, granted only by `--watch <dir>` or main's folder dialog
+spending an input credit. Main lists it (names, sizes, times; never content) to 4 levels inside its real
+path, never entering symlinked folders, and gives the page entry ids; opening an entry goes by id through
+the normal open path. The page never sends a path. A watched folder saved in the session is validated on
+load.
+
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as
 absolute paths. The `.desktop` entry uses `%F`. Main parses argv with a strict schema and never
 forwards it to Chromium switches; the one Chromium switch a user may pass is `--no-sandbox`,
 before the `--` separator, at first launch (SR-01). `second-instance` data is treated like argv:
 files to open and the few documented flags, nothing else (a forwarded `--no-sandbox` is ignored).
+(v0.8) `--watch <dir>` takes the next argument as the folder to watch, before `--` (ADR-034).
 Chromium itself acts on switches anywhere before `--`, so on Linux every entry point (desktop
 entry, `/usr/bin/galeo`, AppImage, `gal`) goes through the launcher's argument handling
 (ADR-009). macOS's `galeo` command is a copy of `gal` too; Finder hands files over as `open-file`
@@ -479,6 +486,8 @@ font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens
   table only the columns in view, each cell at most 1,000 characters.
 - The own file watcher watches only open files (via their parent directories), coalesces events,
   and caps its rate.
+- A watched folder (ADR-034): the first scan stops at 50,000 files or 3 s, at most 1,000 folders are
+  watched (then polled), and the list keeps the newest 200 entries.
 - Re-reads of a changed file (ADR-033) run one at a time per tab. Main keeps a copy of the bytes it
   last sent only for files of 1 MiB or more, at most 512 MiB for all tabs, dropping the least recently
   read first; an append is sent only after an exact byte compare of the file's start.

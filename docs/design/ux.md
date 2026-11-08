@@ -59,6 +59,7 @@ the [decision records](../decisions/)).
 | **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side; (v0.6) a heading with task items under it (up to the next heading) shows them done of all, "2/5", at the end of its row, read as "(2 of 5 tasks done)" | Ctrl+Shift+O (toggle) |
 | **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 %; (v0.7) a diagram's Save as SVG… or Save as PNG… (main asks where) | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
 | **Profile menu** | Switch / new / rename / delete profile, open profile settings, About galeo (v0.3); (v0.7) New window and Settings | Click profile chip or Ctrl+Shift+M |
+| **Watched folder panel** (v0.8) | The files created or changed in the window's watched folder, newest first (F21) | `--watch`, *Watch folder…*, the title-bar folder button, Ctrl+Shift+D / its close button |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
 
 **Window title** (used by GNOME's overview and Alt+Tab): `<file name> — <profile> — galeo`.
@@ -487,6 +488,17 @@ labelled placeholder boxes (`<Callout>` with its props listed).
   changes" once it changes. Marks are kept in memory only: quitting, a renderer crash or moving
   the tab to another window forgets them. See [ADR-030](../decisions/ADR-030-change-marks.md).
 
+### F21 — Watch a folder (v0.8)
+
+- `galeo --watch <dir>` or the palette's *Watch folder…* (a folder picker) makes the window watch a folder;
+  one per window, *Stop watching* ends it, and it comes back with the window after a restart.
+- A panel on the right lists the files created or changed there since, newest first: *new* or *changed*,
+  the time and the subfolder. Click or Enter opens one (Ctrl+Enter: a new window); *Open all new*.
+- While the panel is closed, a folder button in the title bar shows how many entries aren't opened yet; the
+  status bar says "Watching reports/ · 3 new". Ctrl+Shift+D toggles the panel.
+- The full spec, states and limits: [watch-folder.md](watch-folder.md); access rules:
+  [ADR-034](../decisions/ADR-034-watching-a-folder.md).
+
 ## 4. States
 
 ### Window-level
@@ -537,6 +549,7 @@ the native menu on the active tab.
 | Toggle source view | Ctrl+U | Chrome's view-source key |
 | Toggle wrap | Alt+Z | Source and log views |
 | Toggle outline | Ctrl+Shift+O | |
+| Toggle watched folder panel (v0.8) | Ctrl+Shift+D | While watching a folder (F21) |
 | Follow end (logs) | End | Scroll up to leave |
 | Reload from disk | F5 / Ctrl+R | |
 | Back / forward | Alt+← / Alt+→ | Per-tab history |
