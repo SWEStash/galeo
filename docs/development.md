@@ -163,6 +163,16 @@ it" comments. Moving an issue to another release changes its milestone, with a o
 - **Work in progress** stays in the working tree or in local commits until it passes the preflight; nothing
   is pushed half done. Context for the next session goes in the working plan, never in a status comment.
 
+**Starting a session**, in this order; nothing else needs a handoff note:
+
+1. `git status -sb`: uncommitted changes or commits not yet pushed are work in progress; finish or push them
+   first.
+2. The issues assigned to the maintainer (`gh issue list --assignee @me`): claimed work, to continue.
+3. The working plan's status, if a release has one: the release's order of work, its evidence, and the
+   maintainer's calls that don't belong in a public issue.
+4. Nothing claimed: pick by the order above. When more than one issue fits, or the plan and the issues
+   disagree, ask the maintainer which to take.
+
 **Comments.** New facts only: a repro, a finding, a decision with its reason, the commit or run that
 changes things. One fact per comment, a few lines; never restate the issue or report status. A decision
 that changes the design is an ADR, and the comment links it.
