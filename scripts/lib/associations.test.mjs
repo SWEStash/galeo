@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { appCommand } from '../../src/core/desktop/launcher';
 import { detectFormat } from '../../src/core/formats/registry';
 import {
   ASSOCIATED_EXTENSIONS,
@@ -68,6 +69,36 @@ describe('file associations (ADR-008)', () => {
       `  DeleteRegKey SHELL_CONTEXT "Software\\Classes\\${WINDOWS_PROG_ID}"`,
       '  DeleteRegKey SHELL_CONTEXT "Software\\Classes\\Applications\\galeo.exe"',
     ]);
+  });
+});
+
+describe('the galeo command on uninstall (#47)', () => {
+  const uninstall = () => macro(windowsAssociationsNsh(), 'customUnInstall');
+
+  it("deletes galeo.cmd only when its second line is galeo's mark, as the app writes it", () => {
+    const written = appCommand('win32', 'C:\\Programs\\galeo\\galeo.exe', 'C:\\bin', null);
+    if (!written.ok) throw new Error(written.reason);
+    const markLine = written.content.split('\r\n')[1];
+    const lines = uninstall();
+    expect(lines).toContain(`      \${If} $1 S== "${markLine}$\\r$\\n"`);
+    const reads = lines.filter((line) => line.trim().startsWith('FileRead'));
+    expect(reads).toHaveLength(2);
+    const del = lines.findIndex((line) => line.trim() === 'Delete "$LOCALAPPDATA\\Microsoft\\WindowsApps\\galeo.cmd"');
+    expect(del).toBeGreaterThan(lines.findIndex((line) => line.includes('S==')));
+  });
+
+  it('keeps it when the uninstall is part of an update', () => {
+    const lines = uninstall();
+    const guard = lines.findIndex((line) => line.trim() === '${IfNot} ${isUpdated}');
+    const del = lines.findIndex((line) => line.trim().startsWith('Delete '));
+    expect(guard).toBeGreaterThan(-1);
+    expect(guard).toBeLessThan(del);
+  });
+
+  it('saves the registers it uses', () => {
+    const lines = uninstall().map((line) => line.trim());
+    expect(lines.filter((line) => line.startsWith('Push '))).toEqual(['Push $0', 'Push $1']);
+    expect(lines.filter((line) => line.startsWith('Pop '))).toEqual(['Pop $1', 'Pop $0']);
   });
 });
 

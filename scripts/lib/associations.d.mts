@@ -16,6 +16,9 @@ export const MAC_FILE_ASSOCIATIONS: (FileAssociation & { role: 'Viewer'; rank: '
 /** The program id the Windows installer registers. */
 export const WINDOWS_PROG_ID: string;
 
+/** The second line of the `galeo.cmd` galeo installs; the uninstaller deletes the file only when it finds it. */
+export const WINDOWS_COMMAND_MARK: string;
+
 /** The NSIS include behind `packaging/windows/associations.nsh`. */
 export function windowsAssociationsNsh(): string;
 
