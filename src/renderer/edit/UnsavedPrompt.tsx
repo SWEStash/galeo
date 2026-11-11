@@ -54,9 +54,9 @@ export function UnsavedPrompt({ children }: { children: ReactNode }) {
               <Heading slot="title">Save changes to {question.name}?</Heading>
               <p>Your changes are lost if you don't save them.</p>
               <div className="dialog-buttons">
-                <Button onPress={() => question.answer('cancel')}>Cancel</Button>
+                <Button className="quiet" onPress={() => question.answer('cancel')}>Cancel</Button>
                 <Button onPress={() => question.answer('discard')}>Don't save</Button>
-                <Button onPress={() => question.answer('save')} autoFocus>
+                <Button className="primary" onPress={() => question.answer('save')} autoFocus>
                   Save
                 </Button>
               </div>

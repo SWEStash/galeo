@@ -1292,8 +1292,7 @@ main {
   background: var(--galeo-chrome-hover);
   color: var(--galeo-color-fg);
 }
-.watch-close:focus-visible,
-.watch-action:focus-visible {
+.watch-close:focus-visible {
   outline: var(--galeo-focus-ring);
   outline-offset: 1px;
 }
@@ -1375,22 +1374,6 @@ main {
   color: var(--galeo-color-muted);
   font-size: var(--galeo-text-xs);
 }
-.watch-action {
-  padding: var(--galeo-space-2xs) var(--galeo-space-sm);
-  border: 1px solid var(--galeo-color-control-border);
-  border-radius: var(--galeo-radius-sm);
-  background: none;
-  color: var(--galeo-color-fg);
-  font: inherit;
-  cursor: pointer;
-}
-.watch-action:hover:not(:disabled) {
-  background: var(--galeo-chrome-hover);
-}
-.watch-action:disabled {
-  color: var(--galeo-color-muted);
-  cursor: default;
-}
 /* The title-bar button's count of entries not opened, while the panel is closed. */
 .watch-button {
   position: relative;
@@ -1441,6 +1424,62 @@ button:focus-visible {
   outline: var(--galeo-focus-ring);
   outline-offset: 1px;
   box-shadow: var(--galeo-focus-halo);
+}
+
+/*
+ * Text buttons: one height and one pill shape everywhere (dialogs, notices, Settings, panels).
+ * `.primary` marks a dialog's or panel's main action with a tint of the profile's accent (tokens:
+ * 4.5:1 for every preset, pressed too, in the colour-contrast test);
+ * `.quiet` is for the least important one (Cancel, Stop watching, Reset). Icon, list and status-bar
+ * buttons have classes of their own and style themselves.
+ */
+button:is(:not([class]), [class='react-aria-Button'], .primary, .quiet) {
+  display: inline-flex;
+  gap: var(--galeo-space-xs);
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 0 var(--galeo-space-lg);
+  border: 1px solid var(--galeo-color-border);
+  border-radius: var(--galeo-radius-full);
+  background: transparent;
+  color: var(--galeo-color-fg);
+  font: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition:
+    background var(--galeo-motion-fast) var(--galeo-ease),
+    color var(--galeo-motion-fast) var(--galeo-ease);
+}
+button:is(:not([class]), [class='react-aria-Button'], .primary, .quiet):hover:not(:disabled) {
+  background: var(--galeo-chrome-hover);
+}
+button:is(:not([class]), [class='react-aria-Button'], .primary, .quiet):is(:active, [data-pressed]):not(:disabled) {
+  background: var(--galeo-chrome-press);
+}
+button:is(:not([class]), [class='react-aria-Button'], .primary, .quiet):disabled {
+  color: var(--galeo-color-muted);
+  cursor: default;
+  opacity: 0.55;
+}
+button.primary {
+  border-color: transparent;
+  background: var(--galeo-chrome-primary);
+  color: var(--galeo-chrome-primary-fg);
+  font-weight: 500;
+}
+button.primary:hover:not(:disabled) {
+  background: var(--galeo-chrome-primary-hover);
+}
+button.primary:is(:active, [data-pressed]):not(:disabled) {
+  background: var(--galeo-chrome-primary-press);
+}
+button.quiet {
+  border-color: transparent;
+  color: var(--galeo-color-muted);
+}
+button.quiet:hover:not(:disabled) {
+  color: var(--galeo-color-fg);
 }
 
 .document-state,
@@ -1798,6 +1837,15 @@ button:focus-visible {
 .setting > * {
   grid-column: 1 / -1;
 }
+/* About: the version, and its button beside it rather than across the row. */
+.settings-about > span {
+  grid-row: 1;
+  grid-column: 1;
+}
+.settings-about > button {
+  grid-row: 1;
+  grid-column: 2;
+}
 .setting .react-aria-Label,
 .setting .field-label {
   grid-column: 1;
@@ -1988,17 +2036,6 @@ button:focus-visible {
 .react-aria-SwitchButton[data-selected] .switch-track::after {
   left: 16px;
   background: var(--galeo-color-accent);
-}
-
-.settings-view button,
-.dialog-buttons button,
-.notice button {
-  padding: var(--galeo-space-xs) var(--galeo-space-lg);
-  border: 1px solid var(--galeo-color-border);
-  border-radius: var(--galeo-radius-md);
-  background: var(--galeo-chrome-surface);
-  color: var(--galeo-color-fg);
-  font: inherit;
 }
 
 /* Files dragged in from the file manager (UX F3). */

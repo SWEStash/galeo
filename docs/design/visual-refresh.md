@@ -92,6 +92,8 @@ The chrome gets its own colours, derived from the document's, so a theme keeps o
 | `--galeo-chrome-hover` | fg 6 % on the bar (`#e9ebed` / `#0f1217`) | | A control or row under the pointer |
 | `--galeo-chrome-press` | fg 10 % (`#e1e3e5` / `#181b20`) | | Pressed; an open menu's button |
 | `--galeo-chrome-selected` | focus 15 % on the surface (`#dae9f9` / `#152539`) | | The highlighted row in a list |
+| `--galeo-chrome-primary` (`-hover`, `-press`) | accent 16 % (24 %, 32 %) over what is behind | | A main action's button (v0.8) |
+| `--galeo-chrome-primary-fg` | accent 50 % with fg | | Its text: 4.5:1 or more for every preset accent, pressed too |
 
 Text keeps `--galeo-color-fg` and `--galeo-color-muted`; edges keep `--galeo-color-border` and, for
 controls, `--galeo-color-control-border`. Dark's bar moves from `#161b22` to `#010409`, darker than
@@ -187,6 +189,12 @@ accessible name; colour is never the only signal.
   shown, hovered and focused tabs, as browsers do (owner, 2026-11-06).
 - **Icon buttons:** 28 × 28, `radius-md`, muted icon; hover `chrome-hover` + fg; pressed or menu
   open `chrome-press`; focus ring. Each has a tooltip with its shortcut, as `▦` has today.
+- **Text buttons** (v0.8, owner's pick from a prototype): one look everywhere, in dialogs, notices,
+  Settings and panels. A pill (`radius-full`), 26 px high, `color-border` edge on a clear ground; hover
+  `chrome-hover`, pressed `chrome-press`, disabled muted at 55 %; focus ring. A dialog's or panel's main
+  action is `.primary`: no edge, `chrome-primary` ground, `chrome-primary-fg` text, weight 500. The
+  least important one (Cancel, Stop watching, Dismiss, Clear recent) is `.quiet`: no edge, muted text,
+  fg on hover.
 
 ### Profile chip and profile menu
 

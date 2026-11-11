@@ -96,6 +96,11 @@
   /* Tints: a find-in-all-tabs match, a banner, the drop area's veil. */
   --galeo-chrome-match: color-mix(in srgb, var(--galeo-color-focus) 30%, transparent);
   --galeo-chrome-banner: color-mix(in srgb, var(--galeo-color-link) 8%, var(--galeo-color-bg));
+  /* A main action's button: a tint of the profile's accent; its text half accent, half text colour. */
+  --galeo-chrome-primary: color-mix(in srgb, var(--galeo-color-accent) 16%, transparent);
+  --galeo-chrome-primary-hover: color-mix(in srgb, var(--galeo-color-accent) 24%, transparent);
+  --galeo-chrome-primary-press: color-mix(in srgb, var(--galeo-color-accent) 32%, transparent);
+  --galeo-chrome-primary-fg: color-mix(in srgb, var(--galeo-color-accent) 50%, var(--galeo-color-fg));
   --galeo-chrome-veil: color-mix(in srgb, var(--galeo-color-bg) 85%, transparent);
   /* A tooltip's ground: the chrome's surface, a little see-through. */
   --galeo-chrome-tooltip: color-mix(in srgb, var(--galeo-chrome-surface) 90%, transparent);

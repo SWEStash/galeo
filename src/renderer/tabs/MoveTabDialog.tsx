@@ -38,7 +38,7 @@ export function MoveTabDialog({ onChoose, onClose }: { onChoose: (window: number
             </ListBox>
           )}
           <div className="dialog-buttons">
-            <Button onPress={onClose}>Cancel</Button>
+            <Button className="quiet" onPress={onClose}>Cancel</Button>
           </div>
         </Dialog>
       </Modal>

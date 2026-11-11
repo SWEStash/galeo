@@ -226,8 +226,8 @@ function ProfileDialog(props: {
             </ColorSwatchPicker>
             {failed && <p role="alert">The profile couldn't be saved. Try again.</p>}
             <div className="dialog-buttons">
-              <Button onPress={props.onClose}>Cancel</Button>
-              <Button type="submit">{props.action}</Button>
+              <Button className="quiet" onPress={props.onClose}>Cancel</Button>
+              <Button className="primary" type="submit">{props.action}</Button>
             </div>
           </Form>
         </Dialog>

@@ -41,7 +41,7 @@ export function EmptyWindow({ platform, say }: { platform: Platform; say: (messa
               );
             })}
           </ul>
-          <button type="button" onClick={clear}>
+          <button type="button" className="quiet" onClick={clear}>
             Clear recent
           </button>
         </>

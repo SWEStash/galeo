@@ -18,6 +18,17 @@ function colours(selector: string): Record<string, string> {
   return Object.fromEntries([...block.matchAll(/--galeo-(?:color-)?([a-z-]+):\s*(#[0-9a-f]{6})\s*;/g)].map(([, name, value]) => [name, value]));
 }
 
+/** CSS `color-mix(in srgb, a p, b)` of two `#rrggbb` colours. */
+function mix(a: string, p: number, b: string): string {
+  const channel = (hex: string, at: number) => parseInt(hex.slice(at, at + 2), 16);
+  return `#${[1, 3, 5].map((at) => Math.round(channel(a, at) * p + channel(b, at) * (1 - p)).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** The accent's share in each `--galeo-chrome-primary*` token, by suffix ('' for the rest state). */
+const PRIMARY: Record<string, number> = Object.fromEntries(
+  [...css.matchAll(/--galeo-chrome-primary(?:-([a-z]+))?: color-mix\(in srgb, var\(--galeo-color-accent\) (\d+)%/g)].map(([, name, share]) => [name ?? '', Number(share) / 100]),
+);
+
 const light = colours(':root');
 const SCHEMES = { light, dark: { ...light, ...colours(":root[data-scheme='dark']") } };
 // What text and controls sit on: the page, and the tab bar, code blocks and panels (`code-bg`).
@@ -39,6 +50,15 @@ describe.each(Object.entries(SCHEMES))('the %s theme (UX §6, WCAG 2.1 AA)', (_s
 
   it.each(['focus', 'control-border', 'changed', 'link-missing'])('%s, which identifies a control or a mark, stands out 3:1 or more', (token) => {
     for (const surface of SURFACES) expect(contrast(tokens[token]!, tokens[surface]!), `${token} on ${surface}`).toBeGreaterThanOrEqual(3);
+  });
+
+  // A main action's button (`--galeo-chrome-primary*`): a tint of the accent and text mixed from it, at rest,
+  // hovered and pressed, on the bars and on menus and dialogs.
+  it.each(ACCENTS.map((accent) => [accent.name, accent.color]))('the %s accent keeps a main button\'s text at 4.5:1 or more', (_name, color) => {
+    const text = mix(color, PRIMARY['fg']!, tokens['fg']!);
+    for (const tint of [PRIMARY[''], PRIMARY['hover'], PRIMARY['press']] as number[]) {
+      for (const surface of ['chrome-bar', 'chrome-surface']) expect(contrast(text, mix(color, tint, tokens[surface]!)), `${tint} on ${surface}`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it.each(ACCENTS.map((accent) => [accent.name, accent.color]))('the %s accent stands out 3:1 on the tab bar and the shown tab', (_name, color) => {

@@ -22,7 +22,7 @@ export function ProfileCreatedNotice({ say }: { say: (message: string) => void }
       >
         Undo
       </button>
-      <button type="button" onClick={() => setCreated(null)}>
+      <button type="button" className="quiet" onClick={() => setCreated(null)}>
         Dismiss
       </button>
     </div>

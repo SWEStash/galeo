@@ -60,7 +60,7 @@ export function SandboxUnavailable({
         without it applies to this launch only.
       </p>
       <div className="actions">
-        <button ref={quit} type="button" onClick={() => onChoose('quit')}>
+        <button ref={quit} type="button" className="primary" onClick={() => onChoose('quit')}>
           Quit
         </button>
         <button type="button" onClick={() => onChoose('run-unsandboxed')}>
@@ -90,7 +90,7 @@ export function CrashLoop({ onRetry, onClose }: { onRetry: () => void; onClose: 
         brings them back without rendering the one that crashed.
       </p>
       <div className="document-state-actions">
-        <button ref={retry} type="button" onClick={onRetry}>
+        <button ref={retry} type="button" className="primary" onClick={onRetry}>
           Try again
         </button>
         <button type="button" onClick={onClose}>

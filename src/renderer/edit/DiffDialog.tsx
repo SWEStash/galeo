@@ -42,7 +42,7 @@ export function DiffDialog({
             <Heading slot="title" className="diff-view-title">
               Changes
             </Heading>
-            <Button onPress={onClose}>Close</Button>
+            <Button className="quiet" onPress={onClose}>Close</Button>
           </div>
           <div className="diff-view-sides" aria-hidden="true">
             <span>Mine (unsaved)</span>

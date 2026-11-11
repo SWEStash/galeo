@@ -116,14 +116,14 @@ export function WatchPanel({ state, platform, onClose, say, autoFocus = false }:
         {state.truncated && <p className="watch-truncated">Showing the newest 200</p>}
         <button
           type="button"
-          className="watch-action"
+          className="primary"
           data-testid="watch-open-all"
           disabled={!unopened}
           onClick={() => void window.galeo.watch.openAllNew().catch(reportFailure(say, "The new files couldn't open"))}
         >
           Open all new
         </button>
-        <button type="button" className="watch-action" data-testid="watch-stop" onClick={() => void window.galeo.watch.stop().catch(reportFailure(say, "Watching didn't stop"))}>
+        <button type="button" className="quiet" data-testid="watch-stop" onClick={() => void window.galeo.watch.stop().catch(reportFailure(say, "Watching didn't stop"))}>
           Stop watching
         </button>
       </footer>

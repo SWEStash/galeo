@@ -65,7 +65,7 @@ function CrashedTab({ id, path, store, onMessage }: { id: string; path: string; 
       <p className="document-state-title">This document crashed the viewer and won't be rendered automatically</p>
       <p className="document-state-path">{path}</p>
       <div className="document-state-actions">
-        <button type="button" onClick={() => renderAgain()}>
+        <button type="button" className="primary" onClick={() => renderAgain()}>
           Try again
         </button>
         <button type="button" onClick={() => renderAgain('source')}>

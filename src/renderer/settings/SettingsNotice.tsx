@@ -21,7 +21,7 @@ export function SettingsNotice({ notices, say }: { notices: readonly Notice[]; s
           </button>
         </p>
       ))}
-      <button type="button" onClick={() => setDismissed(JSON.stringify(notices))}>
+      <button type="button" className="quiet" onClick={() => setDismissed(JSON.stringify(notices))}>
         Dismiss
       </button>
     </div>
@@ -38,7 +38,7 @@ export function SessionNotice({ notice }: { notice: Notice | null }) {
         The saved session couldn't be read, so the last saved one before it was restored. The file was kept as{' '}
         <code>{notice.path}.invalid</code>.
       </p>
-      <button type="button" onClick={() => setDismissed(JSON.stringify(notice))}>
+      <button type="button" className="quiet" onClick={() => setDismissed(JSON.stringify(notice))}>
         Dismiss
       </button>
     </div>
