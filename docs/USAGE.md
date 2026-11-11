@@ -7,7 +7,7 @@ keyboard map is in the [UX specification](design/ux.md#5-keyboard-map).
 
 ## Installation
 
-galeo is released for Linux on x86_64, as a `.deb` package and an AppImage, on the
+galeo is released for Linux on x86_64 and, from 0.8.0, arm64, as a `.deb` package and an AppImage, on the
 [releases page](https://github.com/SWEStash/galeo/releases), and the `.deb` through galeo's own apt
 repository. galeo never checks for updates itself: installed from the repository, it gets each release
 with `sudo apt update && sudo apt upgrade`.
@@ -29,6 +29,7 @@ EOF
 sudo apt update && sudo apt install galeo
 ```
 
+On an arm64 machine (from galeo 0.8.0), write `Architectures: arm64` instead.
 The key's fingerprint is `0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629`; compare it with
 `gpg --show-keys /usr/share/keyrings/galeo-archive-keyring.asc`. Installing galeo replaces the
 downloaded key with the one in the package, which keeps it up to date. The repository holds the
@@ -37,7 +38,7 @@ latest release only; older ones stay on the releases page.
 To install a downloaded `.deb` instead, for instance after [checking it](#checking-a-download):
 
 ```sh
-sudo apt install ./galeo_<version>_amd64.deb
+sudo apt install ./galeo_<version>_amd64.deb    # or _arm64.deb
 ```
 
 Adding the sources file above afterwards turns on updates: from galeo 0.5.1 the package has already

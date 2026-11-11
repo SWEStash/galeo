@@ -3,6 +3,7 @@
 - Status: Accepted (2026-11-04, owner)
 - Date: 2026-11-04
 - Amended: 2026-11-07 (owner, in place): the key is deleted on purge only, not on remove (decision 6).
+- Superseded in part: "amd64 only" in decision 1, by [ADR-035](ADR-035-linux-arm64-packages.md) (2026-11-11): amd64 and arm64.
 - Deciders: project owner
 - Supersedes: in [ADR-008](ADR-008-packaging-and-distribution.md), "an apt repository" in the "Not in v0.1"
   list, and the "Updates" bullet's "Users update by installing a new `.deb`/AppImage" for users of the `.deb`

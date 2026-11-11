@@ -1,7 +1,7 @@
 # Releasing galeo
 
-galeo ships as a `.deb` (official) and an AppImage on GitHub Releases
-([ADR-008](decisions/ADR-008-packaging-and-distribution.md)), with unsigned macOS and Windows
+galeo ships as a `.deb` (official) and an AppImage on GitHub Releases, each for x64 and arm64
+([ADR-008](decisions/ADR-008-packaging-and-distribution.md), [ADR-035](decisions/ADR-035-linux-arm64-packages.md)), with unsigned macOS and Windows
 previews beside them ([ADR-027](decisions/ADR-027-macos-windows-previews.md)). galeo has no
 auto-update: a new release is how fixes, Electron's included, reach users. Users who added the apt
 repository get it with `apt upgrade`; publishing a release updates the repository
@@ -28,11 +28,11 @@ repository get it with `apt upgrade`; publishing a release updates the repositor
 
 A tag starts the release workflow (`.github/workflows/release.yml`,
 [ADR-017](decisions/ADR-017-release-workflow-with-attestations.md)). It builds the `.deb` and the
-AppImage in CI, and, through the Platforms workflow, the macOS and Windows previews (`.dmg` and
+AppImage in CI, on an x64 and an arm64 runner (the arm64 one also runs the end-to-end tests), and, through the Platforms workflow, the macOS and Windows previews (`.dmg` and
 `.zip`, setup and portable `.exe`, each for x64 and arm64;
 [ADR-027](decisions/ADR-027-macos-windows-previews.md)) with their tests. It runs
 `verify:package` on every package, and only when every job passed writes `SHA256SUMS`, attests all
-ten packages and drafts a GitHub Release. Nothing built on a workstation is published.
+12 packages and drafts a GitHub Release. Nothing built on a workstation is published.
 
 Before the version commit, run the Platforms workflow once on the release candidate (push it to
 `ci/platforms`, or `gh workflow run platforms.yml --ref main`), so the tag finds nothing new on
@@ -68,7 +68,7 @@ Then cut it:
 8. **Tag**: `v<version>` on the checked commit, then push the tag. The workflow refuses a tag that
    doesn't match `package.json` or isn't on `main`.
 9. **Publish**: when the workflow is green, download the assets from the draft release and check
-   them: `sha256sum -c SHA256SUMS` (all ten packages) and
+   them: `sha256sum -c SHA256SUMS` (all 12 packages) and
    `gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo` (GitHub CLI 2.49 or
    later; the same for the AppImage and for one macOS and one Windows file). The notes end with the
    previews' Gatekeeper and SmartScreen steps. Edit the draft's notes (a list of commit subjects to start from) for readers, then

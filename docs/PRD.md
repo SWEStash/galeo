@@ -660,7 +660,7 @@ live in the [UX specification](design/ux.md).
   open in source view without freezing the UI; binary files (NUL bytes / invalid text encoding)
   show a "can't display" state. Encoding: UTF-8, then byte
   order marks (UTF-16/32), then a Windows-1252 fallback with a banner and "Reopen with encoding…".
-- **Platform**: official: Ubuntu 26.04 LTS, GNOME, Wayland (primary) and X11; x86_64. Package: `.deb`
+- **Platform**: official: Ubuntu 26.04 LTS, GNOME, Wayland (primary) and X11; x86_64, and arm64 from v0.8 (ADR-035). Package: `.deb`
   (official; installs the AppArmor profile Chromium's sandbox needs on Ubuntu 24.04+), `galeo` on `PATH`,
   `.desktop` file with MIME associations. AppImage as a secondary portable build for
   distributions without user-namespace restrictions (on Ubuntu 24.04+ it runs only if the user opts in to unsandboxed mode, with a warning). Previews
