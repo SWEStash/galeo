@@ -65,6 +65,13 @@ const SETTLE_FRAMES = 2;
 /** How far (in lines) a settled follower may be from where it was put before it counts as moved. */
 const MOVED_LINES = 0.5;
 
+/**
+ * How long after the reader's input on a pane the other pane's own scrolling can't take the lead: the
+ * editor aligning itself as split opens, in the same frames as the reader's scroll, would take the
+ * reader's pane back.
+ */
+const READER_MS = 300;
+
 export interface ScrollSync {
   /**
    * `pane`'s content changed (a live preview): its own scrolling while it keeps its place is
@@ -77,18 +84,28 @@ export interface ScrollSync {
 /**
  * Keeps the panes on the same source line: the pane that scrolls leads, and the other follows on the
  * next frame. A follower's own scroll events are ignored while it settles, so the two never drive
- * each other in a loop; the reader acting on it (wheel, pointer, keys) makes it lead at once.
+ * each other in a loop; the reader acting on it (wheel, pointer, keys) makes it lead at once, and
+ * for a moment the other pane's own scrolling can't take that lead away.
  */
 export function syncScrolling(
   panes: { source: SyncPane; rendered: SyncPane },
   schedule: (run: () => void) => unknown = requestAnimationFrame,
+  now: () => number = () => performance.now(),
 ): ScrollSync {
   // Panes whose own scroll events are ignored, each with the hold that ends it (the latest wins).
   const following = new Map<SyncPane, number>();
   let holds = 0;
   let leader: SyncPane | null = null;
   let pending = false;
+  // The pane the reader last acted on, until when.
+  let reading: { pane: SyncPane; until: number } | null = null;
   const other = (pane: SyncPane) => (pane === panes.source ? panes.rendered : panes.source);
+  const readerOn = (pane: SyncPane) => reading?.pane === pane && now() < reading.until;
+  // `pane` scrolled by itself: it leads, unless the reader is on the other one, which then puts it back.
+  const moved = (pane: SyncPane) => {
+    leader = readerOn(other(pane)) ? other(pane) : pane;
+    followSoon();
+  };
 
   // Holds `pane` through `move`, the follow that scrolls it. Moved elsewhere while it settled, it
   // was scrolled by something else (the page, without the reader's input): it leads once settled.
@@ -102,8 +119,7 @@ export function syncScrolling(
       if (frames > 0) return void schedule(() => tick(frames - 1));
       following.delete(pane);
       if (put === undefined || Math.abs(pane.position() - put) <= MOVED_LINES) return;
-      leader = pane;
-      followSoon();
+      moved(pane);
     };
     tick(SETTLE_FRAMES);
   };
@@ -122,10 +138,12 @@ export function syncScrolling(
   const stops = [panes.source, panes.rendered].flatMap((pane) => {
     const onScroll = () => {
       if (following.has(pane)) return;
-      leader = pane;
-      followSoon();
+      moved(pane);
     };
-    const onInput = () => following.delete(pane);
+    const onInput = () => {
+      following.delete(pane);
+      reading = { pane, until: now() + READER_MS };
+    };
     pane.scroller.addEventListener('scroll', onScroll, { passive: true });
     for (const type of READER_INPUT) pane.scroller.addEventListener(type, onInput, { passive: true });
     return [

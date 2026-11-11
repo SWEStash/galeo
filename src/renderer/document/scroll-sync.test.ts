@@ -73,12 +73,13 @@ describe('syncScrolling', () => {
     };
     const source = pane();
     const rendered = pane();
-    const sync = syncScrolling({ source, rendered }, (run) => frames.push(run));
+    const clock = { now: 0 };
+    const sync = syncScrolling({ source, rendered }, (run) => frames.push(run), () => clock.now);
     const scroll = (target: ReturnType<typeof pane>, line: number) => {
       target.line = line;
       target.scroller.dispatchEvent(new Event('scroll'));
     };
-    return { frames, flush, source, rendered, sync, scroll };
+    return { frames, flush, source, rendered, sync, scroll, clock };
   }
 
   it('moves the other pane to the scrolled one’s place on the next frame, once per frame', () => {
@@ -125,6 +126,39 @@ describe('syncScrolling', () => {
     scroll(source, 4);
     flush();
     expect(rendered.moves).toEqual([4]);
+  });
+
+  it('lets a scroll the reader made lead over the other pane’s own scroll in the same frame', () => {
+    const { flush, source, rendered, scroll } = setup();
+    rendered.scroller.dispatchEvent(new Event('wheel'));
+    scroll(rendered, 3000);
+    // The editor's own first alignment, right after split opens: not the reader.
+    scroll(source, 1);
+    flush(5);
+    expect(source.moves).toEqual([3000]);
+    expect(rendered.moves).toEqual([]);
+  });
+
+  it('puts the follower back when it moves by itself while the reader is still on the other pane', () => {
+    const { flush, source, rendered, scroll } = setup();
+    rendered.scroller.dispatchEvent(new Event('wheel'));
+    scroll(rendered, 3000);
+    flush();
+    scroll(source, 1);
+    flush(5);
+    expect(rendered.moves).toEqual([]);
+    expect(source.moves).toEqual([3000, 3000]);
+  });
+
+  it('lets the other pane’s own scroll lead again once the reader’s input is past', () => {
+    const { flush, source, rendered, scroll, clock } = setup();
+    rendered.scroller.dispatchEvent(new Event('wheel'));
+    scroll(rendered, 12);
+    flush(5);
+    clock.now += 1000;
+    scroll(source, 30);
+    flush();
+    expect(rendered.moves).toEqual([30]);
   });
 
   it('puts a pane whose content changed back on the leader’s line, its own scrolling meanwhile ignored', () => {
