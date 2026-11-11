@@ -118,12 +118,15 @@ test('in split, scrolling the table brings the source to the same row', async ()
     await expect(bodyRows(window).first()).toBeVisible();
     await window.keyboard.press('ControlOrMeta+\\');
     await expect(window.getByTestId('status-view')).toHaveText('Split');
-    // At once, as a reader may: a scroll right after split opens still leads, and the source's first
-    // alignment, a frame later, doesn't take the table back.
-    await shownDocument(window).evaluate((view) => {
+    // As soon as the table can scroll that far, as a reader may: a scroll right after split opens
+    // still leads, and the source's first alignment doesn't take the table back. Before the pane has
+    // its height (a few frames on a slow machine) the browser would clamp the scroll to 0.
+    await shownDocument(window).evaluate(async (view) => {
       const pane = view.shadowRoot!.querySelector<HTMLElement>('.galeo-rendered-pane')!;
+      const top = 3000 * 24;
+      while (pane.scrollHeight - pane.clientHeight < top) await new Promise(requestAnimationFrame);
       pane.dispatchEvent(new WheelEvent('wheel', { deltaY: 1 }));
-      pane.scrollTop = 3000 * 24;
+      pane.scrollTop = top;
     });
     await expect(grid(window).locator('[role=gridcell]', { hasText: /^row 3000$/ })).toBeVisible();
     await expect(shownDocument(window).locator('.cm-line', { hasText: /^row 300\d$/ }).first()).toBeVisible();
