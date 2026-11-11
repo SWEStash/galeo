@@ -36,7 +36,8 @@
   [031](decisions/ADR-031-ticking-task-boxes.md) ·
   [032](decisions/ADR-032-design-tokens-v2.md) ·
   [033](decisions/ADR-033-incremental-reads.md) ·
-  [034](decisions/ADR-034-watching-a-folder.md)
+  [034](decisions/ADR-034-watching-a-folder.md) ·
+  [035](decisions/ADR-035-linux-arm64-packages.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -471,21 +472,21 @@ The pre-release security audits check these layers against the code:
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
 
-## 8. Build, packaging and deployment (ADR-008, ADR-017, ADR-029)
+## 8. Build, packaging and deployment (ADR-008, ADR-017, ADR-029, ADR-035)
 
 ```mermaid
 flowchart TD
   src[source · src/shared, core, main, preload, renderer] --> vite[Vite 8 builds: main and preload as library builds, renderer, worker<br/>scripts/dev.mjs in development]
   vite --> eb[electron-builder · fuses set]
-  eb --> deb[galeo_#lt;v#gt;_amd64.deb · official]
+  eb --> deb[galeo_#lt;v#gt;_amd64.deb and _arm64.deb · official, ADR-035]
   eb --> appimage[galeo-#lt;v#gt;-#lt;arch#gt;.AppImage · secondary; on Ubuntu 24.04+ unsandboxed, by opt-in]
   eb -- "preview, unsigned, ADR-027" --> mac[x64 and arm64 .dmg / .zip · macOS preview]
   eb -- "preview, unsigned, ADR-027" --> win[galeo-#lt;v#gt;-#lt;arch#gt;-setup.exe and -portable.exe, x64 and arm64 · Windows preview]
   eb --> ci["CI: Linux on every push; macOS and Windows on ci/platforms and by hand (platforms.yml, ADR-027)<br/>tests · package, fuse and Open With read-back · no-network harness · performance"]
-  ci -- "tag v#lt;version#gt;" --> release["release workflow: Linux build + Platforms on macOS and Windows, verify each,<br/>then (all green) SHA256SUMS, attestations over the ten packages"]
+  ci -- "tag v#lt;version#gt;" --> release["release workflow: Linux build on x64 and arm64 (arm64 also runs the e2e suite) + Platforms on macOS and Windows,<br/>verify each, then (all green) SHA256SUMS, attestations over the 12 packages"]
   release --> draft[draft GitHub Release · docs/RELEASING.md, ADR-017]
-  draft -- "published by the owner" --> pages["Pages workflow: check the .deb's checksum and attestation,<br/>build the apt repository, sign it (the only job with the key), check it with apt"]
-  pages --> apt[swestash.github.io/galeo/apt/ · suite stable, the latest .deb only, ADR-029]
+  draft -- "published by the owner" --> pages["Pages workflow: check each .deb's checksum and attestation,<br/>build the apt repository, sign it (the only job with the key), check it with apt"]
+  pages --> apt[swestash.github.io/galeo/apt/ · suite stable, amd64 and arm64, the latest .deb only, ADR-029]
 ```
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`
