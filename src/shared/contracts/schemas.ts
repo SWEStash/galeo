@@ -155,4 +155,5 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   'tabs.openSettings': z.tuple([]),
   'window.command': z.tuple([z.enum(WINDOW_COMMANDS)]),
   'window.retryAfterCrashes': z.tuple([]),
+  'window.pageFailed': z.tuple([]),
 };

@@ -11,6 +11,7 @@ function setup(retries: boolean) {
     command: (command, window) => void calls.push(`${command} ${window}`),
     crashes: { retry: (window) => (calls.push(`retry ${window}`), retries) },
     reload: (window) => void calls.push(`reload ${window}`),
+    recover: (window) => void calls.push(`recover ${window}`),
   });
   return { handlers, calls };
 }
@@ -31,5 +32,12 @@ describe('windowHandlers', () => {
     await expect(async () => notShown.handlers['window.retryAfterCrashes']([], from(1))).rejects.toThrow('crash loop');
     await expect(async () => notShown.handlers['window.retryAfterCrashes']([], from(2))).rejects.toThrow('crash loop');
     expect(notShown.calls).toEqual(['retry 1']);
+  });
+
+  it("recovers the sender's window when its page failed, as after a crash, and nothing for a window with no profile", async () => {
+    const { handlers, calls } = setup(true);
+    await handlers['window.pageFailed']([], from(1));
+    await handlers['window.pageFailed']([], from(2));
+    expect(calls).toEqual(['recover w1']);
   });
 });

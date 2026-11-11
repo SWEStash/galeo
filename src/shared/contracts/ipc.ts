@@ -195,6 +195,7 @@ export const CHANNELS = [
   'tabs.openSettings',
   'window.command',
   'window.retryAfterCrashes',
+  'window.pageFailed',
 ] as const;
 
 export type Channel = (typeof CHANNELS)[number];
@@ -371,6 +372,8 @@ export interface Requests {
   'window.command': [command: WindowCommand];
   /** The crash-loop message's "Try again": the sender's window reloads with its tabs. Refused otherwise. */
   'window.retryAfterCrashes': [];
+  /** The page hit an error it can't go on from (React unmounted it): main recovers the sender's window as after a crash. */
+  'window.pageFailed': [];
 }
 
 /** Resolved value of each channel. */
@@ -465,6 +468,7 @@ export interface Responses {
   'tabs.openSettings': string;
   'window.command': void;
   'window.retryAfterCrashes': void;
+  'window.pageFailed': void;
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */

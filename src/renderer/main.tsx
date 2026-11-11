@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { onPageFailure } from './page-failure';
 import { markStart } from './perf';
 import { removeWebRtc } from './security/disable-webrtc';
 import { installDefaultPolicy } from './security/trusted-types';
@@ -14,7 +15,7 @@ installDefaultPolicy();
 const root = document.getElementById('root');
 if (!root) throw new Error('missing #root element');
 
-createRoot(root).render(
+createRoot(root, { onUncaughtError: onPageFailure(window.galeo.window) }).render(
   <StrictMode>
     <App />
   </StrictMode>,

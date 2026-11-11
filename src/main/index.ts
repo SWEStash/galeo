@@ -864,6 +864,7 @@ function start(initialMode: StartupMode): void {
           command: (command, { profile, window }) => mainKey(command, profile, window),
           crashes,
           reload: ({ window }) => windowCrash.reload(window, { activate: true }),
+          recover: ({ window }) => windowCrash.recover(window, 'page error'),
         }),
         ...settingsHandlers({ profileOf, fonts, configDir: paths.configDir, files: { fs, shell, utf8, platform: process.platform } }),
         ...documentHandlers({

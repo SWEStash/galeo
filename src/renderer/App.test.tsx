@@ -201,7 +201,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         return () => {};
       }),
     },
-    window: { command: vi.fn().mockResolvedValue(undefined), retryAfterCrashes: vi.fn().mockResolvedValue(undefined) },
+    window: { command: vi.fn().mockResolvedValue(undefined), retryAfterCrashes: vi.fn().mockResolvedValue(undefined), pageFailed: vi.fn().mockResolvedValue(undefined) },
   } satisfies GaleoApi;
   Object.defineProperty(window, 'galeo', { value: api, configurable: true });
   return api;

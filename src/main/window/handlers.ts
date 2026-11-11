@@ -2,7 +2,7 @@ import type { CrashRecovery } from '../../core/tabs/crashes';
 import type { WindowCommand } from '../../shared/keymap';
 import type { Handlers } from '../ipc/register';
 
-type WindowChannels = 'window.command' | 'window.retryAfterCrashes';
+type WindowChannels = 'window.command' | 'window.retryAfterCrashes' | 'window.pageFailed';
 
 /** Commands the page asks main to run on its window, as if their key was pressed there. */
 export function windowHandlers<W>(deps: {
@@ -12,8 +12,10 @@ export function windowHandlers<W>(deps: {
   crashes: Pick<CrashRecovery, 'retry'>;
   /** Loads the window's page again, its tabs restored. */
   reload: (window: W) => void;
+  /** Brings the window back as after its renderer crashed (ADR-002). */
+  recover: (window: W) => void;
 }): Pick<Handlers, WindowChannels> {
-  const { windowOf, command, crashes, reload } = deps;
+  const { windowOf, command, crashes, reload, recover } = deps;
   return {
     'window.command': ([name], event) => {
       const window = windowOf(event.sender.id);
@@ -23,6 +25,10 @@ export function windowHandlers<W>(deps: {
       const window = windowOf(event.sender.id);
       if (!window || !crashes.retry(event.sender.id)) throw new Error('not showing the crash loop');
       reload(window);
+    },
+    'window.pageFailed': (_args, event) => {
+      const window = windowOf(event.sender.id);
+      if (window) recover(window);
     },
   };
 }
