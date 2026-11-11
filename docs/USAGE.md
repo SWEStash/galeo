@@ -59,8 +59,8 @@ Ubuntu.
 
 ### The AppImage
 
-For other distributions: make `galeo-<version>.AppImage` executable and run it. To get the
-`galeo` command and a desktop entry, open Settings (Ctrl+,) and choose
+For other distributions: make `galeo-<version>-<arch>.AppImage` (`x86_64` or `arm64`)
+executable and run it. To get the `galeo` command and a desktop entry, open Settings (Ctrl+,) and choose
 **Install command-line launcher**: it writes `~/.local/bin/galeo` and an entry in your
 applications, both pointing at that AppImage, and the MDX file type in `~/.local/share/mime`.
 **Uninstall command-line launcher**, beside it, removes them again (a file galeo didn't write

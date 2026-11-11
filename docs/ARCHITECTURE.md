@@ -478,7 +478,7 @@ flowchart TD
   src[source · src/shared, core, main, preload, renderer] --> vite[Vite 8 builds: main and preload as library builds, renderer, worker<br/>scripts/dev.mjs in development]
   vite --> eb[electron-builder · fuses set]
   eb --> deb[galeo_#lt;v#gt;_amd64.deb · official]
-  eb --> appimage[galeo-#lt;v#gt;.AppImage · secondary; on Ubuntu 24.04+ unsandboxed, by opt-in]
+  eb --> appimage[galeo-#lt;v#gt;-#lt;arch#gt;.AppImage · secondary; on Ubuntu 24.04+ unsandboxed, by opt-in]
   eb -- "preview, unsigned, ADR-027" --> mac[x64 and arm64 .dmg / .zip · macOS preview]
   eb -- "preview, unsigned, ADR-027" --> win[galeo-#lt;v#gt;-#lt;arch#gt;-setup.exe and -portable.exe, x64 and arm64 · Windows preview]
   eb --> ci["CI: Linux on every push; macOS and Windows on ci/platforms and by hand (platforms.yml, ADR-027)<br/>tests · package, fuse and Open With read-back · no-network harness · performance"]

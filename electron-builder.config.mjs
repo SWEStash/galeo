@@ -45,6 +45,8 @@ export default {
       },
     },
   },
+  // The runner's arch in the name (x86_64, arm64), as the .deb's: one release carries both.
+  appImage: { artifactName: '${productName}-${version}-${arch}.${ext}' },
   deb: {
     afterInstall: 'packaging/linux/after-install.tpl',
     afterRemove: 'packaging/linux/after-remove.tpl',
