@@ -1,6 +1,7 @@
 # ADR-002 — Window & tab model: one renderer per window, tabs as in-page views with a lifecycle
 
-- Status: Accepted (2026-09-25, with review amendments)
+- Status: Accepted (2026-09-25, with review amendments; amended 2026-11-11: a page that fails
+  is recovered as a crash, see "Amendment" at the end)
 - Date: 2026-09-25
 - Deciders: project owner
 - Related: [ADR-001](ADR-001-app-shell-stack.md), [PRD](../PRD.md) (performance targets),
@@ -57,7 +58,8 @@ In Electron every `BrowserWindow` has at least one renderer process. Additional
 7. **Crash recovery.** Before inserting a document, the renderer sends main a breadcrumb
    ("rendering tab X"). If the renderer crashes, main recreates the window from the registry with
    all tabs hibernated, and marks the breadcrumb tab *crashed* so it is not auto-rendered again
-   (SR-14).
+   (SR-14). A page that fails without its renderer crashing (an error React can't recover from,
+   which unmounts it) tells main once, and main recovers the window the same way.
 
 ## Options considered
 
@@ -111,3 +113,12 @@ everything at start, against the cold-start target.
 - The performance harness shows hibernated wake over 150 ms on typical documents, or the
   warm limits cause frequent visible re-renders in real use: raise the defaults or add a
   rendered-HTML cache for recently hibernated tabs.
+
+## Amendment (2026-11-11, owner)
+
+Point 7 was amended in place (owner's choice for this change; the convention is a superseding
+ADR). Crash recovery first ran only when the renderer went away. An error no React boundary
+catches unmounts the whole page while the renderer lives on, which left a blank window that
+couldn't be moved or closed (seen with a file open in two tabs and quick open, fixed apart).
+The page now reports such a failure once (`window.pageFailed`, no arguments) and main runs the
+same recovery as for a crash, crash-loop limit included.
