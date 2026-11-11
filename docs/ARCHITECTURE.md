@@ -395,8 +395,9 @@ the page keeps its text and shows the "File changed on disk" bar (UX F12) instea
 While a tab has unsaved changes, the page reports it (`documents.dirty`) and hands main its text
 a second after typing stops (`documents.keep`, memory only). Main holds window closes, quits and
 profile deletes until each affected page has asked its reader (`documents.confirmClose`, answered
-by `documents.closeAnswer`: *asking* within 5 s, then the choice). After a renderer crash, a tab
-gets its kept text back (`documents.recover`), and so does a tab moved to another window (§5.7).
+by `documents.closeAnswer`: *asking* within 5 s, then the choice). After a renderer crash, or a page
+failure the page reports once (`window.pageFailed`, ADR-002 §7), a tab gets its kept text back
+(`documents.recover`), and so does a tab moved to another window (§5.7).
 
 In split view (ADR-014) the rendered pane previews the editor's text, not the file's: the page
 sends it to the worker 150 ms after typing pauses, and at least once a second while it goes on.

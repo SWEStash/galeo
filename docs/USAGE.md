@@ -265,10 +265,10 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
 - **Large or slow documents**: Markdown or MDX over 5 MB, or that takes more than 2 s to render, opens as
   source with a banner; **Render anyway** renders it (and waits up to a minute). A render still
   going after 5 s offers **Cancel** under the loading lines: the source shows at once.
-- **A document that crashed the window**: the window comes back with its tabs, and that tab shows
-  a notice instead of rendering again. *Try again* renders it; *Open as source* shows its text. A
-  window that crashes 3 times within a minute stops reloading and says so: *Try again* brings its
-  tabs back, *Close window* closes it.
+- **A document that crashed the window**, or an error galeo's page can't go on from: the window
+  comes back with its tabs, and that tab shows a notice instead of rendering again. *Try again*
+  renders it; *Open as source* shows its text. A window that crashes 3 times within a minute stops
+  reloading and says so: *Try again* brings its tabs back, *Close window* closes it.
 
 ## Editing
 
