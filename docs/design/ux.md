@@ -62,7 +62,7 @@ the [decision records](../decisions/)).
 | **Watched folder panel** (v0.8) | The files created or changed in the window's watched folder, newest first (F21) | `--watch`, *Watch folder…*, the title-bar folder button, Ctrl+Shift+D / its close button |
 | **Settings tab** | Global and per-profile settings, opened as a special tab | Ctrl+, |
 
-**Window title** (used by GNOME's overview and Alt+Tab): `<file name> — <profile> — galeo`.
+**Window title** (used by GNOME's overview and Alt+Tab): `<file name> · <profile> · galeo`.
 
 (v0.7) `▦` Tab overview, `⌕` Search tabs and `⋯` Commands (it opens the command palette) sit at the
 bar's far right, before the window controls, while `+` stays after the last tab (in the tab bar or,
@@ -163,7 +163,7 @@ profile. Multiple selected files open as tabs in selection order.
   files are not touched"). The `default` profile cannot be deleted. (v0.7) Deleting a profile also
   removes its launcher, if galeo wrote one.
 - (v0.7, Linux) **Profile launcher**: Settings → Profile launcher → *Add to applications* adds
-  "galeo — <profile>" to the desktop's applications, which opens galeo in that profile (by its id, so
+  "galeo · <profile>" to the desktop's applications, which opens galeo in that profile (by its id, so
   a rename doesn't break it; the entry keeps the name it had) and opens files with it; *Remove from
   applications* takes out only that profile's entry. It runs the AppImage or the galeo package's
   command; a run from source has none, and says so.
@@ -513,7 +513,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 | **Starting** | Window appears with tab bar immediately; active tab paints first; others stay hibernated |
 | **Sandbox unavailable** (app-level, at startup) | Chromium's sandbox can't start (e.g. the AppImage on Ubuntu 24.04+) | A small error window naming the detected cause and the fix (on Ubuntu 24.04+: install the `.deb`). Actions: **Quit** (default) · Run without sandbox (states the risk: a malicious document could then act with your user's full permissions; applies to this launch only) |
 | **Crash loop** | The window's renderer crashed 3 times within a minute | Instead of its tabs: "This window's viewer kept crashing" — galeo stopped reloading it; the tabs are kept. Actions: **Try again** (default; the tabs come back, the one being rendered marked crashed) · Close window. If even this message crashes, the window stays down |
-| **Running unsandboxed** (app-level, persistent) | Started with `--no-sandbox` or "Run without sandbox" | Every window: a warning badge "Unsandboxed" in the status bar (icon + text; its tooltip explains the risk and how to go back: restart without the flag, or install the `.deb`) and " — unsandboxed" in the window title. Not dismissable |
+| **Running unsandboxed** (app-level, persistent) | Started with `--no-sandbox` or "Run without sandbox" | Every window: a warning badge "Unsandboxed" in the status bar (icon + text; its tooltip explains the risk and how to go back: restart without the flag, or install the `.deb`) and " · unsandboxed" in the window title. Not dismissable |
 
 ### Document-level
 

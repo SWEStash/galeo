@@ -222,7 +222,7 @@ export interface Requests {
   'app.installLauncher': [];
   /** AppImage only: removes what install wrote, while it is still galeo's. */
   'app.uninstallLauncher': [];
-  /** Adds or removes the sender profile's own launcher, "galeo — <profile>" (#60, Linux). */
+  /** Adds or removes the sender profile's own launcher, "galeo · <profile>" (#60, Linux). */
   'app.installProfileLauncher': [];
   'app.uninstallProfileLauncher': [];
   /**

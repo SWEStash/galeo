@@ -64,7 +64,7 @@ test('a new profile gets its own window, in its accent; a rename keeps its sessi
     await work.getByLabel('Name').fill('Work EU');
     await work.getByRole('button', { name: 'Save' }).click();
     await expect(chip(work)).toHaveAccessibleName('Profile: Work EU');
-    await expect.poll(() => titles(app)).toEqual(['basic.md — default — galeo', 'gfm.md — Work EU — galeo']);
+    await expect.poll(() => titles(app)).toEqual(['basic.md · default · galeo', 'gfm.md · Work EU · galeo']);
     // Another window's menu follows the rename.
     await chip(window).click();
     await expect(window.getByRole('menuitem', { name: /Work EU/ })).toBeVisible();

@@ -7,10 +7,10 @@ export function isPermissionAllowed(permission: string): boolean {
 }
 
 /** Window titles carry a non-dismissable warning while the process runs unsandboxed (ADR-008). */
-/** `<file> — <profile> — galeo` (UX), leaving out missing parts; every title says when unsandboxed. */
+/** `<file> · <profile> · galeo` (UX), leaving out missing parts; every title says when unsandboxed. */
 export function windowTitle(parts: readonly (string | null)[], { sandboxed }: { sandboxed: boolean }): string {
-  const title = [...parts.filter((part) => part !== null), 'galeo'].join(' — ');
-  return sandboxed ? title : `${title} — unsandboxed`;
+  const title = [...parts.filter((part) => part !== null), 'galeo'].join(' · ');
+  return sandboxed ? title : `${title} · unsandboxed`;
 }
 
 /**

@@ -103,7 +103,7 @@ describe('the side panel (ADR-023)', () => {
   it("shows the shown tab's name and folder in the title bar, for the eye only", async () => {
     await shown();
     const text = document.querySelector('[data-testid="title-bar-text"]')!;
-    expect(text.textContent).toBe('plan.md — ~/docs');
+    expect(text.textContent).toBe('plan.md · ~/docs');
     expect(text.getAttribute('aria-hidden')).toBe('true');
     const toggle = document.querySelector('[data-testid="panel-toggle"]')!;
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
@@ -124,7 +124,7 @@ describe('the side panel (ADR-023)', () => {
     await shown({ collapsed: true });
     const marker = tabs()[1]!.querySelector('.tab-grab')!;
     await act(async () => marker.dispatchEvent(new PointerEvent('pointerover', { bubbles: true, relatedTarget: document.body })));
-    expect(document.querySelector('[data-testid="marker-tip"]')?.textContent).toBe('plan.md — ~/docs, edit mode, unsaved changes');
+    expect(document.querySelector('[data-testid="marker-tip"]')?.textContent).toBe('plan.md · ~/docs, edit mode, unsaved changes');
     await act(async () => marker.dispatchEvent(new PointerEvent('pointerout', { bubbles: true, relatedTarget: document.body })));
     expect(document.querySelector('[data-testid="marker-tip"]')).toBeNull();
   });

@@ -332,14 +332,14 @@ describe('renameProfileLauncher (#38)', () => {
     expect(await renameProfileLauncher({ fs, utf8 }, FILE, { id: 'acme', name: 'beta' })).toBe(true);
     // Exactly what installing it as "beta" would have written: the New Window action keeps its own Name.
     expect(await text(fs, FILE)).toBe(installed('beta'));
-    expect(await text(fs, FILE)).toContain('Name=galeo — beta\nComment=Opens galeo in the beta profile\n');
+    expect(await text(fs, FILE)).toContain('Name=galeo · beta\nComment=Opens galeo in the beta profile\n');
     expect(await text(fs, FILE)).toContain('[Desktop Action new-window]\nName=New Window\n');
   });
 
   it('writes a name with a backslash as the Desktop Entry spec asks', async () => {
     const fs = new FakeFileSystem({ [FILE]: installed('acme') });
     expect(await renameProfileLauncher({ fs, utf8 }, FILE, { id: 'acme', name: 'a\\b' })).toBe(true);
-    expect(await text(fs, FILE)).toContain('Name=galeo — a\\\\b\n');
+    expect(await text(fs, FILE)).toContain('Name=galeo · a\\\\b\n');
   });
 
   it('makes no entry where there was none', async () => {

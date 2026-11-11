@@ -196,7 +196,7 @@ function TabItem({
   const pinned = tab.pinned && <span className="visually-hidden">, pinned</span>;
 
   // A collapsed marker's tooltip: on the pointer, and on keyboard focus (not after a click).
-  const tipText = [folder ? `${label} — ${folder}` : label, ...shown.map((each) => each.words)].join(', ');
+  const tipText = [folder ? `${label} · ${folder}` : label, ...shown.map((each) => each.words)].join(', ');
   const showTip = (element: Element) => {
     const box = element.getBoundingClientRect();
     onMarkerTip?.({ text: tipText, top: box.top + box.height / 2 });

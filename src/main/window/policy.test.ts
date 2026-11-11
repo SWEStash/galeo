@@ -19,16 +19,16 @@ describe('isPermissionAllowed', () => {
 
 describe('windowTitle', () => {
   it('names the shown file and the profile before the app (UX: GNOME overview, Alt+Tab)', () => {
-    expect(windowTitle(['plan.md', 'acme'], { sandboxed: true })).toBe('plan.md — acme — galeo');
+    expect(windowTitle(['plan.md', 'acme'], { sandboxed: true })).toBe('plan.md · acme · galeo');
   });
 
   it('leaves out a part that is missing, such as the file of an empty window', () => {
-    expect(windowTitle([null, 'default'], { sandboxed: true })).toBe('default — galeo');
+    expect(windowTitle([null, 'default'], { sandboxed: true })).toBe('default · galeo');
     expect(windowTitle([], { sandboxed: true })).toBe('galeo');
   });
 
   it('marks every title while unsandboxed', () => {
-    expect(windowTitle(['a.md', 'default'], { sandboxed: false })).toBe('a.md — default — galeo — unsandboxed');
+    expect(windowTitle(['a.md', 'default'], { sandboxed: false })).toBe('a.md · default · galeo · unsandboxed');
   });
 });
 

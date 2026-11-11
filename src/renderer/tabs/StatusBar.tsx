@@ -90,7 +90,7 @@ export function StatusBar({ view, store, say, children }: { view: TabsView; stor
           type="button"
           className="status-path"
           data-testid="status-path"
-          title={`${tab.path} — copy or reveal`}
+          title={`${tab.path} · copy or reveal`}
           onClick={() => void window.galeo.documents.pathMenu(tab.id).catch(unlessClosed(say, "The file's menu couldn't open"))}
         >
           {tab.path}

@@ -170,7 +170,7 @@ describe('profile launchers (#60)', () => {
     input.received(1);
     expect(await handlers['app.installProfileLauncher']([], from(1))).toEqual({ ok: true, path: ENTRY });
     const entry = await read(fs, ENTRY);
-    expect(entry).toContain('Name=galeo — Work \\\\ Notes\n');
+    expect(entry).toContain('Name=galeo · Work \\\\ Notes\n');
     expect(entry).toContain('Exec=/opt/galeo/galeo --profile work -- %F\n');
     expect(entry).toContain('Exec=/opt/galeo/galeo --profile work --new-window\n');
     expect(entry).toContain('X-galeo-Profile=work');

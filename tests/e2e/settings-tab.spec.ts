@@ -27,7 +27,7 @@ test('Ctrl+, opens the Settings tab once, named in the title, and it passes axe'
     await window.keyboard.press('ControlOrMeta+Comma');
     await expect(settingsView(window)).toBeVisible();
     await expect(window.getByRole('tab', { selected: true })).toContainText('Settings');
-    await expect.poll(() => titles(app)).toEqual(['Settings — default — galeo']);
+    await expect.poll(() => titles(app)).toEqual(['Settings · default · galeo']);
     await window.getByRole('tab').first().click();
     await window.keyboard.press('ControlOrMeta+Comma');
     await expect(window.getByRole('tab')).toHaveCount(2);

@@ -73,8 +73,8 @@ describe('FindAll', () => {
     expect(keepNow).toHaveBeenCalled();
     expect(findAll).toHaveBeenLastCalledWith('plan', { caseSensitive: false });
     const groups = [...document.querySelectorAll('[role="group"]')].map((group) => document.getElementById(group.getAttribute('aria-labelledby')!)?.textContent);
-    expect(groups).toEqual(['plan.md — ~/acme · 2 matches', 'log.txt — ~/var · 25 matches, first 1 shown', 'Not searched']);
-    expect(options()).toEqual(['1the plan here', '4the plan here', '9the plan here', 'gone.md — ~/old: file not found']);
+    expect(groups).toEqual(['plan.md · ~/acme · 2 matches', 'log.txt · ~/var · 25 matches, first 1 shown', 'Not searched']);
+    expect(options()).toEqual(['1the plan here', '4the plan here', '9the plan here', 'gone.md · ~/old: file not found']);
     expect(status()).toBe('27 matches in 2 tabs');
   });
 

@@ -173,7 +173,7 @@ must not obstruct (plain files only, no sidecar metadata).
 
 - Print / export to PDF (offline, via the engine's print-to-PDF).
 - Obsidian-flavoured syntax: `[[wikilinks]]`, `> [!note]` callouts.
-- Per-profile GNOME launcher entries ("galeo — acme").
+- Per-profile GNOME launcher entries ("galeo · acme").
 
 ### Won't Have (v0.1)
 
@@ -546,7 +546,7 @@ as fast and as keyboard- and screen-reader-friendly as before.
 - **Export to PDF.** *Export to PDF…* saves the rendered document as a PDF, offline.
   - AC: The PDF has the document only, without galeo's bars, in the light theme, and avoids
     splitting code blocks and diagrams across pages. galeo writes only the file I chose.
-- **Launchers per profile.** On Linux, Settings can add a launcher "galeo — <profile>" that opens
+- **Launchers per profile.** On Linux, Settings can add a launcher "galeo · <profile>" that opens
   that profile, as the main launcher opens the default one.
   - AC: Removing it removes only launchers galeo added. On macOS and Windows the option says it
     isn't available.

@@ -55,7 +55,7 @@ describe('markerOf', () => {
 
 describe('titleText', () => {
   it("is the shown tab's name and folder, Settings for the Settings tab, and nothing in an empty window", () => {
-    expect(titleText([plan, settings], 'p')).toBe('plan.md — ~/docs');
+    expect(titleText([plan, settings], 'p')).toBe('plan.md · ~/docs');
     expect(titleText([plan, settings], 's')).toBe('Settings');
     expect(titleText([{ id: 'n', path: '/notes' }], 'n')).toBe('notes');
     expect(titleText([], null)).toBe('');

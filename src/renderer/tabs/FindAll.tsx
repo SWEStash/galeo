@@ -98,7 +98,7 @@ export function FindAll({
 
   const sections = useMemo(() => {
     const labels = tabLabels(tabs.map((tab) => tab.path));
-    const names = new Map(tabs.map((tab, index) => [tab.id, tab.folder ? `${labels[index]} — ${tab.folder}` : labels[index]!]));
+    const names = new Map(tabs.map((tab, index) => [tab.id, tab.folder ? `${labels[index]} · ${tab.folder}` : labels[index]!]));
     const name = (id: string) => names.get(id) ?? 'Closed tab';
     const found = (current?.result.tabs ?? []).flatMap((tab) => {
       if (!('found' in tab)) return [];

@@ -399,7 +399,7 @@ function start(initialMode: StartupMode): void {
     const shown = tabs.find((tab) => tab.id === active);
     return !shown ? null : shown.kind === 'settings' ? 'Settings' : path.basename(shown.path);
   };
-  /** `<file> — <profile> — galeo`, from the window's shown tab (UX). */
+  /** `<file> · <profile> · galeo`, from the window's shown tab (UX). */
   const updateTitle = (profile: ProfileRuntime, windowId: number) => {
     const window = profile.window(windowId);
     window?.setTitle(windowTitle([shownFile(windowId), profile.name], { sandboxed }));

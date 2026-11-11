@@ -17,10 +17,10 @@ const titles = (app: ElectronApplication) => app.evaluate(({ BrowserWindow }) =>
 test('the window title names the shown file and the profile', async () => {
   const { app, window, close } = await launchApp(['--', basic, gfm]);
   try {
-    await expect.poll(() => titles(app)).toEqual(['basic.md — default — galeo']);
+    await expect.poll(() => titles(app)).toEqual(['basic.md · default · galeo']);
     await expect(window.getByRole('tab')).toHaveCount(2);
     await window.keyboard.press('Control+Tab');
-    await expect.poll(() => titles(app)).toEqual(['gfm.md — default — galeo']);
+    await expect.poll(() => titles(app)).toEqual(['gfm.md · default · galeo']);
   } finally {
     await close();
   }
@@ -34,7 +34,7 @@ test('Ctrl+N opens an empty window of the same profile; Ctrl+Shift+W closes a wi
     await pressInMain(app, window, 'N');
     const second = await opened;
     await expect(second.getByTestId('empty-window')).toBeVisible();
-    await expect.poll(() => titles(app)).toEqual(['basic.md — default — galeo', 'default — galeo']);
+    await expect.poll(() => titles(app)).toEqual(['basic.md · default · galeo', 'default · galeo']);
     const gone = second.waitForEvent('close');
     await pressInMain(app, second, 'W', true);
     await gone;

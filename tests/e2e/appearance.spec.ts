@@ -123,7 +123,7 @@ test("a hand edit of profile.json's name shows in the chip and the title at once
     await expect(window.getByTestId('profile-chip')).toHaveAccessibleName('Profile: default');
     saveFile(file, '{"schemaVersion":1,"name":"Home"}');
     await expect(window.getByTestId('profile-chip')).toHaveAccessibleName('Profile: Home');
-    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe('basic.md — Home — galeo');
+    await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getTitle())).toBe('basic.md · Home · galeo');
   } finally {
     await close();
     removeTempHome(home);

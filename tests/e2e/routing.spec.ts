@@ -19,7 +19,7 @@ const shownPath = (page: Page) => page.getByRole('tab', { selected: true }).loca
  * window manager, so `focus()` sends no event: this runs main's own focus listener instead.
  */
 const focusProfileWindow = (app: ElectronApplication, profile: string) =>
-  app.evaluate(({ BrowserWindow }, name) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(` — ${name} — `))!.emit('focus'), profile);
+  app.evaluate(({ BrowserWindow }, name) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(` · ${name} · `))!.emit('focus'), profile);
 
 test('a later launch adds its files to the running window as tabs, shows the first, and exits', async () => {
   const home = tempHome();
@@ -70,7 +70,7 @@ test('a launch without --profile adds to the window focused last, whichever prof
     await expect.poll(() => paths(acme)).toEqual([gfm]);
     // A new window takes the focus once shown, a little later; only then does the reader move on.
     await expect
-      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(' — acme — '))!.isFocused()))
+      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(' · acme · '))!.isFocused()))
       .toBe(true);
     await focusProfileWindow(app, 'default');
     expect(launchSecond(home, ['--', math]).status).toBe(0);
@@ -97,7 +97,7 @@ test('--profile of a stopped profile brings back its saved tabs and adds the fil
     await expect.poll(() => paths(work)).toEqual([gfm]);
     // Closing its only window stops the profile; default keeps running.
     const gone = work.waitForEvent('close');
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(' — work — '))!.close());
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((each) => each.getTitle().includes(' · work · '))!.close());
     await gone;
     expect(app.windows()).toHaveLength(1);
     const back = app.waitForEvent('window');

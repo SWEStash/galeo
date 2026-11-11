@@ -258,11 +258,11 @@ function entryString(value: string): string {
 
 /** The launcher's Name and Comment lines for a profile called `name`. */
 function profileEntryNames(name: string): { name: string; comment: string } {
-  return { name: `Name=${entryString(`galeo — ${name}`)}`, comment: `Comment=${entryString(`Opens galeo in the ${name} profile`)}` };
+  return { name: `Name=${entryString(`galeo · ${name}`)}`, comment: `Comment=${entryString(`Opens galeo in the ${name} profile`)}` };
 }
 
 /**
- * A profile's own launcher (#60): an application entry "galeo — <name>" that opens galeo in that
+ * A profile's own launcher (#60): an application entry "galeo · <name>" that opens galeo in that
  * profile, by its id (a name could match another profile later, an unknown one would create it),
  * files after `--` (SR-13), with a New Window action. `exec` is the galeo command this run has.
  */

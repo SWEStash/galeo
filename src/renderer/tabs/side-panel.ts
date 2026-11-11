@@ -25,5 +25,5 @@ export function markerOf(tab: TabView, status: TabStatus | undefined, flags: Tab
 export function titleText(tabs: readonly TabView[], active: string | null): string {
   const tab = tabs.find((each) => each.id === active);
   if (!tab) return '';
-  return tab.folder ? `${rowName(tab)} — ${tab.folder}` : rowName(tab);
+  return tab.folder ? `${rowName(tab)} · ${tab.folder}` : rowName(tab);
 }

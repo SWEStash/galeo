@@ -61,7 +61,7 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(rows(window).first().locator('.tab-folder')).toContainText(/fixtures[\\/]docs/);
       await expect(window.getByRole('tablist')).toHaveAttribute('aria-orientation', 'vertical');
       const title = window.getByTestId('title-bar-text');
-      await expect(title).toHaveText(/^basic\.md — .*fixtures[\\/]docs$/);
+      await expect(title).toHaveText(/^basic\.md · .*fixtures[\\/]docs$/);
       expect(await title.evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('drag');
       expect(await window.getByTestId('window-grip').evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('drag');
       expect((await panel(window).boundingBox())!.width).toBe(220);
@@ -248,11 +248,11 @@ test('collapsed, the panel is a strip of markers that still show and take tabs; 
     expect(results.violations).toEqual([]);
 
     await rows(window).nth(2).hover();
-    await expect(window.getByTestId('marker-tip')).toHaveText(/^math\.md — /);
+    await expect(window.getByTestId('marker-tip')).toHaveText(/^math\.md · /);
     await rows(window).nth(2).click();
     await expect.poll(async () => (await snapshot(window)).active).toBe((await snapshot(window)).tabs[2]!.id);
     await window.keyboard.press('ArrowUp');
-    await expect(window.getByTestId('marker-tip')).toHaveText(/^gfm\.md — /);
+    await expect(window.getByTestId('marker-tip')).toHaveText(/^gfm\.md · /);
 
     await window.getByTestId('panel-toggle').click();
     await expect(panel(window)).not.toHaveAttribute('data-collapsed');

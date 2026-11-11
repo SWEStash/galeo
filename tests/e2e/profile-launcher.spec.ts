@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
 
-// A profile's launcher (#60, Linux): "galeo — <profile>" in the user's applications (the test's own).
+// A profile's launcher (#60, Linux): "galeo · <profile>" in the user's applications (the test's own).
 test.skip(process.platform !== 'linux', 'desktop entries are Linux only');
 const basic = path.resolve(import.meta.dirname, '../fixtures/docs/basic.md');
 
@@ -17,12 +17,12 @@ test("Settings adds this profile's launcher to the applications and removes it a
     await expect(window.getByTestId('settings-view')).toBeVisible();
     const result = window.getByTestId('profile-launcher-result');
     await window.getByRole('button', { name: 'Add to applications' }).click();
-    await expect(result).toHaveText('Added “galeo — default” to your applications.');
+    await expect(result).toHaveText('Added “galeo · default” to your applications.');
     const text = readFileSync(entry, 'utf8');
-    expect(text).toContain('Name=galeo — default');
+    expect(text).toContain('Name=galeo · default');
     expect(text).toContain('Exec=/opt/galeo/galeo --profile default -- %F');
     await window.getByRole('button', { name: 'Remove from applications' }).click();
-    await expect(result).toHaveText('Removed “galeo — default” from your applications.');
+    await expect(result).toHaveText('Removed “galeo · default” from your applications.');
     expect(existsSync(entry)).toBe(false);
   } finally {
     await close();
@@ -45,13 +45,13 @@ test("renaming the profile renames its launcher; without one, none is made", asy
     await expect(window.getByRole('tab')).toHaveCount(1);
     await window.keyboard.press('ControlOrMeta+Comma');
     await window.getByRole('button', { name: 'Add to applications' }).click();
-    await expect(window.getByTestId('profile-launcher-result')).toHaveText('Added “galeo — default” to your applications.');
+    await expect(window.getByTestId('profile-launcher-result')).toHaveText('Added “galeo · default” to your applications.');
     await rename('Personal');
-    await expect.poll(() => readFileSync(entry, 'utf8')).toContain('Name=galeo — Personal\nComment=Opens galeo in the Personal profile\n');
+    await expect.poll(() => readFileSync(entry, 'utf8')).toContain('Name=galeo · Personal\nComment=Opens galeo in the Personal profile\n');
     expect(readFileSync(entry, 'utf8')).toContain('Exec=/opt/galeo/galeo --profile default -- %F');
 
     await window.getByRole('button', { name: 'Remove from applications' }).click();
-    await expect(window.getByTestId('profile-launcher-result')).toHaveText('Removed “galeo — Personal” from your applications.');
+    await expect(window.getByTestId('profile-launcher-result')).toHaveText('Removed “galeo · Personal” from your applications.');
     await rename('Home');
     expect(existsSync(entry)).toBe(false);
   } finally {

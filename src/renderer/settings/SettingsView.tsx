@@ -386,19 +386,19 @@ function uninstalled({ removed, kept }: { removed: string[]; kept: string[] }): 
   return kept.length > 0 ? `Nothing removed.${keptNote}` : 'Nothing removed: the launcher is not installed.';
 }
 
-/** Adds this profile to the applications as "galeo — <name>", or takes it out again (#60). */
+/** Adds this profile to the applications as "galeo · <name>", or takes it out again (#60). */
 function ProfileLauncherSection({ name }: { name: string }) {
   const [result, setResult] = useState<string | null>(null);
   return (
     <>
       <h2>Profile launcher</h2>
-      <p className="field-hint">Adds “galeo — {name}” to your applications: it opens galeo in this profile, and files you open with it.</p>
+      <p className="field-hint">Adds “galeo · {name}” to your applications: it opens galeo in this profile, and files you open with it.</p>
       <div className="settings-buttons">
         <Button
           onPress={() =>
             void window.galeo.app
               .installProfileLauncher()
-              .then((outcome) => setResult(outcome.ok ? `Added “galeo — ${name}” to your applications.` : `Not added: ${outcome.reason}.`))
+              .then((outcome) => setResult(outcome.ok ? `Added “galeo · ${name}” to your applications.` : `Not added: ${outcome.reason}.`))
               .catch(() => setResult("Not added: galeo couldn't write the file."))
           }
         >
@@ -408,7 +408,7 @@ function ProfileLauncherSection({ name }: { name: string }) {
           onPress={() =>
             void window.galeo.app
               .uninstallProfileLauncher()
-              .then(({ removed, kept }) => setResult(removed.length > 0 ? `Removed “galeo — ${name}” from your applications.` : kept.length > 0 ? `Nothing removed: galeo didn't write ${kept[0]}.` : 'Nothing removed: it is not in your applications.'))
+              .then(({ removed, kept }) => setResult(removed.length > 0 ? `Removed “galeo · ${name}” from your applications.` : kept.length > 0 ? `Nothing removed: galeo didn't write ${kept[0]}.` : 'Nothing removed: it is not in your applications.'))
               .catch(() => setResult("Not removed: galeo couldn't remove the file."))
           }
         >
