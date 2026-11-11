@@ -164,6 +164,10 @@ jobs:
       - name: Verify the package
         if: ${{ !cancelled() && matrix.kind == 'package' }}
         run: npm run verify:package
+      # Does a closed galeo go away, without the test tool attached (#46)? Reports; doesn't fail on a straggler.
+      - name: Quit check
+        if: ${{ !cancelled() && matrix.kind == 'package' && runner.os == 'Windows' }}
+        run: node scripts/windows-quit-check.mjs
       # For the release: only from a job whose every step passed.
       - name: Hand the packages to the release
         if: ${{ success() && inputs.release && matrix.kind == 'package' }}

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
 import electronBinary from 'electron';
+import { describeProcesses, processesOf } from '../../scripts/lib/windows-processes.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 /** How long the app may take to quit when a test closes it. */
@@ -49,7 +50,7 @@ export function removeTempHome(home: string): void {
     rmSync(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 });
   } catch (error) {
     if (process.platform !== 'win32' || (error as NodeJS.ErrnoException).code !== 'EPERM') throw error;
-    console.warn(`left ${home}: ${(error as Error).message}`);
+    console.warn(`left ${home}: ${(error as Error).message}; still running: ${running()}`);
   }
 }
 
@@ -109,6 +110,7 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
         const quit = app.close().then(() => true);
         quit.catch(() => {});
         if (!(await Promise.race([quit, new Promise<false>((late) => setTimeout(() => late(false), QUIT_MS))]))) {
+          if (process.platform === 'win32') console.warn(`not gone after ${QUIT_MS / 1000} s, still running: ${running()}`);
           killProcess(child);
           // Node says so when the main process's JavaScript has ended: the app quit, and only its process
           // stayed, waiting on Playwright's debugger connection (seen on Windows).
@@ -126,6 +128,11 @@ export async function launchApp(args: string[] = [], options: LaunchOptions = {}
       }
     },
   };
+}
+
+/** Every Electron process still running on Windows (#45, #46), so a warning can say what held on. */
+function running(): string {
+  return describeProcesses(processesOf([String(electronBinary)])) || 'none';
 }
 
 /** Apps a test ended with killApp: close() then only waits for them to go. */
