@@ -1,8 +1,8 @@
 name: Pages
 
 # Publishes site/ as the project's website (https://swestash.github.io/galeo/) and, under /apt/, the signed apt
-# repository holding the latest release's .deb (ADR-029). Nothing is built: the .deb comes from the release,
-# checked against its checksum and attestation before it is signed.
+# repository holding the latest release's .deb files, one per architecture (ADR-029, ADR-035). Nothing is built:
+# the .deb files come from the release, checked against its checksums and attestations before they are signed.
 on:
   push:
     branches: [main]
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Download and check the latest release's .deb
+      - name: Download and check the latest release's .deb files
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,25 +64,32 @@ jobs:
             echo "No published release: the site only."
             exit 0
           fi
-          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$dir" --pattern 'galeo_*_amd64.deb' --pattern SHA256SUMS
-          debs=$(find "$dir" -name 'galeo_*_amd64.deb')
-          [ "$(printf '%s\n' "$debs" | wc -l)" -eq 1 ] || { echo "expected one .deb, got: $debs"; exit 1; }
+          # One per architecture (ADR-035); releases before 0.8.0 carry amd64 only.
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir "$dir" --pattern 'galeo_*.deb' --pattern SHA256SUMS
+          debs=$(find "$dir" -name 'galeo_*.deb' | sort)
+          printf '%s\n' "$debs" | grep -q '_amd64\.deb$' || { echo "no amd64 .deb, got: $debs"; exit 1; }
+          [ "$(printf '%s\n' "$debs" | wc -l)" -le 2 ] || { echo "expected at most two .deb files, got: $debs"; exit 1; }
           (cd "$dir" && sha256sum --ignore-missing --strict -c SHA256SUMS)
           # Built by the release workflow, from this release's own tag, on GitHub's runners.
-          gh attestation verify "$debs" --repo "$GITHUB_REPOSITORY" \
-            --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
-            --source-ref "refs/tags/$tag" --deny-self-hosted-runners
-          echo "deb=$debs" >> "$GITHUB_OUTPUT"
+          for deb in $debs; do
+            gh attestation verify "$deb" --repo "$GITHUB_REPOSITORY" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
+              --source-ref "refs/tags/$tag" --deny-self-hosted-runners
+          done
+          echo "debs=$(printf '%s ' $debs)" >> "$GITHUB_OUTPUT"
       - name: Build the unsigned repository
         id: build
         env:
-          DEB: ${{ steps.release.outputs.deb }}
+          DEBS: ${{ steps.release.outputs.debs }}
         run: |
           mkdir -p "$RUNNER_TEMP/pages"
           cp -R site/. "$RUNNER_TEMP/pages/"
-          # Only a .deb that ships the key can be installed from the repository (ADR-029).
-          if [ -n "$DEB" ] && scripts/apt-repo.sh has-key "$DEB"; then
-            scripts/apt-repo.sh build "$DEB" "$RUNNER_TEMP/pages/apt"
+          # Only .deb files that ship the key can be installed from the repository (ADR-029).
+          keyed=true
+          for deb in $DEBS; do scripts/apt-repo.sh has-key "$deb" || keyed=false; done
+          if [ -n "$DEBS" ] && [ "$keyed" = true ]; then
+            # shellcheck disable=SC2086
+            scripts/apt-repo.sh build "$RUNNER_TEMP/pages/apt" $DEBS
             cp packaging/linux/galeo-archive-keyring.asc "$RUNNER_TEMP/pages/apt/galeo.asc"
             echo "apt=true" >> "$GITHUB_OUTPUT"
           else

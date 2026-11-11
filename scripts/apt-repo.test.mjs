@@ -54,10 +54,10 @@ function newKey(home, name) {
   return file;
 }
 
-/** Builds and signs a repository holding `debFile`. */
-function signedRepo(name, debFile) {
+/** Builds and signs a repository holding `debFiles`. */
+function signedRepo(name, ...debFiles) {
   const dir = path.join(root, name);
-  const built = run('build', debFile, dir);
+  const built = run('build', dir, ...debFiles);
   expect(built.status, built.stderr).toBe(0);
   const signed = run('sign', dir);
   expect(signed.status, signed.stderr).toBe(0);
@@ -132,15 +132,32 @@ describe.skipIf(!haveTools)('apt-repo.sh', () => {
 
   it('fails the check of a repository that was never signed', () => {
     const dir = path.join(root, 'unsigned');
-    expect(run('build', good, dir).status).toBe(0);
+    expect(run('build', dir, good).status).toBe(0);
     expect(run('check', dir, key).status).toBe(1);
   });
 
-  it('builds only galeo for amd64, into a new folder', () => {
-    expect(run('build', deb('other-name', { pkg: 'notgaleo' }), path.join(root, 'x1')).stderr).toContain("'notgaleo', not galeo");
-    expect(run('build', deb('arm', { arch: 'arm64' }), path.join(root, 'x2')).stderr).toContain('for arm64, not amd64');
+  it('serves amd64 and arm64 from one signed Release, and apt accepts each', () => {
+    const dir = signedRepo('both', good, deb('good-arm', { arch: 'arm64' }));
+    expect(readdirSync(path.join(dir, 'pool/main/g/galeo')).sort()).toEqual(['galeo_1.2.3_amd64.deb', 'galeo_1.2.3_arm64.deb']);
+    expect(readFileSync(path.join(dir, 'dists/stable/Release'), 'utf8')).toContain('Architectures: amd64 arm64\n');
+    for (const arch of ['amd64', 'arm64']) {
+      const packages = readFileSync(path.join(dir, `dists/stable/main/binary-${arch}/Packages`), 'utf8');
+      expect(packages.match(/^Architecture: .*$/gm)).toEqual([`Architecture: ${arch}`]);
+    }
+    const checked = run('check', dir, key);
+    expect(checked.status, checked.stderr).toBe(0);
+    expect(checked.stdout).toContain('galeo_1.2.3_amd64.deb');
+    expect(checked.stdout).toContain('galeo_1.2.3_arm64.deb');
+  });
+
+  it('builds only galeo, for amd64 or arm64, one of each, one version, into a new folder', () => {
+    expect(run('build', path.join(root, 'x1'), deb('other-name', { pkg: 'notgaleo' })).stderr).toContain("'notgaleo', not galeo");
+    expect(run('build', path.join(root, 'x2'), deb('armhf', { arch: 'armhf' })).stderr).toContain('for armhf, not amd64 or arm64');
+    expect(run('build', path.join(root, 'x3'), good, deb('again')).stderr).toContain('two .deb files for amd64');
+    expect(run('build', path.join(root, 'x4'), good, deb('newer-arm', { arch: 'arm64', version: '1.2.4' })).stderr).toContain('1.2.4, not 1.2.3');
+    expect(run('build', path.join(root, 'x5')).stderr).toContain('usage');
     mkdirSync(path.join(root, 'taken'));
-    expect(run('build', good, path.join(root, 'taken')).stderr).toContain('already exists');
+    expect(run('build', path.join(root, 'taken'), good).stderr).toContain('already exists');
   });
 
   it('tells whether the .deb ships the repository key', () => {
