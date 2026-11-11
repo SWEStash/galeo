@@ -141,8 +141,10 @@ export class QuickOpen {
   }
 
   private sections(session: Session, query: string): ListedSection[] {
-    const { tabs, recent } = session.request;
-    const tabSet = new Set(tabs);
+    const { recent } = session.request;
+    // A file open in two tabs is listed once: each result's id is its file's, and ids must be unique.
+    const tabSet = new Set(session.request.tabs);
+    const tabs = [...tabSet];
     const recentFiles = recent.filter((path) => !tabSet.has(path));
     const listed = new Set([...tabs, ...recentFiles]);
     // Tabs and recent files match as the reader sees them (`~/…`).

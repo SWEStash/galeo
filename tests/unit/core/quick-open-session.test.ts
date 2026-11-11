@@ -72,6 +72,18 @@ describe('QuickOpen', () => {
     ]);
   });
 
+  it('lists a file open in two tabs once, so no two results share an id', async () => {
+    const { quickOpen, start } = setup();
+    const twice = `${HOME}/git/acme/README.md`;
+    const { token } = await start({ tabs: [twice, `${HOME}/git/acme/docs/plan-old.md`, twice] });
+    for (const query of ['', 're']) {
+      const results = await quickOpen.query(1, token, query);
+      expect(names(results, 'tabs').filter((name) => name === 'README.md')).toHaveLength(1);
+      const ids = results.sections.flatMap((section) => section.entries.map((entry) => entry.id));
+      expect(new Set(ids).size).toBe(ids.length);
+    }
+  });
+
   it('lists a tab or recent file only when the query reaches its name, not for letters spread over its folders', async () => {
     const { quickOpen, start } = setup();
     const scattered = '/srv/RUNNER/Local/Temps/README.md';
