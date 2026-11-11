@@ -15,7 +15,9 @@ export function svgSize(bytes: Uint8Array): { width: number; height: number } | 
   const tag = rootTag(head);
   if (tag === null) return null;
   const attributes = new Map<string, string>();
-  for (const [, name, quoted] of tag.matchAll(/([\w:.-]+)\s*=\s*("[^"]*"|'[^']*')/g)) attributes.set(name!, quoted!.slice(1, -1).trim());
+  // A name starts only where no name character comes before it: matching from inside a long run of
+  // them would make this quadratic in the tag's length.
+  for (const [, name, quoted] of tag.matchAll(/(?<![\w:.-])([\w:.-]+)\s*=\s*("[^"]*"|'[^']*')/g)) attributes.set(name!, quoted!.slice(1, -1).trim());
   const absolute = (value: string | undefined) => value !== undefined && value !== '' && !value.endsWith('%');
   if (absolute(attributes.get('width')) || absolute(attributes.get('height'))) return null;
   const box = attributes.get('viewBox')?.split(/[\s,]+/).filter(Boolean).map(Number);

@@ -47,4 +47,12 @@ describe('svgSize', () => {
     expect(size(`<!--${' '.repeat(16 * 1024)}--><svg viewBox="0 0 10 10">`)).toBeNull();
     expect(size(`<svg viewBox="0 0 10 10" data-x="${'x'.repeat(16 * 1024)}">`)).toBeNull();
   });
+
+  it('reads a root tag of one long name in linear time (main runs it for every image)', () => {
+    const long = `<svg ${'a'.repeat(16 * 1024 - 7)}>`;
+    const start = performance.now();
+    expect(size(long)).toBeNull();
+    expect(size(`<svg ${'a'.repeat(8000)} viewBox="0 0 10 20">`)).toEqual({ width: 10, height: 20 });
+    expect(performance.now() - start).toBeLessThan(50);
+  });
 });
