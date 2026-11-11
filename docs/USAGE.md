@@ -166,7 +166,7 @@ window watches one folder; watching another replaces it.
   symlinked folders are left out, and so is anything whose real path is outside the folder.
 - **Click or Enter** opens a file (Ctrl+Enter or a middle click: in a new window); it is then marked
   *opened*, and a later change marks it *changed* again. **Open all new** opens every file not
-  opened yet, oldest first. The list keeps the newest 200.
+  opened yet, oldest first, and asks first when there are more than 20. The list keeps the newest 200.
 - The panel shares the right side with the outline: opening one closes the other. **Ctrl+Shift+D**,
   the folder button in the title bar or the status bar's "Watching reports/" toggles it; while it is
   closed, the button shows how many files aren't opened yet.

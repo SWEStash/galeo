@@ -13,7 +13,7 @@ async function flush(): Promise<void> {
   for (let i = 0; i < 5; i++) await new Promise((resolve) => setImmediate(resolve));
 }
 
-function setup(answer: string | null = '/home/me/reports') {
+function setup(answer: string | null = '/home/me/reports', confirm = true) {
   let n = 0;
   const clock = new FakeClock(1_000);
   const fs = new FakeFileSystem({ '/home/me/reports/.keep.md': '', '/home/me/other/x.md': '', '/home/me/a-file.md': '' });
@@ -39,12 +39,17 @@ function setup(answer: string | null = '/home/me/reports') {
   const input = new InputCredits(() => 0);
   const opened: [number, readonly string[], boolean][] = [];
   const asked: number[] = [];
+  const confirmed: [number, number][] = [];
   const handlers = watchHandlers({
     watches,
     input,
     askFolder: async (window) => {
       asked.push(window);
       return answer;
+    },
+    confirmMany: async (window, count) => {
+      confirmed.push([window, count]);
+      return confirm;
     },
     open: (window, paths, newWindow) => {
       opened.push([window, paths, newWindow]);
@@ -62,7 +67,7 @@ function setup(answer: string | null = '/home/me/reports') {
     clock.advance(300);
   };
   const last = () => sent.at(-1)![1];
-  return { handlers, watches, input, opened, asked, sent, times, changed, arrive, last, tabs, watcher, clock, fs };
+  return { handlers, watches, input, opened, asked, confirmed, sent, times, changed, arrive, last, tabs, watcher, clock, fs };
 }
 
 describe('watchHandlers (ADR-034)', () => {
@@ -133,6 +138,36 @@ describe('watchHandlers (ADR-034)', () => {
     input.received(1);
     await handlers['watch.openAllNew']([], from(1));
     expect(opened).toHaveLength(1);
+  });
+
+  it('checks each entry again when opened: one swapped for a link out of the folder is refused or left out', async () => {
+    const { handlers, input, opened, arrive, last, fs } = setup();
+    input.received(1);
+    await handlers['watch.choose']([], from(1));
+    await arrive('/home/me/reports/a.md');
+    await arrive('/home/me/reports/b.md');
+    const a = last()!.entries.find((entry) => entry.name === 'a.md')!;
+    fs.symlink('/home/me/reports/a.md', '/home/me/a-file.md');
+    input.received(1);
+    await expect(handlers['watch.open']([a.id, false], from(1))).rejects.toThrow('not offered');
+    input.received(1);
+    await handlers['watch.openAllNew']([], from(1));
+    expect(opened).toEqual([[1, ['/home/me/reports/b.md'], false]]);
+  });
+
+  it('asks before opening more than 20 new entries at once; no opens nothing', async () => {
+    const run = async (confirm: boolean, count: number) => {
+      const { handlers, input, opened, arrive, confirmed } = setup('/home/me/reports', confirm);
+      input.received(1);
+      await handlers['watch.choose']([], from(1));
+      for (let i = 0; i < count; i++) await arrive(`/home/me/reports/n${i}.md`);
+      input.received(1);
+      await handlers['watch.openAllNew']([], from(1));
+      return { opened: opened.flatMap(([, paths]) => paths).length, confirmed };
+    };
+    expect(await run(false, 20)).toEqual({ opened: 20, confirmed: [] });
+    expect(await run(false, 21)).toEqual({ opened: 0, confirmed: [[1, 21]] });
+    expect(await run(true, 21)).toEqual({ opened: 21, confirmed: [[1, 21]] });
   });
 
   it('counts an entry for a file already open in a tab as opened when it arrives', async () => {

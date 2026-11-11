@@ -442,8 +442,10 @@ input, or a closed tab by id from another window
 (v0.8, ADR-034) A window may watch one folder, granted only by `--watch <dir>` or main's folder dialog
 spending an input credit. Main lists it (names, sizes, times; never content) to 4 levels inside its real
 path, never entering symlinked folders, and gives the page entry ids; opening an entry goes by id through
-the normal open path. The page never sends a path. A watched folder saved in the session is validated on
-load.
+the normal open path, after main checks again that the entry's real path is still inside the folder (one
+written into it could be swapped for a link out of it after the listing). *Open all new* asks main's own
+question before opening more than 20 tabs on one click. The page never sends a path. A watched folder saved
+in the session is validated on load.
 
 **SR-13 — Arguments are data.** The launcher passes file arguments after a `--` separator and as
 absolute paths. The `.desktop` entry uses `%F`. Main parses argv with a strict schema and never
@@ -487,7 +489,9 @@ font tokens). *AC*: adapter tests with a fake runner; the no-network suite opens
 - The own file watcher watches only open files (via their parent directories), coalesces events,
   and caps its rate.
 - A watched folder (ADR-034): the first scan stops at 50,000 files or 3 s, at most 1,000 folders are
-  watched (then polled), and the list keeps the newest 200 entries.
+  watched (then polled), and the list keeps the newest 200 entries. The polled folders have no cap: an
+  agent that keeps creating folders inside the watched one keeps main listing them every 3 s. Accepted
+  (owner, v0.8 audit): it is the folder the reader chose to watch, and stopping the watch ends it.
 - Re-reads of a changed file (ADR-033) run one at a time per tab. Main keeps a copy of the bytes it
   last sent only for files of 1 MiB or more, at most 512 MiB for all tabs, dropping the least recently
   read first; an append is sent only after an exact byte compare of the file's start.

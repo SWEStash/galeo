@@ -929,6 +929,7 @@ function start(initialMode: StartupMode): void {
           watches: folderWatches,
           input,
           askFolder: (windowId) => askFolder(windowId, activeFolder(windowId)),
+          confirmMany: confirmOpenMany,
           open: async (windowId, paths, newWindow) => {
             const profile = profileOf(windowId);
             if (!profile) return;
@@ -1095,6 +1096,20 @@ async function confirmBurst(windowId: number): Promise<boolean> {
     type: 'question',
     message: 'This document is opening many links. Allow?',
     buttons: ['Allow', 'Block for this tab'],
+    defaultId: 1,
+    cancelId: 1,
+  });
+  return response === 0;
+}
+
+/** Asks, in a native dialog the page can't answer for itself, whether to open `count` files at once. */
+async function confirmOpenMany(windowId: number, count: number): Promise<boolean> {
+  const answer = !app.isPackaged ? process.env['GALEO_TEST_OPEN_MANY_ANSWER'] : undefined;
+  if (answer) return answer === 'open';
+  const response = await ask(windowId, {
+    type: 'question',
+    message: `Open ${count} files in new tabs?`,
+    buttons: ['Open', 'Cancel'],
     defaultId: 1,
     cancelId: 1,
   });

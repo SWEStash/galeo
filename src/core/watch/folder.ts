@@ -280,8 +280,20 @@ export class FolderWatch {
     }
   }
 
+  /**
+   * Whether `path`, an entry listed earlier, still resolves inside the folder: checked again when it
+   * is opened, since whoever writes into the folder can swap it for a link out of it after the listing.
+   */
+  async stillInside(path: string): Promise<boolean> {
+    const real = await this.realpath(path);
+    return real !== null && this.inside(real);
+  }
+
+  /** Under the watched folder, by the root's own separator (`\\` only for a Windows path). */
   private inside(path: string): boolean {
-    return path.startsWith(`${this.root}/`) || path.startsWith(`${this.root}\\`);
+    const separator = /^([A-Za-z]:\\|\\\\)/.test(this.root) ? '\\' : '/';
+    const base = this.root.endsWith(separator) ? this.root : `${this.root}${separator}`;
+    return path.length > base.length && path.startsWith(base);
   }
 
   private schedulePoll(): void {

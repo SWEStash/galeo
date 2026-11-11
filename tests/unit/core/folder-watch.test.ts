@@ -95,6 +95,34 @@ describe('FolderWatch', () => {
     expect(watcher.watchedFolders()).toEqual(['/w']);
   });
 
+  it('checks an entry again when it is opened: one swapped for a link out of the folder is not', async () => {
+    const { write, settle, watch, fs } = await setup({ '/elsewhere/secret.md': 's' });
+    await write('/w/a.md');
+    await write('/w/b.md');
+    await settle();
+    expect(await watch.stillInside('/w/a.md')).toBe(true);
+    // Whoever writes into the folder swaps the file between the listing and the click.
+    fs.symlink('/w/a.md', '/elsewhere/secret.md');
+    expect(await watch.stillInside('/w/a.md')).toBe(false);
+    expect(await watch.stillInside('/w/gone.md')).toBe(false);
+    expect(await watch.stillInside('/w/b.md')).toBe(true);
+  });
+
+  it("takes only its own separator, and a folder at the file system's root", async () => {
+    const { write, settle, names, watcher } = await setup(
+      { '/w\\x/s.md': 's' },
+      { before: (fs) => fs.symlink('/w/l.md', '/w\\x/s.md') },
+    );
+    watcher.emitFolder('/w', { kind: 'entry', name: 'l.md' });
+    await write('/w/ok.md');
+    await settle();
+    expect(names()).toEqual(['ok.md:new']);
+
+    // A root already ends with its separator: what is under it is inside.
+    const root = new FolderWatch('/', { fs: new FakeFileSystem({ '/b.md': 'b' }), watcher: new FakeFileWatcher(), clock: new FakeClock(1_000), exclude: [], onChange: () => {} });
+    expect(await root.stillInside('/b.md')).toBe(true);
+  });
+
   it('watches a folder created after the start, and its files are new', async () => {
     const { settle, names, watcher, fs } = await setup();
     fs.write('/w/reports/2026/review.md', '# r');

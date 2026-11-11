@@ -37,7 +37,7 @@ palette: Watch folder… ─→ folder picker ─→ [Watching: panel opens, emp
      button.
    - The list, newest first: a mark (green *new*, amber *changed*, an outline once opened), the file name, *new
      · 14:12* or *changed · 14:15*, and the folder inside the watched one (`reviews/`, or `./`).
-   - Footer: *Open all new* (opens each unopened file as a tab, oldest first) and *Stop watching*.
+   - Footer: *Open all new* (opens each unopened file as a tab, oldest first; asks first past 20) and *Stop watching*.
 4. **States**:
    - Empty (just started, nothing yet): "Nothing new yet. Files created or changed in this folder show up here
      as they arrive."

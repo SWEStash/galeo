@@ -101,14 +101,23 @@ export class FolderWatches {
     return watched ? this.offer(window, watched) : null;
   }
 
-  /** The path of an entry the window was offered, or null for an id it wasn't (or no longer is). */
-  choose(window: number, id: string): string | null {
-    return this.windows.has(window) ? this.deps.grants.choose(window, 'watch', id) : null;
+  /**
+   * The path of an entry the window was offered, or null for an id it wasn't (or no longer is), or
+   * for an entry that no longer resolves inside the folder.
+   */
+  async choose(window: number, id: string): Promise<string | null> {
+    const watched = this.windows.get(window);
+    const path = watched ? this.deps.grants.choose(window, 'watch', id) : null;
+    return path !== null && (await watched!.watch.stillInside(path)) ? path : null;
   }
 
-  /** The entries not opened yet, oldest first. */
-  unopened(window: number): string[] {
-    return this.windows.get(window)?.watch.unopened() ?? [];
+  /** The entries not opened yet that still resolve inside the folder, oldest first. */
+  async unopened(window: number): Promise<string[]> {
+    const watched = this.windows.get(window);
+    if (!watched) return [];
+    const paths = watched.watch.unopened();
+    const inside = await Promise.all(paths.map((path) => watched.watch.stillInside(path)));
+    return paths.filter((_, index) => inside[index]);
   }
 
   /** The window's tabs changed: entries for the files they show are opened. */
