@@ -127,6 +127,20 @@ describe.skipIf(process.platform !== 'linux')('Linux launcher wrapper', () => {
     expect(result.stderr.trim().split('\n').at(-1)).toBe('line 4999');
   });
 
+  it('passes on what the app writes to stderr while it is still running', async () => {
+    const { wrapper } = install(`trap 'exit 0' TERM; echo 'galeo: live' >&2; while :; do sleep 0.05; done`);
+    const child = spawn(wrapper, [], { stdio: ['ignore', 'ignore', 'pipe'] });
+    try {
+      const seen = await new Promise<boolean>((resolve) => {
+        const deadline = setTimeout(() => resolve(false), 3000);
+        child.stderr.on('data', (chunk: Buffer) => chunk.toString().includes('galeo: live') && (clearTimeout(deadline), resolve(true)));
+      });
+      expect(seen).toBe(true);
+    } finally {
+      child.kill('SIGTERM');
+    }
+  });
+
   it('exits with the app even when a process it started still holds stderr', () => {
     const { wrapper } = install('sleep 20 >&2 & exit 0');
     const started = Date.now();

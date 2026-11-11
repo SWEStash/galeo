@@ -39,7 +39,12 @@ mkfifo "$work/stderr" || exec "$gal" "$@"
 
 # The app's stderr still reaches the terminal live. Only the first lines are kept, where
 # Chromium's sandbox failure appears, so the copy stays small however long the app runs.
-awk -v copy="$work/log" '{ print > "/dev/stderr"; fflush("/dev/stderr") } NR <= 200 { print > copy }' \
+# mawk (Debian's and Ubuntu's awk) holds a pipe's lines until its buffer fills unless told
+# `-W interactive`; another awk that doesn't take the flag silently reads lines as they come.
+live=
+[ -z "$(awk -W interactive 'BEGIN {}' </dev/null 2>&1)" ] && live='-W interactive'
+# shellcheck disable=SC2086 # $live is the flag and its value, or nothing.
+awk $live -v copy="$work/log" '{ print > "/dev/stderr"; fflush("/dev/stderr") } NR <= 200 { print > copy }' \
   <"$work/stderr" &
 reader=$!
 "$gal" "$@" 2>"$work/stderr" &
