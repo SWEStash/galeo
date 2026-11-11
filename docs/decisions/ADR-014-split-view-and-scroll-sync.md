@@ -2,6 +2,7 @@
 
 - Status: Accepted (2026-10-09; proposed 2026-10-08, wording matched to the code before acceptance)
 - Date: 2026-10-08
+- Amended: 2026-11-11 (owner, in place): the pane the reader acts on keeps the lead for 300 ms (Sync).
 - Deciders: project owner
 - Builds on: [ADR-003](ADR-003-rendering-pipeline-and-format-registry.md) (the render worker,
   `data-src-line` positions, `capabilities.split`), [ADR-006](ADR-006-renderer-ui-framework.md)
@@ -55,6 +56,11 @@ What exists in v0.1:
   leads; the other follows on the next animation frame. A follower's own scroll event is
   ignored while it is following, so the two never drive each other in a loop.
 - Find, outline jumps and links scroll the pane they act in, which then leads.
+- *(Amended 2026-11-11.)* For 300 ms after the reader's own input (wheel, pointer, keys, touch) on a
+  pane, the other pane's own scrolling doesn't lead; it is put back on the reader's line. The editor
+  aligns itself as split opens, in the same frames as a scroll the reader makes right away, and
+  would otherwise take the reader's pane back. A find, outline or link jump in that moment is put
+  back too.
 
 ### Live preview
 
