@@ -32,6 +32,36 @@ export const WINDOWS_PROG_ID = 'galeo.document';
  * The NSIS include behind `packaging/windows/associations.nsh` (a test keeps the two equal). Per
  * user, as the installer is (`SHELL_CONTEXT`). Files follow `--`, so no name can pass as a switch (SR-13).
  */
+/**
+ * The second line of the `galeo.cmd` that Settings → Install command-line launcher writes
+ * (`appCommand` in src/core/desktop/launcher.ts; a unit test keeps them equal).
+ */
+export const WINDOWS_COMMAND_MARK = 'rem Installed by galeo: the command-line launcher for its app.';
+
+/** Uninstall lines that delete the user's `galeo` command while it is galeo's, except during an update (#47). */
+function removeCommand() {
+  const file = '$LOCALAPPDATA\\Microsoft\\WindowsApps\\galeo.cmd';
+  return [
+    '  ; The `galeo` command, only while its second line is galeo\'s mark; an update keeps it.',
+    '  ${IfNot} ${isUpdated}',
+    '    Push $0',
+    '    Push $1',
+    '    ClearErrors',
+    `    FileOpen $0 "${file}" r`,
+    '    ${IfNot} ${Errors}',
+    '      FileRead $0 $1',
+    '      FileRead $0 $1',
+    '      FileClose $0',
+    `      \${If} $1 S== "${WINDOWS_COMMAND_MARK}$\\r$\\n"`,
+    `        Delete "${file}"`,
+    '      ${EndIf}',
+    '    ${EndIf}',
+    '    Pop $1',
+    '    Pop $0',
+    '  ${EndIf}',
+  ];
+}
+
 export function windowsAssociationsNsh() {
   const classes = 'Software\\Classes';
   const app = `${classes}\\Applications\\galeo.exe`;
@@ -40,6 +70,7 @@ export function windowsAssociationsNsh() {
   return [
     '; Generated from scripts/lib/associations.mjs by windowsAssociationsNsh(); a unit test keeps them equal.',
     '; Adds galeo to the "Open with" list of the types it reads. Never sets a type\'s default app.',
+    '; The uninstall also removes the `galeo` command Settings installed, while it is galeo\'s.',
     '',
     '!macro customInstall',
     `  WriteRegStr SHELL_CONTEXT "${classes}\\${WINDOWS_PROG_ID}" "" "galeo document"`,
@@ -59,6 +90,7 @@ export function windowsAssociationsNsh() {
     `  DeleteRegKey SHELL_CONTEXT "${classes}\\${WINDOWS_PROG_ID}"`,
     `  DeleteRegKey SHELL_CONTEXT "${app}"`,
     notify,
+    ...removeCommand(),
     '!macroend',
     '',
   ].join('\n');

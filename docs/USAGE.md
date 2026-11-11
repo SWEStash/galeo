@@ -95,7 +95,8 @@ JSON Lines), YAML, TOML, CSV, PSV and TSV files, never as their default app; the
 - on Windows it writes `galeo.cmd` to `%LOCALAPPDATA%\Microsoft\WindowsApps`, which is on your
   `PATH` already. For the portable build the command runs the `.exe` where you keep it.
 
-**Uninstall command-line launcher** removes the command again.
+**Uninstall command-line launcher** removes the command again. On Windows, uninstalling galeo removes
+it too, unless the file is no longer the one galeo wrote.
 
 ### Checking a download
 

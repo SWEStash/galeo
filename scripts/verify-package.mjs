@@ -3,11 +3,11 @@
 // its arguments. Playwright can't drive the packaged app: its fuses refuse --inspect.
 import { FuseV1Options, FuseVersion, flipFuses, getCurrentFuseWire } from '@electron/fuses';
 import { spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FUSES } from '../packaging/fuses.mjs';
-import { ASSOCIATED_EXTENSIONS, macDocumentTypeProblems, regValue, WINDOWS_PROG_ID } from './lib/associations.mjs';
+import { ASSOCIATED_EXTENSIONS, macDocumentTypeProblems, regValue, WINDOWS_COMMAND_MARK, WINDOWS_PROG_ID } from './lib/associations.mjs';
 import { desktopEntryProblems } from './lib/desktop-entry.mjs';
 import { fuseMismatches } from './lib/fuses.mjs';
 
@@ -157,8 +157,10 @@ if (process.platform === 'win32') {
   if (missing.length) failures.push(...missing.map((file) => `windows: no ${path.basename(file)} in release/`));
   else console.log(`windows: ${path.basename(setup)} and ${path.basename(portable)}`);
   if (!missing.includes(setup)) {
-    if (process.env.CI) failures.push(...windowsAssociationProblems(setup).map((problem) => `associations: ${problem}`));
-    else console.log('associations: skipped outside CI (the check installs galeo for this user)');
+    if (process.env.CI) {
+      failures.push(...windowsAssociationProblems(setup).map((problem) => `associations: ${problem}`));
+      failures.push(...windowsCommandProblems(setup).map((problem) => `galeo.cmd: ${problem}`));
+    } else console.log('associations, galeo.cmd: skipped outside CI (the checks install galeo for this user)');
   }
 }
 
@@ -187,6 +189,47 @@ function windowsAssociationProblems(setup) {
   if (left.length) problems.push(`the uninstall left ${left.join(', ')}`);
   else console.log('associations: the uninstall removed them');
   return problems;
+}
+
+/**
+ * The uninstaller deletes the `galeo` command Settings installed, and only that (#47): one install and
+ * uninstall with galeo's `galeo.cmd` in place, which must go, then one with someone else's, which must stay.
+ */
+function windowsCommandProblems(setup) {
+  const bin = path.win32.join(process.env.LOCALAPPDATA ?? '', 'Microsoft', 'WindowsApps');
+  const command = path.win32.join(bin, 'galeo.cmd');
+  const ours = ['@echo off', WINDOWS_COMMAND_MARK, '"C:\\galeo\\galeo.exe" --galeo-command -- %*', ''].join('\r\n');
+  const theirs = ['@echo off', 'rem Some other galeo.', 'echo hello', ''].join('\r\n');
+  mkdirSync(bin, { recursive: true });
+  const problems = [];
+  for (const [content, wanted] of [[ours, 'removed'], [theirs, 'kept']]) {
+    writeFileSync(command, content);
+    const problem = installAndUninstall(setup);
+    if (problem) return [...problems, problem];
+    const left = existsSync(command);
+    if (wanted === 'removed' && left) problems.push("the uninstall left galeo's galeo.cmd");
+    else if (wanted === 'kept' && !left) problems.push("the uninstall deleted a galeo.cmd that wasn't galeo's");
+    else if (wanted === 'kept' && readFileSync(command, 'utf8') !== content) problems.push("the uninstall changed a galeo.cmd that wasn't galeo's");
+    else console.log(`galeo.cmd: ${wanted === 'removed' ? "galeo's removed" : 'a foreign one kept'} by the uninstall`);
+  }
+  rmSync(command, { force: true });
+  return problems;
+}
+
+/** A silent per-user install, then a silent uninstall, waiting until the app's folder is gone; a problem, or null. */
+function installAndUninstall(setup) {
+  const install = spawnSync(setup, ['/S'], { timeout: 180_000 });
+  if (install.status !== 0) return `the silent install failed (${install.status ?? install.error?.message})`;
+  const query = spawnSync('reg', ['query', `HKCU\\Software\\Classes\\${WINDOWS_PROG_ID}\\shell\\open\\command`, '/ve'], { encoding: 'utf8' });
+  const exe = /^"([^"]+\\galeo\.exe)" /.exec(regValue(query.stdout, '(Default)') ?? '')?.[1];
+  if (!exe || !existsSync(exe)) return `no galeo.exe found after the install (${exe})`;
+  // The uninstaller hands over to a copy of itself and returns at once: wait for it to finish.
+  spawnSync(path.win32.join(path.win32.dirname(exe), 'Uninstall galeo.exe'), ['/S'], { timeout: 180_000 });
+  const deadline = Date.now() + 120_000;
+  while (existsSync(exe) && Date.now() < deadline) spawnSync('ping', ['-n', '2', '127.0.0.1']);
+  // The uninstall step runs before the files go; a moment more for the uninstaller to exit.
+  spawnSync('ping', ['-n', '3', '127.0.0.1']);
+  return existsSync(exe) ? `the uninstall left ${exe}` : null;
 }
 
 const mismatches = fuseMismatches(await getCurrentFuseWire(fuses), FUSES);
