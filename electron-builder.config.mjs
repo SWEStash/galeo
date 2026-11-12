@@ -1,4 +1,4 @@
-// Packaging (ADR-008): .deb (official) and AppImage on Linux, unsigned macOS and Windows previews.
+// Packaging (ADR-008): .deb (official), .rpm (preview, ADR-036) and AppImage on Linux, unsigned macOS and Windows previews.
 import { MAC_FILE_ASSOCIATIONS } from './scripts/lib/associations.mjs';
 import { MIME_TYPES } from './scripts/lib/desktop-entry.mjs';
 
@@ -15,6 +15,8 @@ export default {
   afterPack: './packaging/after-pack.mjs',
 
   linux: {
+    // The .rpm (ADR-036) is built only where CI asks for it (`--linux deb rpm AppImage`): rpmbuild isn't on
+    // every workstation.
     target: ['deb', 'AppImage'],
     // The hicolor sizes, named <size>x<size>.png; the window and the AppImage launcher use resources/icon.png.
     icon: 'packaging/icons/png',
@@ -51,6 +53,11 @@ export default {
     afterInstall: 'packaging/linux/after-install.tpl',
     afterRemove: 'packaging/linux/after-remove.tpl',
     appArmorProfile: 'packaging/linux/apparmor-profile.tpl',
+  },
+  // A CI-checked preview for Fedora and RHEL (ADR-036): no AppArmor; removal steps only on erase.
+  rpm: {
+    afterInstall: 'packaging/linux/rpm-after-install.tpl',
+    afterRemove: 'packaging/linux/rpm-after-remove.tpl',
   },
 
   // The runner's own architecture, as on Windows: CI builds arm64 and x64 on their own runners.
