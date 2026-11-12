@@ -37,7 +37,8 @@
   [032](decisions/ADR-032-design-tokens-v2.md) ·
   [033](decisions/ADR-033-incremental-reads.md) ·
   [034](decisions/ADR-034-watching-a-folder.md) ·
-  [035](decisions/ADR-035-linux-arm64-packages.md)
+  [035](decisions/ADR-035-linux-arm64-packages.md) ·
+  [036](decisions/ADR-036-rpm-packages-and-dnf-repository.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
