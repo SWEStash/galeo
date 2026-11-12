@@ -90,10 +90,12 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
   }, [active, staleReads]);
   const { document, navigated } = useDocument(id, appliedReads, onMessage);
   const [arrival, setArrival] = useState<Arrival | null>(null);
-  // An anchor within the current read (a link or a history step inside the document).
-  const [pendingAnchor, setPendingAnchor] = useState<{ anchor: string; token: number; navigation: number } | null>(
-    null,
-  );
+  // An anchor within the current read (a link or a history step inside the document), or where the
+  // link that opened this tab pointed.
+  const [pendingAnchor, setPendingAnchor] = useState<{ anchor: string; token: number; navigation: number } | null>(() => {
+    const anchor = store.anchorOf(id);
+    return anchor ? { anchor, token: Date.now(), navigation: 0 } : null;
+  });
 
   // A new read of the same navigation is the file changed on disk: the tab says so briefly.
   const lastRead = useRef<{ navigation: number; generation: number } | null>(null);

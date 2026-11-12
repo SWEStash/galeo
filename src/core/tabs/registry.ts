@@ -128,12 +128,14 @@ export class TabRegistry {
   snapshot(window: number): TabSnapshot {
     const tabs = (this.order.get(window) ?? []).map((id): TabView => {
       const record = this.records.get(id)!;
-      const { position, view, follow, ratio, table } = record.entries[record.index]!;
+      const { anchor, position, view, follow, ratio, table } = record.entries[record.index]!;
       return {
         ...recordOf(record),
         ...(record.zoom ? { zoom: record.zoom } : {}),
         ...(record.width ? { width: record.width } : {}),
         ...(position ? { position } : {}),
+        // Where a link pointed, until the page has a place of its own: a tab a link opened lands there.
+        ...(anchor && !position ? { anchor } : {}),
         ...(view ? { view } : {}),
         ...(follow ? { follow } : {}),
         ...(ratio ? { ratio } : {}),

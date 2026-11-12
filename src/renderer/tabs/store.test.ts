@@ -355,6 +355,14 @@ describe('createTabStore', () => {
     expect(api.renderAgain).toHaveBeenLastCalledWith('b');
   });
 
+  it('keeps where the link that opened a tab pointed, until the tab has a place of its own', async () => {
+    const { store } = setup({ revision: 1, active: 'a', tabs: [{ id: 'a', path: '/d/a.md' }, { id: 'b', path: '/d/b.md', anchor: 'details' }] });
+    await store.start();
+    expect([store.anchorOf('a'), store.anchorOf('b')]).toEqual([null, 'details']);
+    store.moved('b', { line: 4, offset: 0, heading: null, fraction: 0.3 });
+    expect(store.anchorOf('b')).toBeNull();
+  });
+
   it("takes zoom and last positions from main's snapshots (a restored session)", async () => {
     const where = { line: 4, offset: 0, heading: null, fraction: 0.3 };
     const { store } = setup({ revision: 1, active: 'a', tabs: [{ id: 'a', path: '/d/a.md', zoom: 1.5, position: where }] });

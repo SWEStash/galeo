@@ -31,6 +31,15 @@ describe('TabRegistry', () => {
     expect(records.get('id-99', 1)).toBeUndefined();
   });
 
+  it("tells the page where a link pointed until the tab reports a place of its own", () => {
+    const tabs = new TabRegistry(counterIds());
+    const { id } = tabs.open('/d/a.md', 1, 'details');
+    tabs.open('/d/b.md', 1, '');
+    expect(tabs.snapshot(1).tabs.map((tab) => tab.anchor)).toEqual(['details', undefined]);
+    tabs.setPosition(id, 1, { line: 3, offset: 0, heading: null, fraction: 0.2 });
+    expect(tabs.snapshot(1).tabs[0]!.anchor).toBeUndefined();
+  });
+
   it('never hands out the same id twice, even if the source repeats', () => {
     const repeats = ['same', 'same', 'other'];
     const records = new TabRegistry(() => repeats.shift()!);

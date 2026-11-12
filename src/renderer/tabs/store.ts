@@ -119,6 +119,8 @@ export interface TabStore {
   /** The reader scrolled a tab: kept here for its next wake, and reported to main for history and sessions. */
   moved(id: string, position: ScrollAnchor): void;
   positionOf(id: string): ScrollAnchor | null;
+  /** Where the link that opened the tab pointed, while it has no place of its own yet. */
+  anchorOf(id: string): string | null;
   /** How the tab's document is shown: the reader's chosen view and follow state (the session keeps it). */
   viewStateOf(id: string): TabViewState;
   setViewState(id: string, state: TabViewState): void;
@@ -164,6 +166,7 @@ export function createTabStore(api: TabsApi): TabStore {
   };
   const reloadTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const positions = new Map<string, ScrollAnchor>();
+  const anchors = new Map<string, string>();
   const viewStates = new Map<string, TabViewState>();
   let unsubscribe: (() => void)[] = [];
   /** A tab to activate as soon as a snapshot has it (a reopened one, before main's snapshot). */
@@ -191,6 +194,7 @@ export function createTabStore(api: TabsApi): TabStore {
     const updated = new Set([...merged.updated].filter((id) => ids.has(id) && id !== merged.active));
     view = { ...merged, rendered, reloaded, updated, reads: own(merged.reads), statuses: own(merged.statuses), zooms: own(merged.zooms), widths: own(merged.widths) };
     for (const id of positions.keys()) if (!ids.has(id)) positions.delete(id);
+    for (const id of anchors.keys()) if (!ids.has(id)) anchors.delete(id);
     for (const id of viewStates.keys()) if (!ids.has(id)) viewStates.delete(id);
     for (const listener of listeners) listener();
   };
@@ -245,6 +249,8 @@ export function createTabStore(api: TabsApi): TabStore {
     const crashed = new Set(snapshot.tabs.flatMap((tab) => (tab.crashed ? [tab.id] : [])));
     for (const tab of snapshot.tabs) {
       if (tab.position && !positions.has(tab.id)) positions.set(tab.id, tab.position);
+      if (tab.anchor && !positions.has(tab.id)) anchors.set(tab.id, tab.anchor);
+      else anchors.delete(tab.id);
       // Main's is the entry the tab shows now: after a navigation, another entry's.
       viewStates.set(tab.id, {
         ...(tab.view ? { view: tab.view } : {}),
@@ -329,6 +335,7 @@ export function createTabStore(api: TabsApi): TabStore {
       void api.position(id, position);
     },
     positionOf: (id) => positions.get(id) ?? null,
+    anchorOf: (id) => (positions.has(id) ? null : (anchors.get(id) ?? null)),
     viewStateOf: (id) => viewStates.get(id) ?? {},
     setViewState(id, state) {
       if (JSON.stringify(viewStates.get(id) ?? {}) === JSON.stringify(state)) return;

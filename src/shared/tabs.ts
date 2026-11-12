@@ -34,6 +34,8 @@ export interface TabView extends DocumentRecord, TabViewState {
   zoom?: number;
   width?: ReaderWidth;
   position?: ScrollAnchor;
+  /** Where the link that opened it pointed, while it has no `position` yet. */
+  anchor?: string;
   /** It was rendering when the window's renderer crashed: shown only when the reader asks (ADR-002). */
   crashed?: true;
   /** Pinned: in the block at the start of the window's tabs. */

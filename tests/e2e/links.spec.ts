@@ -57,6 +57,26 @@ test('an anchor link scrolls within the document, and back returns to the top', 
   }
 });
 
+test('a link opened in a new tab lands on its heading, there and within the document (#57)', async () => {
+  const { window, close } = await launchApp(['--', index], { env });
+  try {
+    const document = window.getByTestId('document');
+    const tabs = window.getByRole('tab');
+    await document.getByRole('link', { name: 'Raw HTML link to a section' }).click({ button: 'middle' });
+    await expect(tabs).toHaveCount(2);
+    await tabs.filter({ hasText: 'other.md' }).click();
+    await expect(document.locator('h2', { hasText: 'Details' })).toBeInViewport();
+    await tabs.filter({ hasText: 'index.md' }).click();
+    await document.getByRole('link', { name: 'A section further down' }).click({ button: 'middle' });
+    await expect(tabs).toHaveCount(3);
+    await tabs.nth(1).click();
+    // Both index.md tabs stay rendered: the shown one is the new tab.
+    await expect(window.getByTestId('document').filter({ visible: true }).locator('h2', { hasText: 'Far section' })).toBeInViewport();
+  } finally {
+    await close();
+  }
+});
+
 test('web and mail links go to the desktop, normalized, and never navigate the page', async () => {
   const { app, window, close } = await launchApp(['--', index], { env });
   try {
