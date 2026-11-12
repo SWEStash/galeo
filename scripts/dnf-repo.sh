@@ -37,7 +37,9 @@ sign_packages() {
   [ -n "$signer" ] || fail 'no secret key in GNUPGHOME'
   for package do
     [ -f "$package" ] || fail "no such .rpm: $package"
-    rpmsign --addsign --define "_gpg_path ${GNUPGHOME:?}" --define "_gpg_name $signer" "$package" > /dev/null \
+    # Ubuntu's rpm looks for /usr/bin/gpg2, which Ubuntu doesn't ship: name the gpg on PATH.
+    rpmsign --addsign --define "__gpg $(command -v gpg)" --define "_gpg_path ${GNUPGHOME:?}" --define "_gpg_name $signer" \
+      "$package" > /dev/null \
       || fail "rpmsign failed: $package"
   done
   # Checked against the public key alone, in a keyring of its own.
