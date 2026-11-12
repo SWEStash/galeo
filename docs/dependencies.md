@@ -97,7 +97,7 @@ installed as npm packages. They are plain assets with no code and change rarely.
 | `@types/node` | 24.x | MIT | 2026-09 | Node API types for `main`/`preload`, pinned to the Node 24 major. Electron depends on it transitively; listed explicitly so the typecheck doesn't rest on a transitive package (added 2026-09-26) |
 | `@types/react`, `@types/react-dom` | 19.3.x | MIT | 2026-09 | React types (React ships none) for the renderer typecheck (added 2026-09-26) |
 | `vite` | 8.3.x | MIT | 2026-09-24 | Builds all four bundles: main and preload (library/SSR builds), renderer, worker (ADR-008). A small own dev script (`scripts/dev.mjs`) restarts Electron when main or preload rebuild |
-| `@vitejs/plugin-react` | 6.2.x | MIT | 2026-09 | JSX + fast refresh for Vite 8 (1 dependency; its Babel/compiler peers are optional and not used) |
+| `@vitejs/plugin-react` | 6.3.x | MIT | 2026-09 | JSX + fast refresh for Vite 8 (1 dependency; its Babel/compiler peers are optional and not used) |
 | `electron-builder` | 26.18.x | MIT | 2026-09-26 | Packaging: `.deb` (official) + AppImage (secondary), and unsigned macOS `.dmg`/`.zip` and Windows NSIS installer and portable previews. **Verified**: its configuration schema has `electronFuses` (fuses at package time, SR-08), and its v26 `.deb` post-install installs an AppArmor `userns` profile on Ubuntu 24.04+ |
 | `@electron/fuses` | 2.1.x | MIT | 2026-06-29 | Reading fuses back from the packaged binary in CI (SR-08) |
 | `happy-dom` | 21.0.x | MIT | 2026-09 | DOM environment for the `renderer` vitest project. Lighter and faster than jsdom; renderer tests are unit-level, so its missing layout APIs don't matter (added 2026-09-26) |
