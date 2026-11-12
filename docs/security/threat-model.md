@@ -2,16 +2,17 @@
 
 - **Status**: Approved (2026-09-26; design-time — to be verified against the built app by a
   security audit before each release)
-- **Date**: 2026-09-25 (updated 2026-09-26; requirements added per release since, last 2026-11-04)
+- **Date**: 2026-09-25 (updated 2026-09-26; requirements added per release since, last 2026-11-12)
 - **Scope**: v0.1 "reader" to v0.5 "platforms" (the macOS and Windows previews included), and the apt
-  repository (ADR-029)
+  repository (ADR-029); the `.rpm` and its dnf repository (ADR-036, v0.9)
 - **Related**: [PRD](../PRD.md) · [UX specification](../design/ux.md) ·
   ADRs [001](../decisions/ADR-001-app-shell-stack.md)–[029](../decisions/ADR-029-apt-repository-on-github-pages.md), notably
   [ADR-004](../decisions/ADR-004-security-and-zero-network.md) (security & zero network),
   [ADR-005](../decisions/ADR-005-profiles-and-session-persistence.md) (profiles & sessions),
   [ADR-007](../decisions/ADR-007-platform-seam.md) (platform seam),
   [ADR-008](../decisions/ADR-008-packaging-and-distribution.md) (packaging),
-  [ADR-029](../decisions/ADR-029-apt-repository-on-github-pages.md) (apt repository)
+  [ADR-029](../decisions/ADR-029-apt-repository-on-github-pages.md) (apt repository),
+  [ADR-036](../decisions/ADR-036-rpm-packages-and-dnf-repository.md) (dnf repository)
 
 Framed by the four questions: what are we building, what can go wrong, what are we doing about
 it, did we do a good job.
@@ -137,6 +138,7 @@ Ranking is likelihood × impact: **H**igh, **M**edium, **L**ow.
 | T18 | B4, B1 | E | **Programs main starts (v0.3).** `fc-list` (the font pickers) and `update-mime-database` (the AppImage launcher) are found on `PATH` by name. A relative `PATH` entry (`.`, or an empty one) resolves against the folder galeo was started in, so a cloned repo's executable `fc-list` runs as the user. | L |
 | T19 | B3 | E, T, I | **Tabs moving between windows (v0.3, ADR-019).** A compromised page claims a tab the reader drags in another window, with its edit grant and unsaved text, by naming an id it learned earlier. It can also learn which files and profiles the other windows show. | L |
 | T20 | B8 | T, E | **A malicious update through the apt repository (ADR-029).** Whoever holds the repository's signing subkey, or can change the Pages workflow on `main`, signs a package that apt installs as root on every machine that added the repository. | M (impact **H**) |
+| T22 | B8 | T, E | **A malicious update through the dnf repository (ADR-036).** Whoever holds the dnf signing subkey signs an `.rpm`, or `repomd.xml` naming one, that dnf installs as root on every machine that added the repository. The subkey is in two places: the release workflow's signing job (packages) and the Pages workflow (metadata). | M (impact **H**) |
 | T21 | B8 | T, D | **Stale repository metadata.** An attacker between the user and Pages, or a cache, serves an older correctly signed `InRelease`, so the user is held on an old version and misses a security release. | L |
 | T16 | — | R | **Repudiation.** Not meaningful for a single-user local tool; there are no actions by other principals to attribute. | — (accepted) |
 
@@ -157,6 +159,7 @@ Ranking is likelihood × impact: **H**igh, **M**edium, **L**ow.
 | A11 | As a hostile repo author, I commit a 400 KB `data.csv` whose first line has 200,000 fields, so that the window showing it, and every session that restores it, freezes. | T8 |
 | A12 | As a hostile repo author, I ship an executable `fc-list` and wait for a user whose `PATH` starts with `.` to run `galeo` in the repo and open the font picker. | T18 |
 | A13 | As an attacker with script in one window's renderer, I keep the id of a tab that left my window. When the reader later drags it in another window, I claim it, with its edit grant. | T19, T6 |
+| A15 | As an attacker who can push to a branch, I start the release workflow there so its signing job signs an `.rpm` I built. | T22 |
 | A14 | As an attacker who stole the apt repository's signing subkey, I sign a `galeo` package with a higher version and serve it from a mirror or a hijacked network, so that the next `apt upgrade` runs my post-install script as root. | T20 |
 
 ## 5. What we're doing about it: decisions and security requirements
@@ -182,6 +185,7 @@ criteria, feeding ADR-004/005/007/008 and the tests that prove them.
 | T18 | Mitigate (v0.3 audit L3: only absolute `PATH` entries) | SR-13 |
 | T19 | Mitigate (a drag is claimed once, on input; v0.3 audit L1: claimed by a per-drag token, not the tab id). The window list's file and profile names are accepted as metadata a page can't send anywhere (SR-04, SR-06), and are given only on real input (v0.3 audit I4). | SR-12, SR-16 |
 | T20 | Mitigate (a package is signed only after its checksum and attestation verify; the subkey lives only in the `github-pages` environment, which only `main` deploys; the signing job runs no npm packages and holds the key in a single step; the primary key and revocation certificate stay offline; the public key ships in the `.deb`, so a revocation reaches users with the next upgrade; a revocation runbook in `docs/RELEASING.md`). Write access to `main` can already change the release workflow, so it adds no new power. | SR-10 |
+| T22 | Mitigate as T20: packages are signed only by a release job that runs after both build jobs passed, runs no npm packages and no Actions beyond GitHub's own, pinned, holds the key in one step, and checks every signature against the published key; its `rpm-signing` environment admits only `main` and its tags, so a branch's run can't read the key (A15); the Pages job signs only `repomd.xml`, after the packages' checksums and attestations verify, and installs galeo from the result with `gpgcheck` and `repo_gpgcheck` before it deploys; a separate subkey from apt's, so one leak revokes one; the public key ships in the `.rpm`, whose post-install keeps `/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo` current; runbook in `docs/RELEASING.md`. | SR-10 |
 | T21 | **Accept.** Pages serves over HTTPS, and `Acquire-By-Hash` keeps `InRelease` and `Packages` consistent; a `Valid-Until` would need a scheduled re-sign for a small gain. Owner: project owner (2026-11-04, ADR-029). | SR-10 |
 | T17 | Mitigate (sandbox on by default; `.deb` ships the AppArmor `userns` profile; unsandboxed only by explicit per-launch user opt-in, with a persistent warning, ADR-008; the "sandbox unavailable" window runs unsandboxed with no document content, ADR-009). Residual risk accepted by the user who opts in. Owner: project owner (2026-09-26) | SR-01, SR-08 |
 | T16 | **Accept.** Not applicable to a single-user local tool. Owner: project owner. | — |
@@ -327,6 +331,11 @@ ship an Electron major that is out of support.
   its revocation certificate are kept offline by the owner. The public key ships in the `.deb`, whose
   post-install script keeps `/usr/share/keyrings/galeo-archive-keyring.asc` current; users' first copy is downloaded
   over HTTPS from the same site, and the usage guide shows its fingerprint.
+- The dnf repository ([ADR-036](../decisions/ADR-036-rpm-packages-and-dnf-repository.md)) carries only a published
+  release's `.rpm` files, signed by the release workflow before they are checksummed and attested, so the release and
+  the repository serve one file. Its own signing subkey is a secret of the `rpm-signing` environment (`main` and its
+  tags only) and of `github-pages`, where it signs `repomd.xml` only, after the packages verify; both jobs follow the
+  apt job's rules, and the Pages workflow installs galeo from the signed repository with dnf before it deploys.
 *AC*: CI configuration reviewed against this list before v0.1; the Pages workflow against the apt bullet when
 it first publishes the repository.
 

@@ -32,7 +32,9 @@ AppImage in CI, on an x64 and an arm64 runner (the arm64 one also runs the end-t
 `.zip`, setup and portable `.exe`, each for x64 and arm64;
 [ADR-027](decisions/ADR-027-macos-windows-previews.md)) with their tests. It runs
 `verify:package` on every package, and only when every job passed writes `SHA256SUMS`, attests all
-12 packages and drafts a GitHub Release. Nothing built on a workstation is published.
+14 packages and drafts a GitHub Release. Before that, one job signs the two `.rpm` files
+([ADR-036](decisions/ADR-036-rpm-packages-and-dnf-repository.md)), so what is checksummed and attested is
+the signed file. Nothing built on a workstation is published.
 
 Before the version commit, run the Platforms workflow once on the release candidate (push it to
 `ci/platforms`, or `gh workflow run platforms.yml --ref main`), so the tag finds nothing new on
@@ -68,15 +70,16 @@ Then cut it:
 8. **Tag**: `v<version>` on the checked commit, then push the tag. The workflow refuses a tag that
    doesn't match `package.json` or isn't on `main`.
 9. **Publish**: when the workflow is green, download the assets from the draft release and check
-   them: `sha256sum -c SHA256SUMS` (all 12 packages) and
+   them: `sha256sum -c SHA256SUMS` (all 14 packages) and
    `gh attestation verify galeo_<version>_amd64.deb --repo SWEStash/galeo` (GitHub CLI 2.49 or
-   later; the same for the AppImage and for one macOS and one Windows file). The notes end with the
+   later; the same for the AppImage, one `.rpm`, and one macOS and one Windows file). The notes end with the
    previews' Gatekeeper and SmartScreen steps. Edit the draft's notes (a list of commit subjects to start from) for readers, then
    publish it. The version is now **released**.
 10. **Website**: if the UI changed visibly, retake the [website's screenshots](development.md#website)
     and commit them; the page links to the latest release, so nothing else changes.
-11. **apt repository**: publishing starts the Pages workflow, which starts a second run on `main` (only
-    `main` may deploy); that one checks the new `.deb` and signs the repository. When it is green, `sudo apt update && apt policy galeo` on the reference machine shows the
+11. **apt and dnf repositories**: publishing starts the Pages workflow, which starts a second run on `main` (only
+    `main` may deploy); that one checks the new `.deb` and `.rpm` files, signs both repositories and installs from
+    the dnf one on x64 and arm64. When it is green, `sudo apt update && apt policy galeo` on the reference machine shows the
     new version as the candidate. If the release was published by a token rather than by hand, the
     workflow doesn't start: run it with `gh workflow run pages.yml --ref main`.
 12. **Milestone**: move each issue still open in the release's milestone to the next milestone or to
@@ -122,7 +125,60 @@ To work with the offline key: `export GNUPGHOME=<media>/galeo-apt-gnupg`.
    The trailing `!` exports that subkey alone; the stick's key keeps its passphrase.
 5. Say in the release notes what happened, which subkey was revoked, and that users should upgrade now.
 
-**If the primary key or both signing subkeys are lost or leak:** delete the secret, publish the revocation
+## The dnf repository's subkey
+
+The dnf repository and the `.rpm` files ([ADR-036](decisions/ADR-036-rpm-packages-and-dnf-repository.md)) are
+signed by the same key, through a **dnf signing subkey** of its own: `<fingerprint, recorded when it is made>`.
+CI holds it as the `DNF_SIGNING_KEY` secret of two environments: `rpm-signing`, read only by the release
+workflow's *Sign the .rpm packages* job, and `github-pages`, read only by the Pages workflow's signing job (for
+`repomd.xml`). The standby subkey above covers it too. The public key file carries it; the `.rpm` installs that
+file as `/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo`, the path users' `.repo` file names.
+
+**Setting it up**, or again after it was removed:
+
+1. Create the `rpm-signing` environment with its rule before any run references it: GitHub creates a referenced
+   environment on the spot, with no rule.
+   ```sh
+   gh api -X PUT repos/SWEStash/galeo/environments/rpm-signing \
+     -F 'deployment_branch_policy[protected_branches]=false' -F 'deployment_branch_policy[custom_branch_policies]=true'
+   gh api -X POST repos/SWEStash/galeo/environments/rpm-signing/deployment-branch-policies -f name=main -f type=branch
+   gh api -X POST repos/SWEStash/galeo/environments/rpm-signing/deployment-branch-policies -f name='v*' -f type=tag
+   gh api repos/SWEStash/galeo/environments/rpm-signing/deployment-branch-policies --jq '.branch_policies[] | "\(.type) \(.name)"'
+   ```
+   The last command lists `branch main` and `tag v*`, and nothing else.
+2. Add the subkey to the offline key, in a copy of it in memory, and keep the result on the stick:
+   ```sh
+   RAM=$(mktemp -d -p /dev/shm) && chmod 700 "$RAM"
+   cp -a /media/$USER/<stick>/galeo-apt-gnupg/. "$RAM" && export GNUPGHOME="$RAM"
+   gpg --quick-add-key <fingerprint> ed25519 sign never
+   gpg --list-keys --with-subkey-fingerprints <fingerprint>    # the newest [S] subkey: record it above
+   cp -a "$RAM"/. /media/$USER/<stick>/galeo-apt-gnupg/
+   gpg --armor --export <fingerprint> > packaging/linux/galeo-archive-keyring.asc
+   ```
+3. Set the secret in both environments, exported without a passphrase from that copy only (the stick's key
+   keeps its passphrase), then delete the copy:
+   ```sh
+   gpg --change-passphrase <fingerprint>      # in the copy only: enter the passphrase, then an empty one
+   gpg --armor --export-secret-subkeys '<dnf subkey fingerprint>!' | gh secret set DNF_SIGNING_KEY --env rpm-signing --repo SWEStash/galeo
+   gpg --armor --export-secret-subkeys '<dnf subkey fingerprint>!' | gh secret set DNF_SIGNING_KEY --env github-pages --repo SWEStash/galeo
+   gpgconf --kill all && rm -r -- "${RAM:?}" && unset GNUPGHOME
+   ```
+4. Commit the public key file (the `.deb` and `.rpm` carry it to users with their next upgrade), push, and run the
+   release workflow by hand on `main`: its *Sign the .rpm packages* job signs both files and checks them against
+   the committed key.
+
+**If the dnf subkey leaks, or might have:** as for the apt subkey, with these names.
+1. Delete it from both environments at once: `gh secret delete DNF_SIGNING_KEY --env rpm-signing --repo SWEStash/galeo`
+   and the same with `--env github-pages`. Releases and the Pages workflow then fail at signing; the live repository
+   stays as it was.
+2. With the offline key, revoke the dnf subkey and add a new one (apt step 2), and export the public key.
+3. Release a patch version carrying that key, signed **with the standby subkey**: set it as `DNF_SIGNING_KEY` and
+   the offline key's passphrase as `DNF_SIGNING_PASSPHRASE`, in both environments, for that release only.
+4. Once its deploy is green, delete both `DNF_SIGNING_PASSPHRASE` secrets, set the new dnf subkey in both
+   environments (step 3 above), and add a new standby subkey: the old one is now spent for apt too.
+5. Say in the release notes what happened, which subkey was revoked, and that users should upgrade now.
+
+**If the primary key or both signing subkeys are lost or leak:** delete the secrets (apt's and dnf's), publish the revocation
 certificate (`gpg --import <media>/galeo-apt-gnupg/openpgp-revocs.d/<fingerprint>.rev`, then export the public
 key), and tell users in the release notes and on the website to remove the repository. A new key needs every
 user to download it again, as on first setup.

@@ -474,21 +474,23 @@ The pre-release security audits check these layers against the code:
 
 The performance harness (`tests/perf/`) measures each row on the owner's machine and in CI.
 
-## 8. Build, packaging and deployment (ADR-008, ADR-017, ADR-029, ADR-035)
+## 8. Build, packaging and deployment (ADR-008, ADR-017, ADR-029, ADR-035, ADR-036)
 
 ```mermaid
 flowchart TD
   src[source · src/shared, core, main, preload, renderer] --> vite[Vite 8 builds: main and preload as library builds, renderer, worker<br/>scripts/dev.mjs in development]
   vite --> eb[electron-builder · fuses set]
   eb --> deb[galeo_#lt;v#gt;_amd64.deb and _arm64.deb · official, ADR-035]
+  eb -- "preview, built in CI, ADR-036" --> rpm[galeo-#lt;v#gt;.x86_64.rpm and .aarch64.rpm · Fedora preview]
   eb --> appimage[galeo-#lt;v#gt;-#lt;arch#gt;.AppImage · secondary; on Ubuntu 24.04+ unsandboxed, by opt-in]
   eb -- "preview, unsigned, ADR-027" --> mac[x64 and arm64 .dmg / .zip · macOS preview]
   eb -- "preview, unsigned, ADR-027" --> win[galeo-#lt;v#gt;-#lt;arch#gt;-setup.exe and -portable.exe, x64 and arm64 · Windows preview]
   eb --> ci["CI: Linux on every push; macOS and Windows on ci/platforms and by hand (platforms.yml, ADR-027)<br/>tests · package, fuse and Open With read-back · no-network harness · performance"]
-  ci -- "tag v#lt;version#gt;" --> release["release workflow: Linux build on x64 and arm64 (arm64 also runs the e2e suite) + Platforms on macOS and Windows,<br/>verify each, then (all green) SHA256SUMS, attestations over the 12 packages"]
+  ci -- "tag v#lt;version#gt;" --> release["release workflow: Linux build on x64 and arm64 (arm64 also runs the e2e suite) + Platforms on macOS and Windows,<br/>verify each (the .rpm also installed on Fedora), sign the .rpm (rpm-signing environment),<br/>then (all green) SHA256SUMS, attestations over the 14 packages"]
   release --> draft[draft GitHub Release · docs/RELEASING.md, ADR-017]
-  draft -- "published by the owner" --> pages["Pages workflow: check each .deb's checksum and attestation,<br/>build the apt repository, sign it (the only job with the key), check it with apt"]
+  draft -- "published by the owner" --> pages["Pages workflow: check each .deb's and .rpm's checksum and attestation,<br/>build the apt and dnf repositories, sign them (the only job with the keys), check them with apt and dnf"]
   pages --> apt[swestash.github.io/galeo/apt/ · suite stable, amd64 and arm64, the latest .deb only, ADR-029]
+  pages --> dnf[swestash.github.io/galeo/rpm/ · x86_64 and aarch64, the latest .rpm only, ADR-036]
 ```
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`

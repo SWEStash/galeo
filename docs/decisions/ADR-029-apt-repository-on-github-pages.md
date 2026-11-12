@@ -4,6 +4,7 @@
 - Date: 2026-11-04
 - Amended: 2026-11-07 (owner, in place): the key is deleted on purge only, not on remove (decision 6).
 - Superseded in part: "amd64 only" in decision 1, by [ADR-035](ADR-035-linux-arm64-packages.md) (2026-11-11): amd64 and arm64.
+- Superseded in part: "used only for this repository" in decision 5, by [ADR-036](ADR-036-rpm-packages-and-dnf-repository.md) (2026-11-12): the key also signs the dnf repository, through a subkey of its own.
 - Deciders: project owner
 - Supersedes: in [ADR-008](ADR-008-packaging-and-distribution.md), "an apt repository" in the "Not in v0.1"
   list, and the "Updates" bullet's "Users update by installing a new `.deb`/AppImage" for users of the `.deb`
