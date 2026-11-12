@@ -85,6 +85,7 @@ is 0.5.0's, with the apt repository's key added to the package).
 0.8.0 on 2026-11-11 (Electron 45.3.0, Mermaid 12.2.0, headless, load average 0.5 before the run, on the
 version commit `74dee2a`; the fixes after it changed styles and labels only, and preflight's performance
 pass held on the tagged commit `b779197`).
+0.8.1 (2026-11-12): no run, by the owner's call: the patch changes only how a new tab finds its link's heading.
 0.7.0 on 2026-11-06 (Electron 45.2.3, Mermaid 12.2.0, headless, load average 0.4 before the run, on the
 version commit `b81dc15`; the fixes after it changed styles, tooltips and print only, and preflight's
 performance pass held on the tagged commit).
@@ -210,6 +211,7 @@ these.
 | Copy and share (v0.7): a code block's Copy pastes into a terminal; *Copy as rich text* pastes into LibreOffice Writer with headings, bold and code; the viewer's Save as SVG… and Save as PNG… open in an image viewer; *Export to PDF…* in dark mode opens in the document viewer as a light page with no bars | Pass (2026-11-07, `.deb` 0.7.0) |
 | Profile launcher (v0.7): Settings → Profile launcher → Add to applications: "galeo — <profile>" shows in the GNOME app grid and opens that profile; Remove takes it out; deleting the profile removes it | Pass (2026-11-07, `.deb` 0.7.0) |
 | What's new in 0.8 (look pass): `galeo --watch <folder>` lists a new file within a second, Enter opens it and marks it opened, the title-bar button counts while the panel is closed, the watch comes back after a restart; *Open all new* asks past 20 files; *Close others* keeps pinned tabs and asks about unsaved ones, also from the tab overview; renaming a profile renames its entry in the app grid; the viewer's 100 % shows a viewBox-only SVG at 120 × 60; a followed 100 MB+ log shows a new line within about half a second; quick open with one file in two tabs keeps working; text buttons in one pill look, the main action tinted in more than one profile colour; middle dots in the window title and the app grid | Pass (2026-11-11, `.deb` 0.8.0 from `b779197`) |
+| A link opened in a new tab lands on its heading (v0.8.1): middle-click `other.md#details` and `#far` in a document; each new tab opens at its heading | Pass (2026-11-12, `.deb` 0.8.1, [#57](https://github.com/SWEStash/galeo/issues/57)); the keyboard-only and Orca passes and the other desktop rows were not rerun for this patch (owner) |
 | Quick open in a real repository: dot folders listed, `node_modules` not; Ctrl+Enter opens a new window | Pass (2026-10-05) |
 | Palette: F11 toggles full screen; "Toggle edit mode" only says "Press Ctrl+E" | Pass (2026-10-05) |
 | Mermaid in real documents (edge labels, line breaks, subgraphs) draws, follows light/dark, and a broken one shows its error | Pass (2026-10-05, after the sanitizer fix) |
@@ -255,3 +257,4 @@ runs in three shards on macOS arm64 and Windows x64 only, to keep a run short.
 | 0.7.0 candidate: Platforms 42311587698 (2026-11-06, `b05efb3`) | Pass, Fail: the context-menu key test ran on macOS, which has no such key | Pass | Fail (a profile-launcher unit test with POSIX paths), Fail: a middle click on a scrolling tab strip started autoscroll, so it didn't close the tab; tests split Windows paths and line endings wrongly; fixed in `7276525`, re-run 42314113951: Pass | Fail (the same unit test), fixed in `7276525`: Pass |
 | Release 0.7.0: release workflow 42372310132 (2026-11-07, tag `v0.7.0` on `9d88621`; attested all ten packages) | Pass, Pass | Pass | Pass, Pass | Pass |
 | 0.8.0 candidate: release dry run 43119467749 (2026-11-11, `b779197`; Linux x64 and arm64 too, the arm64 job with the end-to-end suite; attested all 12 packages) | Pass, Pass | Pass | Pass, Pass (one test passed on its retry: `windows.spec` Ctrl+N / Ctrl+Shift+W, the app slow to quit, [#46](https://github.com/SWEStash/galeo/issues/46)) | Pass |
+| 0.8.1 candidate: Platforms 43234156554 (2026-11-12, `37e3f8d`; the two macOS arm64 jobs re-run after GitHub had no runner for them) | Pass, Pass | Pass | Pass, Pass | Pass |
