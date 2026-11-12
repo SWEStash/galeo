@@ -12,7 +12,8 @@ const TOOLS = ['rpm', 'rpmbuild', 'rpmsign', 'rpmkeys', 'createrepo_c', 'gpg', '
 const haveTools =
   process.platform === 'linux' &&
   process.getuid?.() === 0 &&
-  spawnSync('sh', ['-c', `command -v ${TOOLS.join(' ')}`], { encoding: 'utf8' }).status === 0;
+  // One name per `command -v`: given several, it succeeds when any one is found.
+  TOOLS.every((tool) => spawnSync('sh', ['-c', `command -v ${tool}`]).status === 0);
 
 let root;
 let gnupg;
@@ -70,6 +71,11 @@ function signedRepo(name, ...rpmFiles) {
   return dir;
 }
 
+// CI sets GALEO_REQUIRE_DNF_TESTS=1 where it runs them, so a missing tool fails instead of skipping them all.
+it.runIf(process.env.GALEO_REQUIRE_DNF_TESTS === '1')('has the tools and root it needs', () => {
+  expect(haveTools).toBe(true);
+});
+
 describe.skipIf(!haveTools)('dnf-repo.sh', () => {
   let key;
   let good;
@@ -89,7 +95,7 @@ describe.skipIf(!haveTools)('dnf-repo.sh', () => {
   });
 
   afterAll(() => {
-    for (const home of [gnupg, path.join(root, 'other-gnupg')]) {
+    for (const home of [gnupg, path.join(root, 'other-gnupg'), path.join(root, 'other-signer')]) {
       spawnSync('gpgconf', ['--kill', 'all'], { env: { ...process.env, GNUPGHOME: home } });
     }
     rmSync(root, { recursive: true, force: true });
@@ -160,6 +166,22 @@ describe.skipIf(!haveTools)('dnf-repo.sh', () => {
     const again = run('check', dir, key);
     expect(again.status).toBe(1);
     expect(again.stderr).toContain('already installed');
+  });
+
+  it('signs packages and checks each signature against the key', () => {
+    const unsigned = rpm('to-sign', { signer: null });
+    const signed = run('sign-packages', key, unsigned);
+    expect(signed.status, signed.stderr).toBe(0);
+    expect(signed.stdout).toContain('signed to-sign.rpm');
+    const dir = signedRepo('signed-here', unsigned);
+    expect(run('check', dir, key).status).toBe(0);
+  });
+
+  it('fails the signing when the signature is not the given key', () => {
+    const other = newKey(path.join(root, 'other-signer'), 'signer');
+    const signed = run('sign-packages', other, rpm('wrong-signer', { signer: null }));
+    expect(signed.status).toBe(1);
+    expect(signed.stderr).toContain('not signed by');
   });
 
   it('tells whether the .rpm ships the repository key', () => {
