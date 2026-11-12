@@ -11,7 +11,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const SCRIPT = path.resolve(import.meta.dirname, 'apt-repo.sh');
 const TOOLS = ['dpkg-deb', 'apt-ftparchive', 'gpg', 'gpgconf', 'apt-get'];
 const haveTools =
-  process.platform === 'linux' && spawnSync('sh', ['-c', `command -v ${TOOLS.join(' ')}`], { encoding: 'utf8' }).status === 0;
+  process.platform === 'linux' &&
+  // One name per `command -v`: given several, it succeeds when any one is found.
+  TOOLS.every((tool) => spawnSync('sh', ['-c', `command -v ${tool}`]).status === 0);
 
 let root;
 let gnupg;
