@@ -10,6 +10,7 @@ import { FUSES } from '../packaging/fuses.mjs';
 import { ASSOCIATED_EXTENSIONS, macDocumentTypeProblems, regValue, WINDOWS_COMMAND_MARK, WINDOWS_PROG_ID } from './lib/associations.mjs';
 import { desktopEntryProblems } from './lib/desktop-entry.mjs';
 import { fuseMismatches } from './lib/fuses.mjs';
+import { rpmScriptProblems } from './lib/rpm-scripts.mjs';
 
 const RELEASE = path.resolve(import.meta.dirname, '../release');
 
@@ -127,6 +128,37 @@ if (process.platform === 'linux') {
     else if (!/^\s*purge\) rm -f '\/usr\/share\/keyrings\/galeo-archive-keyring\.asc' ;;$/m.test(script('postrm')) || script('postrm').split(keyring).length !== 2) {
       failures.push(`apt key: postrm doesn't remove ${keyring} on purge only`);
     } else console.log('apt key: in resources, installed to /usr/share/keyrings, removed only on purge');
+  }
+}
+
+// The .rpm (ADR-036, a preview built where CI asks for it): galeo's own scripts, desktop entry and icon.
+// GALEO_VERIFY_RPM=1 (CI) makes a missing .rpm a failure; elsewhere it's skipped.
+if (process.platform === 'linux') {
+  const { version } = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../package.json'), 'utf8'));
+  const rpm = `galeo-${version}.${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}.rpm`;
+  const file = path.join(RELEASE, rpm);
+  if (!existsSync(file)) {
+    if (process.env.GALEO_VERIFY_RPM === '1') failures.push(`rpm: no ${rpm} in release/`);
+    else console.log(`rpm: no ${rpm} built (skipped; CI builds it)`);
+  } else if (spawnSync('rpm', ['--version']).status !== 0) {
+    if (process.env.GALEO_VERIFY_RPM === '1') failures.push(`rpm: ${rpm} is built, but the rpm tool isn't installed to check it`);
+    else console.log(`rpm: ${rpm} not checked (no rpm tool here; CI checks it)`);
+  } else {
+    const scripts = spawnSync('rpm', ['-qp', '--scripts', file], { encoding: 'utf8' });
+    const problems = scripts.status === 0 ? rpmScriptProblems(scripts.stdout) : [`scripts not readable (${scripts.stderr.trim()})`];
+    if (problems.length) failures.push(...problems.map((problem) => `rpm: ${problem}`));
+    else console.log('rpm: scripts link gal, install the key and MDX type, and remove only on erase');
+
+    const payload = (member) => spawnSync('sh', ['-c', `rpm2cpio "$1" | cpio -i --quiet --to-stdout "$2"`, 'sh', file, member], { maxBuffer: 1 << 26 });
+    const entry = payload('./usr/share/applications/galeo.desktop');
+    const entryProblems = entry.status === 0 ? desktopEntryProblems(entry.stdout.toString('utf8')) : [`not readable (${entry.stderr.toString().trim()})`];
+    if (entryProblems.length) failures.push(...entryProblems.map((problem) => `rpm desktop entry: ${problem}`));
+    else console.log('rpm desktop entry: files after --, MIME types, window class, icon, New Window');
+
+    const icon = readFileSync(path.resolve(import.meta.dirname, '../packaging/icons/png/256x256.png'));
+    const themed = payload('./usr/share/icons/hicolor/256x256/apps/galeo.png');
+    if (themed.status !== 0 || !icon.equals(themed.stdout)) failures.push("rpm icon: the 256x256 hicolor icon is not packaging/icons/png/256x256.png");
+    else console.log("rpm icon: galeo's own, in the hicolor theme");
   }
 }
 

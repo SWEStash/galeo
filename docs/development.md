@@ -21,7 +21,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run test:perf` | Timings for cold start, tabs, diagrams, data views, a 100 MB log, find in all tabs, typing in split view, and memory (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the budgets, see [performance runs](#performance-runs) |
 | `npm run site:screenshots` | The [website](#website)'s screenshots from the built app, into `site/screenshots/` (`npm run build` first; run it through `npm run headless`) |
 | `npm run package` | Build, then package for the current OS into `release/` (Linux: `.deb` and AppImage; macOS: `.dmg` and `.zip`; Windows: setup and portable `.exe`) |
-| `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon, the licence notices |
+| `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon, the licence notices; the `.rpm`'s scripts, desktop entry and icon when one is built and `rpm` is installed (`GALEO_VERIFY_RPM=1`, as in CI, makes either missing a failure) |
 | `npm run headless -- <cmd>` | Run a command on a virtual display (Linux, needs the `xvfb` package), so no windows open on your desktop: wrap the Playwright commands and `verify:package` in it |
 | `npm run boundaries` | Check the import rules below (`scripts/check-boundaries.mjs`) |
 | `npm run check:bundle` | After `npm run build`: what the window and the render worker load up front, failing if KaTeX, Shiki, CodeMirror, Mermaid, DOMPurify or the MDX parser is among it (they load with the first document that needs them) |
