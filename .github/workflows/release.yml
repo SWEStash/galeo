@@ -18,7 +18,9 @@ concurrency:
 env:
   HUSKY: '0'
   # Every package a release carries, as shell globs.
-  ASSETS: galeo_*.deb galeo-*.AppImage galeo-*.dmg galeo-*.zip galeo-*-setup.exe galeo-*-portable.exe
+  ASSETS: galeo_*.deb galeo-*.rpm galeo-*.AppImage galeo-*.dmg galeo-*.zip galeo-*-setup.exe galeo-*-portable.exe
+  # Fedora for the .rpm check (ADR-036), pinned by digest: one index for x64 and arm64.
+  FEDORA_IMAGE: fedora@sha256:a7d72ba2745b100a3351087472e5ee7b2450af7cf331e7673007e3817612839c
 
 jobs:
   # First, so a wrong tag spends no macOS or Windows minutes.
@@ -71,13 +73,21 @@ jobs:
         run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm test
+      - name: Install rpm, to build and check the .rpm
+        run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Package
-        run: npm run package
+        run: npm run package -- --linux deb rpm AppImage
       - run: npm run check:bundle
       - name: Allow the Chromium sandbox
         run: sudo scripts/dev-sandbox-setup.sh
       - name: Verify the package
-        run: npm run headless -- npm run verify:package
+        run: GALEO_VERIFY_RPM=1 npm run headless -- npm run verify:package
+      # Fedora allows the user namespaces Chromium's sandbox needs; Docker's default seccomp profile doesn't.
+      - name: The .rpm installs, upgrades and starts sandboxed on Fedora
+        run: |
+          rpm_file=$(cd release && ls galeo-*.rpm)
+          docker run --rm --security-opt seccomp=unconfined -v "$PWD/release:/rel:ro" -v "$PWD/scripts:/s:ro" \
+            "$FEDORA_IMAGE" bash /s/rpm-install-check.sh "/rel/$rpm_file"
       - name: End-to-end tests
         if: matrix.arch == 'arm64'
         run: npm run headless -- npm run test:e2e
@@ -96,6 +106,62 @@ jobs:
             release/NOTES.md
           if-no-files-found: error
           retention-days: 30
+      # Unsigned: the signing job takes it from here, and only its signed copy is a release package.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: rpm-unsigned-${{ matrix.arch }}
+          path: release/galeo-*.rpm
+          if-no-files-found: error
+          retention-days: 1
+
+  # Signs both .rpm packages with the dnf subkey (ADR-036), before anything is checksummed or attested, so the
+  # release and the dnf repository carry one file. The only release job that can read a key: the rpm-signing
+  # environment, which only main and its tags may use. It runs no npm packages and no Actions beyond GitHub's
+  # own, pinned; the key is in one step, which deletes the keyring when it is done.
+  sign-rpm:
+    name: Sign the .rpm packages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: rpm-signing
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Before the key is anywhere on the runner.
+      - name: Install rpm (rpmsign, rpmkeys)
+        run: sudo apt-get update && sudo apt-get install -y rpm
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: rpm-unsigned-*
+          path: ${{ runner.temp }}/rpm
+          merge-multiple: true
+      - name: Sign, then check each signature against the published key
+        env:
+          DNF_SIGNING_KEY: ${{ secrets.DNF_SIGNING_KEY }}
+          # Set only while the standby subkey, which keeps its passphrase, signs a key rotation (RELEASING).
+          DNF_SIGNING_PASSPHRASE: ${{ secrets.DNF_SIGNING_PASSPHRASE }}
+        run: |
+          test -n "$DNF_SIGNING_KEY" || { echo 'DNF_SIGNING_KEY is not set in the rpm-signing environment (RELEASING)' >&2; exit 1; }
+          export GNUPGHOME="$RUNNER_TEMP/gnupg"
+          mkdir -m 700 "$GNUPGHOME"
+          trap 'gpgconf --kill all; rm -rf "${GNUPGHOME:?}"' EXIT
+          if [ -n "$DNF_SIGNING_PASSPHRASE" ]; then
+            printf '%s' "$DNF_SIGNING_PASSPHRASE" > "$GNUPGHOME/passphrase"
+            printf 'pinentry-mode loopback\npassphrase-file %s\n' "$GNUPGHOME/passphrase" > "$GNUPGHOME/gpg.conf"
+          fi
+          printf '%s\n' "$DNF_SIGNING_KEY" | gpg --batch --import
+          count=$(ls "$RUNNER_TEMP"/rpm/galeo-*.rpm | wc -l)
+          test "$count" = 2 || { echo "expected 2 .rpm files, found $count" >&2; exit 1; }
+          scripts/dnf-repo.sh sign-packages packaging/linux/galeo-archive-keyring.asc "$RUNNER_TEMP"/rpm/galeo-*.rpm
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages-linux-rpm
+          path: ${{ runner.temp }}/rpm/galeo-*.rpm
+          if-no-files-found: error
+          retention-days: 30
 
   # The macOS and Windows previews: tests, packages and package checks on every system, each package
   # job handing its files over.
@@ -112,7 +178,7 @@ jobs:
   # The gate: runs only when every Linux, macOS and Windows job passed. Read-only.
   collect:
     name: Collect the packages
-    needs: [build, platforms]
+    needs: [build, sign-rpm, platforms]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -125,9 +191,9 @@ jobs:
       - name: Every package, then checksums
         run: |
           ls -l
-          # .deb and AppImage for Linux, .dmg and .zip for macOS, setup and portable for Windows: each for x64 and arm64.
+          # .deb, .rpm and AppImage for Linux, .dmg and .zip for macOS, setup and portable for Windows: each for x64 and arm64.
           count=$(ls $ASSETS | wc -l)
-          test "$count" = 12 || { echo "expected 12 packages, found $count" >&2; exit 1; }
+          test "$count" = 14 || { echo "expected 14 packages, found $count" >&2; exit 1; }
           sha256sum $ASSETS > SHA256SUMS
           cat SHA256SUMS
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -135,6 +201,7 @@ jobs:
           name: release-assets
           path: |
             galeo_*.deb
+            galeo-*.rpm
             galeo-*.AppImage
             galeo-*.dmg
             galeo-*.zip
@@ -167,6 +234,7 @@ jobs:
         with:
           subject-path: |
             galeo_*.deb
+            galeo-*.rpm
             galeo-*.AppImage
             galeo-*.dmg
             galeo-*.zip

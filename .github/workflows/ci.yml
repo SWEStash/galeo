@@ -19,6 +19,8 @@ concurrency:
 
 env:
   HUSKY: '0'
+  # Fedora for the .rpm checks (ADR-036), pinned by digest: one index for x64 and arm64.
+  FEDORA_IMAGE: fedora@sha256:a7d72ba2745b100a3351087472e5ee7b2450af7cf331e7673007e3817612839c
 
 jobs:
   linux:
@@ -26,7 +28,7 @@ jobs:
     # Dependabot's updates are applied by hand on main, where CI runs; its pull requests never merge.
     if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,10 +74,25 @@ jobs:
           retention-days: 30
       # Packages build, the fuses read back from the binary as configured (SR-08), and the
       # packaged app starts through the launcher wrapper (ADR-009).
+      - name: Install rpm, to build and check the .rpm
+        run: sudo apt-get update && sudo apt-get install -y rpm
       - name: Package
-        run: npm run package
+        run: npm run package -- --linux deb rpm AppImage
       - name: Verify the package
-        run: npm run headless -- npm run verify:package
+        run: GALEO_VERIFY_RPM=1 npm run headless -- npm run verify:package
+      # Fedora allows the user namespaces Chromium's sandbox needs; Docker's default seccomp profile doesn't.
+      - name: The .rpm installs, upgrades and starts sandboxed on Fedora
+        run: |
+          version=$(node -p "require('./package.json').version")
+          docker run --rm --security-opt seccomp=unconfined -v "$PWD/release:/rel:ro" -v "$PWD/scripts:/s:ro" \
+            "$FEDORA_IMAGE" bash /s/rpm-install-check.sh "/rel/galeo-$version.x86_64.rpm"
+      - name: The dnf repository script's tests, on Fedora as root
+        run: |
+          # Vite writes its temporary files here; the checkout itself stays read-only to the container's root.
+          mkdir -p node_modules/.vite-temp node_modules/.vite
+          docker run --rm -e GALEO_REQUIRE_DNF_TESTS=1 -v "$PWD:/src:ro" \
+            --tmpfs /src/node_modules/.vite-temp --tmpfs /src/node_modules/.vite -w /src "$FEDORA_IMAGE" \
+            sh -c 'dnf install -y -q nodejs rpm-build rpm-sign createrepo_c > /dev/null && npx vitest run scripts/dnf-repo.test.mjs'
       - if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
