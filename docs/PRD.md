@@ -622,6 +622,46 @@ is updated.
 - `.rpm` packages and winget ([#54](https://github.com/SWEStash/galeo/issues/54),
   [#55](https://github.com/SWEStash/galeo/issues/55)).
 
+## User Stories — v0.9 "more places to run"
+
+v0.9 brings galeo to more systems: an `.rpm` package and a dnf repository for Fedora and its relatives, a
+decision on profile launchers outside Linux, and drags between windows checked on X11. The website may show
+galeo working before you install it. Each story links its issue, which holds the full acceptance criteria
+(*Done when*). The v0.9 milestone decides what ships; where this list and the milestone or an issue differ,
+they win and this list is updated.
+
+### Must Have
+
+1. **Install on Fedora with dnf** ([#54](https://github.com/SWEStash/galeo/issues/54)). As a Fedora user, I
+   want an `.rpm` and a dnf repository, so that I can install galeo and get each release through my package
+   manager.
+   - AC: x64 and arm64 `.rpm` packages are checked and attested like the `.deb`; the repository is signed, and
+     `dnf install galeo` from it works in a Fedora container in CI.
+   - AC: Like the macOS and Windows builds, a CI-checked preview: no manual checks.
+
+### Should Have
+
+- **Profile launchers on macOS and Windows** ([#40](https://github.com/SWEStash/galeo/issues/40)). As a
+  user there, I want to know whether profile launchers exist for me, and use them if they do.
+- **Drags between windows on X11** ([#48](https://github.com/SWEStash/galeo/issues/48)). Moving a tab to
+  another window and tearing one off are checked on an X11 session; each failure gets its own bug.
+
+### Could Have
+
+- **Try galeo on the website** ([#41](https://github.com/SWEStash/galeo/issues/41)), if the design pass
+  finds a version that fits the site's security policy and size.
+- Mermaid 12.3 ([#33](https://github.com/SWEStash/galeo/issues/33)), only within the pathological-document
+  budget.
+- Windows test reliability ([#45](https://github.com/SWEStash/galeo/issues/45),
+  [#46](https://github.com/SWEStash/galeo/issues/46)).
+
+### Won't Have (v0.9)
+
+- winget ([#55](https://github.com/SWEStash/galeo/issues/55)).
+- More diagram engines, Vim keybindings and spell check in edit mode
+  ([#50](https://github.com/SWEStash/galeo/issues/50), [#51](https://github.com/SWEStash/galeo/issues/51),
+  [#52](https://github.com/SWEStash/galeo/issues/52)).
+
 ## User Experience
 
 A browser-like window: a tab bar with the profile name/colour at the left, the document below,
