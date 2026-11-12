@@ -17,7 +17,7 @@ and data that coding-agent work produces. galeo **never connects to the network*
 
 ## Quick start
 
-On Ubuntu 24.04 or later (x86_64), add galeo's apt repository and install it; `apt upgrade` then
+On Ubuntu 24.04 or later (x86_64 or arm64), add galeo's apt repository and install it; `apt upgrade` then
 brings each release:
 
 ```sh
@@ -34,9 +34,9 @@ sudo apt update && sudo apt install galeo
 galeo README.md
 ```
 
-Or download `galeo_<version>_amd64.deb` from the
-[latest release](https://github.com/SWEStash/galeo/releases/latest) and run
-`sudo apt install ./galeo_*_amd64.deb`.
+On arm64, write `Architectures: arm64`. Or download `galeo_<version>_amd64.deb` (or `_arm64.deb`)
+from the [latest release](https://github.com/SWEStash/galeo/releases/latest) and run
+`sudo apt install ./galeo_*.deb`.
 
 galeo is now also in *Open With* for Markdown, MDX, text, log, JSON, YAML, TOML, CSV and TSV files
 and source code. An AppImage is available too; see [installation](docs/USAGE.md#installation) for

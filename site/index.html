@@ -101,14 +101,16 @@ Signed-By: /usr/share/keyrings/galeo-archive-keyring.asc
 EOF
 sudo apt update &amp;&amp; sudo apt install galeo
 galeo README.md</code></pre>
-      <p>The key's fingerprint is <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>.
-        Or download <code>galeo_&lt;version&gt;_amd64.deb</code> from the
+      <p>On arm64, write <code>Architectures: arm64</code>. The key's fingerprint is
+        <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>.
+        Or download <code>galeo_&lt;version&gt;_amd64.deb</code> (or <code>_arm64.deb</code>) from the
         <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and run
-        <code>sudo apt install ./galeo_*_amd64.deb</code>.</p>
+        <code>sudo apt install ./galeo_*.deb</code>.</p>
       <p>This puts <code>galeo</code> and the shorter <code>gal</code> on your <code>PATH</code> and
         adds galeo to <em>Open With</em> for Markdown, text, logs, data files and source code.</p>
       <h3>Other Linux distributions (AppImage)</h3>
-      <p>Make <code>galeo-&lt;version&gt;.AppImage</code> executable and run it. To get the
+      <p>Make <code>galeo-&lt;version&gt;-&lt;arch&gt;.AppImage</code> (<code>x86_64</code> or
+        <code>arm64</code>) executable and run it. To get the
         <code>galeo</code> command, use <strong>Settings → Install command-line launcher</strong>.</p>
       <h3>macOS and Windows (previews)</h3>
       <p>Releases also include builds for macOS (<code>.dmg</code>, <code>.zip</code>) and Windows
