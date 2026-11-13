@@ -148,8 +148,9 @@ jobs:
               --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/release.yml" \
               --source-ref "refs/tags/$tag" --deny-self-hosted-runners
           done
-          echo "debs=$(printf '%s ' $debs)" >> "$GITHUB_OUTPUT"
-          echo "rpms=$(printf '%s ' $rpms)" >> "$GITHUB_OUTPUT"
+          # Space-separated, and empty when there are none (unquoted echo drops the newlines and a trailing space).
+          echo "debs=$(echo $debs)" >> "$GITHUB_OUTPUT"
+          echo "rpms=$(echo $rpms)" >> "$GITHUB_OUTPUT"
       - name: Install rpm and createrepo_c, for the dnf repository
         if: steps.release.outputs.rpms != ''
         run: sudo apt-get update && sudo apt-get install -y rpm createrepo-c
