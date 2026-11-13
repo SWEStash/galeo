@@ -34,18 +34,13 @@ sudo apt update && sudo apt install galeo
 galeo README.md
 ```
 
-On arm64, write `Architectures: arm64`. Or download `galeo_<version>_amd64.deb` (or `_arm64.deb`)
-from the [latest release](https://github.com/SWEStash/galeo/releases/latest) and run
-`sudo apt install ./galeo_*.deb`.
+On arm64, write `Architectures: arm64`. galeo is now also in *Open With* for Markdown, MDX, text, log,
+JSON, YAML, TOML, CSV and TSV files and source code.
 
-galeo is now also in *Open With* for Markdown, MDX, text, log, JSON, YAML, TOML, CSV and TSV files
-and source code. An AppImage is available too; see [installation](docs/USAGE.md#installation) for
-it and for checking a download.
-
-Releases also carry macOS (`.dmg`, `.zip`) and Windows (setup and portable `.exe`) builds for x64
-and Arm. They are **previews**: checked by CI, but unsigned and unsupported. Gatekeeper and
-SmartScreen warn on the first start; [installing the previews](docs/USAGE.md#macos-and-windows-previews)
-shows how to get past them.
+**Other ways to install** (a package file, the AppImage, building from source, the macOS and Windows
+previews): [install](https://swestash.github.io/galeo/#install) on the website, a tab per method. The
+[usage guide](docs/USAGE.md#installation) says what each install does, how to remove it, and how to
+check a download.
 
 ## Features
 

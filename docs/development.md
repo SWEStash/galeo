@@ -61,7 +61,8 @@ release records them in [VALIDATION](VALIDATION.md#performance).
 ## Website
 
 `site/` is the project's website, <https://swestash.github.io/galeo/>: one static page, its
-stylesheet and the screenshots, with no build step and no script. The Pages workflow
+stylesheet, the screenshots and `copy.js` (the command blocks' copy buttons, which the page works without),
+with no build step. Its security policy allows its own files only: no inline script, nothing from elsewhere. The Pages workflow
 (`.github/workflows/pages.yml`) publishes it when `site/` changes on `main`, when a release is
 published, or when started by hand. Each run also rebuilds the signed apt repository under `/apt/`
 from the latest release's `.deb` (`scripts/apt-repo.sh`, ADR-029; key procedures in

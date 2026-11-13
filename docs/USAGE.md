@@ -14,39 +14,23 @@ with `sudo apt update && sudo apt upgrade`.
 
 ### Ubuntu and Debian (Ubuntu 24.04 and later)
 
-Add galeo's apt repository and install it:
-
-```sh
-sudo curl -fsSLo /usr/share/keyrings/galeo-archive-keyring.asc https://swestash.github.io/galeo/apt/galeo.asc
-sudo tee /etc/apt/sources.list.d/galeo.sources > /dev/null <<'EOF'
-Types: deb
-URIs: https://swestash.github.io/galeo/apt/
-Suites: stable
-Components: main
-Architectures: amd64
-Signed-By: /usr/share/keyrings/galeo-archive-keyring.asc
-EOF
-sudo apt update && sudo apt install galeo
-```
-
-On an arm64 machine (from galeo 0.8.0), write `Architectures: arm64` instead.
+The commands are on the website, [install](https://swestash.github.io/galeo/#install), under
+*Ubuntu, Debian*: they download the repository's key, add a sources file for galeo's apt repository and
+install galeo from it. On an arm64 machine (from galeo 0.8.0), the sources file says `Architectures: arm64`.
 The key's fingerprint is `0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629`; compare it with
 `gpg --show-keys /usr/share/keyrings/galeo-archive-keyring.asc`. Installing galeo replaces the
 downloaded key with the one in the package, which keeps it up to date. The repository holds the
 latest release only; older ones stay on the releases page.
 
-To install a downloaded `.deb` instead, for instance after [checking it](#checking-a-download):
+To install a downloaded `.deb` instead (*Package file* on the website), for instance after
+[checking it](#checking-a-download), run `sudo apt install ./galeo_<version>_amd64.deb` (or `_arm64.deb`).
 
-```sh
-sudo apt install ./galeo_<version>_amd64.deb    # or _arm64.deb
-```
-
-Adding the sources file above afterwards turns on updates: from galeo 0.5.1 the package has already
+Adding the sources file afterwards turns on updates: from galeo 0.5.1 the package has already
 put the key in place.
 
 Up to galeo 0.7, removing galeo (`sudo apt remove galeo`) also deletes the repository's key while the
 sources file stays, so installing it again fails with `NO_PUBKEY 8D6C14A47CC81C1B` (and may then ask for
-an older package that is gone). Download the key again with the first command above, then
+an older package that is gone). Download the key again (the website's first command), then
 `sudo apt update && sudo apt install galeo`. From galeo 0.8, only `sudo apt purge galeo` deletes the key.
 
 Either way, it installs galeo in `/opt/galeo`, puts `galeo` and the shorter `gal` on your `PATH` (it leaves
@@ -57,6 +41,14 @@ Ubuntu.
 `sudo apt remove galeo` removes it and keeps the repository's key, so installing it again works.
 `sudo apt purge galeo` deletes the key too: delete `/etc/apt/sources.list.d/galeo.sources` as well, or
 `apt update` reports the missing key. Your settings and sessions stay in your home folder.
+
+### From source
+
+*From source* on the website builds the packages with `npm run package` and installs the `.deb` you built,
+so you get what the release's `.deb` sets up, the AppArmor profile included: on Ubuntu 24.04 and later
+Chromium's sandbox starts only for the installed app, so `npm start` from the checkout lands on the
+*sandbox unavailable* window. A package you build isn't attested and gets no updates from the repository;
+[development](development.md) covers working on galeo itself.
 
 ### The AppImage
 

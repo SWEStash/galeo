@@ -200,6 +200,142 @@ pre code {
   font-size: 1em;
 }
 
+/* Command blocks with a copy button (copy.js adds the wrapper and the button; without it they are plain blocks). */
+.code {
+  position: relative;
+}
+
+/* Room above the first line for the button, so it never covers a command, however narrow the screen. */
+.code pre {
+  padding-top: 2.6rem;
+}
+
+.copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.copy:hover {
+  border-color: var(--muted);
+}
+
+.copy:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Install methods: a radio group shaped as tabs. The arrow keys move between methods and select them, Tab enters
+   the panel; screen readers announce radio buttons, which is what they are. */
+.methods {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.methods legend {
+  color: var(--muted);
+  font-size: 0.95rem;
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.methods label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.9em;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.methods label:hover {
+  border-color: var(--muted);
+}
+
+.methods input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.methods label:has(input:checked) {
+  background: var(--button-bg);
+  border-color: var(--button-bg);
+  color: var(--button-fg);
+}
+
+.methods label:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.tag {
+  font-size: 0.72rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0 0.45em;
+}
+
+.panel {
+  border-top: 1px solid var(--border);
+  margin-top: 1rem;
+}
+
+.panel h3 {
+  margin-top: 1rem;
+}
+
+/* One panel at a time where :has() works; elsewhere, and without CSS, every panel shows in order. */
+@supports selector(:has(*)) {
+  .panel {
+    display: none;
+  }
+
+  .install:has(#m-apt:checked) #p-apt,
+  .install:has(#m-appimage:checked) #p-appimage,
+  .install:has(#m-file:checked) #p-file,
+  .install:has(#m-source:checked) #p-source,
+  .install:has(#m-mac:checked) #p-mac,
+  .install:has(#m-win:checked) #p-win {
+    display: block;
+  }
+}
+
+.note {
+  border-left: 3px solid var(--border);
+  padding-left: 0.8rem;
+}
+
 kbd {
   border: 1px solid var(--border);
   border-bottom-width: 2px;

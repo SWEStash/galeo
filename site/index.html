@@ -3,13 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- The page loads nothing but its own stylesheet and images, and runs no script. -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+  <!-- The page loads nothing but its own stylesheet, images and copy.js (copy buttons; it works without it). -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <title>galeo: a fast, private desktop viewer and editor</title>
   <meta name="description" content="Read and edit Markdown, text, logs, JSON, CSV, YAML and more. galeo never connects to the network.">
   <link rel="icon" href="galeo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
+  <script src="copy.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
@@ -86,11 +87,26 @@
         running.</p>
     </section>
 
-    <section aria-labelledby="install">
+    <section class="install" aria-labelledby="install">
       <h2 id="install">Install</h2>
-      <h3>Ubuntu and Debian (apt)</h3>
-      <p>Add galeo's apt repository and install it. <code>apt upgrade</code> then brings each release:</p>
-      <pre tabindex="0"><code>sudo curl -fsSLo /usr/share/keyrings/galeo-archive-keyring.asc https://swestash.github.io/galeo/apt/galeo.asc
+      <!-- One panel per method, chosen with a radio group styled as tabs: CSS only. Without :has() every panel shows. -->
+      <fieldset class="methods">
+        <legend>How do you want to install galeo?</legend>
+        <div class="tabs">
+          <label><input type="radio" name="method" id="m-apt" checked> Ubuntu, Debian</label>
+          <label><input type="radio" name="method" id="m-appimage"> Other Linux</label>
+          <label><input type="radio" name="method" id="m-file"> Package file</label>
+          <label><input type="radio" name="method" id="m-source"> From source</label>
+          <label><input type="radio" name="method" id="m-mac"> macOS <span class="tag">preview</span></label>
+          <label><input type="radio" name="method" id="m-win"> Windows <span class="tag">preview</span></label>
+        </div>
+      </fieldset>
+
+      <div class="panel" id="p-apt">
+        <h3>Ubuntu and Debian (apt)</h3>
+        <p>Ubuntu 24.04 or later. Add galeo's apt repository and install it; <code>apt upgrade</code> then brings each
+          release:</p>
+        <pre tabindex="0"><code>sudo curl -fsSLo /usr/share/keyrings/galeo-archive-keyring.asc https://swestash.github.io/galeo/apt/galeo.asc
 sudo tee /etc/apt/sources.list.d/galeo.sources &gt; /dev/null &lt;&lt;'EOF'
 Types: deb
 URIs: https://swestash.github.io/galeo/apt/
@@ -99,27 +115,69 @@ Components: main
 Architectures: amd64
 Signed-By: /usr/share/keyrings/galeo-archive-keyring.asc
 EOF
-sudo apt update &amp;&amp; sudo apt install galeo
-galeo README.md</code></pre>
-      <p>On arm64, write <code>Architectures: arm64</code>. The key's fingerprint is
-        <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>.
-        Or download <code>galeo_&lt;version&gt;_amd64.deb</code> (or <code>_arm64.deb</code>) from the
-        <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and run
-        <code>sudo apt install ./galeo_*.deb</code>.</p>
-      <p>This puts <code>galeo</code> and the shorter <code>gal</code> on your <code>PATH</code> and
-        adds galeo to <em>Open With</em> for Markdown, text, logs, data files and source code.</p>
-      <h3>Other Linux distributions (AppImage)</h3>
-      <p>Make <code>galeo-&lt;version&gt;-&lt;arch&gt;.AppImage</code> (<code>x86_64</code> or
-        <code>arm64</code>) executable and run it. To get the
-        <code>galeo</code> command, use <strong>Settings → Install command-line launcher</strong>.</p>
-      <h3>macOS and Windows (previews)</h3>
-      <p>Releases also include builds for macOS (<code>.dmg</code>, <code>.zip</code>) and Windows
-        (setup and portable <code>.exe</code>), for x64 and Arm. They are tested in CI but unsigned
-        and unsupported, so Gatekeeper and SmartScreen warn the first time you start them.
-        <a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md#macos-and-windows-previews">Installing the previews</a>
-        shows how to get past the warnings.</p>
-      <p>Every package has a <code>SHA256SUMS</code> entry and a GitHub artifact attestation:
-        <a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md#checking-a-download">checking a download</a>.</p>
+sudo apt update &amp;&amp; sudo apt install galeo</code></pre>
+        <p>On arm64, write <code>Architectures: arm64</code>. The key's fingerprint is
+          <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>. This puts <code>galeo</code> and the shorter
+          <code>gal</code> on your <code>PATH</code> and adds galeo to <em>Open With</em> for Markdown, text, logs,
+          data files and source code.</p>
+      </div>
+
+      <div class="panel" id="p-appimage">
+        <h3>Other Linux distributions (AppImage)</h3>
+        <p>Download <code>galeo-&lt;version&gt;-x86_64.AppImage</code> or <code>-arm64.AppImage</code> from the
+          <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a>, then:</p>
+        <pre tabindex="0"><code>chmod +x galeo-*.AppImage
+./galeo-*.AppImage</code></pre>
+        <p>For the <code>galeo</code> command, use <strong>Settings → Install command-line launcher</strong>. The
+          AppImage doesn't update itself: download the next release when it comes. On Ubuntu 24.04 and later it
+          can't start Chromium's sandbox; use the <code>.deb</code> there.</p>
+      </div>
+
+      <div class="panel" id="p-file">
+        <h3>A package file, without the repository</h3>
+        <p>Download <code>galeo_&lt;version&gt;_amd64.deb</code> (or <code>_arm64.deb</code>) from the
+          <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and install it:</p>
+        <pre tabindex="0"><code>sudo apt install ./galeo_*.deb</code></pre>
+        <p>Updates come through the repository only: without it, install the next release the same way.</p>
+      </div>
+
+      <div class="panel" id="p-source">
+        <h3>Build from source</h3>
+        <p>On Ubuntu 24.04 or later, with <a href="https://nodejs.org/">Node.js 24</a>. The build downloads
+          npm packages and Electron; galeo itself still never connects to the network.</p>
+        <pre tabindex="0"><code>sudo apt install git binutils
+git clone https://github.com/SWEStash/galeo.git &amp;&amp; cd galeo
+npm ci &amp;&amp; npm run setup
+npm run package
+sudo apt install ./release/galeo_*.deb</code></pre>
+        <p class="note">Install the package you built rather than running <code>npm start</code>: Ubuntu 24.04 and
+          later allow Chromium's sandbox only to an installed app with its AppArmor profile, which the package sets
+          up.</p>
+        <p>A package you build isn't attested like a release's, and gets no updates from the repository.</p>
+      </div>
+
+      <div class="panel" id="p-mac">
+        <h3>macOS <span class="tag">preview</span></h3>
+        <p>Download <code>galeo-&lt;version&gt;-arm64.dmg</code> (Apple silicon) or <code>-x64.dmg</code> (Intel)
+          from the <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and drag galeo to
+          Applications.</p>
+        <p class="note">The previews are tested in CI but unsigned and unsupported. macOS refuses the first start:
+          open <strong>System Settings → Privacy &amp; Security</strong> and choose <strong>Open Anyway</strong>.</p>
+      </div>
+
+      <div class="panel" id="p-win">
+        <h3>Windows <span class="tag">preview</span></h3>
+        <p>Download <code>galeo-&lt;version&gt;-x64-setup.exe</code> (or <code>-arm64-setup.exe</code>, or a
+          <code>-portable.exe</code> that runs without installing) from the
+          <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and run it.</p>
+        <p class="note">The previews are tested in CI but unsigned and unsupported. SmartScreen warns about an
+          unknown publisher: choose <strong>More info → Run anyway</strong>.</p>
+      </div>
+
+      <p><a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md#installation">The usage guide</a> says
+        what each install does and how to remove it. Every package has a <code>SHA256SUMS</code> entry and a GitHub
+        artifact attestation: <a href="https://github.com/SWEStash/galeo/blob/main/docs/USAGE.md#checking-a-download">checking
+        a download</a>.</p>
     </section>
 
     <section aria-labelledby="use">
