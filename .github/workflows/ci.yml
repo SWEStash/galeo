@@ -58,6 +58,9 @@ jobs:
         run: sudo scripts/dev-sandbox-setup.sh
       - name: End-to-end tests
         run: npm run headless -- npm run test:e2e
+      # The website demo, built above, in Electron's Chromium as a plain page (#41).
+      - name: Demo tests
+        run: npm run headless -- npm run test:demo
       # Socket-level zero-network proof (SR-07): every connect() of the app's process tree is
       # recorded; the suite also shows it goes red with the network lockdown switched off.
       - name: Install strace

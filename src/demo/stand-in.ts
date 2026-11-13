@@ -15,7 +15,7 @@ import type { Channel, EventName, Events, GaleoApi, Requests, Responses, StartIn
 import { UNKNOWN_DOCUMENT } from '../shared/documents';
 import { findInTextTask } from '../shared/find';
 import { workerFormat } from '../shared/formats';
-import { commandFor, type KeyEventLike } from '../shared/keymap';
+import { commandFor, type KeyEventLike, type Platform } from '../shared/keymap';
 import { referencesTask } from '../shared/markdown/references';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/settings';
 import type { MemoryFiles } from './memory-fs';
@@ -25,10 +25,9 @@ const WINDOW = 1;
 /** The demo's home folder: tabs show their folders under it as `~/…`. */
 export const DEMO_HOME = '/home/demo';
 
-const START: StartInfo = {
+const BASE: Omit<StartInfo, 'platform'> = {
   name: 'galeo',
   version: 'demo',
-  platform: 'linux',
   sandboxed: true,
   sandboxUnavailable: null,
   commandLauncher: false,
@@ -68,9 +67,10 @@ const NOT_IN_DEMO = 'not in the demo';
  * `window.galeo` for the website's demo (#41): the app's own API (`buildApi`), answered in the page by main's
  * core logic (tabs, reads, saves, edit grants, tab search, find in all tabs) over `files`, an in-memory file
  * system. Nothing reads the reader's files, opens a window or talks to a network. `keyDown` takes the keys main
- * catches before the page in the app (Ctrl+E).
+ * catches before the page in the app (Ctrl+E); `platform` is the visitor's, so the keys are the ones they know.
  */
-export function standIn(files: MemoryFiles, open: readonly string[], say: (message: string) => void = () => {}): { api: GaleoApi; keyDown: (event: KeyEventLike) => boolean; changed: (path: string) => void } {
+export function standIn(files: MemoryFiles, open: readonly string[], say: (message: string) => void = () => {}, platform: Platform = 'linux'): { api: GaleoApi; keyDown: (event: KeyEventLike) => boolean; changed: (path: string) => void } {
+  const START: StartInfo = { ...BASE, platform };
   const listeners = new Map<EventName, Set<(payload: never) => void>>();
   const emit = <E extends EventName>(event: E, payload: Events[E]) => {
     for (const listener of listeners.get(event) ?? []) (listener as (payload: Events[E]) => void)(payload);

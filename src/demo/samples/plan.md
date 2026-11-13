@@ -8,8 +8,9 @@ owner: Sam
 
 > [!NOTE]
 > This is galeo's live demo. Every tab here is a file held in this page's memory:
-> try **Ctrl+E** to edit this one, **Ctrl+Shift+A** to search tabs, or **Ctrl+Shift+P** for every command.
-> Your browser keeps a few keys for itself (Ctrl+W, Ctrl+Tab, Ctrl+Shift+T): here, use the tab bar for those.
+> try **Ctrl+E** to edit this one, **Ctrl+Shift+A** to search tabs, or **Ctrl+Shift+P** for every command
+> (⌘ for Ctrl on a Mac). Your browser keeps a few keys for itself, such as Ctrl+W and Ctrl+Tab: here, use the
+> tab bar for those.
 
 ## Goals
 
