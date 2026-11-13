@@ -80,8 +80,9 @@ Then cut it:
 11. **apt and dnf repositories**: publishing starts the Pages workflow, which starts a second run on `main` (only
     `main` may deploy); that one checks the new `.deb` and `.rpm` files, signs both repositories and installs from
     the dnf one on x64 and arm64. When it is green, `sudo apt update && apt policy galeo` on the reference machine shows the
-    new version as the candidate. If the release was published by a token rather than by hand, the
-    workflow doesn't start: run it with `gh workflow run pages.yml --ref main`.
+    new version as the candidate. The same run builds the live demo from the new tag (ADR-037): open
+    <https://swestash.github.io/galeo/demo/> and check it shows the plan. If the release was published by a token
+    rather than by hand, the workflow doesn't start: run it with `gh workflow run pages.yml --ref main`.
 12. **Milestone**: move each issue still open in the release's milestone to the next milestone or to
     none, with a one-line comment saying why, then close the milestone.
 

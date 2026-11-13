@@ -38,7 +38,8 @@
   [033](decisions/ADR-033-incremental-reads.md) ·
   [034](decisions/ADR-034-watching-a-folder.md) ·
   [035](decisions/ADR-035-linux-arm64-packages.md) ·
-  [036](decisions/ADR-036-rpm-packages-and-dnf-repository.md)
+  [036](decisions/ADR-036-rpm-packages-and-dnf-repository.md) ·
+  [037](decisions/ADR-037-live-demo-on-the-website.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -491,6 +492,7 @@ flowchart TD
   draft -- "published by the owner" --> pages["Pages workflow: check each .deb's and .rpm's checksum and attestation,<br/>build the apt and dnf repositories, sign them (the only job with the keys), check them with apt and dnf"]
   pages --> apt[swestash.github.io/galeo/apt/ · suite stable, amd64 and arm64, the latest .deb only, ADR-029]
   pages --> dnf[swestash.github.io/galeo/rpm/ · x86_64 and aarch64, the latest .rpm only, ADR-036]
+  pages -- "built from the release's tag" --> demo[swestash.github.io/galeo/demo/ · the renderer with core in the page, ADR-037]
 ```
 
 Installed layout (`.deb`): `/opt/galeo/` (app: the `galeo` wrapper and the `galeo-bin`
@@ -529,6 +531,8 @@ src/
               menus), profiles/ (runtimes, the running profiles), tasks/ (the worker thread for the
               parsing main's checks need, and find in all tabs)
   preload/    window.galeo bridge
+  demo/       the website's live demo (ADR-037): window.galeo answered in the page by core over
+              in-memory sample files (stand-in, memory-fs, samples/, the notice)
   renderer/   document/ (host, rendered/source/text/log views, diagrams, find, states) · tabs/
               (tab bar, side panel, store, status bar, empty window, drops, tab search, tab
               overview, find in all tabs) · edit/ (editors, unsaved prompt, diff) · about/ ·
@@ -544,6 +548,7 @@ tests/
               security/ (network guard, window hardening)
   security/   no-network harness (the app under strace)
   perf/       harness for PRD targets
+  demo/       Playwright for the built demo, as a web page in Electron's Chromium (host.mjs, serve.ts)
   fixtures/   documents, generated files, the payload corpus · helpers/ (launch, fakes) · types/
 Component and module tests also sit beside their code in src/ (*.test.ts, *.test.tsx); the fuse
 check is part of scripts/verify-package.mjs.

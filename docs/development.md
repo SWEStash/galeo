@@ -19,6 +19,8 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run test:e2e` | Playwright end-to-end tests against the built app (`npm run build` first) |
 | `npm run test:no-network` | Zero-network proof on Linux: the built app runs under `strace` and must make no network `connect()` (needs `strace`) |
 | `npm run test:perf` | Timings for cold start, tabs, diagrams, data views, a 100 MB log, find in all tabs, typing in split view, and memory (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the budgets, see [performance runs](#performance-runs) |
+| `npm run build:demo` | The [website](#website)'s live demo into `out/demo` (ADR-037): the renderer, with `src/demo` standing in for main |
+| `npm run test:demo` | Playwright tests of the built demo, served as Pages serves it and opened in Electron's Chromium (`npm run build:demo` first) |
 | `npm run site:screenshots` | The [website](#website)'s screenshots from the built app, into `site/screenshots/` (`npm run build` first; run it through `npm run headless`) |
 | `npm run package` | Build, then package for the current OS into `release/` (Linux: `.deb` and AppImage; macOS: `.dmg` and `.zip`; Windows: setup and portable `.exe`) |
 | `npm run verify:package` | Check the packaged binary: fuses as configured, a flipped fuse detected, the app starts, the `.deb`'s desktop entry and icon, the licence notices; the `.rpm`'s scripts, desktop entry and icon when one is built and `rpm` is installed (`GALEO_VERIFY_RPM=1`, as in CI, makes either missing a failure) |
@@ -26,6 +28,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm run boundaries` | Check the import rules below (`scripts/check-boundaries.mjs`) |
 | `npm run check:bundle` | After `npm run build`: what the window and the render worker load up front, failing if KaTeX, Shiki, CodeMirror, Mermaid, DOMPurify or the MDX parser is among it (they load with the first document that needs them) |
 | `npm run check:exports` | Fail on an export in `src/` that no other file imports: drop the `export`, or the code if nothing uses it; exports only tests import are allowed (`scripts/check-exports.mjs`) |
+| `npm run check:demo` | After `npm run build:demo`: fail on source maps in `out/demo` or a demo over 24 MB (`scripts/demo-size.mjs`) |
 | `npm run check:docs` | Check the docs' relative links and `#anchors`, ADR and SR ids, and repository paths in code spans (`scripts/check-docs.mjs`; web links are never fetched) |
 | `npm run check:portable` | Fail on test lines that pass on Linux but not on macOS or Windows: Ctrl where macOS uses Cmd, Cmd+←/→ (by line on macOS), fixture paths expected with `/`, GNU-only tools; `portable: <reason>` in a comment keeps one (`scripts/check-portable-tests.mjs`) |
 | `npm run check:styles` | Fail on a px text size, a px spacing of 2 px or more, a px corner or a colour literal in `src/renderer/styles/app.css`: use the tokens in `tokens.css` (ADR-032), or say why on the line with `/* literal: … */` (`scripts/check-styles.mjs`) |
@@ -66,7 +69,9 @@ with no build step. Its security policy allows its own files only: no inline scr
 (`.github/workflows/pages.yml`) publishes it when `site/` changes on `main`, when a release is
 published, or when started by hand. Each run also rebuilds the signed apt repository under `/apt/`
 from the latest release's `.deb` (`scripts/apt-repo.sh`, ADR-029; key procedures in
-[Releasing](RELEASING.md)). To retake the screenshots after a UI change:
+[Releasing](RELEASING.md)), and builds the live demo under `/demo/` from that release's tag (ADR-037). The demo
+is `src/demo/`: it gives the renderer a `window.galeo` answered in the page by `src/core/` over sample files held in
+memory (`src/demo/samples/`). Try it locally with `npm run build:demo` and any static server on `out/demo`. To retake the screenshots after a UI change:
 
 ```sh
 npm run build
