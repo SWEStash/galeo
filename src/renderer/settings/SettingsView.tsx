@@ -61,7 +61,7 @@ export function SettingsView({
   state,
   profile,
   launcher = null,
-  profileLauncher = false,
+  profileLauncher = null,
   version,
   onAbout,
   say,
@@ -70,8 +70,8 @@ export function SettingsView({
   profile: ProfileView;
   /** The system whose command-line launcher this run can install; null: none (UX §6). */
   launcher?: Platform | null;
-  /** This system can give the profile a launcher of its own (#60, Linux). */
-  profileLauncher?: boolean;
+  /** The system whose launcher the profile can have (#60 Linux, #40 macOS and Windows); null: none. */
+  profileLauncher?: Platform | null;
   /** galeo's version, and the About dialog it opens (version, licence, notices). */
   version: string;
   onAbout: () => void;
@@ -180,7 +180,7 @@ export function SettingsView({
       </div>
 
       {launcher && <LauncherSection platform={launcher} />}
-      {profileLauncher && <ProfileLauncherSection name={profile.name} />}
+      {profileLauncher && <ProfileLauncherSection name={profile.name} platform={profileLauncher} />}
 
       <h2>About</h2>
       <div className="setting settings-about" data-setting="about">
@@ -386,33 +386,61 @@ function uninstalled({ removed, kept }: { removed: string[]; kept: string[] }): 
   return kept.length > 0 ? `Nothing removed.${keptNote}` : 'Nothing removed: the launcher is not installed.';
 }
 
-/** Adds this profile to the applications as "galeo · <name>", or takes it out again (#60). */
-function ProfileLauncherSection({ name }: { name: string }) {
+/** Where each system puts a profile's launcher (#60, #40): the hint, the buttons and what they say. */
+const PROFILE_LAUNCHER = {
+  linux: { hint: 'to your applications', add: 'Add to applications', remove: 'Remove from applications', place: 'your applications' },
+  win32: { hint: 'to the Start menu', add: 'Add to Start menu', remove: 'Remove from Start menu', place: 'the Start menu' },
+} as const;
+
+/**
+ * Adds this profile's launcher, "galeo · <name>", or takes it out again: an application entry on Linux (#60), a
+ * Start menu shortcut on Windows (#40). On macOS the Dock menu lists every profile, so there is nothing to add.
+ */
+function ProfileLauncherSection({ name, platform }: { name: string; platform: Platform }) {
   const [result, setResult] = useState<string | null>(null);
+  if (platform === 'darwin') {
+    return (
+      <>
+        <h2>Profile launcher</h2>
+        <p className="field-hint" data-testid="profile-launcher-dock">
+          Every profile is in galeo’s Dock menu: Control-click galeo in the Dock and choose one under New window in.
+        </p>
+      </>
+    );
+  }
+  const where = PROFILE_LAUNCHER[platform];
   return (
     <>
       <h2>Profile launcher</h2>
-      <p className="field-hint">Adds “galeo · {name}” to your applications: it opens galeo in this profile, and files you open with it.</p>
+      <p className="field-hint">Adds “galeo · {name}” {where.hint}: it opens galeo in this profile{platform === 'linux' ? ', and files you open with it' : ''}.</p>
       <div className="settings-buttons">
         <Button
           onPress={() =>
             void window.galeo.app
               .installProfileLauncher()
-              .then((outcome) => setResult(outcome.ok ? `Added “galeo · ${name}” to your applications.` : `Not added: ${outcome.reason}.`))
-              .catch(() => setResult("Not added: galeo couldn't write the file."))
+              .then((outcome) => setResult(outcome.ok ? `Added “galeo · ${name}” to ${where.place}.` : `Not added: ${outcome.reason}.`))
+              .catch(() => setResult(`Not added: galeo couldn't write ${platform === 'linux' ? 'the file' : 'the shortcut'}.`))
           }
         >
-          Add to applications
+          {where.add}
         </Button>
         <Button
           onPress={() =>
             void window.galeo.app
               .uninstallProfileLauncher()
-              .then(({ removed, kept }) => setResult(removed.length > 0 ? `Removed “galeo · ${name}” from your applications.` : kept.length > 0 ? `Nothing removed: galeo didn't write ${kept[0]}.` : 'Nothing removed: it is not in your applications.'))
-              .catch(() => setResult("Not removed: galeo couldn't remove the file."))
+              .then(({ removed, kept }) =>
+                setResult(
+                  removed.length > 0
+                    ? `Removed “galeo · ${name}” from ${where.place}.`
+                    : kept.length > 0
+                      ? `Nothing removed: galeo didn't write ${kept[0]}.`
+                      : `Nothing removed: it is not in ${where.place}.`,
+                ),
+              )
+              .catch(() => setResult(`Not removed: galeo couldn't remove ${platform === 'linux' ? 'the file' : 'the shortcut'}.`))
           }
         >
-          Remove from applications
+          {where.remove}
         </Button>
       </div>
       <p className="field-hint" role="status" data-testid="profile-launcher-result">
