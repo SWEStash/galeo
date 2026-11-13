@@ -57,3 +57,56 @@ export function dockMenuModel(profiles: readonly { id: string; name: string }[])
   if (profiles.length === 0) return [];
   return [{ label: 'New window in', profile: null }, ...profiles.map((profile) => ({ label: profile.name, profile: profile.id }))];
 }
+
+/** The user's Start menu programs folder, as main reaches it: only `.lnk` files, read and written whole. */
+export interface StartMenu {
+  dir: string;
+  /** The `.lnk` files in `dir`, as full paths. */
+  list(): Promise<string[]>;
+  /** A shortcut's target and arguments, or null if it can't be read. */
+  read(path: string): { target: string; args: string } | null;
+  /** Writes (or replaces) a shortcut; false if Windows refused. */
+  write(path: string, link: ShortcutLink): boolean;
+  remove(path: string): Promise<void>;
+}
+
+/** The shortcuts in the Start menu that are galeo's for `id`. */
+async function shortcutsOf(menu: StartMenu, target: string, id: string): Promise<string[]> {
+  const files = (await menu.list()).filter((file) => file.slice(menu.dir.length + 1).startsWith('galeo · '));
+  return files.filter((file) => {
+    const link = menu.read(file);
+    return link !== null && isProfileShortcut(link, target, id);
+  });
+}
+
+/**
+ * Adds a profile's shortcut (#40), replacing galeo's shortcut for it under an older name. A shortcut of that name
+ * that isn't galeo's for this profile stays: the reason says so.
+ */
+export async function installProfileShortcut(
+  menu: StartMenu,
+  target: string,
+  profile: { id: string; name: string },
+): Promise<{ ok: true; path: string } | { ok: false; reason: string }> {
+  const shortcut = profileShortcut(target, profile, menu.dir);
+  if (!shortcut.ok) return shortcut;
+  const existing = await shortcutsOf(menu, target, profile.id);
+  if (!existing.includes(shortcut.path) && (await menu.list()).includes(shortcut.path)) {
+    return { ok: false, reason: `the Start menu already has a shortcut called "${shortcut.path.slice(menu.dir.length + 1, -4)}"` };
+  }
+  if (!menu.write(shortcut.path, shortcut.link)) return { ok: false, reason: "Windows didn't write the shortcut" };
+  for (const old of existing) if (old !== shortcut.path) await menu.remove(old);
+  return { ok: true, path: shortcut.path };
+}
+
+/** Removes galeo's shortcuts for a profile (#40); returns the names removed. */
+export async function uninstallProfileShortcuts(menu: StartMenu, target: string, id: string): Promise<string[]> {
+  const found = await shortcutsOf(menu, target, id);
+  for (const file of found) await menu.remove(file);
+  return found.map((file) => file.slice(menu.dir.length + 1));
+}
+
+/** After a profile's rename: its shortcut, if galeo had written one, takes the new name. */
+export async function renameProfileShortcut(menu: StartMenu, target: string, profile: { id: string; name: string }): Promise<void> {
+  if ((await shortcutsOf(menu, target, profile.id)).length > 0) await installProfileShortcut(menu, target, profile);
+}

@@ -19,6 +19,8 @@ interface TestHooks {
   __galeoRevealed?: string[];
   __galeoOpenedPaths?: string[];
   __galeoBlockedRequests?: string[];
+  /** The profiles galeo's Dock menu lists (macOS, #40). */
+  __galeoDockMenu?: { label: string; profile: string | null }[];
 }
 
 export const testHooks = globalThis as TestHooks;

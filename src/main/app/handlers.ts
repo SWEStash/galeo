@@ -13,6 +13,7 @@ import {
   uninstallLauncher,
   uninstallProfileLauncher,
 } from '../../core/desktop/launcher';
+import { installProfileShortcut, uninstallProfileShortcuts, type StartMenu } from '../../core/desktop/profile-shortcuts';
 import type { InputCredits } from '../../core/documents/input-credits';
 import type { FileSystem } from '../../core/ports';
 import type { Utf8 } from '../../core/settings/json-file';
@@ -126,6 +127,8 @@ export function appHandlers(deps: {
     profileOf: (window: number) => { id: string; name: string } | null;
     /** The galeo command a profile's launcher runs, or null where there is none (#60). */
     profileExec: () => Promise<string | null>;
+    /** On Windows, the Start menu and the program a profile's shortcut runs (#40); null elsewhere. */
+    startMenu: { menu: StartMenu; target: () => string | null } | null;
   };
 }): Pick<Handlers, AppChannels> {
   const { info, sandboxChoice, launcher } = deps;
@@ -173,6 +176,11 @@ export function appHandlers(deps: {
       if (!input.spend(event.sender.id)) throw new Error('no input');
       const profile = profileOf(event.sender.id);
       if (!profile) throw new Error('no profile');
+      if (launcher.startMenu) {
+        const target = launcher.startMenu.target();
+        if (!target) return { ok: false as const, reason: 'this copy of galeo has no program a shortcut could run (it runs from source)' };
+        return installProfileShortcut(launcher.startMenu.menu, target, profile);
+      }
       const exec = await profileExec();
       if (!exec) return { ok: false as const, reason: 'this copy of galeo has no command a launcher could run (it runs from source, or not on Linux)' };
       const file = profileLauncher(exec, profile, launcherDirs().applicationsDir);
@@ -185,6 +193,10 @@ export function appHandlers(deps: {
       if (!input.spend(event.sender.id)) throw new Error('no input');
       const profile = profileOf(event.sender.id);
       if (!profile) throw new Error('no profile');
+      if (launcher.startMenu) {
+        const target = launcher.startMenu.target();
+        return { removed: target ? await uninstallProfileShortcuts(launcher.startMenu.menu, target, profile.id) : [], kept: [] };
+      }
       return uninstallProfileLauncher({ fs, utf8 }, profileLauncherPath(launcherDirs().applicationsDir, profile.id), profile.id);
     },
     'app.resolveSandboxUnavailable': ([choice]) => {

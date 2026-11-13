@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { dockMenuModel, isProfileShortcut, profileShortcut, profileShortcutTarget } from '../../../src/core/desktop/profile-shortcuts';
+import {
+  dockMenuModel,
+  installProfileShortcut,
+  isProfileShortcut,
+  profileShortcut,
+  profileShortcutTarget,
+  renameProfileShortcut,
+  uninstallProfileShortcuts,
+  type StartMenu,
+} from '../../../src/core/desktop/profile-shortcuts';
 
 const programs = 'C:\\Users\\ana\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs';
 const exe = 'C:\\Users\\ana\\AppData\\Local\\Programs\\galeo\\galeo.exe';
@@ -67,5 +76,68 @@ describe('dockMenuModel (#40, macOS)', () => {
 
   it('has no heading without profiles', () => {
     expect(dockMenuModel([])).toEqual([]);
+  });
+});
+
+/** A Start menu in memory: path → the shortcut's target and arguments. */
+function fakeMenu(files: Record<string, { target: string; args: string }> = {}, { refuse = false } = {}) {
+  const store = new Map(Object.entries(files));
+  const menu: StartMenu = {
+    dir: programs,
+    list: async () => [...store.keys()],
+    read: (path) => store.get(path) ?? null,
+    write: (path, link) => {
+      if (refuse) return false;
+      store.set(path, { target: link.target, args: link.args });
+      return true;
+    },
+    remove: async (path) => void store.delete(path),
+  };
+  return { menu, names: () => [...store.keys()].map((path) => path.slice(programs.length + 1)).sort() };
+}
+
+describe('the Start menu operations (#40)', () => {
+  const work = { id: 'work', name: 'Work' };
+  const at = (name: string) => `${programs}\\${name}`;
+
+  it('adds the shortcut, and leaves the others alone', async () => {
+    const { menu, names } = fakeMenu({ [at('Firefox.lnk')]: { target: 'C:\\ff.exe', args: '' } });
+    expect(await installProfileShortcut(menu, exe, work)).toEqual({ ok: true, path: at('galeo · Work.lnk') });
+    expect(names()).toEqual(['Firefox.lnk', 'galeo · Work.lnk']);
+  });
+
+  it("replaces galeo's shortcut for the profile under an older name", async () => {
+    const { menu, names } = fakeMenu({ [at('galeo · Old.lnk')]: { target: exe, args: '--profile work' } });
+    await installProfileShortcut(menu, exe, work);
+    expect(names()).toEqual(['galeo · Work.lnk']);
+  });
+
+  it('keeps a shortcut of that name that is not galeo\'s for this profile', async () => {
+    const { menu, names } = fakeMenu({ [at('galeo · Work.lnk')]: { target: exe, args: '--profile home' } });
+    expect(await installProfileShortcut(menu, exe, work)).toEqual({ ok: false, reason: 'the Start menu already has a shortcut called "galeo · Work"' });
+    expect(names()).toEqual(['galeo · Work.lnk']);
+  });
+
+  it('says so when Windows refuses to write it', async () => {
+    const { menu } = fakeMenu({}, { refuse: true });
+    expect(await installProfileShortcut(menu, exe, work)).toEqual({ ok: false, reason: "Windows didn't write the shortcut" });
+  });
+
+  it("removes only galeo's shortcuts for the profile", async () => {
+    const { menu, names } = fakeMenu({
+      [at('galeo · Work.lnk')]: { target: exe, args: '--profile work' },
+      [at('galeo · Home.lnk')]: { target: exe, args: '--profile home' },
+      [at('galeo · Mine.lnk')]: { target: 'C:\\Other\\galeo.exe', args: '--profile work' },
+    });
+    expect(await uninstallProfileShortcuts(menu, exe, 'work')).toEqual(['galeo · Work.lnk']);
+    expect(names()).toEqual(['galeo · Home.lnk', 'galeo · Mine.lnk']);
+  });
+
+  it('renames the shortcut with the profile, and adds none where there was none', async () => {
+    const { menu, names } = fakeMenu({ [at('galeo · Work.lnk')]: { target: exe, args: '--profile work' } });
+    await renameProfileShortcut(menu, exe, { id: 'work', name: 'Job' });
+    expect(names()).toEqual(['galeo · Job.lnk']);
+    await renameProfileShortcut(menu, exe, { id: 'home', name: 'Home' });
+    expect(names()).toEqual(['galeo · Job.lnk']);
   });
 });

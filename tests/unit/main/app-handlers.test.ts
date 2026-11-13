@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InputCredits } from '../../../src/core/documents/input-credits';
+import type { StartMenu } from '../../../src/core/desktop/profile-shortcuts';
 import { appHandlers, execCommand, launcherTarget, profileLauncherExec, type LauncherTarget } from '../../../src/main/app/handlers';
 import { utf8 } from '../../../src/main/adapters/utf8';
 import type { WindowIpcEvent } from '../../../src/main/ipc/register';
@@ -10,7 +11,13 @@ const from = (id: number) => ({ sender: { id } }) as WindowIpcEvent;
 const GAL = ['#!/bin/sh', 'GALEO_BIN="${GALEO_BIN:-/opt/galeo/galeo}"', 'exec "$GALEO_BIN" "$@"', ''].join('\n');
 const APPIMAGE = '/home/me/Apps/galeo.AppImage';
 
-function setup({ target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTarget | null, env = {} as Record<string, string>, files = {} as Record<string, string>, profileExec = '/opt/galeo/galeo' as string | null } = {}) {
+function setup({
+  target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTarget | null,
+  env = {} as Record<string, string>,
+  files = {} as Record<string, string>,
+  profileExec = '/opt/galeo/galeo' as string | null,
+  startMenu = null as { menu: StartMenu; target: () => string | null } | null,
+} = {}) {
   const fs = new FakeFileSystem({ '/opt/galeo/gal': GAL, '/opt/galeo/resources/mime.xml': '<!-- The MDX type, installed by galeo. --><mime/>', ...files });
   const input = new InputCredits(() => 0);
   const refreshed: string[] = [];
@@ -31,6 +38,7 @@ function setup({ target = { kind: 'appimage', appImage: APPIMAGE } as LauncherTa
       refreshMime: async (database) => void refreshed.push(database),
       profileOf: (window) => (window === 1 ? { id: 'work', name: 'Work \\ Notes' } : null),
       profileExec: async () => profileExec,
+      startMenu,
     },
   });
   return { handlers, fs, input, refreshed, sandbox, withdraw: () => (offered = false) };
@@ -193,6 +201,48 @@ describe('profile launchers (#60)', () => {
     await expect(handlers['app.uninstallProfileLauncher']([], from(1))).rejects.toThrow('no input');
     input.received(1);
     expect(await handlers['app.installProfileLauncher']([], from(1))).toMatchObject({ ok: false, reason: expect.stringContaining('no command') });
+  });
+});
+
+describe('profile shortcuts on Windows (#40)', () => {
+  const programs = 'C:\\Users\\me\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs';
+  const exe = 'C:\\Users\\me\\AppData\\Local\\Programs\\galeo\\galeo.exe';
+  const shortcut = `${programs}\\galeo · Work - Notes.lnk`;
+
+  function menu(target: string | null = exe) {
+    const store = new Map<string, { target: string; args: string }>();
+    const startMenu: StartMenu = {
+      dir: programs,
+      list: async () => [...store.keys()],
+      read: (file) => store.get(file) ?? null,
+      write: (file, link) => (store.set(file, { target: link.target, args: link.args }), true),
+      remove: async (file) => void store.delete(file),
+    };
+    return { startMenu: { menu: startMenu, target: () => target }, store };
+  }
+
+  it("adds the sender profile's shortcut on input, opening galeo in it by id, and removes it", async () => {
+    const { startMenu, store } = menu();
+    const { handlers, input, fs } = setup({ startMenu });
+    await expect(handlers['app.installProfileLauncher']([], from(1))).rejects.toThrow('no input');
+    input.received(1);
+    expect(await handlers['app.installProfileLauncher']([], from(1))).toEqual({ ok: true, path: shortcut });
+    expect(store.get(shortcut)).toEqual({ target: exe, args: '--profile work' });
+    // Nothing of the Linux launcher is written.
+    expect(await fs.stat('/home/me/.local/share/applications/galeo-profile-work.desktop').then(() => true, () => false)).toBe(false);
+    input.received(1);
+    expect(await handlers['app.uninstallProfileLauncher']([], from(1))).toEqual({ removed: ['galeo · Work - Notes.lnk'], kept: [] });
+    expect(store.size).toBe(0);
+  });
+
+  it('says why when this run has no program a shortcut could run', async () => {
+    const { startMenu } = menu(null);
+    const { handlers, input } = setup({ startMenu });
+    input.received(1);
+    expect(await handlers['app.installProfileLauncher']([], from(1))).toEqual({
+      ok: false,
+      reason: 'this copy of galeo has no program a shortcut could run (it runs from source)',
+    });
   });
 });
 

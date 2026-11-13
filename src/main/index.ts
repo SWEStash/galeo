@@ -56,6 +56,8 @@ import { chainedSha256, samePrefix, sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
 import { appHandlers, launcherTarget, profileLauncherExec, profileLauncherFile } from './app/handlers';
 import { renameProfileLauncher, uninstallProfileLauncher } from '../core/desktop/launcher';
+import { dockMenuModel, profileShortcutTarget, renameProfileShortcut, uninstallProfileShortcuts } from '../core/desktop/profile-shortcuts';
+import { windowsStartMenu } from './adapters/start-menu';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
 import { sendEvent } from './ipc/send';
@@ -251,6 +253,14 @@ function start(initialMode: StartupMode): void {
   cleanups.add((windowId) => focusOrder.remove(windowId));
   let quitting = false;
   const launcher = launcherTarget({ packaged: app.isPackaged, platform: process.platform, env: process.env, execPath: process.execPath, home: app.getPath('home') });
+  // Profile shortcuts in the Start menu on Windows (#40).
+  const startMenu =
+    process.platform === 'win32'
+      ? {
+          menu: windowsStartMenu(app.getPath('appData'), process.env),
+          target: () => profileShortcutTarget({ packaged: app.isPackaged, platform: 'win32', env: process.env, execPath: process.execPath }),
+        }
+      : null;
   /** What a window's page needs to paint, handed over when the window is created (and in `app.info`). */
   const startInfo = (): StartInfo => ({
     name: app.getName(),
@@ -272,7 +282,18 @@ function start(initialMode: StartupMode): void {
     profiles: (await catalog.list()).map((profile) => ({ ...profile, running: running.has(profile.id) })),
   });
   /** Every window's profile menu and chip follow profiles being created, changed, started and stopped. */
+  // galeo's Dock menu on macOS lists every profile (#40); rebuilt whenever the profiles change.
+  const updateDockMenu = async () => {
+    if (process.platform !== 'darwin' || !app.dock) return;
+    const model = dockMenuModel((await catalog.list()).map(({ id, name }) => ({ id, name })));
+    if (!app.isPackaged) testHooks.__galeoDockMenu = model;
+    const items = model.map(({ label, profile }) =>
+      profile === null ? { label, enabled: false } : { label, click: () => void openRouted({ profile, newWindow: true }, []) },
+    );
+    app.dock.setMenu(Menu.buildFromTemplate(items));
+  };
   const broadcastProfiles = async () => {
+    await updateDockMenu().catch((error: unknown) => console.warn('galeo: Dock menu not updated', error));
     for (const profile of running.values()) {
       const state = await profilesState(profile.id);
       for (const window of profile.windows) sendEvent(window.webContents, 'profiles.changed', state);
@@ -733,6 +754,10 @@ function start(initialMode: StartupMode): void {
     if (process.platform === 'linux') {
       await uninstallProfileLauncher({ fs, utf8 }, profileLauncherFile(app.getPath('home'), process.env, id), id).catch((error: unknown) => console.warn('galeo: profile launcher not removed', error));
     }
+    const shortcutTarget = startMenu?.target();
+    if (startMenu && shortcutTarget) {
+      await uninstallProfileShortcuts(startMenu.menu, shortcutTarget, id).catch((error: unknown) => console.warn('galeo: profile shortcut not removed', error));
+    }
     await broadcastProfiles();
   };
 
@@ -752,6 +777,10 @@ function start(initialMode: StartupMode): void {
     if (renamed) {
       const launcher = profileLauncherFile(app.getPath('home'), process.env, profile.id);
       await renameProfileLauncher({ fs, utf8 }, launcher, updated.profile).catch((error: unknown) => console.warn('galeo: profile launcher not renamed', error));
+      const shortcutTarget = startMenu?.target();
+      if (startMenu && shortcutTarget) {
+        await renameProfileShortcut(startMenu.menu, shortcutTarget, updated.profile).catch((error: unknown) => console.warn('galeo: profile shortcut not renamed', error));
+      }
     }
     for (const windowId of idsOf(profile)) updateTitle(profile, windowId);
     await broadcastProfiles();
@@ -833,6 +862,7 @@ function start(initialMode: StartupMode): void {
               return profile ? { id: profile.id, name: profile.name } : null;
             },
             profileExec: () => profileLauncherExec({ packaged: app.isPackaged, platform: process.platform, env: process.env, fs, utf8 }),
+            startMenu,
           },
         }),
         ...profileHandlers({
@@ -969,6 +999,7 @@ function start(initialMode: StartupMode): void {
       choiceWindow = createAppWindow({ url: rendererUrl(runtime), sandboxed, dialog: true, startInfo: startInfo() });
     } else {
       acceptOpenRequests();
+      void updateDockMenu().catch((error: unknown) => console.warn('galeo: Dock menu not built', error));
     }
     installAppLifecycle(app, {
       platform: process.platform,
