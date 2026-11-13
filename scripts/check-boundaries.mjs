@@ -5,7 +5,7 @@ import { builtinModules } from 'node:module';
 import path from 'node:path';
 import { listSourceFiles, resolveRelative, stripComments } from './lib/source-scan.mjs';
 
-const FOLDERS = ['shared', 'core', 'main', 'preload', 'renderer'];
+const FOLDERS = ['shared', 'core', 'main', 'preload', 'renderer', 'demo'];
 
 /** Folders each folder may import from (dependencies point inward). */
 const ALLOWED_FOLDERS = {
@@ -14,13 +14,15 @@ const ALLOWED_FOLDERS = {
   main: ['shared', 'core', 'main'],
   preload: ['shared', 'preload'],
   renderer: ['shared', 'renderer'],
+  // The website's demo: the renderer, with main's core logic standing in for main (#41).
+  demo: ['shared', 'core', 'renderer', 'demo'],
 };
 
 /** Folders that must stay free of Electron and Node APIs. */
-const PLATFORM_FREE = new Set(['shared', 'core', 'renderer']);
+const PLATFORM_FREE = new Set(['shared', 'core', 'renderer', 'demo']);
 
 /** Folders whose bundles must not contain zod: schemas run in main only (ADR-007, SR-11). */
-const ZOD_FREE = new Set(['preload', 'renderer']);
+const ZOD_FREE = new Set(['preload', 'renderer', 'demo']);
 
 const NODE_BUILTINS = new Set(builtinModules);
 

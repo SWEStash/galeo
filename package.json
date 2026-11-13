@@ -18,6 +18,7 @@
     "build:main": "vite build --config build/vite.main.config.ts",
     "build:preload": "vite build --config build/vite.preload.config.ts",
     "build:renderer": "vite build --config build/vite.renderer.config.ts",
+    "build:demo": "vite build --config build/vite.demo.config.ts",
     "start": "electron .",
     "package": "npm run build && electron-builder --config electron-builder.config.mjs --publish never",
     "verify:package": "node scripts/verify-package.mjs",

@@ -17,6 +17,9 @@
       "path": "src/renderer"
     },
     {
+      "path": "src/demo"
+    },
+    {
       "path": "tsconfig.node.json"
     },
     {
