@@ -137,16 +137,30 @@ file as `/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo`, the path users' `.repo` file names
 
 **Setting it up**, or again after it was removed:
 
-1. Create the `rpm-signing` environment with its rule before any run references it: GitHub creates a referenced
-   environment on the spot, with no rule.
+1. Create the `rpm-signing` environment with its rules before any run references it (GitHub creates a referenced
+   environment on the spot, with none): only `main` and `v*` tags, and each run waits for the owner's approval.
+   Either signing subkey signs for both repositories (apt and rpm accept any signing subkey of the key), so a
+   tag ruleset lets only an admin push `v*` tags: without it, a pushed tag would reach the key without `main`'s
+   checks.
    ```sh
-   gh api -X PUT repos/SWEStash/galeo/environments/rpm-signing \
-     -F 'deployment_branch_policy[protected_branches]=false' -F 'deployment_branch_policy[custom_branch_policies]=true'
+   gh api -X PUT repos/SWEStash/galeo/environments/rpm-signing --input - <<EOF
+   {"reviewers": [{"type": "User", "id": $(gh api user --jq .id)}],
+    "deployment_branch_policy": {"protected_branches": false, "custom_branch_policies": true}}
+   EOF
    gh api -X POST repos/SWEStash/galeo/environments/rpm-signing/deployment-branch-policies -f name=main -f type=branch
    gh api -X POST repos/SWEStash/galeo/environments/rpm-signing/deployment-branch-policies -f name='v*' -f type=tag
+   gh api -X POST repos/SWEStash/galeo/rulesets --input - <<'EOF'
+   {"name": "Release tags", "target": "tag", "enforcement": "active",
+    "conditions": {"ref_name": {"include": ["refs/tags/v*"], "exclude": []}},
+    "rules": [{"type": "creation"}, {"type": "update"}, {"type": "deletion"}],
+    "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}]}
+   EOF
    gh api repos/SWEStash/galeo/environments/rpm-signing/deployment-branch-policies --jq '.branch_policies[] | "\(.type) \(.name)"'
+   gh api repos/SWEStash/galeo/environments/rpm-signing --jq '.protection_rules[] | .type'
    ```
-   The last command lists `branch main` and `tag v*`, and nothing else.
+   The last two commands list `branch main` and `tag v*`, and nothing else, then `required_reviewers` and
+   `branch_policy`. Every release run and dry run then waits at *Sign the .rpm packages* until the owner
+   approves it in the run's page (*Review deployments*).
 2. Add the subkey to the offline key, in a copy of it in memory, and keep the result on the stick. `<fingerprint>`
    is the primary key's: once `GNUPGHOME` points at the copy, `gpg --list-keys` prints it on the line under `pub`.
    ```sh
@@ -182,8 +196,12 @@ file as `/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo`, the path users' `.repo` file names
 3. Release a patch version carrying that key, signed **with the standby subkey**: set it as `DNF_SIGNING_KEY` and
    the offline key's passphrase as `DNF_SIGNING_PASSPHRASE`, in both environments, for that release only.
 4. Once its deploy is green, delete both `DNF_SIGNING_PASSPHRASE` secrets, set the new dnf subkey in both
-   environments (step 3 above), and add a new standby subkey: the old one is now spent for apt too.
-5. Say in the release notes what happened, which subkey was revoked, and that users should upgrade now.
+   environments (step 3 above), and add a new standby subkey: the old one is now spent for apt too. Sign the
+   next release with the new dnf subkey soon: rpm keeps the key it imported first, and a package signed by a
+   subkey it doesn't know is what makes dnf import the updated key, with its revocation, on every machine.
+5. Say in the release notes what happened, which subkey was revoked, and that users should upgrade now. Tell
+   Fedora users, once upgraded, to run `sudo rpmkeys --import /etc/pki/rpm-gpg/RPM-GPG-KEY-galeo`: until then
+   their rpm still trusts the revoked subkey.
 
 **If the primary key or both signing subkeys are lost or leak:** delete the secrets (apt's and dnf's), publish the revocation
 certificate (`gpg --import <media>/galeo-apt-gnupg/openpgp-revocs.d/<fingerprint>.rev`, then export the public

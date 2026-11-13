@@ -34,7 +34,10 @@ a new CI subkey of galeo's existing key.
    `.repo` file with `gpgcheck=1`, `repo_gpgcheck=1` and the key's URL.
 4. **The key.** galeo's existing key gets a **new signing subkey for dnf**, made offline by the owner. CI holds it
    as a secret of two environments: the release's signing environment (packages, decision 5) and
-   `github-pages` (repository metadata), beside the apt subkey there. A leak revokes that subkey only.
+   `github-pages` (repository metadata), beside the apt subkey there. A leak revokes that subkey only, but
+   reaches both repositories until then: apt and rpm accept any signing subkey of the key (corrected after the
+   v0.9 audit, 2026-11-13, owner). So the signing environment also needs the owner's approval for each run, and
+   only the owner may push a `v*` tag (a tag ruleset).
    The standby subkey of ADR-029 covers both. The published key file gains the subkey with the next release,
    which apt users receive with their upgrade.
 5. **Where the packages are signed: in the release workflow, before attestation** (owner, 2026-11-12). One

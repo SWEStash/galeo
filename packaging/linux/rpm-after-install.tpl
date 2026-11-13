@@ -28,7 +28,9 @@ if [ ! -e '/usr/bin/gal' ] || [ "`readlink '/usr/bin/gal'`" = '/opt/${sanitizedP
 fi
 
 # The repository's key, where the dnf .repo file names it (ADR-036). It replaces a copy the user
-# downloaded to set the repository up, so key rotations and revocations arrive with each upgrade.
+# downloaded to set the repository up. dnf imports it again when a package is signed by a subkey rpm
+# doesn't know yet, which brings a new subkey and any revocation; until then a revocation needs
+# `sudo rpmkeys --import` of this file (RELEASING).
 mkdir -p /etc/pki/rpm-gpg
 cp -f '/opt/${sanitizedProductName}/resources/galeo-archive-keyring.asc' '/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo' || true
 chmod 644 '/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo' || true

@@ -1,9 +1,11 @@
 # galeo's dnf repository (ADR-036): save as /etc/yum.repos.d/galeo.repo, with the key at the path below
-# (USAGE). The package keeps that key current, so rotations and revocations arrive with each upgrade.
+# (USAGE). The package keeps that file current, but rpm keeps the key it imported first: dnf imports again only
+# for a package signed by a subkey it doesn't know, and then reads both sources below, the site's over HTTPS
+# (RELEASING, the dnf repository's subkey).
 [galeo]
 name=galeo
 baseurl=https://swestash.github.io/galeo/rpm/
 enabled=1
 gpgcheck=1
 repo_gpgcheck=1
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-galeo
+gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-galeo https://swestash.github.io/galeo/rpm/galeo.asc
