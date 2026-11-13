@@ -58,6 +58,9 @@ export default {
   rpm: {
     afterInstall: 'packaging/linux/rpm-after-install.tpl',
     afterRemove: 'packaging/linux/rpm-after-remove.tpl',
+    // Unused on Fedora, but each package target writes it into the shared linux-unpacked: without this the .rpm
+    // build replaced the .deb's profile there with electron-builder's own.
+    appArmorProfile: 'packaging/linux/apparmor-profile.tpl',
   },
 
   // The runner's own architecture, as on Windows: CI builds arm64 and x64 on their own runners.
