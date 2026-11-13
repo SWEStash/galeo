@@ -436,7 +436,12 @@ A profile's launcher (v0.7, #60, Linux) is a desktop entry in the user's own app
 written for the sender window's profile only and only for real input: it runs galeo's own command
 (the AppImage, or the package entry's command) with `--profile <id>` and files after `--` (SR-13);
 names with control characters are refused. Removing it, and deleting the profile, removes only an
-entry carrying that profile's mark.
+entry carrying that profile's mark. On Windows (v0.9, #40) it is a Start menu shortcut, under the same
+rules: written for the sender's profile only and on real input, running galeo's own program (the installed
+or portable `.exe`) with only `--profile <id>`; galeo removes or renames only a shortcut that runs that
+program with that argument, and the uninstaller only `galeo*.lnk` that run its `galeo.exe` with
+`--profile`, its paths passed to PowerShell as environment variables. On macOS the Dock menu lists the
+profiles' names, which only open a window in that profile.
 Find in all tabs (v0.4, ADR-024) searches only the sender's own open tabs: their files, which the
 window already shows, or the unsaved text main keeps for them. It answers with counts and short
 snippets by tab id. It reads nothing the page couldn't already read, so it spends no credit.

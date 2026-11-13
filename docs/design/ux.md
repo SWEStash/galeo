@@ -164,9 +164,14 @@ profile. Multiple selected files open as tabs in selection order.
   removes its launcher, if galeo wrote one.
 - (v0.7, Linux) **Profile launcher**: Settings → Profile launcher → *Add to applications* adds
   "galeo · <profile>" to the desktop's applications, which opens galeo in that profile (by its id, so
-  a rename doesn't break it; the entry keeps the name it had) and opens files with it; *Remove from
+  a rename doesn't break it; from v0.8 the entry takes the new name) and opens files with it; *Remove from
   applications* takes out only that profile's entry. It runs the AppImage or the galeo package's
   command; a run from source has none, and says so.
+- (v0.9, #40, Windows) *Add to Start menu* writes a "galeo · <profile>" shortcut beside galeo in the Start
+  menu, running the installed or portable `.exe` with `--profile <id>`; renames and deletes follow it as on
+  Linux, and the uninstaller removes these shortcuts. A shortcut of that name that isn't galeo's for the
+  profile stays, and the result says so. (macOS) galeo's Dock menu lists every profile under "New window
+  in", kept current; Settings says so instead of offering buttons.
 - Closing the last window of a profile stops the profile and keeps its session for next time
   (Chrome semantics). Closing one of several windows discards that window's tabs, recoverable
   with Ctrl+Shift+T while the profile runs.
@@ -641,7 +646,9 @@ this map only.
   in `%LOCALAPPDATA%\Microsoft\WindowsApps` on Windows. Beside it, "Uninstall
   command-line launcher" (v0.4) removes what it wrote and says what it removed, and names any file
   it kept because galeo didn't write it. (v0.7, Linux) "Profile launcher" adds or removes this
-  profile's own entry in the applications (F5).
+  profile's own entry in the applications (F5); (v0.9, #40) on Windows its buttons add or remove a
+  "galeo · <profile>" Start menu shortcut, and on macOS the section says the Dock menu lists every
+  profile under "New window in".
 
 ## 7. Accessibility (target: WCAG 2.2 AA)
 

@@ -350,9 +350,16 @@ A profile is a separate set of windows, session, recent files and settings, for 
 client or project. The profile chip at the left of the tab bar (Ctrl+Shift+M) lists them and
 creates, renames, recolours or deletes them. `galeo --profile NAME` creates a profile on first use,
 with an Undo. The `default` profile can't be deleted; deleting another removes its session and
-settings, never your files. On Linux, Settings → **Profile launcher** adds "galeo · <profile>" to
-your applications, which opens galeo straight in that profile; renaming the profile renames it, and
-deleting the profile removes it.
+settings, never your files. Settings → **Profile launcher** gives a profile its own way in, which
+opens galeo straight in that profile:
+
+- On Linux, *Add to applications* adds "galeo · <profile>" to your applications.
+- On Windows (from galeo 0.9), *Add to Start menu* adds a "galeo · <profile>" shortcut to the Start menu,
+  beside galeo. Uninstalling galeo removes these shortcuts, and only them.
+- On macOS (from galeo 0.9), there is nothing to add: Control-click galeo in the Dock and choose a
+  profile under *New window in*.
+
+Renaming the profile renames its entry or shortcut, and deleting the profile removes it.
 
 ## Settings and custom CSS
 
