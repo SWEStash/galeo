@@ -5,11 +5,9 @@ import type { StartMenu } from '../../core/desktop/profile-shortcuts';
 
 /**
  * The user's Start menu programs folder on Windows (#40), through Electron's shortcut calls: profile shortcuts only,
- * written and removed on the reader's input (the handlers spend a credit first). A test names its own folder.
+ * written and removed on the reader's input (the handlers spend a credit first). `dir` is `startMenuFolder`'s.
  */
-export function windowsStartMenu(appData: string, env: Readonly<Record<string, string | undefined>>): StartMenu {
-  const test = env['GALEO_TEST_START_MENU'];
-  const dir = test && path.win32.isAbsolute(test) ? test : path.win32.join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+export function windowsStartMenu(dir: string): StartMenu {
   return {
     dir,
     list: async () => {

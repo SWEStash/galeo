@@ -56,7 +56,7 @@ import { chainedSha256, samePrefix, sha256 } from './adapters/content-hash';
 import { utf8 } from './adapters/utf8';
 import { appHandlers, launcherTarget, profileLauncherExec, profileLauncherFile } from './app/handlers';
 import { renameProfileLauncher, uninstallProfileLauncher } from '../core/desktop/launcher';
-import { dockMenuModel, profileShortcutTarget, renameProfileShortcut, uninstallProfileShortcuts } from '../core/desktop/profile-shortcuts';
+import { dockMenuModel, profileShortcutTarget, renameProfileShortcut, startMenuFolder, uninstallProfileShortcuts } from '../core/desktop/profile-shortcuts';
 import { windowsStartMenu } from './adapters/start-menu';
 import { documentHandlers } from './documents/handlers';
 import { registerIpc } from './ipc/register';
@@ -257,7 +257,7 @@ function start(initialMode: StartupMode): void {
   const startMenu =
     process.platform === 'win32'
       ? {
-          menu: windowsStartMenu(app.getPath('appData'), process.env),
+          menu: windowsStartMenu(startMenuFolder({ packaged: app.isPackaged, env: process.env, appData: app.getPath('appData') })),
           target: () => profileShortcutTarget({ packaged: app.isPackaged, platform: 'win32', env: process.env, execPath: process.execPath }),
         }
       : null;

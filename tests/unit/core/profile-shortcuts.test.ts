@@ -6,6 +6,7 @@ import {
   profileShortcut,
   profileShortcutTarget,
   renameProfileShortcut,
+  startMenuFolder,
   uninstallProfileShortcuts,
   type StartMenu,
 } from '../../../src/core/desktop/profile-shortcuts';
@@ -65,6 +66,20 @@ describe('profileShortcutTarget (#40)', () => {
   });
 });
 
+describe('startMenuFolder (#40)', () => {
+  const appData = 'C:\\Users\\ana\\AppData\\Roaming';
+  it("is the user's Start menu programs folder", () => {
+    expect(startMenuFolder({ packaged: true, env: {}, appData })).toBe(programs);
+  });
+
+  it("is a test's folder only in a run from source, and only an absolute one", () => {
+    const test = 'C:\\Temp\\menu';
+    expect(startMenuFolder({ packaged: false, env: { GALEO_TEST_START_MENU: test }, appData })).toBe(test);
+    expect(startMenuFolder({ packaged: true, env: { GALEO_TEST_START_MENU: test }, appData })).toBe(programs);
+    expect(startMenuFolder({ packaged: false, env: { GALEO_TEST_START_MENU: 'menu' }, appData })).toBe(programs);
+  });
+});
+
 describe('dockMenuModel (#40, macOS)', () => {
   it('lists every profile under a heading, in catalog order', () => {
     expect(dockMenuModel([{ id: 'default', name: 'Default' }, { id: 'work', name: 'Work' }])).toEqual([
@@ -80,20 +95,22 @@ describe('dockMenuModel (#40, macOS)', () => {
 });
 
 /** A Start menu in memory: path → the shortcut's target and arguments. */
-function fakeMenu(files: Record<string, { target: string; args: string }> = {}, { refuse = false } = {}) {
-  const store = new Map(Object.entries(files));
+/** A Start menu folder; `caseless` behaves as Windows' does: one file per name whatever its case, keeping its first. */
+function fakeMenu(files: Record<string, { target: string; args: string }> = {}, { refuse = false, caseless = false } = {}) {
+  const key = (path: string) => (caseless ? path.toLowerCase() : path);
+  const store = new Map(Object.entries(files).map(([path, link]) => [key(path), { path, link }]));
   const menu: StartMenu = {
     dir: programs,
-    list: async () => [...store.keys()],
-    read: (path) => store.get(path) ?? null,
+    list: async () => [...store.values()].map((file) => file.path),
+    read: (path) => store.get(key(path))?.link ?? null,
     write: (path, link) => {
       if (refuse) return false;
-      store.set(path, { target: link.target, args: link.args });
+      store.set(key(path), { path: store.get(key(path))?.path ?? path, link: { target: link.target, args: link.args } });
       return true;
     },
-    remove: async (path) => void store.delete(path),
+    remove: async (path) => void store.delete(key(path)),
   };
-  return { menu, names: () => [...store.keys()].map((path) => path.slice(programs.length + 1)).sort() };
+  return { menu, names: () => [...store.values()].map((file) => file.path.slice(programs.length + 1)).sort() };
 }
 
 describe('the Start menu operations (#40)', () => {
@@ -116,6 +133,20 @@ describe('the Start menu operations (#40)', () => {
     const { menu, names } = fakeMenu({ [at('galeo · Work.lnk')]: { target: exe, args: '--profile home' } });
     expect(await installProfileShortcut(menu, exe, work)).toEqual({ ok: false, reason: 'the Start menu already has a shortcut called "galeo · Work"' });
     expect(names()).toEqual(['galeo · Work.lnk']);
+  });
+
+  it('keeps another program\'s shortcut whose name differs only in case, as Windows names do', async () => {
+    const { menu, names } = fakeMenu({ [at('Galeo · Work.lnk')]: { target: 'C:\\Other\\galeo.exe', args: '--profile work' } }, { caseless: true });
+    expect(await installProfileShortcut(menu, exe, work)).toEqual({ ok: false, reason: 'the Start menu already has a shortcut called "galeo · Work"' });
+    expect(menu.read(at('Galeo · Work.lnk'))).toEqual({ target: 'C:\\Other\\galeo.exe', args: '--profile work' });
+    expect(names()).toEqual(['Galeo · Work.lnk']);
+  });
+
+  it("keeps galeo's shortcut when the profile's new name differs only in case", async () => {
+    const { menu, names } = fakeMenu({ [at('galeo · work.lnk')]: { target: exe, args: '--profile work' } }, { caseless: true });
+    await renameProfileShortcut(menu, exe, work);
+    expect(names()).toHaveLength(1);
+    expect(menu.read(at('galeo · Work.lnk'))).toEqual({ target: exe, args: '--profile work' });
   });
 
   it('says so when Windows refuses to write it', async () => {

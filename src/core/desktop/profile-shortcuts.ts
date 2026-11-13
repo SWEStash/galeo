@@ -52,6 +52,16 @@ export function profileShortcutTarget(run: { packaged: boolean; platform: Platfo
   return run.env['PORTABLE_EXECUTABLE_FILE'] || run.execPath;
 }
 
+/**
+ * The Start menu programs folder profile shortcuts go in (#40). A run from source may name its own (an absolute
+ * path) for a test; an installed galeo never takes it from its environment.
+ */
+export function startMenuFolder(run: { packaged: boolean; env: Env; appData: string }): string {
+  const test = run.packaged ? undefined : run.env['GALEO_TEST_START_MENU'];
+  if (test && /^(?:[a-zA-Z]:\\|\\\\)/.test(test)) return test;
+  return `${run.appData}\\Microsoft\\Windows\\Start Menu\\Programs`;
+}
+
 /** The profiles in galeo's Dock menu on macOS (#40): a heading, then every profile, in catalog order. */
 export function dockMenuModel(profiles: readonly { id: string; name: string }[]): { label: string; profile: string | null }[] {
   if (profiles.length === 0) return [];
@@ -70,9 +80,12 @@ export interface StartMenu {
   remove(path: string): Promise<void>;
 }
 
+/** Windows file names ignore case: two names that differ only in case are one file. */
+const sameName = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
 /** The shortcuts in the Start menu that are galeo's for `id`. */
 async function shortcutsOf(menu: StartMenu, target: string, id: string): Promise<string[]> {
-  const files = (await menu.list()).filter((file) => file.slice(menu.dir.length + 1).startsWith('galeo · '));
+  const files = (await menu.list()).filter((file) => file.slice(menu.dir.length + 1).toLowerCase().startsWith('galeo · '));
   return files.filter((file) => {
     const link = menu.read(file);
     return link !== null && isProfileShortcut(link, target, id);
@@ -91,11 +104,12 @@ export async function installProfileShortcut(
   const shortcut = profileShortcut(target, profile, menu.dir);
   if (!shortcut.ok) return shortcut;
   const existing = await shortcutsOf(menu, target, profile.id);
-  if (!existing.includes(shortcut.path) && (await menu.list()).includes(shortcut.path)) {
+  const same = (file: string) => sameName(file, shortcut.path);
+  if (!existing.some(same) && (await menu.list()).some(same)) {
     return { ok: false, reason: `the Start menu already has a shortcut called "${shortcut.path.slice(menu.dir.length + 1, -4)}"` };
   }
   if (!menu.write(shortcut.path, shortcut.link)) return { ok: false, reason: "Windows didn't write the shortcut" };
-  for (const old of existing) if (old !== shortcut.path) await menu.remove(old);
+  for (const old of existing) if (!same(old)) await menu.remove(old);
   return { ok: true, path: shortcut.path };
 }
 
