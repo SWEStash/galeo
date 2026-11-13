@@ -70,7 +70,7 @@ const NOT_IN_DEMO = 'not in the demo';
  * system. Nothing reads the reader's files, opens a window or talks to a network. `keyDown` takes the keys main
  * catches before the page in the app (Ctrl+E).
  */
-export function standIn(files: MemoryFiles, open: readonly string[]): { api: GaleoApi; keyDown: (event: KeyEventLike) => boolean; changed: (path: string) => void } {
+export function standIn(files: MemoryFiles, open: readonly string[], say: (message: string) => void = () => {}): { api: GaleoApi; keyDown: (event: KeyEventLike) => boolean; changed: (path: string) => void } {
   const listeners = new Map<EventName, Set<(payload: never) => void>>();
   const emit = <E extends EventName>(event: E, payload: Events[E]) => {
     for (const listener of listeners.get(event) ?? []) (listener as (payload: Events[E]) => void)(payload);
@@ -148,9 +148,15 @@ export function standIn(files: MemoryFiles, open: readonly string[]): { api: Gal
       if (!grants.allows(id, WINDOW, record.path)) return { kind: 'refused', reason: 'not-editable' };
       return saveDocument({ fs: files, decode, hash }, { path: record.path, text, base, encoding: tabs.encoding(id, WINDOW) ?? undefined });
     },
-    'documents.exportPdf': () => null,
+    'documents.exportPdf': () => {
+      say('Export to PDF needs the app.');
+      return null;
+    },
     'documents.printPdf': () => 'refused',
-    'diagrams.save': () => null,
+    'diagrams.save': () => {
+      say('Saving a diagram as a file needs the app.');
+      return null;
+    },
     'diagrams.write': () => 'refused',
     'documents.dirty': (id, dirty) => grants.setDirty(id, WINDOW, dirty),
     'documents.leaveEdit': (id) => grants.revoke(id, WINDOW),
@@ -183,7 +189,10 @@ export function standIn(files: MemoryFiles, open: readonly string[]): { api: Gal
     },
     'tabs.dragEnd': () => {},
     'tabs.adopt': () => null,
-    'tabs.moveTo': () => false,
+    'tabs.moveTo': () => {
+      say('Moving tabs between windows needs the app.');
+      return false;
+    },
     'tabs.windows': () => [],
     'tabs.openSettings': () => tabs.openSettings(WINDOW).id,
 
@@ -200,7 +209,7 @@ export function standIn(files: MemoryFiles, open: readonly string[]): { api: Gal
       return { ok: true };
     },
     'settings.fonts': () => [],
-    'settings.openCustomCss': () => {},
+    'settings.openCustomCss': () => say('Custom CSS files need the app.'),
     'settings.openNoticeFile': () => {},
     'session.previous': () => [],
     'session.restorePrevious': () => {},
@@ -208,11 +217,14 @@ export function standIn(files: MemoryFiles, open: readonly string[]): { api: Gal
     'recent.open': () => {},
     'recent.clear': () => {},
     'drops.open': () => ({ folder: false }),
-    'quickOpen.start': () => ({ token: 'demo', scope: null }),
+    'quickOpen.start': () => {
+      say('Quick open searches your folders in the app. Here, try tab search: Ctrl+Shift+A.');
+      return { token: 'demo', scope: null };
+    },
     'quickOpen.query': (token, query) => ({ token, query, sections: [] }),
     'quickOpen.open': () => {},
     'quickOpen.close': () => {},
-    'watch.choose': () => {},
+    'watch.choose': () => say('Watching a folder needs the app.'),
     'watch.stop': () => {},
     'watch.open': () => {},
     'watch.openAllNew': () => {},
@@ -222,10 +234,16 @@ export function standIn(files: MemoryFiles, open: readonly string[]): { api: Gal
     'profiles.undoCreate': () => {},
     'profiles.list': () => ({ current: 'default', profiles: [{ id: 'default', name: 'default', accent: null, running: true }] }),
     'profiles.open': () => {},
-    'profiles.create': () => ({ ok: false, reason: 'invalid-file' }),
-    'profiles.update': () => ({ ok: false, reason: 'invalid-file' }),
+    'profiles.create': () => {
+      say('Profiles need the app.');
+      return { ok: false, reason: 'invalid-file' };
+    },
+    'profiles.update': () => {
+      say('Profiles need the app.');
+      return { ok: false, reason: 'invalid-file' };
+    },
     'profiles.delete': () => {},
-    'window.command': () => {},
+    'window.command': () => say('Windows need the app: the demo is one page.'),
     'window.retryAfterCrashes': () => {
       throw new Error('not showing the crash loop');
     },

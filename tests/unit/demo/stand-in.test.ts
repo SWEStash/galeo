@@ -131,7 +131,8 @@ describe('standIn (the demo)', () => {
   });
 
   it("says no to what only the app can do: files, windows, profiles, PDF, launchers", async () => {
-    const { api } = demo();
+    const said: string[] = [];
+    const { api } = standIn(memoryFiles(FILES), [PLAN, LOG], (message) => said.push(message));
     const plan = (await api.tabs.snapshot()).tabs[0]!;
     expect(await api.documents.exportPdf(plan.id)).toBeNull();
     expect(await api.tabs.moveTo(plan.id, 'new')).toBe(false);
@@ -140,5 +141,7 @@ describe('standIn (the demo)', () => {
     expect(await api.watch.state()).toBeNull();
     expect((await api.app.installLauncher()).ok).toBe(false);
     expect((await api.profiles.create('Work', null)).ok).toBe(false);
+    await api.window.command('newWindow');
+    expect(said).toEqual(['Export to PDF needs the app.', 'Moving tabs between windows needs the app.', 'Profiles need the app.', 'Windows need the app: the demo is one page.']);
   });
 });

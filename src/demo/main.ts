@@ -4,8 +4,10 @@ import materials from './samples/materials.csv?raw';
 import order from './samples/order.json?raw';
 import plan from './samples/plan.md?raw';
 import roof from './samples/roof.md?raw';
+import './demo.css';
 import { growingLog } from './growing-log';
 import { memoryFiles } from './memory-fs';
+import { demoNotice } from './notice';
 import { DEMO_HOME, standIn } from './stand-in';
 
 const folder = `${DEMO_HOME}/shed`;
@@ -19,7 +21,8 @@ const samples = {
   [`${folder}/roof.md`]: roof,
 };
 const files = memoryFiles(samples);
-const demo = standIn(files, Object.keys(samples));
+// The site's install section, from /demo/.
+const demo = standIn(files, Object.keys(samples), demoNotice(document, '../#install'));
 
 // The renderer reads `window.galeo` as the preload leaves it: set it first, then load the app's page.
 Object.defineProperty(window, 'galeo', { value: demo.api });

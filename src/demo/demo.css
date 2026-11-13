@@ -1,0 +1,40 @@
+/* The demo's notice (src/demo/notice.ts), over the app's page; it takes the app's theme tokens. */
+.demo-notice {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 40px;
+  margin-inline: auto;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: center;
+  gap: var(--galeo-space-sm);
+  padding: var(--galeo-space-sm) var(--galeo-space-sm) var(--galeo-space-sm) var(--galeo-space-md);
+  border-radius: var(--galeo-radius-md);
+  background: var(--galeo-chrome-tooltip);
+  color: var(--galeo-chrome-tooltip-fg);
+  font: 14px/1.4 var(--galeo-font-ui);
+  z-index: 1000;
+}
+.demo-notice[hidden] {
+  display: none;
+}
+.demo-notice a {
+  color: inherit;
+  font-weight: 600;
+}
+.demo-notice button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: var(--galeo-radius-sm);
+  cursor: pointer;
+}
+.demo-notice a:focus-visible,
+.demo-notice button:focus-visible {
+  outline: 2px solid var(--galeo-color-focus);
+  outline-offset: 2px;
+}
