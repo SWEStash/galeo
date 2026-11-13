@@ -8,5 +8,6 @@ const ownReport = (plugin: PluginOption) => (plugin as Plugin | null)?.name === 
 // The website's demo (#41): the window renderer, entered through src/demo, which supplies `window.galeo`.
 export default mergeConfig(
   { ...app, plugins: app.plugins?.filter((plugin) => !ownReport(plugin)), worker: { ...app.worker, plugins: () => (app.worker?.plugins?.() ?? []).filter((plugin) => !ownReport(plugin)) } },
-  { root: 'src/demo', build: { outDir: '../../out/demo', emptyOutDir: true } },
+  // No source maps: the site serves the demo, and maps would triple its size.
+  { root: 'src/demo', build: { outDir: '../../out/demo', emptyOutDir: true, sourcemap: false } },
 );

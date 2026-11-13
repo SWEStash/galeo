@@ -2,8 +2,9 @@ name: Pages
 
 # Publishes site/ as the project's website (https://swestash.github.io/galeo/), under /apt/ the signed apt
 # repository holding the latest release's .deb files, one per architecture (ADR-029, ADR-035), and under /rpm/ the
-# signed dnf repository holding its .rpm files (ADR-036). Nothing is built: the packages come from the release,
-# checked against its checksums and attestations before their repositories are signed.
+# signed dnf repository holding its .rpm files (ADR-036), and under /demo/ the live demo built from that release's
+# own tag (#41). The packages are not built here: they come from the release, checked against its checksums and
+# attestations before their repositories are signed.
 on:
   push:
     branches: [main]
@@ -45,8 +46,67 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
 
+  demo:
+    name: Build the live demo from the latest release
+    if: github.event_name != 'release'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # No secrets here: the latest release's own source, built as the website demo.
+    permissions:
+      contents: read
+    outputs:
+      built: ${{ steps.build.outputs.built }}
+    steps:
+      - name: Find the latest release
+        id: tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null); then
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          else
+            echo "No published release: no demo."
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.tag.outputs.tag != ''
+        with:
+          ref: refs/tags/${{ steps.tag.outputs.tag }}
+          persist-credentials: false
+      - name: Does this release have the demo?
+        id: has
+        if: steps.tag.outputs.tag != ''
+        # Releases before 0.9.0 have none.
+        run: |
+          if node -e "process.exit(require('./package.json').scripts['build:demo'] ? 0 : 1)"; then
+            echo "demo=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "This release has no demo."
+          fi
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.has.outputs.demo == 'true'
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Build the demo
+        id: build
+        if: steps.has.outputs.demo == 'true'
+        # No install scripts: the demo needs no Electron.
+        run: |
+          npm ci --ignore-scripts
+          npm run build:demo
+          npm run check:demo
+          echo "built=true" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.has.outputs.demo == 'true'
+        with:
+          name: demo
+          path: out/demo
+          retention-days: 1
+          if-no-files-found: error
+
   assemble:
     name: Check the release and build the repository
+    needs: demo
     if: github.event_name != 'release'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -125,6 +185,12 @@ jobs:
             echo "No .rpm with the repository key: no dnf repository."
             echo "rpm=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Add the live demo
+        if: needs.demo.outputs.built == 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: demo
+          path: ${{ runner.temp }}/pages/demo
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pages-unsigned
