@@ -31,8 +31,9 @@ test.describe('Windows: a Start menu shortcut per profile', () => {
     const read = (file: string) => app.evaluate(({ shell }, p) => shell.readShortcutLink(p), file);
     const names = () => readdirSync(menu).sort();
     try {
-      // Someone else's shortcut, which galeo must leave alone.
-      await app.evaluate(({ shell }, p) => shell.writeShortcutLink(p, 'create', { target: 'C:\\Windows\\System32\\notepad.exe', args: '--profile default' }), path.join(menu, 'galeo · Mine.lnk'));
+      // Someone else's shortcut with galeo's name and arguments, to another program: galeo must leave it alone.
+      // (One to galeo's own target with `--profile default` would be galeo's, and replaced.)
+      await app.evaluate(({ shell }, p) => shell.writeShortcutLink(p, 'create', { target: 'C:\\Windows\\explorer.exe', args: '--profile default' }), path.join(menu, 'galeo · Mine.lnk'));
       await expect(window.getByRole('tab')).toHaveCount(1);
       await window.keyboard.press('ControlOrMeta+Comma');
       const result = window.getByTestId('profile-launcher-result');
