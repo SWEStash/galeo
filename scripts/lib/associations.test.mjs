@@ -95,10 +95,38 @@ describe('the galeo command on uninstall (#47)', () => {
     expect(guard).toBeLessThan(del);
   });
 
-  it('saves the registers it uses', () => {
-    const lines = uninstall().map((line) => line.trim());
-    expect(lines.filter((line) => line.startsWith('Push '))).toEqual(['Push $0', 'Push $1']);
-    expect(lines.filter((line) => line.startsWith('Pop '))).toEqual(['Pop $1', 'Pop $0']);
+  it('saves the registers it uses, and leaves the stack as it found it', () => {
+    const stack = [];
+    for (const line of uninstall().map((each) => each.trim())) {
+      if (line.startsWith('Push ')) stack.push(line.slice('Push '.length));
+      // nsExec leaves the program's exit code on the stack.
+      else if (line.startsWith('nsExec::Exec ')) stack.push('(exit code)');
+      else if (line.startsWith('Pop ')) expect([line.slice('Pop '.length), '(exit code)']).toContain(stack.pop());
+    }
+    expect(stack).toEqual([]);
+  });
+});
+
+describe('profile shortcuts on uninstall (#40)', () => {
+  const uninstall = () => windowsAssociationsNsh().split('!macro customUnInstall')[1].split('!macroend')[0].split('\n');
+
+  it("removes galeo*.lnk that run this galeo.exe with --profile, except during an update", () => {
+    const lines = uninstall();
+    const guard = lines.findIndex((line) => line.includes('${IfNot} ${isUpdated}'));
+    const run = lines.findIndex((line) => line.includes('nsExec::Exec'));
+    expect(guard).toBeGreaterThan(-1);
+    expect(run).toBeGreaterThan(guard);
+    const command = lines[run];
+    expect(command).toContain("-Filter 'galeo*.lnk'");
+    expect(command).toContain('$$link.TargetPath -ieq $$env:GALEO_UNINSTALL_EXE');
+    expect(command).toContain("$$link.Arguments -like '--profile *'");
+  });
+
+  it('hands PowerShell the paths as environment variables, never inside its command', () => {
+    const command = uninstall().find((line) => line.includes('nsExec::Exec'));
+    expect(command).not.toContain('$INSTDIR');
+    expect(command).not.toContain('$APPDATA');
+    expect(uninstall().join('\n')).toContain('SetEnvironmentVariable(t "GALEO_UNINSTALL_EXE", t "$INSTDIR\\galeo.exe")');
   });
 });
 

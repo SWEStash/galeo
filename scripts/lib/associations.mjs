@@ -58,7 +58,30 @@ function removeCommand() {
     '    ${EndIf}',
     '    Pop $1',
     '    Pop $0',
+    ...removeProfileShortcuts(),
     '  ${EndIf}',
+  ];
+}
+
+/**
+ * Uninstall lines that delete galeo's profile shortcuts from the user's Start menu (#40): `galeo*.lnk` running this
+ * galeo.exe with `--profile`; any other shortcut stays. The paths reach PowerShell as environment variables, never
+ * inside its command (a user name can hold a quote).
+ */
+function removeProfileShortcuts() {
+  const script = [
+    '$$shell = New-Object -ComObject WScript.Shell;',
+    "Get-ChildItem -LiteralPath (Join-Path $$env:APPDATA 'Microsoft\\Windows\\Start Menu\\Programs') -Filter 'galeo*.lnk' -File |",
+    "Where-Object { $$link = $$shell.CreateShortcut($$_.FullName); $$link.TargetPath -ieq $$env:GALEO_UNINSTALL_EXE -and $$link.Arguments -like '--profile *' } |",
+    'Remove-Item -Force',
+  ].join(' ');
+  return [
+    "    ; galeo's profile shortcuts in the Start menu (#40), nothing else.",
+    '    Push $0',
+    `    System::Call 'Kernel32::SetEnvironmentVariable(t "GALEO_UNINSTALL_EXE", t "$INSTDIR\\galeo.exe")'`,
+    `    nsExec::Exec \`powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${script}"\``,
+    '    Pop $0',
+    '    Pop $0',
   ];
 }
 
@@ -70,7 +93,8 @@ export function windowsAssociationsNsh() {
   return [
     '; Generated from scripts/lib/associations.mjs by windowsAssociationsNsh(); a unit test keeps them equal.',
     '; Adds galeo to the "Open with" list of the types it reads. Never sets a type\'s default app.',
-    '; The uninstall also removes the `galeo` command Settings installed, while it is galeo\'s.',
+    '; The uninstall also removes the `galeo` command Settings installed, while it is galeo\'s, and galeo\'s profile',
+    '; shortcuts in the Start menu.',
     '',
     '!macro customInstall',
     `  WriteRegStr SHELL_CONTEXT "${classes}\\${WINDOWS_PROG_ID}" "" "galeo document"`,

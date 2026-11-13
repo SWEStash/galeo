@@ -192,7 +192,8 @@ if (process.platform === 'win32') {
     if (process.env.CI) {
       failures.push(...windowsAssociationProblems(setup).map((problem) => `associations: ${problem}`));
       failures.push(...windowsCommandProblems(setup).map((problem) => `galeo.cmd: ${problem}`));
-    } else console.log('associations, galeo.cmd: skipped outside CI (the checks install galeo for this user)');
+      failures.push(...windowsShortcutProblems(setup).map((problem) => `profile shortcuts: ${problem}`));
+    } else console.log('associations, galeo.cmd, profile shortcuts: skipped outside CI (the checks install galeo for this user)');
   }
 }
 
@@ -248,13 +249,50 @@ function windowsCommandProblems(setup) {
   return problems;
 }
 
-/** A silent per-user install, then a silent uninstall, waiting until the app's folder is gone; a problem, or null. */
-function installAndUninstall(setup) {
+/**
+ * The uninstaller removes galeo's profile shortcuts from the Start menu (#40) and nothing else: one that runs the
+ * installed galeo.exe with --profile goes; one running it without --profile, and one running another program, stay.
+ */
+function windowsShortcutProblems(setup) {
+  const programs = path.win32.join(process.env.APPDATA ?? '', 'Microsoft', 'Windows', 'Start Menu', 'Programs');
+  const shortcuts = {
+    ours: path.win32.join(programs, 'galeo · Verify.lnk'),
+    plain: path.win32.join(programs, 'galeo verify plain.lnk'),
+    theirs: path.win32.join(programs, 'galeo · Theirs.lnk'),
+  };
+  // WScript.Shell, as the uninstaller reads them; values reach PowerShell as environment variables.
+  const make = (file, target, args) =>
+    spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', '$l = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK); $l.TargetPath = $env:TARGET; $l.Arguments = $env:ARGS; $l.Save()'], {
+      env: { ...process.env, LNK: file, TARGET: target, ARGS: args },
+      timeout: 60_000,
+    }).status === 0;
+  const problem = installAndUninstall(setup, (exe) => {
+    const made = [make(shortcuts.ours, exe, '--profile verify'), make(shortcuts.plain, exe, ''), make(shortcuts.theirs, 'C:\\Windows\\System32\\notepad.exe', '--profile verify')];
+    return made.every(Boolean) ? null : 'could not write the test shortcuts';
+  });
+  const problems = problem ? [problem] : [];
+  if (!problem) {
+    if (existsSync(shortcuts.ours)) problems.push("the uninstall left galeo's profile shortcut");
+    if (!existsSync(shortcuts.plain)) problems.push('the uninstall deleted a shortcut to galeo without --profile');
+    if (!existsSync(shortcuts.theirs)) problems.push("the uninstall deleted another program's shortcut");
+    if (problems.length === 0) console.log("profile shortcuts: galeo's removed by the uninstall, the others kept");
+  }
+  for (const file of Object.values(shortcuts)) rmSync(file, { force: true });
+  return problems;
+}
+
+/**
+ * A silent per-user install, then a silent uninstall, waiting until the app's folder is gone; a problem, or null.
+ * `between`, given the installed galeo.exe, runs before the uninstall and may return a problem.
+ */
+function installAndUninstall(setup, between = (_exe) => null) {
   const install = spawnSync(setup, ['/S'], { timeout: 180_000 });
   if (install.status !== 0) return `the silent install failed (${install.status ?? install.error?.message})`;
   const query = spawnSync('reg', ['query', `HKCU\\Software\\Classes\\${WINDOWS_PROG_ID}\\shell\\open\\command`, '/ve'], { encoding: 'utf8' });
   const exe = /^"([^"]+\\galeo\.exe)" /.exec(regValue(query.stdout, '(Default)') ?? '')?.[1];
   if (!exe || !existsSync(exe)) return `no galeo.exe found after the install (${exe})`;
+  const before = between(exe);
+  if (before) return before;
   // The uninstaller hands over to a copy of itself and returns at once: wait for it to finish.
   spawnSync(path.win32.join(path.win32.dirname(exe), 'Uninstall galeo.exe'), ['/S'], { timeout: 180_000 });
   const deadline = Date.now() + 120_000;
