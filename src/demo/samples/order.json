@@ -1,0 +1,14 @@
+{
+  "order": "GS-2026-0412",
+  "placed": "2026-11-02T09:14:00Z",
+  "customer": { "name": "Sam", "delivery": { "window": "08:00-12:00", "access": "side gate" } },
+  "lines": [
+    { "sku": "STUD-47100-2400", "quantity": 38, "unitPrice": 4.2 },
+    { "sku": "PLATE-47100-3600", "quantity": 6, "unitPrice": 6.1 },
+    { "sku": "RAFT-47150-3000", "quantity": 14, "unitPrice": 8.75 },
+    { "sku": "OSB-11-2440", "quantity": 16, "unitPrice": 14.5 }
+  ],
+  "totals": { "goods": 550.7, "delivery": 35, "currency": "GBP" },
+  "paid": true,
+  "notes": null
+}

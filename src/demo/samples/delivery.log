@@ -1,0 +1,7 @@
+2026-11-13T07:58:02Z INFO  yard: order GS-2026-0412 picked, 4 pallets
+2026-11-13T08:03:44Z INFO  yard: pallet 1/4 loaded (studs, plates)
+2026-11-13T08:06:10Z INFO  yard: pallet 2/4 loaded (rafters)
+2026-11-13T08:09:31Z WARN  yard: pallet 3/4 OSB count 15 of 16, one sheet damaged, replacing
+2026-11-13T08:15:02Z INFO  yard: pallet 3/4 loaded (OSB, 16 sheets)
+2026-11-13T08:17:48Z INFO  yard: pallet 4/4 loaded (felt, shingles, fixings)
+2026-11-13T08:20:00Z INFO  truck: departed, ETA 09:05
