@@ -129,7 +129,7 @@ To work with the offline key: `export GNUPGHOME=<media>/galeo-apt-gnupg`.
 ## The dnf repository's subkey
 
 The dnf repository and the `.rpm` files ([ADR-036](decisions/ADR-036-rpm-packages-and-dnf-repository.md)) are
-signed by the same key, through a **dnf signing subkey** of its own: `<fingerprint, recorded when it is made>`.
+signed by the same key, through a **dnf signing subkey** of its own: `E885 D09A 145C CACF F13D D8C5 096C C3E0 AA10 E5F7`, made on 2026-11-13.
 CI holds it as the `DNF_SIGNING_KEY` secret of two environments: `rpm-signing`, read only by the release
 workflow's *Sign the .rpm packages* job, and `github-pages`, read only by the Pages workflow's signing job (for
 `repomd.xml`). The standby subkey above covers it too. The public key file carries it; the `.rpm` installs that
