@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Plugin } from 'vite';
 import { collectNotices, groupByText, licenceProblems } from '../scripts/lib/licences.mjs';
@@ -33,7 +33,10 @@ export function licences(): Plugin {
           const licence = files.listDir(dir).find((file) => /^OFL/i.test(file))!;
           return { name: entry.name, text: files.readText(`${dir}/${licence}`) };
         });
-      const electron = files.readText('node_modules/electron/dist/LICENSE');
+      // The licence that ships with the Electron binary; a build without the binary (the website demo, from
+      // `npm ci --ignore-scripts`) takes the package's own copy of it.
+      const binary = 'node_modules/electron/dist/LICENSE';
+      const electron = files.readText(existsSync(path.join(ROOT, binary)) ? binary : 'node_modules/electron/LICENSE');
       return `export default ${JSON.stringify({ packages: groupByText(notices), fonts, electron })};`;
     },
   };
