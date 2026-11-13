@@ -79,7 +79,7 @@ function removeProfileShortcuts() {
     "    ; galeo's profile shortcuts in the Start menu (#40), nothing else.",
     '    Push $0',
     `    System::Call 'Kernel32::SetEnvironmentVariable(t "GALEO_UNINSTALL_EXE", t "$INSTDIR\\galeo.exe")'`,
-    `    nsExec::Exec \`powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${script}"\``,
+    `    nsExec::Exec \`"$SYSDIR\\WindowsPowerShell\\v1.0\\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "${script}"\``,
     '    Pop $0',
     '    Pop $0',
   ];

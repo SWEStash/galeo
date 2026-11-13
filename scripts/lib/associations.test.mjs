@@ -122,6 +122,11 @@ describe('profile shortcuts on uninstall (#40)', () => {
     expect(command).toContain("$$link.Arguments -like '--profile *'");
   });
 
+  it("runs Windows' own PowerShell by its full path, not one found beside the uninstaller", () => {
+    const command = uninstall().find((line) => line.includes('nsExec::Exec'));
+    expect(command).toContain('nsExec::Exec `"$SYSDIR\\WindowsPowerShell\\v1.0\\powershell.exe" -NoProfile');
+  });
+
   it('hands PowerShell the paths as environment variables, never inside its command', () => {
     const command = uninstall().find((line) => line.includes('nsExec::Exec'));
     expect(command).not.toContain('$INSTDIR');

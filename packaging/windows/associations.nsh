@@ -77,7 +77,7 @@
     ; galeo's profile shortcuts in the Start menu (#40), nothing else.
     Push $0
     System::Call 'Kernel32::SetEnvironmentVariable(t "GALEO_UNINSTALL_EXE", t "$INSTDIR\galeo.exe")'
-    nsExec::Exec `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$shell = New-Object -ComObject WScript.Shell; Get-ChildItem -LiteralPath (Join-Path $$env:APPDATA 'Microsoft\Windows\Start Menu\Programs') -Filter 'galeo*.lnk' -File | Where-Object { $$link = $$shell.CreateShortcut($$_.FullName); $$link.TargetPath -ieq $$env:GALEO_UNINSTALL_EXE -and $$link.Arguments -like '--profile *' } | Remove-Item -Force"`
+    nsExec::Exec `"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$$shell = New-Object -ComObject WScript.Shell; Get-ChildItem -LiteralPath (Join-Path $$env:APPDATA 'Microsoft\Windows\Start Menu\Programs') -Filter 'galeo*.lnk' -File | Where-Object { $$link = $$shell.CreateShortcut($$_.FullName); $$link.TargetPath -ieq $$env:GALEO_UNINSTALL_EXE -and $$link.Arguments -like '--profile *' } | Remove-Item -Force"`
     Pop $0
     Pop $0
   ${EndIf}
