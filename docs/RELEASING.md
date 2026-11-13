@@ -147,12 +147,18 @@ file as `/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo`, the path users' `.repo` file names
    gh api repos/SWEStash/galeo/environments/rpm-signing/deployment-branch-policies --jq '.branch_policies[] | "\(.type) \(.name)"'
    ```
    The last command lists `branch main` and `tag v*`, and nothing else.
-2. Add the subkey to the offline key, in a copy of it in memory, and keep the result on the stick:
+2. Add the subkey to the offline key, in a copy of it in memory, and keep the result on the stick. `<fingerprint>`
+   is the primary key's: once `GNUPGHOME` points at the copy, `gpg --list-keys` prints it on the line under `pub`.
    ```sh
    RAM=$(mktemp -d -p /dev/shm) && chmod 700 "$RAM"
    cp -a /media/$USER/<stick>/galeo-apt-gnupg/. "$RAM" && export GNUPGHOME="$RAM"
+   gpg --list-keys
    gpg --quick-add-key <fingerprint> ed25519 sign never
-   gpg --list-keys --with-subkey-fingerprints <fingerprint>    # the newest [S] subkey: record it above
+   gpg --list-keys --with-subkey-fingerprints <fingerprint>
+   ```
+   This lists three `[S]` subkeys: apt's CI and standby subkeys (above), and the new dnf subkey, dated today.
+   That one's fingerprint is the `<dnf subkey fingerprint>` of step 3: record it at the top of this section.
+   ```sh
    cp -a "$RAM"/. /media/$USER/<stick>/galeo-apt-gnupg/
    gpg --armor --export <fingerprint> > packaging/linux/galeo-archive-keyring.asc
    ```
