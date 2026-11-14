@@ -8,6 +8,8 @@ import path from 'node:path';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 const SCRIPT = path.resolve(import.meta.dirname, 'dnf-repo.sh');
+// Small, needing only glibc, and not in the `fedora` image: only Fedora's own repositories have it.
+const FROM_FEDORA = 'tree';
 const TOOLS = ['rpm', 'rpmbuild', 'rpmsign', 'rpmkeys', 'createrepo_c', 'gpg', 'gpgconf', 'dnf'];
 const haveTools =
   process.platform === 'linux' &&
@@ -20,14 +22,17 @@ let gnupg;
 const env = () => ({ ...process.env, GNUPGHOME: gnupg });
 const run = (...args) => spawnSync(SCRIPT, args, { encoding: 'utf8', env: env() });
 
-/** Builds a minimal .rpm for `arch`, with the repository key inside it when `withKey`, signed by `signer` if given. */
-function rpm(name, { pkg = 'galeo', arch = 'x86_64', version = '1.2.3', withKey = true, signer = gnupg } = {}) {
+/**
+ * Builds a minimal .rpm for `arch`, with the repository key inside it when `withKey`, signed by `signer` if given;
+ * `requires` names a package it needs from Fedora's own repositories, as galeo's needs gtk3.
+ */
+function rpm(name, { pkg = 'galeo', arch = 'x86_64', version = '1.2.3', withKey = true, signer = gnupg, requires = '' } = {}) {
   const top = path.join(root, `${name}-build`);
   mkdirSync(path.join(top, 'SPECS'), { recursive: true });
   const key = withKey ? '/opt/galeo/resources/galeo-archive-keyring.asc' : '';
   writeFileSync(
     path.join(top, 'SPECS/test.spec'),
-    `Name: ${pkg}\nVersion: ${version}\nRelease: 1\nSummary: test\nLicense: MIT\n%description\ntest\n` +
+    `Name: ${pkg}\nVersion: ${version}\nRelease: 1\nSummary: test\nLicense: MIT\n${requires ? `Requires: ${requires}\n` : ''}%description\ntest\n` +
       `%install\nmkdir -p %{buildroot}/opt/galeo/resources\necho app > %{buildroot}/opt/galeo/resources/app.asar\n` +
       (withKey ? `echo key > %{buildroot}${key}\n` : '') +
       `%files\n/opt/galeo/resources/app.asar\n${key}\n`,
@@ -79,17 +84,20 @@ it.runIf(process.env.GALEO_REQUIRE_DNF_TESTS === '1')('has the tools and root it
 describe.skipIf(!haveTools)('dnf-repo.sh', () => {
   let key;
   let good;
+  let needsFedora;
 
   beforeAll(() => {
     root = mkdtempSync(path.join(tmpdir(), 'galeo-dnf-'));
     gnupg = path.join(root, 'gnupg');
     key = newKey(gnupg, 'repo');
     good = rpm('good');
+    needsFedora = rpm('needs-fedora', { requires: FROM_FEDORA });
   });
 
   // Each check installs galeo and imports the key it trusts: undo both, so the next check starts clean.
   afterEach(() => {
     spawnSync('rpm', ['-e', 'galeo']);
+    spawnSync('rpm', ['-e', FROM_FEDORA]);
     const keys = spawnSync('rpmkeys', ['--list'], { encoding: 'utf8' }).stdout.split('\n').map((line) => line.split(' ')[0]).filter(Boolean);
     for (const id of keys) spawnSync('rpmkeys', ['--delete', id]);
   });
@@ -106,6 +114,13 @@ describe.skipIf(!haveTools)('dnf-repo.sh', () => {
     const checked = run('check', dir, key);
     expect(checked.status, checked.stderr).toBe(0);
     expect(checked.stdout).toContain('dnf installed galeo-1.2.3-1.x86_64');
+  });
+
+  it("installs galeo's dependencies from the system's own repositories, wherever the system keeps them", () => {
+    const dir = signedRepo('needs-fedora', needsFedora);
+    const checked = run('check', dir, key);
+    expect(checked.status, checked.stderr).toBe(0);
+    expect(spawnSync('rpm', ['-q', FROM_FEDORA]).status).toBe(0);
   });
 
   it('writes the packages and rpm-md metadata, with a detached signature on repomd.xml', () => {

@@ -96,11 +96,13 @@ check() {
   # An installed galeo would make dnf succeed without reading the repository.
   ! rpm -q galeo > /dev/null 2>&1 || fail 'galeo is already installed: check needs a system without it'
   work=$(mktemp -d)
-  trap 'rm -rf "$work"' EXIT
-  # The repository as users add it (USAGE), beside the system's own, which carry galeo's dependencies.
+  # The repository as users add it (USAGE): a file in /etc/yum.repos.d, beside the system's own repositories,
+  # which carry galeo's dependencies wherever the system keeps them (Fedora 45: /usr/share/dnf5/repos.d).
   # An id of its own each run, so cached metadata of an earlier repository never stands in for this one's.
   id=galeo-check-$(basename "$work")
-  cat > "$work/$id.repo" <<EOF
+  repo=/etc/yum.repos.d/$id.repo
+  trap 'rm -rf "$work" "$repo"' EXIT
+  cat > "$repo" <<EOF
 [$id]
 name=galeo (check)
 baseurl=file://$dir
@@ -109,7 +111,7 @@ gpgcheck=1
 repo_gpgcheck=1
 gpgkey=file://$key
 EOF
-  dnf -y -q --setopt=reposdir="/etc/yum.repos.d,$work" install galeo > "$work/dnf.log" 2>&1 \
+  dnf -y -q install galeo > "$work/dnf.log" 2>&1 \
     || { cat "$work/dnf.log" >&2; fail 'dnf install galeo failed'; }
   [ "$(rpm -q --qf '%{NAME}' galeo)" = galeo ] || fail 'dnf exited 0, but galeo is not installed'
   printf 'dnf-repo: dnf installed %s\n' "$(rpm -q galeo)"
