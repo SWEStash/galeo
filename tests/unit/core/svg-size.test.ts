@@ -49,10 +49,27 @@ describe('svgSize', () => {
   });
 
   it('reads a root tag of one long name in linear time (main runs it for every image)', () => {
-    const long = `<svg ${'a'.repeat(16 * 1024 - 7)}>`;
-    const start = performance.now();
-    expect(size(long)).toBeNull();
+    const tag = (length: number) => bytes(`<svg ${'a'.repeat(length - 7)}>`);
+    expect(svgSize(tag(16 * 1024))).toBeNull();
     expect(size(`<svg ${'a'.repeat(8000)} viewBox="0 0 10 20">`)).toEqual({ width: 10, height: 20 });
-    expect(performance.now() - start).toBeLessThan(50);
+    // A ratio, not a time, so a slow machine can't fail it: 16 times the length took 10 to 17 times as long when
+    // linear, 77 to 250 times when quadratic (#66). The two lengths take turns, so both see the machine as it is
+    // then, and the best of each leaves out garbage-collection pauses.
+    const short = tag(1024);
+    const long = tag(16 * 1024);
+    const time = (input: Uint8Array) => {
+      const start = performance.now();
+      svgSize(input);
+      return performance.now() - start;
+    };
+    let shortest = Infinity;
+    let longest = Infinity;
+    // Twenty turns, or fewer once a second has gone (a quadratic read takes about half a second each).
+    const begin = performance.now();
+    for (let turn = 0; turn < 20 && (turn < 3 || performance.now() - begin < 1000); turn++) {
+      shortest = Math.min(shortest, time(short));
+      longest = Math.min(longest, time(long));
+    }
+    expect(longest / shortest).toBeLessThan(40);
   });
 });
