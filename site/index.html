@@ -23,7 +23,7 @@
       <a class="button" href="https://github.com/SWEStash/galeo/releases/latest">Download</a>
       <a class="button secondary" href="https://github.com/SWEStash/galeo">Source on GitHub</a>
     </p>
-    <p class="platforms">Linux (Ubuntu 24.04 and later, x86_64 and arm64) · macOS and Windows previews · MIT licence</p>
+    <p class="platforms">Linux (Ubuntu 24.04 and later, x86_64 and arm64) · Fedora, macOS and Windows previews · MIT licence</p>
     <picture class="shot hero-shot">
       <source srcset="screenshots/markdown-dark.png" media="(prefers-color-scheme: dark)">
       <img src="screenshots/markdown-light.png" width="1280" height="800"
@@ -94,6 +94,7 @@
         <legend>How do you want to install galeo?</legend>
         <div class="tabs">
           <label><input type="radio" name="method" id="m-apt" checked> Ubuntu, Debian</label>
+          <label><input type="radio" name="method" id="m-dnf"> Fedora <span class="tag">preview</span></label>
           <label><input type="radio" name="method" id="m-appimage"> Other Linux</label>
           <label><input type="radio" name="method" id="m-file"> Package file</label>
           <label><input type="radio" name="method" id="m-source"> From source</label>
@@ -122,6 +123,17 @@ sudo apt update &amp;&amp; sudo apt install galeo</code></pre>
           data files and source code.</p>
       </div>
 
+      <div class="panel" id="p-dnf">
+        <h3>Fedora (dnf) <span class="tag">preview</span></h3>
+        <p>Checked in CI on Fedora, x86_64 and aarch64; nobody checks it by hand. Add galeo's dnf repository and
+          install it; <code>dnf upgrade</code> then brings each release:</p>
+        <pre tabindex="0"><code>sudo curl -fsSLo /etc/pki/rpm-gpg/RPM-GPG-KEY-galeo https://swestash.github.io/galeo/rpm/galeo.asc
+sudo curl -fsSLo /etc/yum.repos.d/galeo.repo https://swestash.github.io/galeo/rpm/galeo.repo
+sudo dnf install galeo</code></pre>
+        <p>dnf asks you to accept the key the first time: its fingerprint is
+          <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>, the same as apt's.</p>
+      </div>
+
       <div class="panel" id="p-appimage">
         <h3>Other Linux distributions (AppImage)</h3>
         <p>Download <code>galeo-&lt;version&gt;-x86_64.AppImage</code> or <code>-arm64.AppImage</code> from the
@@ -135,9 +147,10 @@ sudo apt update &amp;&amp; sudo apt install galeo</code></pre>
 
       <div class="panel" id="p-file">
         <h3>A package file, without the repository</h3>
-        <p>Download <code>galeo_&lt;version&gt;_amd64.deb</code> (or <code>_arm64.deb</code>) from the
+        <p>Download the <code>.deb</code> or the <code>.rpm</code> (a preview) for your machine from the
           <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and install it:</p>
-        <pre tabindex="0"><code>sudo apt install ./galeo_*.deb</code></pre>
+        <pre tabindex="0"><code>sudo apt install ./galeo_*.deb      # galeo_&lt;version&gt;_amd64.deb or _arm64.deb
+sudo dnf install ./galeo-*.rpm      # galeo-&lt;version&gt;.x86_64.rpm or .aarch64.rpm</code></pre>
         <p>Updates come through the repository only: without it, install the next release the same way.</p>
       </div>
 

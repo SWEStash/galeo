@@ -9,7 +9,7 @@ keyboard map is in the [UX specification](design/ux.md#5-keyboard-map).
 
 galeo is released for Linux on x86_64 and, from 0.8.0, arm64, as a `.deb` package and an AppImage, on the
 [releases page](https://github.com/SWEStash/galeo/releases), and the `.deb` through galeo's own apt
-repository. galeo never checks for updates itself: installed from the repository, it gets each release
+repository. From 0.9.0 there is an `.rpm` too, with a dnf repository, as a preview ([Fedora](#fedora-preview)). galeo never checks for updates itself: installed from the repository, it gets each release
 with `sudo apt update && sudo apt upgrade`.
 
 ### Ubuntu and Debian (Ubuntu 24.04 and later)
@@ -41,6 +41,20 @@ Ubuntu.
 `sudo apt remove galeo` removes it and keeps the repository's key, so installing it again works.
 `sudo apt purge galeo` deletes the key too: delete `/etc/apt/sources.list.d/galeo.sources` as well, or
 `apt update` reports the missing key. Your settings and sessions stay in your home folder.
+
+### Fedora (preview)
+
+From galeo 0.9, releases carry an `.rpm` for x86_64 and aarch64, and galeo's dnf repository serves it.
+It is a preview: CI installs and starts it on Fedora, and nobody checks it by hand. The commands are on
+the website, [install](https://swestash.github.io/galeo/#install), under *Fedora*: they download the
+repository's key to `/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo`, add `/etc/yum.repos.d/galeo.repo`, and install galeo;
+`sudo dnf upgrade` then brings each release. dnf asks you to accept the key the first time; its
+fingerprint is apt's, `0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629`. dnf checks both the
+repository's signature and each package's.
+
+It installs what the `.deb` does, apart from the AppArmor profile, which Fedora doesn't need for
+Chromium's sandbox. `sudo dnf remove galeo` removes it and keeps the key, which the `.repo` file names;
+delete `/etc/yum.repos.d/galeo.repo` and the key as well to stop using the repository.
 
 ### From source
 

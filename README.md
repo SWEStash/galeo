@@ -37,8 +37,8 @@ galeo README.md
 On arm64, write `Architectures: arm64`. galeo is now also in *Open With* for Markdown, MDX, text, log,
 JSON, YAML, TOML, CSV and TSV files and source code.
 
-**Other ways to install** (a package file, the AppImage, building from source, the macOS and Windows
-previews): [install](https://swestash.github.io/galeo/#install) on the website, a tab per method. The
+**Other ways to install** (Fedora's dnf repository, a package file, the AppImage, building from source,
+the macOS and Windows previews): [install](https://swestash.github.io/galeo/#install) on the website, a tab per method. The
 [usage guide](docs/USAGE.md#installation) says what each install does, how to remove it, and how to
 check a download.
 
