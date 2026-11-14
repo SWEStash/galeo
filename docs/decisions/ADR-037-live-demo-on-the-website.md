@@ -2,11 +2,13 @@
 
 - Status: Accepted (2026-11-13, owner)
 - Date: 2026-11-13
+- Amended: 2026-11-14 (owner, in place): the site shows the demo in the page, loaded on click, not a link under a
+  screenshot (decision 5).
 - Deciders: project owner
 - Builds on: [ADR-007](ADR-007-platform-seam.md) (platform seam: a sixth source folder, its rules unchanged),
   [ADR-004](ADR-004-security-and-zero-network.md) (CSP and Trusted Types), [ADR-029](ADR-029-apt-repository-on-github-pages.md)
   (the Pages site and its workflow)
-- Issue: [#41](https://github.com/SWEStash/galeo/issues/41)
+- Issues: [#41](https://github.com/SWEStash/galeo/issues/41), [#65](https://github.com/SWEStash/galeo/issues/65)
 
 ## Context
 
@@ -37,7 +39,13 @@ behind ports.
    read-only contents and no secrets, and publishes it under `/demo/`. A release without the demo has none. CI
    builds it on every push and holds it to a size budget (`npm run check:demo`: 24 MB, no source maps) and a
    first-view budget (6 MB, in `npm run test:demo`).
-5. **The site links to it** under the hero screenshot (*See it in action*), from the release that first has it.
+5. **The site shows it in the page**, at the top, from the release that first has it: a still of the demo with a
+   *Try it live* button that loads it in a frame from the site itself (the site's CSP adds `frame-src 'self'`), and
+   *Open full screen*. Loading it only on request keeps the page light and stops the demo taking the keyboard or the
+   scroll before the visitor chose it. On a phone, and without script, it is a link to `/demo/`. The screenshots
+   stay, one at a time under *What it does*. (*Amended 2026-11-14:* this read "the site links to it under the hero
+   screenshot (*See it in action*)"; the owner wanted the page to say what galeo is and how to install it first,
+   with the demo standing in for most screenshots, [#65](https://github.com/SWEStash/galeo/issues/65).)
 
 ## Options considered
 

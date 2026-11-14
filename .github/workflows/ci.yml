@@ -4,10 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
-    # Docs-only pushes: `npm run check` covers them before the commit.
+    # Docs-only pushes: `npm run check` covers them before the commit. The website isn't one: its script and the
+    # demo in it have end-to-end tests (`npm run test:demo`).
     paths-ignore:
       - 'docs/**'
-      - 'site/**'
       - '*.md'
 
 permissions:

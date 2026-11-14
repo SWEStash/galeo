@@ -64,17 +64,20 @@ release records them in [VALIDATION](VALIDATION.md#performance).
 ## Website
 
 `site/` is the project's website, <https://swestash.github.io/galeo/>: one static page, its
-stylesheet, the screenshots and `copy.js` (the command blocks' copy buttons, which the page works without),
-with no build step. Its security policy allows its own files only: no inline script, nothing from elsewhere. The Pages workflow
+stylesheet, the screenshots and `site.js` (copy buttons, the live demo loaded on click, Previous and Next for the
+screenshots; the page works without it), with no build step. Its security policy allows its own files only, and
+frames from the site itself for the demo: no inline script, nothing from elsewhere. The Pages workflow
 (`.github/workflows/pages.yml`) publishes it when `site/` changes on `main`, when a release is
 published, or when started by hand. Each run also rebuilds the signed apt repository under `/apt/`
 from the latest release's `.deb` (`scripts/apt-repo.sh`, ADR-029; key procedures in
 [Releasing](RELEASING.md)), and builds the live demo under `/demo/` from that release's tag (ADR-037). The demo
 is `src/demo/`: it gives the renderer a `window.galeo` answered in the page by `src/core/` over sample files held in
-memory (`src/demo/samples/`). Try it locally with `npm run build:demo` and any static server on `out/demo`. To retake the screenshots after a UI change:
+memory (`src/demo/samples/`). Try it locally with `npm run build:demo` and any static server on `out/demo`;
+`npm run headless -- npm run test:demo` tests the demo and the site with it in the page. To retake the screenshots
+after a UI change (the site's still of the demo comes from `out/demo`):
 
 ```sh
-npm run build
+npm run build && npm run build:demo
 npm run headless -- npm run site:screenshots
 ```
 

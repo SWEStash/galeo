@@ -3,92 +3,125 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <!-- The page loads nothing but its own stylesheet, images and copy.js (copy buttons; it works without it). -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <!-- The page loads nothing but its own stylesheet, images, site.js (it works without it) and, on request, the
+       demo in a frame. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self'; style-src 'self'; script-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <title>galeo: a fast, private desktop viewer and editor</title>
   <meta name="description" content="Read and edit Markdown, text, logs, JSON, CSV, YAML and more. galeo never connects to the network.">
   <link rel="icon" href="galeo.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
-  <script src="copy.js" defer></script>
+  <script src="site.js" defer></script>
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <header class="hero">
-    <img class="logo" src="galeo.svg" alt="" width="96" height="96">
+    <img class="logo" src="galeo.svg" alt="" width="80" height="80">
     <h1>galeo</h1>
     <p class="tagline">A fast, private desktop viewer and editor for the plans, notes, logs and data
-      that coding-agent work produces. It <strong>never connects to the network</strong>.</p>
+      that coding-agent work produces.</p>
+    <ul class="points">
+      <li>Markdown, logs, JSON, CSV, YAML and code</li>
+      <li>Never connects to the network</li>
+      <li>Linux · macOS and Windows previews</li>
+    </ul>
     <p class="actions">
-      <a class="button" href="https://github.com/SWEStash/galeo/releases/latest">Download</a>
+      <a class="button" href="#install">Install</a>
       <a class="button secondary" href="https://github.com/SWEStash/galeo">Source on GitHub</a>
     </p>
-    <p class="platforms">Linux (Ubuntu 24.04 and later, x86_64 and arm64) · Fedora, macOS and Windows previews · MIT licence</p>
-    <picture class="shot hero-shot">
-      <source srcset="screenshots/markdown-dark.png" media="(prefers-color-scheme: dark)">
-      <img src="screenshots/markdown-light.png" width="1280" height="800"
-           alt="galeo showing a rendered Markdown plan, with a JSON, a CSV, a log and a YAML file open in other tabs.">
-    </picture>
-    <p class="demo">
-      <a class="button" href="demo/">See it in action</a>
-      <span>The app's own page in your browser, with sample files held in its memory.</span>
-    </p>
+    <!-- The demo loads only when asked for (site.js); without the script, or where it doesn't fit, it is a link. -->
+    <div class="demo-frame">
+      <picture>
+        <source srcset="screenshots/demo-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshots/demo-light.png" width="1280" height="800"
+             alt="galeo's live demo: a garden shed plan in a tab, with a frame plan, a CSV, a JSON file, a log and a roof plan open beside it.">
+      </picture>
+      <div class="start">
+        <div>
+          <button type="button" class="button" hidden>▶ Try it live</button>
+          <a class="button link" href="demo/">Open the live demo</a>
+          <small>galeo runs here in your browser, with sample files. Nothing leaves the page.</small>
+        </div>
+      </div>
+    </div>
+    <p class="demo-under"><span>Some keys belong to your browser (Ctrl+W, Ctrl+Tab); the demo's plan lists the
+      others.</span> <a href="demo/">Open full screen ↗</a></p>
   </header>
 
   <main id="main">
     <section aria-labelledby="what">
       <h2 id="what">What it does</h2>
-      <div class="features">
-        <figure>
-          <!-- The other theme from the one the hero shows, so both are seen. -->
-          <picture>
-            <source srcset="screenshots/markdown-light.png" media="(prefers-color-scheme: dark)">
-            <img class="shot" src="screenshots/markdown-dark.png" width="1280" height="800" loading="lazy"
-                 alt="The same Markdown plan in the other colour theme.">
-          </picture>
-          <figcaption><strong>Reading.</strong> GitHub-style Markdown with code, math and Mermaid
-            diagrams. Files reload when they change on disk.</figcaption>
-        </figure>
-        <figure>
-          <img class="shot" src="screenshots/split-edit.png" width="1280" height="800" loading="lazy"
-               alt="Edit mode: the Markdown source on the left and its live preview on the right.">
-          <figcaption><strong>Editing.</strong> Raw text with a live split preview. Saving keeps the
-            file's encoding, line endings and permissions.</figcaption>
-        </figure>
-        <figure>
-          <img class="shot" src="screenshots/json-tree.png" width="1280" height="800" loading="lazy"
-               alt="A JSON file of load-test results shown as an expanded tree.">
-          <figcaption><strong>JSON as a tree.</strong> Move through it with the arrow keys, expand
-            or collapse everything, copy a node's path.</figcaption>
-        </figure>
-        <figure>
-          <img class="shot" src="screenshots/csv-table.png" width="1280" height="800" loading="lazy"
-               alt="A CSV file of requests shown as a table with numbered rows and a fixed header.">
-          <figcaption><strong>CSV and TSV as a table.</strong> The separator and header row are found
-            for you, and the header stays in view as you scroll.</figcaption>
-        </figure>
-        <figure>
-          <img class="shot" src="screenshots/log.png" width="1280" height="800" loading="lazy"
-               alt="A log file in the dark theme with level badges, coloured key=value pairs and tinted warning and error lines.">
-          <figcaption><strong>Logs.</strong> Level badges, coloured fields, and End follows a log that
-            keeps growing.</figcaption>
-        </figure>
-        <figure>
-          <img class="shot" src="screenshots/find-all.png" width="1280" height="800" loading="lazy"
-               alt="Find in all tabs listing the matches for p95 in a Markdown file and a JSON file.">
-          <figcaption><strong>Find in all tabs.</strong> Every match in the window's tabs, unsaved
-            ones included, one keystroke away.</figcaption>
-        </figure>
-        <figure>
-          <img class="shot" src="screenshots/tabs-left-palette.png" width="1280" height="800" loading="lazy"
-               alt="Tabs in a panel on the left, with the command palette open over the document.">
-          <figcaption><strong>Tabs, windows and profiles.</strong> Browser-like tabs, on top or on the
-            left, that move between windows. Sessions come back after a restart, and each project
-            can have its own profile.</figcaption>
-        </figure>
+      <div class="cards">
+        <div><h3>Reading</h3><p>GitHub-style Markdown with code, math and Mermaid diagrams. Files reload when they
+          change on disk.</p></div>
+        <div><h3>Editing</h3><p>Raw text with a live split preview. Saving keeps the file's encoding, line endings and
+          permissions.</p></div>
+        <div><h3>JSON, CSV and logs</h3><p>JSON as a tree, CSV and TSV as a table with its header in view, logs with
+          level badges that follow as they grow.</p></div>
+        <div><h3>Find in all tabs</h3><p>Every match in the window's tabs, unsaved ones included, one keystroke
+          away.</p></div>
+        <div><h3>Tabs, windows, profiles</h3><p>Tabs on top or on the left that move between windows. Sessions come
+          back, and each project can have its own profile.</p></div>
+        <div><h3>Following agents</h3><p>A file an agent changes gets a dot on its tab; showing it marks what changed
+          since you last looked.</p></div>
       </div>
-      <p>YAML, TOML, JSON Lines and source code open highlighted. MDX renders with nothing in it
-        running.</p>
+      <p>YAML, TOML, JSON Lines and source code open highlighted. MDX renders with nothing in it running.</p>
+      <div class="gallery">
+        <ul tabindex="0" aria-label="Screenshots">
+          <li>
+            <figure>
+              <a href="screenshots/markdown-dark.png"><picture>
+                <source srcset="screenshots/markdown-light.png" media="(prefers-color-scheme: dark)">
+                <img class="shot" src="screenshots/markdown-dark.png" width="1280" height="800" loading="lazy"
+                     alt="A Markdown plan with math, code and a Mermaid diagram, in the other colour theme from this page's.">
+              </picture></a>
+              <figcaption>Markdown with math, code and diagrams.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <a href="screenshots/split-edit.png"><img class="shot" src="screenshots/split-edit.png" width="1280" height="800" loading="lazy"
+                   alt="Edit mode: the Markdown source on the left and its live preview on the right."></a>
+              <figcaption>Editing with a live split preview.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <a href="screenshots/json-tree.png"><img class="shot" src="screenshots/json-tree.png" width="1280" height="800" loading="lazy"
+                   alt="A JSON file of load-test results shown as an expanded tree."></a>
+              <figcaption>JSON as a tree.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <a href="screenshots/csv-table.png"><img class="shot" src="screenshots/csv-table.png" width="1280" height="800" loading="lazy"
+                   alt="A CSV file of requests shown as a table with numbered rows and a fixed header."></a>
+              <figcaption>CSV as a table, its header in view.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <a href="screenshots/log.png"><img class="shot" src="screenshots/log.png" width="1280" height="800" loading="lazy"
+                   alt="A log file in the dark theme with level badges, coloured key=value pairs and tinted warning and error lines."></a>
+              <figcaption>A log with level badges and coloured fields.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <a href="screenshots/find-all.png"><img class="shot" src="screenshots/find-all.png" width="1280" height="800" loading="lazy"
+                   alt="Find in all tabs listing the matches for p95 in a Markdown file and a JSON file."></a>
+              <figcaption>Find in all tabs.</figcaption>
+            </figure>
+          </li>
+          <li>
+            <figure>
+              <a href="screenshots/tabs-left-palette.png"><img class="shot" src="screenshots/tabs-left-palette.png" width="1280" height="800" loading="lazy"
+                   alt="Tabs in a panel on the left, with the command palette open over the document."></a>
+              <figcaption>Tabs on the left, and the command palette.</figcaption>
+            </figure>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <section class="install" aria-labelledby="install">
@@ -195,6 +228,20 @@ sudo apt install ./release/galeo_*.deb</code></pre>
         a download</a>.</p>
     </section>
 
+    <section aria-labelledby="private">
+      <h2 id="private">Private by design</h2>
+      <ul>
+        <li><strong>No network.</strong> galeo makes no connections at all: no telemetry, no update
+          checks, no remote images. A test proves it at the socket level.</li>
+        <li><strong>Documents can't run code.</strong> Rendered content is sanitized, scripts are
+          blocked, and links to the web open in your browser only when you click them.</li>
+        <li><strong>Sandboxed.</strong> Chromium's sandbox is on, and every release is audited
+          against a <a href="https://github.com/SWEStash/galeo/blob/main/docs/security/threat-model.md">threat model</a>.</li>
+      </ul>
+      <p>This page follows the same rule: nothing loaded from anywhere else, no trackers. The demo runs from this
+        site too.</p>
+    </section>
+
     <section aria-labelledby="use">
       <h2 id="use">Use it</h2>
       <pre tabindex="0"><code>galeo notes.md plan.md          # open files in the last window used
@@ -223,18 +270,6 @@ galeo --profile acme plan.md    # in the "acme" profile</code></pre>
         everything else.</p>
     </section>
 
-    <section aria-labelledby="private">
-      <h2 id="private">Private by design</h2>
-      <ul>
-        <li><strong>No network.</strong> galeo makes no connections at all: no telemetry, no update
-          checks, no remote images. A test proves it at the socket level.</li>
-        <li><strong>Documents can't run code.</strong> Rendered content is sanitized, scripts are
-          blocked, and links to the web open in your browser only when you click them.</li>
-        <li><strong>Sandboxed.</strong> Chromium's sandbox is on, and every release is audited
-          against a <a href="https://github.com/SWEStash/galeo/blob/main/docs/security/threat-model.md">threat model</a>.</li>
-      </ul>
-      <p>This page follows the same rule: no scripts, no trackers, nothing loaded from anywhere else.</p>
-    </section>
   </main>
 
   <footer>
