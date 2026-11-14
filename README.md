@@ -37,10 +37,19 @@ galeo README.md
 On arm64, write `Architectures: arm64`. galeo is now also in *Open With* for Markdown, MDX, text, log,
 JSON, YAML, TOML, CSV and TSV files and source code.
 
-**Other ways to install** (Fedora's dnf repository, a package file, the AppImage, building from source,
-the macOS and Windows previews): [install](https://swestash.github.io/galeo/#install) on the website, a tab per method. The
-[usage guide](docs/USAGE.md#installation) says what each install does, how to remove it, and how to
-check a download.
+**Other systems.** The steps for each are on the website, under
+[install](https://swestash.github.io/galeo/#install), a tab per system:
+
+| System | How | Details |
+|---|---|---|
+| Fedora (preview) | galeo's dnf repository, or the `.rpm` | [Fedora](docs/USAGE.md#fedora-preview) |
+| Other Linux | the AppImage | [AppImage](docs/USAGE.md#the-appimage) |
+| macOS (preview) | the `.dmg` (Apple silicon or Intel) | [previews](docs/USAGE.md#macos-and-windows-previews) |
+| Windows (preview) | the installer, or the portable `.exe` | [previews](docs/USAGE.md#macos-and-windows-previews) |
+| From source | build the `.deb` and install it | [from source](docs/USAGE.md#from-source) |
+
+The previews are checked in CI but unsigned. The [usage guide](docs/USAGE.md#installation) says what each install
+does, how to remove it, and how to [check a download](docs/USAGE.md#checking-a-download).
 
 ## Features
 
