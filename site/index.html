@@ -100,7 +100,6 @@
           <label><input type="radio" name="method" id="m-apt" checked> Ubuntu, Debian</label>
           <label><input type="radio" name="method" id="m-dnf"> Fedora <span class="tag">preview</span></label>
           <label><input type="radio" name="method" id="m-appimage"> Other Linux</label>
-          <label><input type="radio" name="method" id="m-file"> Package file</label>
           <label><input type="radio" name="method" id="m-source"> From source</label>
           <label><input type="radio" name="method" id="m-mac"> macOS <span class="tag">preview</span></label>
           <label><input type="radio" name="method" id="m-win"> Windows <span class="tag">preview</span></label>
@@ -125,6 +124,10 @@ sudo apt update &amp;&amp; sudo apt install galeo</code></pre>
           <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>. This puts <code>galeo</code> and the shorter
           <code>gal</code> on your <code>PATH</code> and adds galeo to <em>Open With</em> for Markdown, text, logs,
           data files and source code.</p>
+        <p>Without the repository: download <code>galeo_&lt;version&gt;_amd64.deb</code> (or <code>_arm64.deb</code>)
+          from the <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and run
+          <code>sudo apt install ./galeo_*.deb</code>. Updates then don't come by themselves: install the next release
+          the same way.</p>
       </div>
 
       <div class="panel" id="p-dnf">
@@ -136,6 +139,10 @@ sudo curl -fsSLo /etc/yum.repos.d/galeo.repo https://swestash.github.io/galeo/rp
 sudo dnf install galeo</code></pre>
         <p>dnf asks you to accept the key the first time: its fingerprint is
           <code>0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629</code>, the same as apt's.</p>
+        <p>Without the repository: download <code>galeo-&lt;version&gt;.x86_64.rpm</code> (or <code>.aarch64.rpm</code>)
+          from the <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and run
+          <code>sudo dnf install ./galeo-*.rpm</code>. Updates then don't come by themselves: install the next release
+          the same way.</p>
       </div>
 
       <div class="panel" id="p-appimage">
@@ -147,15 +154,6 @@ sudo dnf install galeo</code></pre>
         <p>For the <code>galeo</code> command, use <strong>Settings → Install command-line launcher</strong>. The
           AppImage doesn't update itself: download the next release when it comes. On Ubuntu 24.04 and later it
           can't start Chromium's sandbox; use the <code>.deb</code> there.</p>
-      </div>
-
-      <div class="panel" id="p-file">
-        <h3>A package file, without the repository</h3>
-        <p>Download the <code>.deb</code> or the <code>.rpm</code> (a preview) for your machine from the
-          <a href="https://github.com/SWEStash/galeo/releases/latest">latest release</a> and install it:</p>
-        <pre tabindex="0"><code>sudo apt install ./galeo_*.deb      # galeo_&lt;version&gt;_amd64.deb or _arm64.deb
-sudo dnf install ./galeo-*.rpm      # galeo-&lt;version&gt;.x86_64.rpm or .aarch64.rpm</code></pre>
-        <p>Updates come through the repository only: without it, install the next release the same way.</p>
       </div>
 
       <div class="panel" id="p-source">

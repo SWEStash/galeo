@@ -335,7 +335,6 @@ pre code {
   .install:has(#m-apt:checked) #p-apt,
   .install:has(#m-dnf:checked) #p-dnf,
   .install:has(#m-appimage:checked) #p-appimage,
-  .install:has(#m-file:checked) #p-file,
   .install:has(#m-source:checked) #p-source,
   .install:has(#m-mac:checked) #p-mac,
   .install:has(#m-win:checked) #p-win {

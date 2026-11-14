@@ -22,7 +22,7 @@ The key's fingerprint is `0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629`; co
 downloaded key with the one in the package, which keeps it up to date. The repository holds the
 latest release only; older ones stay on the releases page.
 
-To install a downloaded `.deb` instead (*Package file* on the website), for instance after
+To install a downloaded `.deb` instead (the last step under *Ubuntu, Debian* on the website), for instance after
 [checking it](#checking-a-download), run `sudo apt install ./galeo_<version>_amd64.deb` (or `_arm64.deb`).
 
 Adding the sources file afterwards turns on updates: from galeo 0.5.1 the package has already
@@ -51,6 +51,9 @@ repository's key to `/etc/pki/rpm-gpg/RPM-GPG-KEY-galeo`, add `/etc/yum.repos.d/
 `sudo dnf upgrade` then brings each release. dnf asks you to accept the key the first time; its
 fingerprint is apt's, `0240 8BDA 7C32 5856 C770 3ED4 716D B0EB 162F 5629`. dnf checks both the
 repository's signature and each package's.
+
+To install a downloaded `.rpm` instead, run `sudo dnf install ./galeo-<version>.x86_64.rpm` (or `.aarch64.rpm`);
+without the repository, updates don't come by themselves.
 
 It installs what the `.deb` does, apart from the AppArmor profile, which Fedora doesn't need for
 Chromium's sandbox. `sudo dnf remove galeo` removes it and keeps the key, which the `.repo` file names;
