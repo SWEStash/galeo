@@ -10,6 +10,7 @@ const TYPES: Record<string, string> = {
   '.woff': 'font/woff',
   '.ttf': 'font/ttf',
   '.svg': 'image/svg+xml',
+  '.png': 'image/png',
 };
 
 /** A static server for `dir` on 127.0.0.1, as Pages serves it (no headers of its own), counting what it sends. */
