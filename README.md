@@ -2,7 +2,7 @@
   <img src="packaging/icons/galeo.svg" alt="" width="200">
   <h1>galeo</h1>
   <p>A fast, private desktop viewer and editor.</p>
-  <p><a href="https://swestash.github.io/galeo/">Website</a> · <a href="https://github.com/SWEStash/galeo/releases/latest">Download</a> · <a href="docs/USAGE.md">Usage guide</a></p>
+  <p><a href="https://swestash.github.io/galeo/">Website</a> · <a href="https://swestash.github.io/galeo/demo/">Live demo</a> · <a href="https://github.com/SWEStash/galeo/releases/latest">Download</a> · <a href="docs/USAGE.md">Usage guide</a></p>
 
 [![CI](https://github.com/SWEStash/galeo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SWEStash/galeo/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/SWEStash/galeo)](https://github.com/SWEStash/galeo/releases/latest)
