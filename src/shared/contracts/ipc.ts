@@ -136,6 +136,7 @@ export const CHANNELS = [
   'documents.printPdf',
   'documents.dirty',
   'documents.leaveEdit',
+  'documents.paste',
   'documents.closeAnswer',
   'documents.keep',
   'documents.recover',
@@ -267,6 +268,8 @@ export interface Requests {
   'documents.dirty': [id: string, dirty: boolean];
   /** The page left edit mode (its text is saved or discarded): main takes the grant back. */
   'documents.leaveEdit': [id: string];
+  /** Vim's `"+p` (#51): main pastes the system clipboard into the tab in edit mode, as for Ctrl+V; the page never reads it. */
+  'documents.paste': [id: string];
   /**
    * The page's answer to `documents.confirmClose`: `asking` at once (it put the question to the
    * reader), then `proceed` (every tab saved or discarded) or `cancel`.
@@ -404,6 +407,8 @@ export interface Responses {
   'diagrams.write': 'saved' | 'refused' | 'failed';
   'documents.dirty': void;
   'documents.leaveEdit': void;
+  /** Whether main pasted (the tab is in edit mode, on the reader's input). */
+  'documents.paste': boolean;
   'documents.closeAnswer': void;
   'documents.keep': void;
   'documents.recover': Recovered;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { VimHooks, VimMode } from '../edit/vim-keys';
 import { exportPdf } from './pdf-export';
 import type { DocumentMenuContext } from '../../shared/contracts/ipc';
 import type { ChosenEncoding, DocumentContent, Recovered } from '../../shared/contracts';
@@ -100,6 +101,8 @@ export interface DocumentPaneProps {
   onKeep: (text: string, base: string | null) => void;
   /** How a table reads when its tab has no choice of its own: the settings (ADR-021). */
   tableDefaults: TableDefaults;
+  /** Vim keys in edit mode (#51): the setting. */
+  vimKeys: boolean;
   /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
   recovered: Recovered['kept'];
   /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
@@ -176,6 +179,7 @@ export function DocumentPane({
   onToggleTask,
   onMissingLinks,
   tableDefaults,
+  vimKeys,
 }: DocumentPaneProps) {
   const [dirty, setDirty] = useState(false);
   const dirtyNow = useRef(false);
@@ -458,6 +462,23 @@ export function DocumentPane({
     'disk-unreadable': [{ label: 'Load theirs', onAction: choose(loadTheirs) }],
   };
   const actions = useLatest({ save, discard });
+  // Vim keys (#51): `:w` saves as Ctrl+S does; `"+p` has main paste (the page can't read the clipboard).
+  const [vimMode, setVimMode] = useState<VimMode | null>(null);
+  const vim = useMemo<VimHooks | undefined>(
+    () =>
+      vimKeys
+        ? {
+            save: () => void actions.current.save(),
+            paste: (editor, { after }) => {
+              const head = editor.state.selection.main.head;
+              if (after && head < editor.state.doc.lineAt(head).to) editor.dispatch({ selection: { anchor: head + 1 } });
+              void window.galeo.documents.paste(tabId).catch(() => onMessage("Couldn't paste"));
+            },
+            onMode: setVimMode,
+          }
+        : undefined,
+    [vimKeys, tabId, actions, onMessage],
+  );
   useEffect(() => {
     if (!editing) return;
     onEditor({ save: () => actions.current.save(), discard: () => actions.current.discard(), focus: () => documentHandle.current?.focus(), keepNow });
@@ -750,6 +771,7 @@ export function DocumentPane({
       words,
       follow,
       editing,
+      vimMode: editing && vim ? vimMode : null,
       dirty,
       changes: changesNote,
       tasks: article ? render.tasks : null,
@@ -757,7 +779,7 @@ export function DocumentPane({
       table: tabular && view !== 'source' ? { separator: separatorChoice, found: shownTable?.table?.separator ?? null, header } : null,
       options: { rendered: renderable, split: splittable, wrap: view === 'rendered' ? null : wrap, outline: outlined ? outlineOpen : null, followable: views?.follow === true },
     });
-  }, [onStatus, content.state, ready, view, lines, words, follow, editing, dirty, changesNote, render.tasks, tabular, separatorChoice, shownTable?.table, header, renderable, splittable, wrap, outlined, outlineOpen, views?.follow]);
+  }, [onStatus, content.state, ready, view, lines, words, follow, editing, vim, vimMode, dirty, changesNote, render.tasks, tabular, separatorChoice, shownTable?.table, header, renderable, splittable, wrap, outlined, outlineOpen, views?.follow]);
 
   // Ready content is always shown: no document means the content is a state of its own.
   const menu = () => onContextMenu({ tree: treeModel !== null && view === 'rendered', rich: article && view !== 'source' });
@@ -822,6 +844,7 @@ export function DocumentPane({
           }}
           editable={editing}
           onEdit={edited}
+          vim={vim}
           replacing={find.open && find.replace}
           pendingFind={findSeed}
           onPendingFind={setFindResult}

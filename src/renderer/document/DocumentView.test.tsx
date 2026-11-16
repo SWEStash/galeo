@@ -186,6 +186,22 @@ describe('DocumentView editing', () => {
   });
 });
 
+describe('DocumentView with Vim keys (#51)', () => {
+  it('gives the editor Vim keys in edit mode while it has Vim hooks, and drops them when they go', async () => {
+    const { EditorView } = await import('@codemirror/view');
+    const focus = vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const vim = { save: vi.fn(), paste: vi.fn(), onMode: vi.fn() };
+    const container = await render(<DocumentView {...props} view="source" rendered={null} scheme="light" editable vim={vim} />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector<HTMLElement>('.cm-editor')?.dataset['vimMode']).toBe('normal'), { timeout: 5_000 });
+    expect(vim.onMode).toHaveBeenCalledWith('normal');
+
+    await act(async () => root!.render(<DocumentView {...props} view="source" rendered={null} scheme="light" editable />));
+    expect(shadow.querySelector<HTMLElement>('.cm-editor')!.dataset['vimMode']).toBeUndefined();
+    focus.mockRestore();
+  });
+});
+
 describe('DocumentView in split', () => {
   const twoViews = { source: { text: '# src src', language: 'markdown' as const }, wrap: false, scheme: 'light' as const };
 

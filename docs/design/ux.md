@@ -48,7 +48,7 @@ the [decision records](../decisions/)).
 |---|---|---|
 | **Tab bar** (merged with title bar, client-side decorations) | Profile chip (name + accent colour, left edge), tabs, new-tab button after the last tab, (v0.7) the tools `▦` Tab overview, `⌕` Search tabs and `⋯` Commands at the far right, window controls. A tab fits its name (96–200 px) and shows `✕` on hover, when shown or focused; short lines separate the tabs not shown | Always visible |
 | **Document area** | Rendered or source view of the active tab | Always visible |
-| **Status bar** | Path (click → copy menu), view mode ((v0.7) a menu of the views, wrap and outline), read-only/edit state, encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; (v0.6) a Markdown document's task items done of all ("7 of 12 tasks", once rendered) and its change marks ("3 changes", F20); (v0.3) a table's options (separator and header, a menu); the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width"), (v0.7) each reset by a click; (v0.7) a log's Follow toggle | Always visible; can be hidden in settings |
+| **Status bar** | Path (click → copy menu), view mode ((v0.7) a menu of the views, wrap and outline), read-only/edit state ((v0.10) with Vim keys, Vim's mode beside it), encoding, the document's metrics: line count (source and log views only: the rendered and reader views wrap to the window), word count and reading time (Markdown prose — not code, math, diagrams or front matter — and `.txt`; about 230 words a minute), live-reload indicator; (v0.6) a Markdown document's task items done of all ("7 of 12 tasks", once rendered) and its change marks ("3 changes", F20); (v0.3) a table's options (separator and header, a menu); the tab's zoom when it isn't 100 % and (v0.3) its reader width when it differs from the setting ("96 ch", "Full width"), (v0.7) each reset by a click; (v0.7) a log's Follow toggle | Always visible; can be hidden in settings |
 | **Quick open** | Fuzzy file finder: open tabs, recent files, repo of active file | Ctrl+P / Esc |
 | **Search tabs** (v0.4) | The window's open tabs and recently closed tabs by name and folder (F16) | Ctrl+Shift+A / Esc |
 | **Tab overview** (v0.4) | Every tab of the window as a grid of cards; activate, close, reorder (F17) | Ctrl+Shift+E, the palette / Esc |
@@ -305,6 +305,11 @@ mode closes the replace row and keeps find open.
   split view's preview ticks the editor's text instead, as an ordinary edit (unsaved until Ctrl+S,
   undone with Ctrl+Z).
 - Ctrl+S saves (atomic); status bar shows "Saved" briefly. Unsaved `●` on tab.
+- (v0.10, #51) **Vim keys**, a setting (Settings → Editing, off by default) that applies to open
+  editors at once: edit mode starts in Vim's normal mode, and the status bar shows the mode as a
+  chip beside "Editing" (NORMAL, INSERT, VISUAL, REPLACE; a live region). `:w` saves as Ctrl+S
+  does; the `+` register is the system clipboard (`"+p` asks main to paste, as Ctrl+V). galeo's
+  shortcuts keep their keys, except Ctrl+R: Vim's redo in normal and visual mode (F5 reloads).
 - Closing a tab/window/profile, or quitting, with unsaved changes → dialog: Save / Don't save / Cancel
   (focus on Save; Esc = Cancel). Closing the window or quitting again while that dialog is open →
   a native dialog from main: *Keep waiting* (default) / *Close without saving*.
@@ -559,7 +564,7 @@ the native menu on the active tab.
 | Toggle outline | Ctrl+Shift+O | |
 | Toggle watched folder panel (v0.8) | Ctrl+Shift+D | While watching a folder (F21) |
 | Follow end (logs) | End | Scroll up to leave |
-| Reload from disk | F5 / Ctrl+R | |
+| Reload from disk | F5 / Ctrl+R | (v0.10) With Vim keys, Ctrl+R in normal and visual mode is Vim's redo |
 | Back / forward | Alt+← / Alt+→ | Per-tab history |
 | New window | Ctrl+N | Same profile |
 | Close tab / window | Ctrl+W / Ctrl+Shift+W | |
@@ -634,7 +639,7 @@ this map only.
   for code, each with a preview line; any name can still be typed), gives the measure presets
   (Narrow 60, Normal 72, Wide 100, Full width) besides a custom value, and adds an "About galeo"
   row showing the version. v0.4 adds, under Window, where the tabs go (Top / Left) and the side
-  panel's width (F18). A switch at the
+  panel's width (F18). v0.10 adds Editing, with Vim keys (F12). A switch at the
   top says where changes go: this profile, or all profiles. Each setting shows whether its value
   is the default, all profiles' or this profile's own, with "reset to global" for the last. A
   change to a file left invalid by a hand edit is refused and names the file. The AppImage adds

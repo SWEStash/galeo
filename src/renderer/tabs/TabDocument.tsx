@@ -45,6 +45,8 @@ interface TabDocumentProps {
   onMessage: (message: string) => void;
   /** How tables read without a choice of their own: the settings (ADR-021). */
   tableDefaults: TableDefaults;
+  /** Vim keys in edit mode (#51): the setting. */
+  vimKeys: boolean;
   /** A match chosen in find in all tabs, for the find bar to open on (ADR-024). */
   findRequest?: DocumentPaneProps['findRequest'];
   onFindShown?: (() => void) | undefined;
@@ -82,7 +84,7 @@ interface Arrival {
   position: ScrollAnchor | null;
 }
 
-function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, onMessage, tableDefaults, findRequest, onFindShown }: TabDocumentProps) {
+function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, onMessage, tableDefaults, vimKeys, findRequest, onFindShown }: TabDocumentProps) {
   // A tab not shown has no layout to keep its place in: it takes a changed file when shown again.
   const [appliedReads, setAppliedReads] = useState(staleReads);
   useEffect(() => {
@@ -244,6 +246,7 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
       zoom={zoom}
       initialViewState={store.viewStateOf(id)}
       tableDefaults={tableDefaults}
+      vimKeys={vimKeys}
       onViewState={onViewState}
       editRequest={editRequest}
       onSave={save}

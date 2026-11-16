@@ -69,6 +69,7 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity, c
   });
   const opened: string[] = [];
   const menus: string[] = [];
+  const pastes: number[] = [];
   const handlers = documentHandlers({
     records,
     links,
@@ -88,8 +89,9 @@ function setup(files: Record<string, string>, slow = '', { credits = Infinity, c
       path: async (id, window) => void menus.push(`path ${id} ${window}`),
       document: async (id, window, context) => (menus.push(`document ${id} ${window} ${JSON.stringify(context)}`), choice),
     },
+    paste: (window) => void pastes.push(window),
   });
-  return { fs, records, handlers, opened, grants, input, reads, answers, menus, pdfs, id: records.open(Object.keys(files)[0]!, 1).id };
+  return { fs, records, handlers, opened, grants, input, reads, answers, menus, pdfs, pastes, id: records.open(Object.keys(files)[0]!, 1).id };
 }
 
 describe('documentHandlers', () => {
@@ -235,6 +237,27 @@ describe('documents.setEncoding', () => {
   it("refuses another window's document", () => {
     const { handlers, id } = setup({ '/d/a.txt': 'x' });
     expect(() => handlers['documents.setEncoding']([id, 'utf-8'], { ...event, sender: { id: 2 } } as WindowIpcEvent)).toThrow();
+  });
+});
+
+describe('documentHandlers pasting (Vim\'s "+p, #51)', () => {
+  it("pastes the system clipboard into the sender's tab in edit mode, on the reader's input", async () => {
+    const { handlers, grants, pastes, id } = setup({ '/d/a.md': 'old' });
+    grants.grant(id, 1, '/d/a.md');
+    expect(handlers['documents.paste']([id], event)).toBe(true);
+    expect(pastes).toEqual([1]);
+  });
+
+  it('pastes nothing while reading, without input, or into another window', async () => {
+    const reading = setup({ '/d/a.md': 'old' });
+    expect(reading.handlers['documents.paste']([reading.id], event)).toBe(false);
+    const idle = setup({ '/d/a.md': 'old' }, '', { credits: 0 });
+    idle.grants.grant(idle.id, 1, '/d/a.md');
+    expect(idle.handlers['documents.paste']([idle.id], event)).toBe(false);
+    const other = setup({ '/d/a.md': 'old' });
+    other.grants.grant(other.id, 1, '/d/a.md');
+    expect(other.handlers['documents.paste']([other.id], { ...event, sender: { id: 2 } } as WindowIpcEvent)).toBe(false);
+    expect([...reading.pastes, ...idle.pastes, ...other.pastes]).toEqual([]);
   });
 });
 

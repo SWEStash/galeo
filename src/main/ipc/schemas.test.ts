@@ -5,7 +5,7 @@ const ID = '0b6c1d2e-8f1a-4c3b-9d4e-5f6a7b8c9d0e';
 const accepts = (channel: keyof typeof requestSchemas, args: unknown[]) => requestSchemas[channel].safeParse(args).success;
 
 describe('document channel arguments (SR-11)', () => {
-  it.each(['documents.back', 'documents.forward', 'documents.pathMenu', 'documents.leaveEdit', 'documents.recover', 'recent.open', 'tabs.activated', 'tabs.rendering', 'tabs.renderAgain', 'tabs.close'] as const)('%s takes one document id', (channel) => {
+  it.each(['documents.back', 'documents.forward', 'documents.pathMenu', 'documents.leaveEdit', 'documents.paste', 'documents.recover', 'recent.open', 'tabs.activated', 'tabs.rendering', 'tabs.renderAgain', 'tabs.close'] as const)('%s takes one document id', (channel) => {
     expect(accepts(channel, [ID])).toBe(true);
     for (const bad of [[], [''], ['x'.repeat(65)], [42], [null], [{ id: ID }], [ID, 'extra']]) {
       expect(accepts(channel, bad)).toBe(false);
@@ -255,6 +255,8 @@ describe('settings, profile and app channel arguments (SR-11)', () => {
     expect(accepts('settings.set', ['global', { themeMode: 'dark', quickOpenExclude: ['dist'] }])).toBe(true);
     expect(accepts('settings.set', ['profile', { tabsPosition: 'left', tabPanelWidth: 260 }])).toBe(true);
     expect(accepts('settings.set', ['profile', { tabPanelWidth: 1000 }])).toBe(false);
+    expect(accepts('settings.set', ['global', { vimKeys: true }])).toBe(true);
+    expect(accepts('settings.set', ['global', { vimKeys: 'on' }])).toBe(false);
     for (const bad of [
       ['profile', { fontSize: 9 }],
       ['profile', { fontSize: 41 }],

@@ -24,6 +24,7 @@ const STATE: SettingsState = {
     tableHeader: 'default',
     tabsPosition: 'default',
     tabPanelWidth: 'default',
+    vimKeys: 'default',
   },
   notices: [],
   session: null,
@@ -221,6 +222,22 @@ describe('SettingsView (UX §6)', () => {
     expect(preview.textContent).toMatch(/\S/);
     expect(preview.style.fontFamily).toContain('Hack');
     expect(preview.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('turns Vim keys on for edit mode, under Editing, saying what galeo keeps (#51)', async () => {
+    const { settings } = stubBridge();
+    const container = await render();
+    const vim = row(container, 'Vim keys');
+    const heading = (element: Element | null): string | undefined => {
+      for (let at = element?.previousElementSibling; at; at = at.previousElementSibling) if (at.tagName === 'H2') return at.textContent ?? undefined;
+      return undefined;
+    };
+    expect(heading(vim)).toBe('Editing');
+    const input = vim.querySelector<HTMLInputElement>('input')!;
+    expect(input.checked).toBe(false);
+    expect(document.getElementById(input.getAttribute('aria-describedby')!)?.textContent).toBe("In edit mode. galeo's shortcuts still work; Ctrl+R redoes in normal mode, F5 reloads.");
+    await act(async () => input.click());
+    expect(settings.set).toHaveBeenCalledWith('profile', { vimKeys: true });
   });
 
   it('shows the version, with a way to About galeo', async () => {

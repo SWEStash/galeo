@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { Input, Label, NumberField, RadioButton, RadioField, RadioGroup, SwitchButton, SwitchField } from 'react-aria-components';
 
 /** One of a few values, by name; only the values it offers come back, so no cast is needed. */
@@ -50,13 +50,19 @@ export function NumberSetting({ label, value, min, max, step, onChange }: { labe
   );
 }
 
-export function SwitchSetting({ label, value, onChange }: { label: string; value: boolean; onChange: (value: boolean) => void }) {
+export function SwitchSetting({ label, hint, value, onChange }: { label: string; hint?: string; value: boolean; onChange: (value: boolean) => void }) {
+  const hintId = useId();
   return (
-    <SwitchField className="switch" isSelected={value} onChange={onChange}>
+    <SwitchField className="switch" isSelected={value} onChange={onChange} {...(hint ? { 'aria-describedby': hintId } : {})}>
       <SwitchButton>
         <span className="switch-track" aria-hidden="true" />
         {label}
       </SwitchButton>
+      {hint && (
+        <span id={hintId} className="field-hint">
+          {hint}
+        </span>
+      )}
     </SwitchField>
   );
 }

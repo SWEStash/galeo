@@ -38,7 +38,7 @@ export class CommandDispatcher {
   /** The window's keydown listener (capture phase, so an editor never sees these keys first). */
   readonly onKey = (event: KeyboardEvent): void => {
     const command = commandFor(event, this.platform);
-    if (!command) return;
+    if (!command || vimTakes(event)) return;
     if (this.run(command, { typing: isTyping(event), tabNumber: tabNumberFor(event, this.platform) })) event.preventDefault();
   };
 }
@@ -52,4 +52,17 @@ function isTyping(event: KeyboardEvent): boolean {
   const target = event.composedPath()[0] ?? event.target;
   if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return true;
   return target instanceof HTMLElement && target.isContentEditable && target.getAttribute('aria-readonly') !== 'true';
+}
+
+/** Vim's modes in which its own Ctrl+R (redo) beats galeo's reload; F5 still reloads. */
+const VIM_REDO_MODES = new Set(['normal', 'visual']);
+
+/**
+ * Whether Vim keeps the key (#51): Ctrl+R in an editor whose Vim mode allows it. The Vim extension
+ * marks its editor with `data-vim-mode`; every other key of galeo's stays galeo's.
+ */
+function vimTakes(event: KeyboardEvent): boolean {
+  if (event.key.toLowerCase() !== 'r' || !event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) return false;
+  const editor = event.composedPath().find((node): node is HTMLElement => node instanceof HTMLElement && node.dataset['vimMode'] !== undefined);
+  return editor !== undefined && VIM_REDO_MODES.has(editor.dataset['vimMode']!);
 }

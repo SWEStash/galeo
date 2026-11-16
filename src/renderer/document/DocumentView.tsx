@@ -20,6 +20,7 @@ import { loadSourceView, mountDocumentHost, placesFractions, sourceViewLoaded, t
 import { createRenderedFinder, type Finder } from './rendered-finder';
 import { lineAtOffset, offsetOfLine, syncScrolling, type ScrollSync, type SyncBlock, type SyncPane } from './scroll-sync';
 import type { SourceLanguage } from './source-view';
+import type { VimHooks } from '../edit/vim-keys';
 import { SPLIT_MIN_WIDTH } from './view-modes';
 import { NO_MATCHES, type FindResult } from '../../shared/find';
 import type { DiagramExpand, FindRequest } from './requests';
@@ -66,6 +67,8 @@ export interface DocumentViewProps {
   editable?: boolean;
   /** The reader changed the source text (never for new text from the file). */
   onEdit?: (() => void) | undefined;
+  /** Vim keys in edit mode (#51), with what they ask of the tab; the Vim code loads only while set. */
+  vim?: VimHooks | undefined;
   /** Find and replace is open: find searches the source, the only text replace can change. */
   replacing?: boolean;
   /** The heading being read (its id), as the reader scrolls; set to follow it. In the source view, the id of an `onSourceOutline` entry. */
@@ -192,6 +195,7 @@ export function DocumentView({
   onExpandImage,
   editable = false,
   onEdit,
+  vim,
   replacing = false,
   sourceCursor = null,
   splitRatio = 0.5,
@@ -516,6 +520,36 @@ export function DocumentView({
     sourceView.setEditable(editable);
     if (editable && showsSource(view)) sourceView.view.focus();
   }, [editable, sourceReady, view]);
+
+  // Vim keys (#51): loaded as soon as they're on, before edit mode, so the first keys typed are Vim's;
+  // the hooks are read at each use.
+  const vimHooks = useLatest(vim);
+  const vimOn = vim !== undefined;
+  useEffect(() => {
+    if (vimOn) void import('../edit/vim-keys');
+  }, [vimOn]);
+  useEffect(() => {
+    const sourceView = host().source;
+    if (!sourceReady || !sourceView) return;
+    if (!vimOn) {
+      sourceView.setVim(null);
+      return;
+    }
+    let current = true;
+    void import('../edit/vim-keys').then(({ vimKeys }) => {
+      if (!current) return;
+      sourceView.setVim(
+        vimKeys({
+          save: () => vimHooks.current?.save(),
+          paste: (editor, options) => vimHooks.current?.paste(editor, options),
+          onMode: (mode) => vimHooks.current?.onMode(mode),
+        }),
+      );
+    });
+    return () => {
+      current = false;
+    };
+  }, [vimOn, sourceReady]);
 
   // Task boxes (ADR-031): reading, a tick goes to main; in edit mode the preview's boxes tick the editor's text.
   const toggleListener = useLatest(onToggleTask);

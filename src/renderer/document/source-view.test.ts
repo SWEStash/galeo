@@ -6,6 +6,7 @@ import { runScopeHandlers } from '@codemirror/view';
 import { afterEach, describe, expect, it } from 'vitest';
 import { takenByDesktop } from '../../shared/desktop-keys';
 import { createSourceView, editingKeys, foldingKeys } from './source-view';
+import { vimKeys } from '../edit/vim-keys';
 
 function shadowContainer() {
   const host = document.createElement('div');
@@ -524,4 +525,25 @@ describe('createSourceView editing', () => {
     expect(outlines).toEqual([['a'], ['a', 'b']]);
     source.destroy();
   });
+
+  it('takes Vim keys in edit mode only, and lets them go live', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'one\n', language: 'markdown', wrap: false });
+    const marked = () => source.view.dom.dataset['vimMode'];
+
+    source.setVim(vimKeys({ save() {}, paste() {}, onMode() {} }));
+    expect(marked()).toBeUndefined();
+    source.setEditable(true);
+    expect(marked()).toBe('normal');
+    source.setEditable(false);
+    expect(marked()).toBeUndefined();
+    source.setEditable(true);
+    expect(marked()).toBe('normal');
+
+    source.setVim(null);
+    expect(marked()).toBeUndefined();
+    expect(source.view.state.readOnly).toBe(false);
+    source.destroy();
+  });
 });
+

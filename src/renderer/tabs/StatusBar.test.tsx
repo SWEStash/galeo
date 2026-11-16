@@ -111,4 +111,16 @@ describe('the status bar (mouse paths review)', () => {
     await act(async () => width.click());
     expect(ran).toEqual(['zoomReset', 'resetReaderWidth']);
   });
+
+  it("shows Vim's mode beside Editing, as a live region, and nothing without Vim keys", async () => {
+    await render(view(status({ view: 'source', editing: true, vimMode: 'insert' })));
+    const chip = document.querySelector<HTMLElement>('[data-testid="status-vim"]')!;
+    expect([document.querySelector('[data-testid="status-mode"]')!.textContent, chip.textContent, chip.dataset['mode']]).toEqual(['Editing', 'INSERT', 'insert']);
+    expect(chip.getAttribute('aria-live')).toBe('polite');
+    act(() => root?.unmount());
+
+    await render(view(status({ view: 'source', editing: true })));
+    expect(document.querySelector('[data-testid="status-vim"]')).toBeNull();
+  });
 });
+

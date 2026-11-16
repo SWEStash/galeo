@@ -102,6 +102,11 @@ export function StatusBar({ view, store, say, children }: { view: TabsView; stor
           {status.editing ? 'Editing' : 'Read-only'}
         </span>
       )}
+      {status?.editing && status.vimMode && (
+        <span className="status-vim" data-testid="status-vim" data-mode={status.vimMode} aria-live="polite">
+          {status.vimMode.toUpperCase()}
+        </span>
+      )}
       {status?.encoding && (
         <EncodingMenu className="status-encoding" onChoose={chooseEncoding}>
           <span data-testid="status-encoding">{ENCODING_NAMES[status.encoding]}</span>

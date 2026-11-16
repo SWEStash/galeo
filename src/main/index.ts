@@ -914,6 +914,7 @@ function start(initialMode: StartupMode): void {
           searches,
           menus,
           pdf,
+          paste: (windowId) => webContents.fromId(windowId)?.paste(),
         }),
         ...tabHandlers({
           tabs: documents,

@@ -9,6 +9,8 @@ describe('resolveSettings', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({ tableSeparator: 'auto', tableHeader: true });
     // ADR-023: the tab bar on top; a 220 px panel once a profile puts its tabs on the left.
     expect(DEFAULT_SETTINGS).toMatchObject({ tabsPosition: 'top', tabPanelWidth: 220 });
+    // Vim keys in edit mode are off until the reader turns them on.
+    expect(DEFAULT_SETTINGS).toMatchObject({ vimKeys: false });
   });
 
   it('lets the global file override the defaults, and the profile override both', () => {

@@ -142,6 +142,17 @@ export function SettingsView({
       )}
       {setting('measure', <MeasureSetting value={values.measure} onChange={(measure) => measure !== values.measure && set({ measure })} />)}
 
+      <h2>Editing</h2>
+      {setting(
+        'vimKeys',
+        <SwitchSetting
+          label="Vim keys"
+          hint="In edit mode. galeo's shortcuts still work; Ctrl+R redoes in normal mode, F5 reloads."
+          value={values.vimKeys}
+          onChange={(vimKeys) => set({ vimKeys })}
+        />,
+      )}
+
       <h2>Window</h2>
       {setting(
         'statusBar',

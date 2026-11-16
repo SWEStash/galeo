@@ -120,4 +120,54 @@ describe('CommandDispatcher typing', () => {
 
     expect(contexts).toEqual([true, false]);
   });
+
+  describe('in an editor with Vim keys', () => {
+    /** A source view in edit mode, its Vim mode marked on the editor (as the Vim extension does). */
+    function editorIn(mode: string) {
+      const editor = document.createElement('div');
+      editor.dataset['vimMode'] = mode;
+      const content = document.createElement('div');
+      content.contentEditable = 'true';
+      editor.append(content);
+      document.body.append(editor);
+      return { content, remove: () => editor.remove() };
+    }
+
+    it('leaves Ctrl+R to Vim (redo) in normal and visual mode, and F5 still reloads', () => {
+      const { dispatcher, stop } = listening();
+      const reload = vi.fn();
+      dispatcher.register('reload', reload);
+      const results: boolean[] = [];
+      for (const mode of ['normal', 'visual']) {
+        const { content, remove } = editorIn(mode);
+        results.push(keydown({ key: 'r', ctrlKey: true }, content).defaultPrevented);
+        remove();
+      }
+      const { content, remove } = editorIn('normal');
+      keydown({ key: 'F5' }, content);
+      remove();
+      stop();
+
+      expect(results).toEqual([false, false]);
+      expect(reload).toHaveBeenCalledOnce();
+    });
+
+    it("keeps Ctrl+R for galeo in insert mode, and galeo's other keys in every mode", () => {
+      const { dispatcher, stop } = listening();
+      const reload = vi.fn();
+      const find = vi.fn();
+      dispatcher.register('reload', reload);
+      dispatcher.register('find', find);
+      const insert = editorIn('insert');
+      keydown({ key: 'r', ctrlKey: true }, insert.content);
+      insert.remove();
+      const normal = editorIn('normal');
+      keydown({ key: 'f', ctrlKey: true }, normal.content);
+      normal.remove();
+      stop();
+
+      expect(reload).toHaveBeenCalledOnce();
+      expect(find).toHaveBeenCalledOnce();
+    });
+  });
 });

@@ -373,7 +373,9 @@ answers *refused*. A file the reader didn't hand over (its history entry isn't `
 came from a link, a drop, quick open or recent files, not the command line, Files or a second
 launch) is granted only after main's native dialog, naming the path, is answered *Edit*
 (ADR-015). Each read names its version: the SHA-256 of the bytes main read. Ctrl+S sends
-`documents.save(tabId, text, version)`, which spends an input credit. Main checks the grant, then
+`documents.save(tabId, text, version)`, which spends an input credit (Vim's `:w` sends the same; Vim's
+`"+p` sends `documents.paste(tabId)`, which spends one too, and main pastes into the window as
+Ctrl+V does: the page never reads the clipboard). Main checks the grant, then
 reads the file again: if its hash isn't `version`, it answers *conflict* and writes nothing.
 Otherwise it encodes the text the way those bytes were (encoding, byte order mark, line endings)
 and saves through the file system port: on the symlink's target, through a temp file that keeps

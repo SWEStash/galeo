@@ -304,6 +304,10 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
   out of the editor with the keyboard, press **Esc** then **Tab**, or **Ctrl+M** (Control+M on
   macOS), which switches Tab between indenting and moving the focus. With the find bar open, the
   first Esc closes it.
+- **Vim keys**: Settings → Editing → *Vim keys* gives edit mode Vim's normal, insert and visual
+  modes; the status bar shows the mode beside *Editing*. `:w` saves, and the `+` register is the
+  system clipboard (`"+y` copies, `"+p` pastes). galeo's own shortcuts still work, except that
+  Ctrl+R redoes in normal and visual mode: F5 reloads. Off by default.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
   permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the

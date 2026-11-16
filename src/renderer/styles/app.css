@@ -1659,6 +1659,26 @@ button.quiet:hover:not(:disabled) {
   color: var(--galeo-color-fg);
 }
 
+/* Vim's mode beside Editing (#51), tinted per mode. */
+.status-vim {
+  padding: 0 var(--galeo-space-sm);
+  border-radius: var(--galeo-radius-sm);
+  font-family: var(--galeo-font-code);
+  font-size: var(--galeo-text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 16px;
+  color: var(--galeo-color-fg);
+  background: var(--galeo-chrome-selected);
+}
+.status-vim[data-mode='insert'],
+.status-vim[data-mode='replace'] {
+  background: var(--galeo-chrome-primary);
+}
+.status-vim[data-mode='visual'] {
+  background: var(--galeo-chrome-match);
+}
+
 .status-path {
   flex: 0 1 auto;
   min-width: 0;

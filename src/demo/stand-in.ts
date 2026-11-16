@@ -160,6 +160,7 @@ export function standIn(files: MemoryFiles, open: readonly string[], say: (messa
     'diagrams.write': () => 'refused',
     'documents.dirty': (id, dirty) => grants.setDirty(id, WINDOW, dirty),
     'documents.leaveEdit': (id) => grants.revoke(id, WINDOW),
+    'documents.paste': () => false,
     'documents.closeAnswer': () => {},
     'documents.keep': (id, text, base) => grants.keep(id, WINDOW, text, base),
     'documents.recover': (id) => ({ edit: grants.granted(id, WINDOW), kept: grants.kept(id, WINDOW) }),

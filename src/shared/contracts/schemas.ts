@@ -49,6 +49,7 @@ export const settingsOverrides = z.strictObject({
   tableHeader: z.boolean(),
   tabsPosition: z.enum(['top', 'left']),
   tabPanelWidth: z.int().min(TAB_PANEL_MIN).max(TAB_PANEL_MAX),
+  vimKeys: z.boolean(),
 }).partial();
 
 /** A tab's zoom, 50 % to 300 %. */
@@ -96,6 +97,7 @@ export const requestSchemas: { [C in AnyChannel]: ZodType<Requests[C]> } = {
   ]),
   'documents.dirty': z.tuple([documentId, z.boolean()]),
   'documents.leaveEdit': z.tuple([documentId]),
+  'documents.paste': z.tuple([documentId]),
   'documents.closeAnswer': z.tuple([z.enum(['asking', 'proceed', 'cancel'])]),
   'documents.keep': z.tuple([documentId, z.string().max(READ_MAX_BYTES), version.nullable()]),
   'documents.recover': z.tuple([documentId]),

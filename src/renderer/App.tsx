@@ -171,6 +171,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
   const scheme = useColorScheme(settings?.settings.themeMode ?? 'system');
   const tableSeparator = settings?.settings.tableSeparator ?? 'auto';
   const tableHeader = settings?.settings.tableHeader ?? true;
+  const vimKeys = settings?.settings.vimKeys ?? false;
   const tableDefaults = useMemo(() => ({ separator: tableSeparator, header: tableHeader }), [tableSeparator, tableHeader]);
 
   // The reading settings reach documents as tokens they inherit; custom CSS only inside them (SR-17).
@@ -339,6 +340,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
                         scheme={scheme}
                         onMessage={setMessage}
                         tableDefaults={tableDefaults}
+                        vimKeys={vimKeys}
                         findRequest={findRequest?.id === tab.id ? findRequest : null}
                         onFindShown={() => setFindRequest(null)}
                       />

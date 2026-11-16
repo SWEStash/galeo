@@ -33,6 +33,8 @@ export interface Settings {
   /** Where the tabs go, and the side panel's width in pixels (ADR-023). */
   tabsPosition: TabsPosition;
   tabPanelWidth: number;
+  /** Vim's modal keys in edit mode. */
+  vimKeys: boolean;
 }
 
 /** The built-in values, before the global file and the profile's overrides (ADR-005). */
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   tableHeader: true,
   tabsPosition: 'top',
   tabPanelWidth: TAB_PANEL_DEFAULT,
+  vimKeys: false,
 });
 
 /** What a settings file sets; anything it leaves out comes from the level below. */

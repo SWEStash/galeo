@@ -31,6 +31,7 @@ type DocumentChannels =
   | 'documents.save'
   | 'documents.dirty'
   | 'documents.leaveEdit'
+  | 'documents.paste'
   | 'documents.closeAnswer'
   | 'documents.keep'
   | 'documents.recover'
@@ -68,8 +69,10 @@ export function documentHandlers(deps: {
   menus: Pick<DocumentMenus, 'path' | 'document'>;
   /** Export to PDF (#56). */
   pdf: Pick<PdfExports, 'choose' | 'print'>;
+  /** Pastes the system clipboard into the window's focused editor, as Ctrl+V does (#51). */
+  paste: (window: number) => void;
 }): Pick<Handlers, DocumentChannels> {
-  const { records, links, reads, fs, decode, hash, chain, samePrefix, grants, input, unsaved, opened, searches, menus, pdf } = deps;
+  const { records, links, reads, fs, decode, hash, chain, samePrefix, grants, input, unsaved, opened, searches, menus, pdf, paste } = deps;
   /** The id names a document of the sender's, not its Settings tab. */
   const assertDocument = (id: string, window: number) => {
     if (records.get(id, window)?.kind === 'settings') throw new Error('not a document');
@@ -171,6 +174,12 @@ export function documentHandlers(deps: {
     },
     'documents.dirty': ([id, dirty], event) => grants.setDirty(id, event.sender.id, dirty),
     'documents.leaveEdit': ([id], event) => grants.revoke(id, event.sender.id),
+    'documents.paste': ([id], event) => {
+      const window = event.sender.id;
+      if (!grants.granted(id, window) || !input.spend(window)) return false;
+      paste(window);
+      return true;
+    },
     'documents.closeAnswer': ([answer], event) => unsaved.answer(event.sender.id, answer),
     'documents.keep': ([id, text, base], event) => grants.keep(id, event.sender.id, text, base),
     'documents.recover': ([id], event) => ({ edit: grants.granted(id, event.sender.id), kept: grants.kept(id, event.sender.id) }),
