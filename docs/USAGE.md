@@ -309,7 +309,8 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
   system clipboard (`"+y` copies, `"+p` pastes). galeo's own shortcuts still work, except that
   Ctrl+R redoes in normal and visual mode: F5 reloads. Off by default.
 - **Spell check**: Settings → Editing → *Spell check* underlines misspelt words in edit mode (never
-  while reading), once you type in the editor. Right-click one for suggestions and *Add to
+  while reading). Words already in the file are underlined once you type a word and a space in
+  the editor; opening edit mode or moving the cursor doesn't start the check. Right-click one for suggestions and *Add to
   dictionary*, above the usual menu. On Linux galeo ships an English (US) dictionary; macOS and
   Windows use the system's spell checker and languages. Nothing is downloaded. Off by default.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
