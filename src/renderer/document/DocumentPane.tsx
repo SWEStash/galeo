@@ -85,6 +85,8 @@ export interface DocumentPaneProps {
   onViewState: (state: TabViewState) => void;
   /** Main's word on edit mode for this tab (Ctrl+E, ADR-013); a new token is a new request. */
   editRequest: EditRequest | null;
+  /** Main asks for the document menu, after a right-click in the spell-checked editor (#52); counts up. */
+  menuRequest: number;
   /** Saves the edited text, naming the version it was loaded from. */
   onSave: (text: string, base: string | null) => Promise<SaveResult>;
   /** The tab in edit mode now has unsaved changes, or no longer has. */
@@ -103,6 +105,8 @@ export interface DocumentPaneProps {
   tableDefaults: TableDefaults;
   /** Vim keys in edit mode (#51): the setting. */
   vimKeys: boolean;
+  /** Spell check in edit mode (#52): the setting. */
+  spellCheck: boolean;
   /** Unsaved text main kept from before a crash: the pane opens in edit mode with it. */
   recovered: Recovered['kept'];
   /** Reads the file again (a save found it changed, or wrote it back after it was gone). */
@@ -167,6 +171,7 @@ export function DocumentPane({
   initialViewState,
   onViewState,
   editRequest,
+  menuRequest,
   onSave,
   onDirty,
   onLeaveEdit,
@@ -180,6 +185,7 @@ export function DocumentPane({
   onMissingLinks,
   tableDefaults,
   vimKeys,
+  spellCheck,
 }: DocumentPaneProps) {
   const [dirty, setDirty] = useState(false);
   const dirtyNow = useRef(false);
@@ -783,6 +789,10 @@ export function DocumentPane({
 
   // Ready content is always shown: no document means the content is a state of its own.
   const menu = () => onContextMenu({ tree: treeModel !== null && view === 'rendered', rich: article && view !== 'source' });
+  const menuNow = useLatest(menu);
+  useEffect(() => {
+    if (menuRequest > 0 && documentHandle.current?.takeSpellingClick()) menuNow.current();
+  }, [menuRequest, menuNow]);
   // Main asks where first, on the click's own input; the PNG is drawn after, however long it takes.
   const saveDiagram = (format: 'svg' | 'png', data: () => Promise<string | Uint8Array>, name: string) =>
     void (async () => {
@@ -845,6 +855,7 @@ export function DocumentPane({
           editable={editing}
           onEdit={edited}
           vim={vim}
+          spellCheck={spellCheck}
           replacing={find.open && find.replace}
           pendingFind={findSeed}
           onPendingFind={setFindResult}

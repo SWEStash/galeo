@@ -9,7 +9,7 @@ function setup(
   files: Record<string, string> = { '/d/plans/plan.md': '# plan' },
   platform = 'linux',
   answer?: () => Promise<string | null>,
-  { editing = false } = {},
+  { editing = false, spelling = null as { word: string; suggestions: string[] } | null } = {},
 ) {
   let n = 0;
   const tabs = new TabRegistry(() => `id-${++n}`);
@@ -18,6 +18,7 @@ function setup(
   const copied: string[] = [];
   const edits: number[] = [];
   const shown: { window: number; items: readonly MenuItem[] }[] = [];
+  const spelled: string[] = [];
   const menus = new DocumentMenus({
     tabs,
     fs,
@@ -28,9 +29,12 @@ function setup(
     editing: () => editing,
     edit: (window) => void edits.push(window),
     shown: (window) => tabs.snapshot(window).active,
+    spelling: () => spelling,
+    respell: (window, text) => void spelled.push(`${window} respell ${text}`),
+    learn: (word) => void spelled.push(`learn ${word}`),
   });
   const { id } = tabs.open(Object.keys(files)[0] ?? '/d/gone.md', 1);
-  return { menus, tabs, shell, fs, copied, shown, edits, id };
+  return { menus, tabs, shell, fs, copied, shown, edits, spelled, id };
 }
 
 describe('DocumentMenus.path', () => {
@@ -228,5 +232,41 @@ describe('DocumentMenus.tab (UX F4)', () => {
     close = () => void tabs.close(id, 1);
     expect(await menus.tab(id, 1, { canReopen: false })).toBeNull();
     expect(copied).toEqual([]);
+  });
+});
+
+describe('DocumentMenus.document with spell check (#52)', () => {
+  const context = { tree: false, rich: false };
+  const recieve = { word: 'recieve', suggestions: ['receive', 'relieve'] };
+
+  it("puts a misspelt word's suggestions and Add to dictionary above the usual items, in edit mode", async () => {
+    const { menus, shown, id } = setup(null, undefined, 'linux', undefined, { editing: true, spelling: recieve });
+    await menus.document(id, 1, context);
+    expect(shown[0]!.items.slice(0, 4).map((item) => [item.id, item.label, item.enabled ?? true])).toEqual([
+      ['spelling-0', 'receive', true],
+      ['spelling-1', 'relieve', true],
+      ['learn', 'Add to dictionary', true],
+      ['back', 'Back', false],
+    ]);
+  });
+
+  it('replaces the word with the suggestion chosen, or learns it, in main', async () => {
+    const replace = setup('spelling-1', undefined, 'linux', undefined, { editing: true, spelling: recieve });
+    expect(await replace.menus.document(replace.id, 1, context)).toBeNull();
+    const learn = setup('learn', undefined, 'linux', undefined, { editing: true, spelling: recieve });
+    expect(await learn.menus.document(learn.id, 1, context)).toBeNull();
+    expect([...replace.spelled, ...learn.spelled]).toEqual(['1 respell relieve', 'learn recieve']);
+  });
+
+  it('says when there are no suggestions, and offers no spelling while reading or without a misspelt word', async () => {
+    const none = setup(null, undefined, 'linux', undefined, { editing: true, spelling: { word: 'zxqv', suggestions: [] } });
+    await none.menus.document(none.id, 1, context);
+    expect(none.shown[0]!.items.slice(0, 2)).toEqual([{ id: 'no-suggestions', label: 'No suggestions', enabled: false }, { id: 'learn', label: 'Add to dictionary' }]);
+
+    const reading = setup(null, undefined, 'linux', undefined, { editing: false, spelling: recieve });
+    await reading.menus.document(reading.id, 1, context);
+    const word = setup(null, undefined, 'linux', undefined, { editing: true, spelling: { word: '', suggestions: [] } });
+    await word.menus.document(word.id, 1, context);
+    expect([reading.shown[0]!.items[0]!.id, word.shown[0]!.items[0]!.id]).toEqual(['back', 'back']);
   });
 });

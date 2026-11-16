@@ -14,8 +14,8 @@ const files = {
 
 /**
  * `virtual:licences`: the notices the About dialog shows, gathered at build time: the
- * runtime packages' terms (grouped where identical), the vendored fonts' OFL texts and Electron's
- * licence. The build fails on a runtime package whose licence isn't permissive.
+ * runtime packages' terms (grouped where identical), the vendored fonts' OFL texts, the spell-check
+ * dictionaries' terms (#52) and Electron's licence. The build fails on a runtime package whose licence isn't permissive.
  */
 export function licences(): Plugin {
   return {
@@ -33,11 +33,18 @@ export function licences(): Plugin {
           const licence = files.listDir(dir).find((file) => /^OFL/i.test(file))!;
           return { name: entry.name, text: files.readText(`${dir}/${licence}`) };
         });
+      const dictionaries = readdirSync(path.join(ROOT, 'assets/dictionaries'), { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => {
+          const dir = `assets/dictionaries/${entry.name}`;
+          const readme = files.listDir(dir).find((file) => /^README/i.test(file))!;
+          return { name: entry.name, text: files.readText(`${dir}/${readme}`) };
+        });
       // The licence that ships with the Electron binary; a build without the binary (the website demo, from
       // `npm ci --ignore-scripts`) takes the package's own copy of it.
       const binary = 'node_modules/electron/dist/LICENSE';
       const electron = files.readText(existsSync(path.join(ROOT, binary)) ? binary : 'node_modules/electron/LICENSE');
-      return `export default ${JSON.stringify({ packages: groupByText(notices), fonts, electron })};`;
+      return `export default ${JSON.stringify({ packages: groupByText(notices), fonts, dictionaries, electron })};`;
     },
   };
 }

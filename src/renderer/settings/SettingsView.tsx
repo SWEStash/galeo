@@ -152,6 +152,15 @@ export function SettingsView({
           onChange={(vimKeys) => set({ vimKeys })}
         />,
       )}
+      {setting(
+        'spellCheck',
+        <SwitchSetting
+          label="Spell check"
+          hint="Marks misspelt words while you edit, never while you read. English (US) on Linux, shipped with galeo; the system’s languages on macOS and Windows. Nothing is downloaded."
+          value={values.spellCheck}
+          onChange={(spellCheck) => set({ spellCheck })}
+        />,
+      )}
 
       <h2>Window</h2>
       {setting(

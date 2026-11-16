@@ -257,6 +257,8 @@ describe('settings, profile and app channel arguments (SR-11)', () => {
     expect(accepts('settings.set', ['profile', { tabPanelWidth: 1000 }])).toBe(false);
     expect(accepts('settings.set', ['global', { vimKeys: true }])).toBe(true);
     expect(accepts('settings.set', ['global', { vimKeys: 'on' }])).toBe(false);
+    expect(accepts('settings.set', ['profile', { spellCheck: true }])).toBe(true);
+    expect(accepts('settings.set', ['profile', { spellCheck: 1 }])).toBe(false);
     for (const bad of [
       ['profile', { fontSize: 9 }],
       ['profile', { fontSize: 41 }],

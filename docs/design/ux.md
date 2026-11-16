@@ -278,7 +278,8 @@ mode closes the replace row and keeps find open.
   history), Find…, Reload, Edit (main's own Ctrl+E) or Save while editing, in a JSON tree Expand all,
   Collapse all and Copy JSON path, on rendered Markdown Copy as rich text and Export to PDF…, then Open with default
   app, Reveal in Files and Copy path. The page tells main only whether a tree or rendered Markdown
-  shows; each choice runs as its key does.
+  shows; each choice runs as its key does. (v0.10) With spell check on, a misspelt word's
+  suggestions and Add to dictionary come first (F12).
 - `http(s)`/`mailto` links → open in the system browser/mail client. First time per profile, a
   one-line hint appears in the status bar ("External links open in your browser"); no dialog.
   Only links actually present in the document can be opened (ADR-004). **Burst guard**: if one
@@ -310,6 +311,12 @@ mode closes the replace row and keeps find open.
   chip beside "Editing" (NORMAL, INSERT, VISUAL, REPLACE; a live region). `:w` saves as Ctrl+S
   does; the `+` register is the system clipboard (`"+p` asks main to paste, as Ctrl+V). galeo's
   shortcuts keep their keys, except Ctrl+R: Vim's redo in normal and visual mode (F5 reloads).
+- (v0.10, #52) **Spell check**, a setting (Settings → Editing, off by default), live like Vim keys:
+  the editor in edit mode is checked, nothing else (the page root says `spellcheck="false"`).
+  Chromium starts checking once the reader types a word; a right-click on a misspelt word puts up
+  to five suggestions (or "No suggestions") and *Add to dictionary* above the document menu (F11),
+  and main makes the replacement or adds the word. Linux: Chromium's English (US) Hunspell
+  dictionary, shipped with galeo; macOS and Windows: the system's checker. Nothing is downloaded.
 - Closing a tab/window/profile, or quitting, with unsaved changes → dialog: Save / Don't save / Cancel
   (focus on Save; Esc = Cancel). Closing the window or quitting again while that dialog is open →
   a native dialog from main: *Keep waiting* (default) / *Close without saving*.
@@ -639,7 +646,7 @@ this map only.
   for code, each with a preview line; any name can still be typed), gives the measure presets
   (Narrow 60, Normal 72, Wide 100, Full width) besides a custom value, and adds an "About galeo"
   row showing the version. v0.4 adds, under Window, where the tabs go (Top / Left) and the side
-  panel's width (F18). v0.10 adds Editing, with Vim keys (F12). A switch at the
+  panel's width (F18). v0.10 adds Editing, with Vim keys and Spell check (F12). A switch at the
   top says where changes go: this profile, or all profiles. Each setting shows whether its value
   is the default, all profiles' or this profile's own, with "reset to global" for the last. A
   change to a file left invalid by a hand edit is refused and names the file. The AppImage adds

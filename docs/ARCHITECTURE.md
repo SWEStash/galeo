@@ -408,6 +408,15 @@ sends it to the worker 150 ms after typing pauses, and at least once a second wh
 Both panes meet on a source line through the blocks' `data-src-line` and `data-src-end`; the pane
 the reader scrolls leads, and a pane whose content just changed follows without taking the lead.
 
+Spell check (#52) stays in Chromium. On Linux main copies the English (US) dictionary galeo ships into
+the session's `Dictionaries` folder before the app is ready, so Chromium never fetches one; it turns
+the session's checker on the first time a profile's settings ask (all profiles share the session),
+and each editor's `spellcheck` attribute, set in edit mode while the profile's setting is on, decides
+what is checked. A right-click there isn't cancelled by the page, because only Chromium's own menu
+event carries the misspelt word: main keeps the word for that window and sends
+`documents.spellingMenu`, the page asks for its usual menu (`documents.contextMenu`), and main tops it
+with the suggestions and *Add to dictionary*, acting on them itself.
+
 ### 5.6 Cold start and session restore
 
 The Launcher starts the app. Main takes the single-instance lock, sets up the Network Guard

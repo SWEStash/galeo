@@ -172,6 +172,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
   const tableSeparator = settings?.settings.tableSeparator ?? 'auto';
   const tableHeader = settings?.settings.tableHeader ?? true;
   const vimKeys = settings?.settings.vimKeys ?? false;
+  const spellCheck = settings?.settings.spellCheck ?? false;
   const tableDefaults = useMemo(() => ({ separator: tableSeparator, header: tableHeader }), [tableSeparator, tableHeader]);
 
   // The reading settings reach documents as tokens they inherit; custom CSS only inside them (SR-17).
@@ -341,6 +342,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
                         onMessage={setMessage}
                         tableDefaults={tableDefaults}
                         vimKeys={vimKeys}
+                        spellCheck={spellCheck}
                         findRequest={findRequest?.id === tab.id ? findRequest : null}
                         onFindShown={() => setFindRequest(null)}
                       />

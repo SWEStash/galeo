@@ -78,6 +78,8 @@ export interface SourceView {
   setEditable(editable: boolean): void;
   /** Vim's keys (#51) for edit mode, ahead of the editing keys; null for galeo's own. Applies at once. */
   setVim(keys: Extension | null): void;
+  /** Spell check (#52) in edit mode: the browser marks misspelt words. Applies at once. */
+  setSpellCheck(on: boolean): void;
   /** The text as shown now, with the reader's edits. */
   text(): string;
   /** Calls `listener` after each edit of the reader's (never for new text from the file). */
@@ -139,8 +141,9 @@ const leaveEditor = () =>
 
 // Several cursors (Ctrl+click, Alt+drag, the keys above) need drawing: the browser shows only one.
 // The indent is the file's, taken when edit mode starts.
-const editing = (doc: Text, vim: Extension | null): Extension => [
+const editing = (doc: Text, vim: Extension | null, spellCheck: boolean): Extension => [
   vim ?? [],
+  spellCheck ? EditorView.contentAttributes.of({ spellcheck: 'true' }) : [],
   history(),
   keymap.of(editingKeys),
   indentUnit.of(indentUnitOf(doc.iterLines())),
@@ -219,6 +222,8 @@ export function createSourceView(options: {
   const mode = new Compartment();
   let editableNow = false;
   let vimKeys: Extension | null = null;
+  let spellCheck = false;
+  const edit = () => view.dispatch({ effects: mode.reconfigure(editing(view.state.doc, vimKeys, spellCheck)) });
   const editListeners = new Set<() => void>();
   const outlineListeners = new Set<(entries: OutlineEntry[]) => void>();
   let outlineTimer: ReturnType<typeof setTimeout> | undefined;
@@ -368,11 +373,16 @@ export function createSourceView(options: {
     },
     setEditable(editable) {
       editableNow = editable;
-      view.dispatch({ effects: mode.reconfigure(editable ? editing(view.state.doc, vimKeys) : reading()) });
+      if (editable) edit();
+      else view.dispatch({ effects: mode.reconfigure(reading()) });
     },
     setVim(keys) {
       vimKeys = keys;
-      if (editableNow) view.dispatch({ effects: mode.reconfigure(editing(view.state.doc, vimKeys)) });
+      if (editableNow) edit();
+    },
+    setSpellCheck(on) {
+      spellCheck = on;
+      if (editableNow) edit();
     },
     text() {
       return view.state.doc.toString();

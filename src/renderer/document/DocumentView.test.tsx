@@ -202,6 +202,33 @@ describe('DocumentView with Vim keys (#51)', () => {
   });
 });
 
+describe('DocumentView with spell check (#52)', () => {
+  it("lets a right-click in the spell-checked editor through to Chromium, and keeps its own menu everywhere else", async () => {
+    const { EditorView } = await import('@codemirror/view');
+    const focus = vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    const onContextMenu = vi.fn();
+    const rightClick = (target: Element) => {
+      const event = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, composed: true });
+      target.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    const handle = { current: null as DocumentHandle | null };
+    const container = await render(<DocumentView {...props} view="source" rendered={null} scheme="light" editable spellCheck onContextMenu={onContextMenu} ref={handle} />);
+    const shadow = shadowOf(container);
+    await vi.waitFor(() => expect(shadow.querySelector('.cm-content')?.getAttribute('spellcheck')).toBe('true'), { timeout: 5_000 });
+    expect(handle.current!.takeSpellingClick()).toBe(false);
+    expect(rightClick(shadow.querySelector('.cm-content')!)).toBe(false);
+    expect(onContextMenu).not.toHaveBeenCalled();
+    // Main's request for the menu that follows is honoured once.
+    expect([handle.current!.takeSpellingClick(), handle.current!.takeSpellingClick()]).toEqual([true, false]);
+
+    await act(async () => root!.render(<DocumentView {...props} view="source" rendered={null} scheme="light" editable onContextMenu={onContextMenu} />));
+    expect(rightClick(shadow.querySelector('.cm-content')!)).toBe(true);
+    expect(onContextMenu).toHaveBeenCalledOnce();
+    focus.mockRestore();
+  });
+});
+
 describe('DocumentView in split', () => {
   const twoViews = { source: { text: '# src src', language: 'markdown' as const }, wrap: false, scheme: 'light' as const };
 

@@ -9,6 +9,7 @@ const notices = vi.hoisted(() => ({
     { packages: [{ name: 'unified', version: '11.0.5', license: 'MIT' }], texts: ['MIT text'] },
   ],
   fonts: [{ name: 'inter', text: 'SIL OPEN FONT LICENSE' }],
+  dictionaries: [{ name: 'en-US', text: 'Copyright 2000-2018 by Kevin Atkinson' }],
   electron: 'Electron MIT text',
 }));
 vi.mock('./notices', () => ({ loadNotices: () => Promise.resolve(notices) }));
@@ -40,10 +41,10 @@ describe('AboutDialog', () => {
 
   it("lists every notice, each package group's terms once", async () => {
     await render();
-    await vi.waitFor(() => expect(document.querySelectorAll('[data-testid="about-notices"] details')).toHaveLength(4));
+    await vi.waitFor(() => expect(document.querySelectorAll('[data-testid="about-notices"] details')).toHaveLength(5));
     const summaries = [...document.querySelectorAll('[data-testid="about-notices"] summary')].map((summary) => summary.textContent);
-    expect(summaries).toEqual(['Electron · MIT', 'inter (font) · OFL-1.1', '@react-aria/a 3.0.0, @react-aria/b 3.1.0 · Apache-2.0', 'unified 11.0.5 · MIT']);
-    expect(document.querySelectorAll('pre')[2]!.textContent).toBe('Apache text\n\nNOTICE text');
+    expect(summaries).toEqual(['Electron · MIT', 'inter (font) · OFL-1.1', 'en-US (spell-check dictionary, Linux) · SCOWL and others', '@react-aria/a 3.0.0, @react-aria/b 3.1.0 · Apache-2.0', 'unified 11.0.5 · MIT']);
+    expect(document.querySelectorAll('pre')[3]!.textContent).toBe('Apache text\n\nNOTICE text');
   });
 
   it('closes on its button', async () => {

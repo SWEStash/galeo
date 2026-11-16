@@ -19,7 +19,16 @@ interface DocumentMenusDeps {
   edit: (window: number) => void;
   /** The tab the window shows now. */
   shown: (window: number) => string | null;
+  /** The misspelt word under the window's last right-click in a spell-checked editor, if recent (#52). */
+  spelling: (window: number) => { word: string; suggestions: readonly string[] } | null;
+  /** Replaces that word in the window's editor with `text`. */
+  respell: (window: number, text: string) => void;
+  /** Adds a word to the user's dictionary. */
+  learn: (word: string) => void;
 }
+
+/** The spelling entries' ids: a suggestion by its place, and Add to dictionary. */
+const SUGGESTION = /^spelling-(\d)$/;
 
 /**
  * Menus main builds for a tab (ADR-004). The page only asks for one; main fills it from the path
@@ -51,7 +60,18 @@ export class DocumentMenus {
     if (!tab) throw new Error(UNKNOWN_DOCUMENT);
     const history = this.deps.tabs.history(id, window);
     const editing = this.deps.editing(id, window);
+    // Spell check (#52): the word Chromium found under the right-click, in edit mode only.
+    const found = editing ? this.deps.spelling(window) : null;
+    const spelling = found?.word ? found : null;
     const choice = await this.deps.showMenu(window, [
+      ...(spelling
+        ? [
+            ...(spelling.suggestions.length > 0
+              ? spelling.suggestions.map((suggestion, index) => ({ id: `spelling-${index}`, label: suggestion }))
+              : [{ id: 'no-suggestions', label: 'No suggestions', enabled: false }]),
+            { id: 'learn', label: 'Add to dictionary' },
+          ]
+        : []),
       { id: 'back', label: 'Back', enabled: history.back },
       { id: 'forward', label: 'Forward', enabled: history.forward },
       { id: 'find', label: 'Find…' },
@@ -76,6 +96,16 @@ export class DocumentMenus {
     ]);
     // The tab may have closed, or the file changed, while the menu was open.
     if (this.deps.tabs.get(id, window)?.path !== tab.path) return null;
+    const suggestion = spelling && choice ? SUGGESTION.exec(choice) : null;
+    if (suggestion) {
+      const text = spelling!.suggestions[Number(suggestion[1])];
+      if (text !== undefined) this.deps.respell(window, text);
+      return null;
+    }
+    if (spelling && choice === 'learn') {
+      this.deps.learn(spelling.word);
+      return null;
+    }
     if (choice === 'open-default') {
       if (await this.openable(tab.path)) await this.deps.shell.openPath(tab.path);
       return null;

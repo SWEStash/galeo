@@ -22,10 +22,12 @@ export default {
     icon: 'packaging/icons/png',
     // The MDX type: the .deb's after-install copies it into /usr/share/mime, the AppImage launcher into ~/.local.
     // The apt repository's public key: the .deb's after-install copies it into /usr/share/keyrings (ADR-029).
+    // The spell-check dictionary (#52): galeo copies it where Chromium looks, so nothing is downloaded.
     extraResources: [
       { from: 'packaging/icons/png/256x256.png', to: 'icon.png' },
       { from: 'packaging/linux/galeo-mime.xml', to: 'mime.xml' },
       { from: 'packaging/linux/galeo-archive-keyring.asc', to: 'galeo-archive-keyring.asc' },
+      { from: 'assets/dictionaries/en-US/en-US-10-2.bdic', to: 'dictionaries/en-US-10-2.bdic' },
     ],
     category: 'Utility',
     maintainer: 'SWEStash <swestash.admin@gmail.com>',

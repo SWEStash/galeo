@@ -11,6 +11,8 @@ describe('resolveSettings', () => {
     expect(DEFAULT_SETTINGS).toMatchObject({ tabsPosition: 'top', tabPanelWidth: 220 });
     // Vim keys in edit mode are off until the reader turns them on.
     expect(DEFAULT_SETTINGS).toMatchObject({ vimKeys: false });
+    // Spell check in edit mode, too (#52).
+    expect(DEFAULT_SETTINGS).toMatchObject({ spellCheck: false });
   });
 
   it('lets the global file override the defaults, and the profile override both', () => {

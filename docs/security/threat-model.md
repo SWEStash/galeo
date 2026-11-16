@@ -290,8 +290,10 @@ place in main's own list, never a path. The same checks apply before `shell.open
 scheme is not `galeo:`, `data:` or the app's own bundle (`onBeforeRequest`, which also covers
 WebSocket). Below that, the network stack can't resolve any host (Chromium host-resolver rules
 map every host, IP literals included, to "not found"), so traffic that never passes through
-`onBeforeRequest` can't connect either. Spell-check dictionary download is disabled (sessions start
-with no spell-check languages). WebRTC is removed from the app page (and restricted with
+`onBeforeRequest` can't connect either. Spell-check dictionaries are never downloaded: sessions start
+with no spell-check languages and the download address points at galeo's own protocol; spell check
+in edit mode (#52, off by default) uses the English (US) dictionary galeo ships, copied into the
+session folder before start (Linux), or the system's checker (macOS, Windows). WebRTC is removed from the app page (and restricted with
 `webRTCIPHandlingPolicy: 'disable_non_proxied_udp'`), DNS prefetch is off (including Blink's
 `<link rel=dns-prefetch>` handling), and there are no service workers. There is no auto-updater and no crash reporter upload. Remote images render as
 placeholders naming the host (UX F11).

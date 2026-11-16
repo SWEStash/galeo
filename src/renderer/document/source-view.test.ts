@@ -545,5 +545,22 @@ describe('createSourceView editing', () => {
     expect(source.view.state.readOnly).toBe(false);
     source.destroy();
   });
+
+  it('spell-checks the text in edit mode only, while asked to (#52)', () => {
+    const { root, parent } = shadowContainer();
+    const source = createSourceView({ root, parent, text: 'recieve\n', language: 'markdown', wrap: false });
+    const checked = () => source.view.contentDOM.getAttribute('spellcheck');
+
+    source.setSpellCheck(true);
+    expect(checked()).toBe('false');
+    source.setEditable(true);
+    expect(checked()).toBe('true');
+    source.setSpellCheck(false);
+    expect(checked()).toBe('false');
+    source.setSpellCheck(true);
+    source.setEditable(false);
+    expect(checked()).toBe('false');
+    source.destroy();
+  });
 });
 

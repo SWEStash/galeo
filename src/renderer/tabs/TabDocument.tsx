@@ -47,6 +47,8 @@ interface TabDocumentProps {
   tableDefaults: TableDefaults;
   /** Vim keys in edit mode (#51): the setting. */
   vimKeys: boolean;
+  /** Spell check in edit mode (#52): the setting. */
+  spellCheck: boolean;
   /** A match chosen in find in all tabs, for the find bar to open on (ADR-024). */
   findRequest?: DocumentPaneProps['findRequest'];
   onFindShown?: (() => void) | undefined;
@@ -84,7 +86,7 @@ interface Arrival {
   position: ScrollAnchor | null;
 }
 
-function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, onMessage, tableDefaults, vimKeys, findRequest, onFindShown }: TabDocumentProps) {
+function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, onMessage, tableDefaults, vimKeys, spellCheck, findRequest, onFindShown }: TabDocumentProps) {
   // A tab not shown has no layout to keep its place in: it takes a changed file when shown again.
   const [appliedReads, setAppliedReads] = useState(staleReads);
   useEffect(() => {
@@ -153,6 +155,15 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
     () =>
       window.galeo.documents.onEditMode(({ id: tab, edit }) => {
         if (tab === id) setEditRequest((last) => ({ edit, token: (last?.token ?? 0) + 1 }));
+      }),
+    [id],
+  );
+  // A right-click in this tab's spell-checked editor (#52): main asks for the document menu.
+  const [menuRequest, setMenuRequest] = useState(0);
+  useEffect(
+    () =>
+      window.galeo.documents.onSpellingMenu(({ id: tab }) => {
+        if (tab === id) setMenuRequest((count) => count + 1);
       }),
     [id],
   );
@@ -247,8 +258,10 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
       initialViewState={store.viewStateOf(id)}
       tableDefaults={tableDefaults}
       vimKeys={vimKeys}
+      spellCheck={spellCheck}
       onViewState={onViewState}
       editRequest={editRequest}
+      menuRequest={menuRequest}
       onSave={save}
       onToggleTask={toggleTask}
       onMissingLinks={missingLinks}

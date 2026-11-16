@@ -50,6 +50,7 @@ export const settingsOverrides = z.strictObject({
   tabsPosition: z.enum(['top', 'left']),
   tabPanelWidth: z.int().min(TAB_PANEL_MIN).max(TAB_PANEL_MAX),
   vimKeys: z.boolean(),
+  spellCheck: z.boolean(),
 }).partial();
 
 /** A tab's zoom, 50 % to 300 %. */

@@ -25,6 +25,7 @@ const STATE: SettingsState = {
     tabsPosition: 'default',
     tabPanelWidth: 'default',
     vimKeys: 'default',
+    spellCheck: 'default',
   },
   notices: [],
   session: null,
@@ -238,6 +239,18 @@ describe('SettingsView (UX §6)', () => {
     expect(document.getElementById(input.getAttribute('aria-describedby')!)?.textContent).toBe("In edit mode. galeo's shortcuts still work; Ctrl+R redoes in normal mode, F5 reloads.");
     await act(async () => input.click());
     expect(settings.set).toHaveBeenCalledWith('profile', { vimKeys: true });
+  });
+
+  it('turns spell check on for edit mode, under Editing, saying nothing is downloaded (#52)', async () => {
+    const { settings } = stubBridge();
+    const container = await render();
+    const spell = row(container, 'Spell check');
+    expect(spell.previousElementSibling).toBe(row(container, 'Vim keys'));
+    const input = spell.querySelector<HTMLInputElement>('input')!;
+    expect(input.checked).toBe(false);
+    expect(document.getElementById(input.getAttribute('aria-describedby')!)?.textContent).toBe('Marks misspelt words while you edit, never while you read. English (US) on Linux, shipped with galeo; the system’s languages on macOS and Windows. Nothing is downloaded.');
+    await act(async () => input.click());
+    expect(settings.set).toHaveBeenCalledWith('profile', { spellCheck: true });
   });
 
   it('shows the version, with a way to About galeo', async () => {

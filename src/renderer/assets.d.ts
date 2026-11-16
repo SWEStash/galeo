@@ -16,6 +16,8 @@ declare module 'virtual:licences' {
   const notices: {
     packages: { packages: { name: string; version: string; license: string }[]; texts: string[] }[];
     fonts: { name: string; text: string }[];
+    /** Spell-check dictionaries (#52): each one's terms, from its README. */
+    dictionaries: { name: string; text: string }[];
     electron: string;
   };
   export default notices;

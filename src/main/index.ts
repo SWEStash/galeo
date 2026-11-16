@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, Menu, nativeTheme, webContents, type MessageBoxOptions } from 'electron';
+import { app, BrowserWindow, clipboard, dialog, Menu, nativeTheme, session, webContents, type MessageBoxOptions } from 'electron';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { parseArgv } from '../core/argv';
@@ -78,6 +78,7 @@ import { registerAppProtocol, registerSchemes } from './protocol/register';
 import { devServerOrigin, rendererUrl, trustedOrigins } from './renderer-entry';
 import { hardenWebContents } from './security/harden';
 import { installNetworkGuard, lockDownBackgroundNetworking } from './security/network-guard';
+import { dictionarySource, installDictionary, SpellChecker } from './security/spell-check';
 import { appResponseHeaders, hostResolverRules, networkLockdown } from './security/network-policy';
 import { tabHandlers } from './tabs/handlers';
 import { tabMover } from './tabs/transfer';
@@ -134,6 +135,11 @@ const paths = resolveAppPaths(
   ),
 );
 createPrivateDirs(paths);
+/** How long a right-click's spelling waits for the page to ask for its menu (#52). */
+const SPELLING_FRESH_MS = 2000;
+/** The suggestions a spelling menu offers, at most. */
+const MAX_SUGGESTIONS = 5;
+
 app.setPath('userData', path.join(paths.stateDir, 'chromium'));
 app.setPath('sessionData', paths.cacheDir);
 
@@ -187,6 +193,10 @@ function start(initialMode: StartupMode): void {
   const images = new ImageGrants(randomUUID);
   cleanups.add((windowId) => images.closeWindow(windowId));
   const shell = externalShell();
+  // Spell check (#52): the word Chromium found under a right-click in a spell-checked editor, kept for
+  // the menu the page asks for next (`documents.spellingMenu`).
+  const spellings = new Map<number, { word: string; suggestions: readonly string[]; at: number }>();
+  cleanups.add((windowId) => spellings.delete(windowId));
   const menus = new DocumentMenus({
     tabs: documents,
     fs,
@@ -200,6 +210,13 @@ function start(initialMode: StartupMode): void {
     },
     edit: (windowId) => toggleEditMode(windowId),
     shown: (windowId) => documents.snapshot(windowId).active,
+    spelling: (windowId) => {
+      const found = spellings.get(windowId);
+      spellings.delete(windowId);
+      return found && Date.now() - found.at < SPELLING_FRESH_MS ? found : null;
+    },
+    respell: (windowId, text) => webContents.fromId(windowId)?.replaceMisspelling(text),
+    learn: (word) => void session.defaultSession.addWordToSpellCheckerDictionary(word),
   });
   // Real input per window: what lets a request reach beyond the window's own grants (T6).
   const input = new InputCredits(Date.now);
@@ -338,6 +355,18 @@ function start(initialMode: StartupMode): void {
     if (contents) sendEvent(contents, event, payload);
   };
   const demote = (windowId: number, ids: string[]) => sendTo(windowId, 'tabs.demote', ids);
+  // The page lets a right-click in a spell-checked editor through (#52): Chromium's menu event carries
+  // the misspelt word, and the page then asks for its usual menu, which main tops with the spelling.
+  // Chromium's own `spellcheckEnabled` reads false there, so any editable field asks: the page shows the
+  // menu only after its spell-checked editor let a right-click through.
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('context-menu', (_menu, params) => {
+      if (!params.isEditable) return;
+      spellings.set(contents.id, { word: params.misspelledWord, suggestions: params.dictionarySuggestions.slice(0, MAX_SUGGESTIONS), at: Date.now() });
+      const id = documents.snapshot(contents.id).active;
+      if (id) sendTo(contents.id, 'documents.spellingMenu', { id });
+    });
+  });
   // Memory pressure demotes one warm tab per sample, so a spike doesn't drop them all (ADR-002).
   const pressure = new MemoryPressure({
     clock: systemClock,
@@ -403,6 +432,24 @@ function start(initialMode: StartupMode): void {
   const lockdown = networkLockdown(runtime);
   registerSchemes();
   lockDownBackgroundNetworking(lockdown.resolver ? hostResolverRules(devServerOrigin(runtime)) : null);
+  // Spell check (#52): the dictionary goes where Chromium looks before it would download one.
+  const dictionaryInstalled = installDictionary({
+    platform: process.platform,
+    source: dictionarySource({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() }),
+    sessionData: app.getPath('sessionData'),
+  });
+  let spellChecker: SpellChecker | undefined;
+  /**
+   * The session's checker comes on the first time a profile wants spell check. Only once the app is
+   * ready: a new session starts with it off (`lockDownBackgroundNetworking`), which would undo it.
+   */
+  const wantSpellCheck = (wanted: boolean) => {
+    if (!wanted) return;
+    void app.whenReady().then(() => {
+      spellChecker ??= new SpellChecker(session.defaultSession, { platform: process.platform, installed: dictionaryInstalled, systemLanguages: app.getPreferredSystemLanguages() });
+      spellChecker.want(true);
+    });
+  };
   // Documents hold no video (the sanitizer keeps no <video>), so Chromium needn't probe the GPU's video
   // decoder and encoder at start; where the driver refuses (VA-API), the probe only logs an error.
   app.commandLine.appendSwitch('disable-accelerated-video-decode');
@@ -575,6 +622,7 @@ function start(initialMode: StartupMode): void {
     const name = (await catalog.list()).find((each) => each.id === id)?.name ?? id;
     const profile = new ProfileRuntime(id, name, { fs, utf8, watcher, clock: systemClock, paths, tabs: documents, focusOrder: () => focusOrder.ids(), watchOf: (windowId) => folderWatches.saved(windowId) });
     profile.settings.onChange((current) => {
+      wantSpellCheck(current.spellCheck);
       for (const window of profile.windows) followScheme(window);
       for (const [windowId, ids] of warm.setLimits(warmLimits(current), idsOf(profile))) demote(windowId, ids);
       broadcastSettings(profile);
@@ -597,6 +645,8 @@ function start(initialMode: StartupMode): void {
     // A profile starting again reads its session only once its last save has landed.
     const profile = await running.start(id);
     reportSettingsNotices(profile.settings.notices);
+    // Its settings are read now (their first read tells no listener).
+    wantSpellCheck(profile.settings.current.spellCheck);
     perfMark('profile-started');
     // Loading stats every recent file (a hung network mount would hang); nothing waits for it.
     void profile.recent.load().catch((error: unknown) => console.warn('galeo: recent files not loaded', error));

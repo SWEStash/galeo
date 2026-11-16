@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import electronBinary from 'electron';
+import { pressInMain } from '../../helpers/keys';
 import { appDirs, launchApp, removeTempHome, tempHome } from '../../helpers/launch';
 import { networkConnects } from './strace';
 
@@ -262,6 +263,34 @@ test('a custom.css that loads remote files opens no connection (SR-06, SR-07)', 
         // The CSS is applied: its remote background is what the document asks for (and the page's CSP refuses).
         await expect.poll(() => article.evaluate((element) => getComputedStyle(element).backgroundImage)).toContain('https://example.com/background.png');
         await page.waitForTimeout(2_000);
+      },
+      home,
+    );
+    expect(connects).toEqual([]);
+  } finally {
+    removeTempHome(home);
+  }
+});
+
+test('spell check in edit mode, its dictionary loaded and a word marked, opens no connection (#52, SR-07)', async () => {
+  const home = tempHome();
+  try {
+    mkdirSync(appDirs(home).config, { recursive: true });
+    writeFileSync(path.join(appDirs(home).config, 'settings.json'), '{"schemaVersion":1,"spellCheck":true}');
+    const doc = path.join(home, 'draft.md');
+    writeFileSync(doc, 'I recieve mail\n');
+    const connects = await connectsWhile(
+      ['--', doc],
+      {},
+      async (app, page) => {
+        await expect(page.getByTestId('document').locator('p')).toHaveText('I recieve mail');
+        await pressInMain(app, page, 'E');
+        const editor = page.getByTestId('document').locator('.cm-content');
+        await expect(editor).toHaveAttribute('spellcheck', 'true');
+        await page.keyboard.press('ControlOrMeta+End');
+        await page.keyboard.type(' wrold ');
+        await editor.getByText('wrold').click({ button: 'right' });
+        await page.waitForTimeout(3_000);
       },
       home,
     );

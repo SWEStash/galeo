@@ -42,8 +42,8 @@ export function hardenedWebPreferences({ preload, isPackaged, startInfo }: { pre
     webSecurity: true,
     allowRunningInsecureContent: false,
     webviewTag: false,
-    // A reader has nothing to spell-check.
-    spellcheck: false,
+    // Edit mode may spell-check (#52): the page marks only the editor, while the setting is on.
+    spellcheck: true,
     devTools: !isPackaged,
     // What the page needs to paint, without waiting on main (start-info.ts).
     additionalArguments: [startInfoArg(startInfo)],

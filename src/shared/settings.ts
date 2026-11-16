@@ -35,6 +35,8 @@ export interface Settings {
   tabPanelWidth: number;
   /** Vim's modal keys in edit mode. */
   vimKeys: boolean;
+  /** Misspelt words marked in edit mode, never while reading. */
+  spellCheck: boolean;
 }
 
 /** The built-in values, before the global file and the profile's overrides (ADR-005). */
@@ -53,6 +55,7 @@ export const DEFAULT_SETTINGS: Readonly<Settings> = Object.freeze({
   tabsPosition: 'top',
   tabPanelWidth: TAB_PANEL_DEFAULT,
   vimKeys: false,
+  spellCheck: false,
 });
 
 /** What a settings file sets; anything it leaves out comes from the level below. */

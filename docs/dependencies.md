@@ -78,6 +78,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | `@lezer/highlight` | 1.2.x | MIT | 2026-09-24 | 15 M | Highlight `tags` for the source view's own highlight style (colours from the `--galeo-*` tokens). Already a dependency of every `@codemirror/language*` package, same maintainer; declared directly because our code imports it (added 2026-09-27, owner) |
 | `@codemirror/merge` | 6.12.x | MIT | 2026-06-09 | 2.3 M | v0.2: the read-only diff behind "Show diff" when a file changes on disk while it has unsaved edits (ADR-013). Same maintainer as the other `@codemirror/*` packages; its dependencies are packages we already ship. Lazy, loaded with the first diff (added 2026-10-08, owner) |
 | `@replit/codemirror-vim` | 6.4.0 | MIT | 2026-11-04 | 272 k | v0.10 (#51): Vim keys in edit mode, a setting off by default. A Vim emulator (modes, motions, registers, `:` commands) is far too much to own; its one dependency, `@replit/codemirror-vim-core`, is from the same repository and maintainers, and its peers are our `@codemirror/*` packages. No HTML sinks, `eval` or network; `"+p` is routed through galeo, since the page can't read the clipboard. Lazy, loaded while the setting is on (added 2026-11-16, owner) |
+| Chromium's English (US) Hunspell dictionary, `en-US-10-2.bdic` (data, vendored in `assets/dictionaries/en-US/`) | `chromium/deps/hunspell_dictionaries` at `00f6e69c` (2026-10-25), SHA-256 `b0d80e6b…1f13` | SCOWL (permissive) and others, see its README | 2026-10-25 | n/a | v0.10 (#52): spell check in edit mode with no download. 452 KB, in the Linux packages only (macOS and Windows use the system's checker); galeo copies it into the session's `Dictionaries` folder before start. Its name carries Chromium's dictionary format version: an Electron update that moves it on needs the matching file (the spell-check e2e fails without it) (added 2026-11-16, owner) |
 
 ### Runtime: fonts (vendored, offline)
 
@@ -175,6 +176,8 @@ about/licences view and the packages must include:
 - the **Apache-2.0** NOTICE files (`react-aria-components` and its `@react-aria/*` and
   `@internationalized/*` dependencies, `dompurify` under its Apache option);
 - the **OFL-1.1** texts for the vendored fonts;
+- the terms of the vendored spell-check dictionary (`assets/dictionaries/en-US/README_en_US.txt`:
+  SCOWL, Ispell's BSD affix file, WordNet, public-domain word lists);
 - Chromium's licences, which Electron ships (`LICENSES.chromium.html`).
 
 ## Watch list and revisit triggers

@@ -34,6 +34,12 @@ export function AboutDialog({ version, onClose }: { version: string; onClose: ()
                     <pre>{font.text}</pre>
                   </details>
                 ))}
+                {notices.dictionaries.map((dictionary) => (
+                  <details key={dictionary.name}>
+                    <summary>{dictionary.name} (spell-check dictionary, Linux) · SCOWL and others</summary>
+                    <pre>{dictionary.text}</pre>
+                  </details>
+                ))}
                 {notices.packages.map((group) => (
                   <details key={group.packages.map((each) => `${each.name}@${each.version}`).join(' ')}>
                     <summary>

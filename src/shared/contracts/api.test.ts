@@ -45,7 +45,7 @@ describe('buildApi', () => {
     // No channel takes a path: entries open by the id main offered (ADR-034).
     expect(Object.keys(api.watch)).toEqual(['choose', 'stop', 'open', 'openAllNew', 'state', 'panel', 'onChanged']);
     expect(Object.keys(api.app)).toEqual(['info', 'resolveSandboxUnavailable', 'installLauncher', 'installProfileLauncher', 'uninstallProfileLauncher', 'uninstallLauncher', 'startInfo']);
-    expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'toggleTask', 'missingLinks', 'pathMenu', 'contextMenu', 'save', 'exportPdf', 'printPdf', 'dirty', 'leaveEdit', 'paste', 'closeAnswer', 'keep', 'recover', 'findAll', 'onEditMode', 'onConfirmClose']);
+    expect(Object.keys(api.documents)).toEqual(['read', 'setEncoding', 'followLink', 'back', 'forward', 'resolveImage', 'toggleTask', 'missingLinks', 'pathMenu', 'contextMenu', 'save', 'exportPdf', 'printPdf', 'dirty', 'leaveEdit', 'paste', 'closeAnswer', 'keep', 'recover', 'findAll', 'onEditMode', 'onSpellingMenu', 'onConfirmClose']);
     expect(Object.keys(api.tabs)).toEqual([
       'snapshot',
       'activated',

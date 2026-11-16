@@ -308,6 +308,10 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
   modes; the status bar shows the mode beside *Editing*. `:w` saves, and the `+` register is the
   system clipboard (`"+y` copies, `"+p` pastes). galeo's own shortcuts still work, except that
   Ctrl+R redoes in normal and visual mode: F5 reloads. Off by default.
+- **Spell check**: Settings → Editing → *Spell check* underlines misspelt words in edit mode (never
+  while reading), once you type in the editor. Right-click one for suggestions and *Add to
+  dictionary*, above the usual menu. On Linux galeo ships an English (US) dictionary; macOS and
+  Windows use the system's spell checker and languages. Nothing is downloaded. Off by default.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
   permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the

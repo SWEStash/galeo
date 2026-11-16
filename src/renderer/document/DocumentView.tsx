@@ -30,6 +30,9 @@ import { contentWeight } from './content-weight';
 /** What the rendered view shows: worker HTML (Markdown), reader text (`.txt`), or a JSON tree or a CSV table (of `source`) named `label`. */
 export type RenderedContent = { html: string } | { text: string } | { tree: TreeModel; label: string } | { table: CsvTable; source: string; label: string; header: boolean };
 
+/** How long main's request for the menu may follow a right-click in the spell-checked editor (#52). */
+const SPELLING_CLICK_MS = 2000;
+
 export interface DocumentViewProps {
   /** The rendered view's content, or null while it isn't needed or ready. */
   rendered: RenderedContent | null;
@@ -69,6 +72,8 @@ export interface DocumentViewProps {
   onEdit?: (() => void) | undefined;
   /** Vim keys in edit mode (#51), with what they ask of the tab; the Vim code loads only while set. */
   vim?: VimHooks | undefined;
+  /** Spell check in edit mode (#52). */
+  spellCheck?: boolean;
   /** Find and replace is open: find searches the source, the only text replace can change. */
   replacing?: boolean;
   /** The heading being read (its id), as the reader scrolls; set to follow it. In the source view, the id of an `onSourceOutline` entry. */
@@ -133,6 +138,11 @@ export interface DocumentHandle extends Finder {
   scrollToLine(line: number): void;
   /** The source view's text with the reader's edits, or null before it exists. */
   sourceText(): string | null;
+  /**
+   * Whether a right-click in the spell-checked editor just went through to Chromium (#52), so the menu
+   * main asks for next is this one's; true once per right-click.
+   */
+  takeSpellingClick(): boolean;
   /** Puts the file's text back in the source view, dropping the reader's edits. */
   replaceSource(text: string): void;
   /** Edit mode: replaces the current find match in the source and moves to the next. */
@@ -196,6 +206,7 @@ export function DocumentView({
   editable = false,
   onEdit,
   vim,
+  spellCheck = false,
   replacing = false,
   sourceCursor = null,
   splitRatio = 0.5,
@@ -215,6 +226,8 @@ export function DocumentView({
   const positionListener = useLatest(onPosition);
   const linkListener = useLatest(onLink);
   const menuListener = useLatest(onContextMenu);
+  /** When a right-click last went through to Chromium's spell checker (#52). */
+  const spellingClick = useRef(-Infinity);
   const shownView = useRef<ViewMode | null>(null);
   const editing = useLatest(editable);
   const renderedFinder = useRef<Finder | null>(null);
@@ -236,6 +249,11 @@ export function DocumentView({
 
   useImperativeHandle(ref, () => {
     return {
+      takeSpellingClick: () => {
+        const recent = performance.now() - spellingClick.current < SPELLING_CLICK_MS;
+        spellingClick.current = -Infinity;
+        return recent;
+      },
       find: (query, options) => active().find(query, options),
       step: (direction) => active().step(direction),
       clear: () => {
@@ -313,6 +331,12 @@ export function DocumentView({
     // On the container, which also hears right-clicks outside the document's own content.
     const element = container.current!;
     const onMenu = (event: Event) => {
+      // Spell check (#52): only Chromium's own menu event carries the misspelt word, so a right-click in
+      // the spell-checked editor goes through; main then asks the page for this menu (`documents.spellingMenu`).
+      if (event.composedPath().some((node) => node instanceof HTMLElement && node.classList.contains('cm-content') && node.getAttribute('spellcheck') === 'true')) {
+        spellingClick.current = performance.now();
+        return;
+      }
       event.preventDefault();
       menuListener.current?.();
     };
@@ -550,6 +574,10 @@ export function DocumentView({
       current = false;
     };
   }, [vimOn, sourceReady]);
+
+  useLayoutEffect(() => {
+    if (sourceReady) host().source?.setSpellCheck(spellCheck);
+  }, [spellCheck, sourceReady]);
 
   // Task boxes (ADR-031): reading, a tick goes to main; in edit mode the preview's boxes tick the editor's text.
   const toggleListener = useLatest(onToggleTask);

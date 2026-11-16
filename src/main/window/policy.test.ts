@@ -56,7 +56,8 @@ describe('hardenedWebPreferences', () => {
       webSecurity: true,
       allowRunningInsecureContent: false,
       webviewTag: false,
-      spellcheck: false,
+      // On, so edit mode can spell-check (#52); the page marks only the editor, and only when asked.
+      spellcheck: true,
       devTools: false,
       additionalArguments: [startInfoArg(startInfo)],
     });

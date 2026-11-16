@@ -53,11 +53,20 @@ if (asar.includes('GALEO_PERF_OUT')) {
 // Windows; the macOS preview's app bundle keeps them elsewhere).
 const besideApp = process.platform === 'darwin' ? [] : ['LICENSES.chromium.html', 'LICENSE.electron.txt'];
 const missingNotices = [
-  ...['react-aria-components', 'Apache License', 'SIL OPEN FONT LICENSE'].filter((text) => !asar.includes(text)).map((text) => `"${text}" not in the bundle`),
+  ...['react-aria-components', 'Apache License', 'SIL OPEN FONT LICENSE', 'Kevin Atkinson'].filter((text) => !asar.includes(text)).map((text) => `"${text}" not in the bundle`),
   ...besideApp.filter((file) => !existsSync(path.join(resources, '..', file))).map((file) => `${file} not packaged`),
 ];
 if (missingNotices.length) failures.push(...missingNotices.map((problem) => `notices: ${problem}`));
 else console.log('notices: packages, fonts, Chromium and Electron licences');
+
+// The spell-check dictionary (#52) ships in the Linux packages, unchanged.
+if (process.platform === 'linux') {
+  const shipped = path.join(resources, 'dictionaries', 'en-US-10-2.bdic');
+  const source = path.resolve(import.meta.dirname, '../assets/dictionaries/en-US/en-US-10-2.bdic');
+  if (!existsSync(shipped)) failures.push('dictionary: en-US-10-2.bdic not packaged');
+  else if (!readFileSync(shipped).equals(readFileSync(source))) failures.push('dictionary: the packaged en-US-10-2.bdic differs from assets/');
+  else console.log('dictionary: en-US-10-2.bdic packaged');
+}
 
 // The .deb's AppArmor profile must grant user namespaces to the Electron binary itself, not to
 // the wrapper in front of it (ADR-009).

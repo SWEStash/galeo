@@ -103,6 +103,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         events.editMode = listener;
         return () => {};
       }),
+      onSpellingMenu: vi.fn(() => () => {}),
     },
     tabs: {
       dragStart: vi.fn().mockResolvedValue(true),

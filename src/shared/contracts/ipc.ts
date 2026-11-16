@@ -477,7 +477,7 @@ export interface Responses {
 }
 
 /** Main → renderer events, named `<group>.<event>`; the page subscribes with `<group>.on<Event>`. */
-export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'tabs.dragging', 'documents.editMode', 'documents.confirmClose', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received', 'watch.changed'] as const;
+export const EVENTS = ['tabs.changed', 'tabs.demote', 'tabs.stale', 'tabs.dragging', 'documents.editMode', 'documents.spellingMenu', 'documents.confirmClose', 'settings.changed', 'profiles.changed', 'quickOpen.results', 'drops.received', 'watch.changed'] as const;
 
 export type EventName = (typeof EVENTS)[number];
 
@@ -496,6 +496,8 @@ export interface Events {
    * the reader asks to leave it, which the page does once its text is saved or discarded (ADR-013).
    */
   'documents.editMode': { id: string; edit: 'granted' | 'leave' | 'refused' };
+  /** A right-click in the tab's spell-checked editor (#52): ask for the document menu, which main tops with the spelling. */
+  'documents.spellingMenu': { id: string };
   /** The window is closing (or the app quitting, or its profile going) with these tabs unsaved: ask the reader. */
   'documents.confirmClose': string[];
   'settings.changed': SettingsState;
