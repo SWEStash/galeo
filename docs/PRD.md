@@ -1,10 +1,11 @@
 # PRD: galeo
 
 - **Author**: project owner
-- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29, apt updates 2026-11-04, v0.6 2026-11-04, v0.7 2026-11-05, v0.8 2026-11-07)
+- **Date**: 2026-09-25 (updated 2026-09-26; v0.3 stories 2026-10-15, v0.4 2026-10-21, v0.5 2026-10-29, apt updates 2026-11-04, v0.6 2026-11-04, v0.7 2026-11-05, v0.8 2026-11-07, v0.9 2026-11-12, v0.10 2026-11-16)
 - **Status**: Approved (2026-09-26)
 - **Target release**: v0.1 "reader", then v0.2 "editor", v0.3 "formats", v0.4 "tabs", v0.5
-  "platforms", v0.6 "agent companion", v0.7 "polish" and v0.8 "watching an agent's work, part 2"
+  "platforms", v0.6 "agent companion", v0.7 "polish", v0.8 "watching an agent's work, part 2", v0.9
+  "more places to run" and v0.10 "writing"
 - **Related**: the decision records, UX specification, threat model, architecture —
   see [References](#references)
 
@@ -661,6 +662,42 @@ they win and this list is updated.
 - More diagram engines, Vim keybindings and spell check in edit mode
   ([#50](https://github.com/SWEStash/galeo/issues/50), [#51](https://github.com/SWEStash/galeo/issues/51),
   [#52](https://github.com/SWEStash/galeo/issues/52)).
+
+## User Stories — v0.10 "writing"
+
+v0.10 is for writing in galeo, not only reading: Vim keys and spell check in edit mode, both off until turned
+on in Settings, and charts beside Mermaid diagrams if an engine fits galeo's security rules. Each story links
+its issue, which holds the full acceptance criteria (*Done when*). The v0.10 milestone decides what ships; where
+this list and the milestone or an issue differ, they win and this list is updated.
+
+### Must Have
+
+1. **Vim keys in edit mode** ([#51](https://github.com/SWEStash/galeo/issues/51)). As a Vim user, I want
+   Vim's modal keys when I edit, so that I can write in galeo without switching habits.
+   - AC: A Settings toggle, off by default, that applies to open editors at once; the status bar shows the
+     mode.
+   - AC: galeo's own shortcuts keep working as the issue's key policy says.
+2. **Spell check in edit mode** ([#52](https://github.com/SWEStash/galeo/issues/52)). As a writer, I want
+   misspelt words marked with suggestions while I edit, so that I catch typos before publishing.
+   - AC: A Settings toggle, off by default; never in the reading view.
+   - AC: Still zero network: dictionaries ship with galeo or come from the system, never downloaded.
+
+### Should Have
+
+- **Charts** ([#50](https://github.com/SWEStash/galeo/issues/50)). As a reader, I want Vega-Lite code
+  blocks drawn as charts, offline and sanitized like Mermaid, if a spike shows the engine fits the content
+  security policy, the sanitizer and the time and size limits.
+
+### Could Have
+
+- Windows test reliability ([#46](https://github.com/SWEStash/galeo/issues/46)).
+
+### Won't Have (v0.10)
+
+- winget ([#55](https://github.com/SWEStash/galeo/issues/55)).
+- Graphviz and D2 (WebAssembly, which the content security policy doesn't allow) and PlantUML (needs Java
+  or a server).
+- Cold start under 500 ms.
 
 ## User Experience
 
