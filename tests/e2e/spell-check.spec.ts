@@ -26,6 +26,8 @@ function home({ spell }: { spell?: true } = {}) {
 
 /** Chromium checks text when the editor is idle: right-click again only after a pause. */
 const IDLE_CHECK = { timeout: 20_000, intervals: [2_000] };
+// A test waits on up to three such checks, more than the default test timeout under load.
+test.describe.configure({ timeout: 90_000 });
 
 /** Right-clicks the middle of `word` in the editor, as a reader would. */
 async function rightClickWord(window: Page, word: string) {
@@ -99,8 +101,15 @@ test('Add to dictionary stops marking the word', async () => {
       }, IDLE_CHECK)
       .toBe(true);
     await answer(app, 'learn');
-    await rightClickWord(window, 'galeoish');
+    await expect
+      .poll(async () => {
+        await rightClickWord(window, 'galeoish');
+        return (await menus(app)).at(-1)?.includes('Add to dictionary');
+      }, IDLE_CHECK)
+      .toBe(true);
     await answer(app, 'none');
+    // As with a file's first check, Chromium checks the text again once a word is typed.
+    await typeAtEnd(window, 'again ');
     await expect
       .poll(async () => {
         await rightClickWord(window, 'galeoish');
