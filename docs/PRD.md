@@ -666,7 +666,7 @@ they win and this list is updated.
 ## User Stories — v0.10 "writing"
 
 v0.10 is for writing in galeo, not only reading: Vim keys and spell check in edit mode, both off until turned
-on in Settings, and charts beside Mermaid diagrams if an engine fits galeo's security rules. Each story links
+on in Settings. Each story links
 its issue, which holds the full acceptance criteria (*Done when*). The v0.10 milestone decides what ships; where
 this list and the milestone or an issue differ, they win and this list is updated.
 
@@ -682,12 +682,6 @@ this list and the milestone or an issue differ, they win and this list is update
    - AC: A Settings toggle, off by default; never in the reading view.
    - AC: Still zero network: dictionaries ship with galeo or come from the system, never downloaded.
 
-### Should Have
-
-- **Charts** ([#50](https://github.com/SWEStash/galeo/issues/50)). As a reader, I want Vega-Lite code
-  blocks drawn as charts, offline and sanitized like Mermaid, if a spike shows the engine fits the content
-  security policy, the sanitizer and the time and size limits.
-
 ### Could Have
 
 - Windows test reliability ([#46](https://github.com/SWEStash/galeo/issues/46)).
@@ -695,6 +689,8 @@ this list and the milestone or an issue differ, they win and this list is update
 ### Won't Have (v0.10)
 
 - winget ([#55](https://github.com/SWEStash/galeo/issues/55)).
+- Vega-Lite charts ([#50](https://github.com/SWEStash/galeo/issues/50)): decision deferred; Mermaid already
+  draws pie, bar and line charts.
 - Graphviz and D2 (WebAssembly, which the content security policy doesn't allow) and PlantUML (needs Java
   or a server).
 - Cold start under 500 ms.
