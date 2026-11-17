@@ -26,8 +26,13 @@ function home({ spell }: { spell?: true } = {}) {
 
 /** Chromium checks text when the editor is idle: right-click again only after a pause. */
 const IDLE_CHECK = { timeout: 20_000, intervals: [2_000] };
+/**
+ * A test's first check. On a new Windows machine the system's checker marks nothing for its first
+ * minute or so, whichever app asks (seen on the Platforms runners); after that it answers at once.
+ */
+const FIRST_CHECK = { ...IDLE_CHECK, timeout: process.platform === 'win32' ? 120_000 : IDLE_CHECK.timeout };
 // A test waits on up to three such checks, more than the default test timeout under load.
-test.describe.configure({ timeout: 90_000 });
+test.describe.configure({ timeout: 180_000 });
 
 /** Right-clicks the middle of `word` in the editor, as a reader would. */
 async function rightClickWord(window: Page, word: string) {
@@ -73,7 +78,7 @@ test("with spell check on, a misspelt word's menu offers suggestions first, and 
     await startEditing(app, window);
     await expect(editor(window)).toHaveAttribute('spellcheck', 'true');
     // Chromium checks the text once it's idle: retry until the word is marked.
-    await expect.poll(async () => (await menuAfterTyping(app, window, 'recieve'))?.[0], IDLE_CHECK).toBe('receive');
+    await expect.poll(async () => (await menuAfterTyping(app, window, 'recieve'))?.[0], FIRST_CHECK).toBe('receive');
     expect((await menus(app)).at(-1)).toEqual(expect.arrayContaining(['Add to dictionary', 'Back', 'Save', 'Copy path']));
 
     await answer(app, 'spelling-0');
@@ -93,7 +98,7 @@ test('Add to dictionary stops marking the word', async () => {
   const { app, window, close } = await launchApp(['--', file], { home: dir, env: { GALEO_TEST_MENU_CHOICE: 'none' } });
   try {
     await startEditing(app, window, 'I recieve tehre mail');
-    await expect.poll(async () => (await menuAfterTyping(app, window, 'tehre'))?.includes('Add to dictionary'), IDLE_CHECK).toBe(true);
+    await expect.poll(async () => (await menuAfterTyping(app, window, 'tehre'))?.includes('Add to dictionary'), FIRST_CHECK).toBe(true);
     await answer(app, 'learn');
     await expect
       .poll(async () => {
