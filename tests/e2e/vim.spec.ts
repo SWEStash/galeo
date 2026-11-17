@@ -84,7 +84,8 @@ test('"+y copies to the system clipboard and "+p pastes from it', async () => {
   try {
     await startEditing(app, window);
     await window.keyboard.type('"+yy');
-    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe('one\n');
+    // Windows puts its own line ending on the clipboard.
+    await expect.poll(() => app.evaluate(async ({ clipboard }) => (await clipboard.readText()).replace(/\r\n/g, '\n'))).toBe('one\n');
 
     await app.evaluate(({ clipboard }) => clipboard.writeText('pasted'));
     await window.keyboard.type('j"+P');

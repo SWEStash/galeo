@@ -54,10 +54,16 @@ async function startEditing(app: ElectronApplication, window: Page, text = 'I re
   await expect(editor(window)).toBeFocused();
 }
 
-/** Chromium starts checking an editor's text once a word is typed and ended with a space, as a reader does. */
-async function typeAtEnd(window: Page, text: string) {
+/**
+ * The menu a right-click on `word` shows after a word is typed at the end, as a reader would: Chromium
+ * checks an editor's text once a word is typed and ended with a space, and a system checker still
+ * starting (macOS, Windows) marks nothing until the next one.
+ */
+async function menuAfterTyping(app: ElectronApplication, window: Page, word: string) {
   await window.keyboard.press('ControlOrMeta+End');
-  await window.keyboard.type(text);
+  await window.keyboard.type(' go ');
+  await rightClickWord(window, word);
+  return (await menus(app)).at(-1);
 }
 
 test("with spell check on, a misspelt word's menu offers suggestions first, and the one chosen replaces it", async () => {
@@ -66,21 +72,15 @@ test("with spell check on, a misspelt word's menu offers suggestions first, and 
   try {
     await startEditing(app, window);
     await expect(editor(window)).toHaveAttribute('spellcheck', 'true');
-    await typeAtEnd(window, ' today ');
     // Chromium checks the text once it's idle: retry until the word is marked.
-    await expect
-      .poll(async () => {
-        await rightClickWord(window, 'recieve');
-        return (await menus(app)).at(-1)?.[0];
-      }, IDLE_CHECK)
-      .toBe('receive');
+    await expect.poll(async () => (await menuAfterTyping(app, window, 'recieve'))?.[0], IDLE_CHECK).toBe('receive');
     expect((await menus(app)).at(-1)).toEqual(expect.arrayContaining(['Add to dictionary', 'Back', 'Save', 'Copy path']));
 
     await answer(app, 'spelling-0');
     await rightClickWord(window, 'recieve');
     await expect(editor(window)).toHaveText(/^I receive mail/);
     await window.keyboard.press('ControlOrMeta+s');
-    await expect.poll(() => readFileSync(file, 'utf8')).toBe('I receive mail\n today ');
+    await expect.poll(() => readFileSync(file, 'utf8')).toMatch(/^I receive mail\n( go )+$/);
   } finally {
     await close();
     removeTempHome(dir);
@@ -93,13 +93,7 @@ test('Add to dictionary stops marking the word', async () => {
   const { app, window, close } = await launchApp(['--', file], { home: dir, env: { GALEO_TEST_MENU_CHOICE: 'none' } });
   try {
     await startEditing(app, window, 'I recieve galeoish mail');
-    await typeAtEnd(window, ' today ');
-    await expect
-      .poll(async () => {
-        await rightClickWord(window, 'galeoish');
-        return (await menus(app)).at(-1)?.includes('Add to dictionary');
-      }, IDLE_CHECK)
-      .toBe(true);
+    await expect.poll(async () => (await menuAfterTyping(app, window, 'galeoish'))?.includes('Add to dictionary'), IDLE_CHECK).toBe(true);
     await answer(app, 'learn');
     await expect
       .poll(async () => {
@@ -108,16 +102,9 @@ test('Add to dictionary stops marking the word', async () => {
       }, IDLE_CHECK)
       .toBe(true);
     await answer(app, 'none');
-    // As with a file's first check, Chromium checks the text again once a word is typed.
-    await typeAtEnd(window, 'again ');
-    await expect
-      .poll(async () => {
-        await rightClickWord(window, 'galeoish');
-        return (await menus(app)).at(-1)?.[0];
-      }, IDLE_CHECK)
-      .toBe('Back');
+    await expect.poll(async () => (await menuAfterTyping(app, window, 'galeoish'))?.[0], IDLE_CHECK).toBe('Back');
     await window.keyboard.press('ControlOrMeta+s');
-    await expect.poll(() => readFileSync(file, 'utf8')).toContain('today');
+    await expect.poll(() => readFileSync(file, 'utf8')).toContain(' go ');
   } finally {
     await close();
     removeTempHome(dir);

@@ -64,6 +64,8 @@ for (const theme of ['light', 'dark'] as const) {
       await window.getByTestId('palette').getByRole('option', { name: 'Move tab to window…' }).click();
       const list = window.getByTestId('move-tab');
       await expect(list.getByRole('option')).toHaveText(['default math.md']);
+      // Mid fade-in its text is faint: check the colours once it's in.
+      await expect(window.locator('.modal.move-tab')).not.toHaveAttribute('data-entering');
       const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="move-tab"]').analyze();
       expect(results.violations).toEqual([]);
       await list.getByRole('option').click();
