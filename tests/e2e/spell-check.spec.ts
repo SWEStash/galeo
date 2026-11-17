@@ -89,20 +89,20 @@ test("with spell check on, a misspelt word's menu offers suggestions first, and 
 
 test('Add to dictionary stops marking the word', async () => {
   const { dir, file } = home({ spell: true });
-  writeFileSync(file, 'I recieve galeoish mail\n');
+  writeFileSync(file, 'I recieve tehre mail\n');
   const { app, window, close } = await launchApp(['--', file], { home: dir, env: { GALEO_TEST_MENU_CHOICE: 'none' } });
   try {
-    await startEditing(app, window, 'I recieve galeoish mail');
-    await expect.poll(async () => (await menuAfterTyping(app, window, 'galeoish'))?.includes('Add to dictionary'), IDLE_CHECK).toBe(true);
+    await startEditing(app, window, 'I recieve tehre mail');
+    await expect.poll(async () => (await menuAfterTyping(app, window, 'tehre'))?.includes('Add to dictionary'), IDLE_CHECK).toBe(true);
     await answer(app, 'learn');
     await expect
       .poll(async () => {
-        await rightClickWord(window, 'galeoish');
+        await rightClickWord(window, 'tehre');
         return (await menus(app)).at(-1)?.includes('Add to dictionary');
       }, IDLE_CHECK)
       .toBe(true);
     await answer(app, 'none');
-    await expect.poll(async () => (await menuAfterTyping(app, window, 'galeoish'))?.[0], IDLE_CHECK).toBe('Back');
+    await expect.poll(async () => (await menuAfterTyping(app, window, 'tehre'))?.[0], IDLE_CHECK).toBe('Back');
     await window.keyboard.press('ControlOrMeta+s');
     await expect.poll(() => readFileSync(file, 'utf8')).toContain(' go ');
   } finally {

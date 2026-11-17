@@ -159,8 +159,13 @@ test('a followed log scrolls to its new end; a log not followed stays where it i
     await window.keyboard.press('Control+Tab');
     const stillScroller = shownDocument(window).locator('.cm-scroller');
     await expect(shownDocument(window).locator('.cm-content')).toContainText('line 1');
-    await stillScroller.evaluate((element) => (element.scrollTop = 1000));
-    const top = await stillScroller.evaluate((element) => element.scrollTop);
+    // The editor measures its lines over the next frames and may move the scroll: read it once still.
+    const top = await stillScroller.evaluate(async (element) => {
+      element.scrollTop = 1000;
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      for (let last = -1; last !== element.scrollTop; await frame(), await frame()) last = element.scrollTop;
+      return element.scrollTop;
+    });
     appendFileSync(still, lines(301, 400));
     await expect(shownDocument(window)).toHaveAttribute('data-reloaded-at', /\d+/);
     expect(Math.abs((await stillScroller.evaluate((element) => element.scrollTop)) - top)).toBeLessThanOrEqual(2);
