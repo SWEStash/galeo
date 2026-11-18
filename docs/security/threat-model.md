@@ -324,7 +324,8 @@ ship an Electron major that is out of support.
 **SR-10 — Supply chain.**
 - Committed lockfile; `npm ci` only; install scripts disabled except for an allowlist.
 - Dependencies are vetted before adoption (maintenance, licence, size) and kept few.
-- `npm audit` / OSV scan in CI, failing on high severity.
+- `npm audit` / OSV scan in CI: shipped dependencies fail on high severity, build and test tools
+  (never in a package) on critical; their lower advisories are weighed in the release audit.
 - GitHub Actions pinned by commit SHA, with least-privilege `permissions:`.
 - Releases are built only in CI, and ship `SHA256SUMS` plus GitHub artifact attestations
   (build provenance) ([ADR-017](../decisions/ADR-017-release-workflow-with-attestations.md)).

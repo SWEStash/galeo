@@ -39,8 +39,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run setup
-      - name: Audit dependencies (fails on high severity)
-        run: npm audit --audit-level=high
+      - name: Audit shipped dependencies (fails on high severity)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit build and test tools (fails on critical severity)
+        run: npm audit --audit-level=critical
       - run: npm run typecheck
       - run: npm run boundaries
       - run: npm run check:exports
