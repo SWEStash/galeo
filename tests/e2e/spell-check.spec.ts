@@ -53,6 +53,18 @@ async function rightClickWord(window: Page, word: string) {
   await window.mouse.click(point.x, point.y, { button: 'right' });
 }
 
+/**
+ * The menu a right-click on `word` shows. It comes from main a moment after the click (Chromium's
+ * menu event, then the page's ask): wait for it, so a read never sees the menu before and an answer
+ * set next never reaches it.
+ */
+async function menuFor(app: ElectronApplication, window: Page, word: string) {
+  const before = (await menus(app)).length;
+  await rightClickWord(window, word);
+  await expect.poll(async () => (await menus(app)).length).toBeGreaterThan(before);
+  return (await menus(app)).at(-1);
+}
+
 async function startEditing(app: ElectronApplication, window: Page, text = 'I recieve mail') {
   await expect(shownDocument(window).locator('p')).toHaveText(text);
   await pressInMain(app, window, 'E');
@@ -67,8 +79,7 @@ async function startEditing(app: ElectronApplication, window: Page, text = 'I re
 async function menuAfterTyping(app: ElectronApplication, window: Page, word: string) {
   await window.keyboard.press('ControlOrMeta+End');
   await window.keyboard.type(' go ');
-  await rightClickWord(window, word);
-  return (await menus(app)).at(-1);
+  return menuFor(app, window, word);
 }
 
 test("with spell check on, a misspelt word's menu offers suggestions first, and the one chosen replaces it", async () => {
@@ -82,7 +93,7 @@ test("with spell check on, a misspelt word's menu offers suggestions first, and 
     expect((await menus(app)).at(-1)).toEqual(expect.arrayContaining(['Add to dictionary', 'Back', 'Save', 'Copy path']));
 
     await answer(app, 'spelling-0');
-    await rightClickWord(window, 'recieve');
+    await menuFor(app, window, 'recieve');
     await expect(editor(window)).toHaveText(/^I receive mail/);
     await window.keyboard.press('ControlOrMeta+s');
     await expect.poll(() => readFileSync(file, 'utf8')).toMatch(/^I receive mail\n( go )+$/);
@@ -100,12 +111,7 @@ test('Add to dictionary stops marking the word', async () => {
     await startEditing(app, window, 'I recieve tehre mail');
     await expect.poll(async () => (await menuAfterTyping(app, window, 'tehre'))?.includes('Add to dictionary'), FIRST_CHECK).toBe(true);
     await answer(app, 'learn');
-    await expect
-      .poll(async () => {
-        await rightClickWord(window, 'tehre');
-        return (await menus(app)).at(-1)?.includes('Add to dictionary');
-      }, IDLE_CHECK)
-      .toBe(true);
+    expect(await menuFor(app, window, 'tehre')).toContain('Add to dictionary');
     await answer(app, 'none');
     await expect.poll(async () => (await menuAfterTyping(app, window, 'tehre'))?.[0], IDLE_CHECK).toBe('Back');
     await window.keyboard.press('ControlOrMeta+s');
@@ -122,8 +128,7 @@ test("spell check is off by default: the editor isn't checked and its menu is th
   try {
     await startEditing(app, window);
     await expect(editor(window)).toHaveAttribute('spellcheck', 'false');
-    await rightClickWord(window, 'recieve');
-    await expect.poll(async () => (await menus(app)).at(-1)?.[0]).toBe('Back');
+    expect((await menuFor(app, window, 'recieve'))?.[0]).toBe('Back');
   } finally {
     await close();
     removeTempHome(dir);
