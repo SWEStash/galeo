@@ -69,10 +69,8 @@ jobs:
           node-version-file: .nvmrc
       - run: npm ci
       - run: npm run setup
-      - name: Audit shipped dependencies (fails on high severity)
-        run: npm audit --omit=dev --audit-level=high
-      - name: Audit build and test tools (fails on critical severity)
-        run: npm audit --audit-level=critical
+      - name: Audit dependencies (fails on high severity)
+        run: npm audit --audit-level=high
       - run: npm run typecheck
       - run: npm test
       - name: Install rpm, to build and check the .rpm

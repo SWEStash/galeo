@@ -13,11 +13,8 @@ step() { printf '\n=== preflight: %s\n' "$1"; }
 step 'dependencies match the lockfile'
 npm ls --all >/dev/null
 
-step 'audit: shipped dependencies (fails on high severity)'
-npm audit --omit=dev --audit-level=high
-
-step 'audit: build and test tools (fails on critical severity)'
-npm audit --audit-level=critical
+step 'audit (fails on high severity)'
+npm audit --audit-level=high
 
 step 'typecheck'
 npm run typecheck
