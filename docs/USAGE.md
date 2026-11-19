@@ -313,6 +313,8 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
   the editor; opening edit mode or moving the cursor doesn't start the check. Right-click one for suggestions and *Add to
   dictionary*, above the usual menu. On Linux galeo ships an English (US) dictionary; macOS and
   Windows use the system's spell checker and languages. Nothing is downloaded. Off by default.
+  On Linux, added words go in `~/.cache/galeo/Custom Dictionary.txt`, one list for every profile;
+  clearing the caches forgets them.
 - **Ctrl+S** saves. The file keeps its encoding, byte order mark and line endings, its
   permissions, and its symlink or hard links. The status bar says *Saved*, or why it didn't save.
 - **Unsaved changes** show as `●` on the tab. Closing the tab, leaving edit mode, closing the
