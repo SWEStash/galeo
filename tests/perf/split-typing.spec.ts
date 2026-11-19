@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { launchApp, tempHome } from '../helpers/launch';
+import { appDirs, launchApp, tempHome } from '../helpers/launch';
 import { pressInMain } from '../helpers/keys';
 import { checkBudget, summarize } from './stats';
 
@@ -43,50 +43,65 @@ async function typeAndWait(page: Page, marker: string): Promise<number> {
   return (await handle.jsonValue()) as number;
 }
 
-test('typing in a 5,000-word article in split updates the preview within the budget', async () => {
-  test.setTimeout(120_000);
-  const dir = tempHome();
-  const file = path.join(dir, 'article.md');
-  writeFileSync(file, article());
-  const { app, window, close } = await launchApp(['--', file]);
-  try {
-    const document = window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
-    await expect(document.locator('h1')).toBeVisible();
-    await expect(window.getByTestId('status-bar')).toContainText(/[5-9],\d{3} words/);
-    await window.keyboard.press('ControlOrMeta+Backslash');
-    await expect(document.locator('.cm-editor')).toBeVisible();
-    await pressInMain(app, window, 'E');
-    await expect(document.locator('.cm-content')).toBeFocused();
-    await window.keyboard.press('ControlOrMeta+End');
-    await document.evaluate((host) => {
-      const state = { lastKey: 0, word: '', ms: null as number | null };
-      (globalThis as { __typing?: typeof state }).__typing = state;
-      globalThis.addEventListener('keydown', () => (state.lastKey = performance.now()), true);
-      const article = host.shadowRoot!.querySelector('article')!;
-      new MutationObserver(() => {
-        if (state.ms !== null || !state.word || !article.textContent!.includes(state.word)) return;
-        requestAnimationFrame(() => (state.ms = performance.now() - state.lastKey));
-      }).observe(article, { childList: true, subtree: true });
-    });
+// The same budget with Vim keys and spell check on (#51, #52): neither may slow typing down.
+const variants = [
+  { name: '', metric: 'split-typing', settings: null },
+  { name: ' with Vim keys and spell check on', metric: 'split-typing-vim-spell', settings: { vimKeys: true, spellCheck: true } },
+] as const;
 
-    await typeAndWait(window, 'warmup');
-    const samples: number[] = [];
-    for (let run = 0; run < RUNS; run++) samples.push(await typeAndWait(window, `mark${run}x`));
+for (const { name, metric, settings } of variants) {
+  test(`typing in a 5,000-word article in split updates the preview within the budget${name}`, async () => {
+    test.setTimeout(120_000);
+    const dir = tempHome();
+    if (settings) {
+      const config = appDirs(dir).config;
+      mkdirSync(config, { recursive: true });
+      writeFileSync(path.join(config, 'settings.json'), JSON.stringify({ schemaVersion: 1, ...settings }));
+    }
+    const file = path.join(dir, 'article.md');
+    writeFileSync(file, article());
+    const { app, window, close } = await launchApp(['--', file], { home: dir });
+    try {
+      const document = window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
+      await expect(document.locator('h1')).toBeVisible();
+      await expect(window.getByTestId('status-bar')).toContainText(/[5-9],\d{3} words/);
+      await window.keyboard.press('ControlOrMeta+Backslash');
+      await expect(document.locator('.cm-editor')).toBeVisible();
+      await pressInMain(app, window, 'E');
+      await expect(document.locator('.cm-content')).toBeFocused();
+      await window.keyboard.press('ControlOrMeta+End');
+      // Vim starts in normal mode: append at the end of the last line.
+      if (settings?.vimKeys) await window.keyboard.type('GA');
+      await document.evaluate((host) => {
+        const state = { lastKey: 0, word: '', ms: null as number | null };
+        (globalThis as { __typing?: typeof state }).__typing = state;
+        globalThis.addEventListener('keydown', () => (state.lastKey = performance.now()), true);
+        const article = host.shadowRoot!.querySelector('article')!;
+        new MutationObserver(() => {
+          if (state.ms !== null || !state.word || !article.textContent!.includes(state.word)) return;
+          requestAnimationFrame(() => (state.ms = performance.now() - state.lastKey));
+        }).observe(article, { childList: true, subtree: true });
+      });
 
-    const summary = summarize(samples);
-    const out = path.join(import.meta.dirname, 'results');
-    mkdirSync(out, { recursive: true });
-    writeFileSync(
-      path.join(out, 'split-typing.json'),
-      `${JSON.stringify({ metric: 'split-typing', measuredAt: new Date().toISOString(), platform: process.platform, ci: Boolean(process.env['CI']), budgetFactor: factor, ms: summary }, null, 2)}\n`,
-    );
-    console.log(`split-typing: median ${summary.median.toFixed(1)} ms, p95 ${summary.p95.toFixed(1)} ms (n=${summary.n})`);
-    const verdict = checkBudget(summary, budgets.splitTypingMs, factor);
-    expect(summary.median, `median over the ${verdict.limit} ms limit`).toBeLessThanOrEqual(verdict.limit);
-  } finally {
-    // Unsaved typing would ask before closing.
-    app.process().kill('SIGKILL');
-    await close().catch(() => {});
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
+      await typeAndWait(window, 'warmup');
+      const samples: number[] = [];
+      for (let run = 0; run < RUNS; run++) samples.push(await typeAndWait(window, `mark${run}x`));
+
+      const summary = summarize(samples);
+      const out = path.join(import.meta.dirname, 'results');
+      mkdirSync(out, { recursive: true });
+      writeFileSync(
+        path.join(out, `${metric}.json`),
+        `${JSON.stringify({ metric, measuredAt: new Date().toISOString(), platform: process.platform, ci: Boolean(process.env['CI']), budgetFactor: factor, ms: summary }, null, 2)}\n`,
+      );
+      console.log(`${metric}: median ${summary.median.toFixed(1)} ms, p95 ${summary.p95.toFixed(1)} ms (n=${summary.n})`);
+      const verdict = checkBudget(summary, budgets.splitTypingMs, factor);
+      expect(summary.median, `median over the ${verdict.limit} ms limit`).toBeLessThanOrEqual(verdict.limit);
+    } finally {
+      // Unsaved typing would ask before closing.
+      app.process().kill('SIGKILL');
+      await close().catch(() => {});
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+}

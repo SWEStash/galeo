@@ -18,7 +18,7 @@ Node 24 (`mise` or `.nvmrc`), npm.
 | `npm test` | All vitest projects (`test:unit` for Node-side code and scripts, `test:renderer` for happy-dom) |
 | `npm run test:e2e` | Playwright end-to-end tests against the built app (`npm run build` first) |
 | `npm run test:no-network` | Zero-network proof on Linux: the built app runs under `strace` and must make no network `connect()` (needs `strace`) |
-| `npm run test:perf` | Timings for cold start, tabs, diagrams, data views, a 100 MB log, find in all tabs, typing in split view, and memory (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the budgets, see [performance runs](#performance-runs) |
+| `npm run test:perf` | Timings for cold start, tabs, diagrams, data views, a 100 MB log, find in all tabs, typing in split view (also with Vim keys and spell check on), and memory (`GALEO_PERF=1 npm run build` first); `GALEO_PERF_ENFORCE=1` holds them to the budgets, see [performance runs](#performance-runs) |
 | `npm run build:demo` | The [website](#website)'s live demo into `out/demo` (ADR-037): the renderer, with `src/demo` standing in for main |
 | `npm run test:demo` | Playwright tests of the built demo, served as Pages serves it and opened in Electron's Chromium (`npm run build:demo` first) |
 | `npm run site:screenshots` | The [website](#website)'s screenshots from the built app, into `site/screenshots/` (`npm run build` first; run it through `npm run headless`) |
