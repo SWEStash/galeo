@@ -684,7 +684,8 @@ this list and the milestone or an issue differ, they win and this list is update
 
 ### Could Have
 
-- Windows test reliability ([#46](https://github.com/SWEStash/galeo/issues/46)).
+- Windows test reliability ([#46](https://github.com/SWEStash/galeo/issues/46)): moved out of v0.10 with one box
+  open, Windows being a preview (owner, 2026-11-19).
 
 ### Won't Have (v0.10)
 

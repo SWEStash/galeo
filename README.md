@@ -59,8 +59,8 @@ does, how to remove it, and how to [check a download](docs/USAGE.md#checking-a-d
 - **Following an agent's work**: what changed since you last looked is marked (F7 steps through
   it), tabs whose file changed show a dot, plans count their tasks done and tick from the page,
   and links to files that don't exist are marked.
-- **Editing**: raw text with a live split preview. Saving keeps the file's encoding, line endings
-  and permissions.
+- **Editing**: raw text with a live split preview, and Vim keys and spell check if you want them.
+  Saving keeps the file's encoding, line endings and permissions.
 - **Data and code**: JSON as a tree, CSV and TSV as a table, YAML, TOML and source code
   highlighted, MDX rendered with nothing in it running.
 - **Tabs, windows and profiles**: browser-like tabs, on top or on the left, that pin and move between
