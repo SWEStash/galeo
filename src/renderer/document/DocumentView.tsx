@@ -145,6 +145,8 @@ export interface DocumentHandle extends Finder {
   takeSpellingClick(): boolean;
   /** Puts the file's text back in the source view, dropping the reader's edits. */
   replaceSource(text: string): void;
+  /** Edit mode: the source's find count after an edit, the caret left where it is; null while find is in the rendered pane. */
+  recountFind(): FindResult | null;
   /** Edit mode: replaces the current find match in the source and moves to the next. */
   replace(text: string): FindResult;
   /** Edit mode: replaces every find match in the source; how many it replaced. */
@@ -271,6 +273,10 @@ export function DocumentView({
       sourceText: () => host().source?.text() ?? null,
       replaceSource: (text) => host().source?.setText(text),
       scrollToLine: (line) => host().source?.scrollToLine(line),
+      recountFind: () => {
+        const sourceView = host().source;
+        return sourceView && active().find === sourceView.find ? sourceView.findRecount() : null;
+      },
       replace: (text) => host().source?.replace(text) ?? NO_MATCHES,
       replaceAll: (text) => host().source?.replaceAll(text) ?? 0,
       tree: () => host().tree,

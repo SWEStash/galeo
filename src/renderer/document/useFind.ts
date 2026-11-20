@@ -48,6 +48,11 @@ export function useFind(handle: RefObject<DocumentHandle | null>) {
     },
     [handle],
   );
+  /** An edit in the source: the count follows it, the caret stays. */
+  const recountFind = useCallback(() => {
+    const result = handle.current?.recountFind();
+    if (result) setFindResult(result);
+  }, [handle]);
   const replaceMatch = useCallback(
     (text: string) => {
       setReplaced(null);
@@ -69,5 +74,5 @@ export function useFind(handle: RefObject<DocumentHandle | null>) {
     // Esc keeps the scroll position at the current match; focus goes back to the document.
     handle.current?.focus();
   }, [handle]);
-  return { find, findSeed, findResult, setFindResult, replaced, openFind, openFindOn, endReplace, runFind, stepFind, replaceMatch, replaceAll, closeFind };
+  return { find, findSeed, findResult, setFindResult, replaced, openFind, openFindOn, endReplace, runFind, stepFind, recountFind, replaceMatch, replaceAll, closeFind };
 }

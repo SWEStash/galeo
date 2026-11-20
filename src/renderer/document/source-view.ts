@@ -69,6 +69,8 @@ export interface SourceView {
   /** Highlights `query` and selects the first match from the reading position on. */
   find(query: string, options: FindOptions): FindResult;
   findStep(direction: 1 | -1): FindResult;
+  /** Counts the active query's matches again after an edit; the selection stays. */
+  findRecount(): FindResult;
   clearFind(): void;
   /** Edit mode: replaces the current match with `text` (as typed) and selects the next one. */
   replace(text: string): FindResult;
@@ -328,6 +330,10 @@ export function createSourceView(options: {
       (direction === 1 ? findNext : findPrevious)(view);
       const { from } = view.state.selection.main;
       view.dispatch({ effects: EditorView.scrollIntoView(from, { y: 'center' }) });
+      return where();
+    },
+    findRecount() {
+      if (active.search) recount();
       return where();
     },
     clearFind() {

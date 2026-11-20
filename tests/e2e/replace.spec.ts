@@ -119,6 +119,25 @@ test('in split with find open, typing stays at the caret while the preview follo
   }
 });
 
+test('with find open, an edit that breaks or makes a match changes the count', async () => {
+  const { window, editor, close } = await editing('# Title\n\ncat one\n\ncat two\n\ndog three\n');
+  try {
+    await window.keyboard.press('ControlOrMeta+F');
+    await window.keyboard.type('cat');
+    await expect(status(window)).toHaveText(/of 2$/);
+    await editor.locator('.cm-line', { hasText: 'cat two' }).click();
+    await window.keyboard.press('Home');
+    await window.keyboard.press('Delete');
+    await expect(status(window)).toHaveText(/of 1$/);
+    await editor.locator('.cm-line', { hasText: 'dog three' }).click();
+    await window.keyboard.press('End');
+    await window.keyboard.type(' cat');
+    await expect(status(window)).toHaveText(/of 2$/);
+  } finally {
+    await close();
+  }
+});
+
 test('the find bar with its replace row has no accessibility violations, light or dark', async () => {
   const { app, window, close } = await editing('# Notes\n\nplan plan\n');
   try {

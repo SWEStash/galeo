@@ -341,6 +341,7 @@ export function DocumentPane({
   const edited = useCallback(() => {
     edits.current++;
     if (liveNow.current) preview.poke();
+    if (finding.current) recountFind();
     if (!dirtyNow.current) markDirty(true);
     clearTimeout(keepTimer.current);
     keepTimer.current = setTimeout(keepNow, KEEP_MS);
@@ -495,7 +496,8 @@ export function DocumentPane({
     return () => onEditor(null);
   }, [editing, onEditor]);
   const { viewer, expandDiagram, expandImage, closeViewer } = useZoomViewer(active);
-  const { find, findSeed, findResult, setFindResult, replaced, openFind, openFindOn, endReplace, runFind, stepFind, replaceMatch, replaceAll, closeFind } = useFind(documentHandle);
+  const { find, findSeed, findResult, setFindResult, replaced, openFind, openFindOn, endReplace, runFind, stepFind, recountFind, replaceMatch, replaceAll, closeFind } = useFind(documentHandle);
+  const finding = useLatest(find.open && find.query !== '');
 
   // The outline: open for the window, shown by the active pane only. Markdown's comes with its
   // rendered view; a format with no rendered view (YAML, TOML) has its source's.
