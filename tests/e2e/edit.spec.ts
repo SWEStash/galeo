@@ -145,6 +145,27 @@ test('in edit mode a task box ticks from the preview of split view, as an edit C
   }
 });
 
+test('in edit mode with nothing unsaved, a change on disk shows in the editor and in the split preview', async () => {
+  const dir = tempHome();
+  const file = path.join(dir, 'notes.md');
+  writeFileSync(file, '# Notes\n');
+  const { app, window, close } = await launchApp(['--', file]);
+  try {
+    const document = shownDocument(window);
+    await expect(document.locator('h1')).toHaveText('Notes');
+    await pressInMain(app, window, 'E');
+    await expect(document.locator('.cm-content')).toBeFocused();
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(document.locator('h1')).toHaveText('Notes');
+    saveFile(file, '# Theirs\n');
+    await expect(document.locator('.cm-content')).toHaveText('# Theirs');
+    await expect(document.locator('h1')).toHaveText('Theirs');
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
 test('after a save, the rendered view shows the saved text', async () => {
   const dir = tempHome();
   const file = path.join(dir, 'notes.md');

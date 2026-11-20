@@ -314,7 +314,11 @@ export function DocumentPane({
     else setDisk('disk-unreadable');
   };
   useEffect(() => {
-    if (content.state === 'ready' && !dirtyNow.current) base.current = content.version;
+    if (content.state === 'ready' && !dirtyNow.current) {
+      base.current = content.version;
+      // With nothing unsaved the editor takes the new read: a live preview shows it too.
+      if (liveNow.current) setPreviewText(content.text);
+    }
     if (!dirtyNow.current) setHeld(false);
     assess(content);
   }, [content]);
