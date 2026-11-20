@@ -725,7 +725,12 @@ export function DocumentPane({
 
   // Switching views, the rendered HTML arriving, or replace moving find to the source repeats the
   // search in what is now showing.
+  const searchedIn = useRef({ view, replace: find.replace });
   useEffect(() => {
+    const before = searchedIn.current;
+    searchedIn.current = { view, replace: find.replace };
+    // Typing in split renders the preview anew: searching again would move the caret to a match (#71).
+    if (live && before.view === view && before.replace === find.replace) return;
     if (find.open && find.query) runFind(find.query, find.caseSensitive, find.line);
     // Only a change of view, content or target repeats the search, not typing (that already ran it).
   }, [view, rendered, find.replace]);

@@ -97,6 +97,28 @@ test('in split, replace changes the source even after a click in the preview, an
   }
 });
 
+test('in split with find open, typing stays at the caret while the preview follows it', async () => {
+  const { window, editor, close } = await editing('# Title\n\ncat one\n\ncat two\n\ncat three\n\nend\n');
+  try {
+    const document = shownDocument(window);
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await window.keyboard.press('ControlOrMeta+F');
+    await window.keyboard.type('cat');
+    await expect(status(window)).toHaveText(/of 3$/);
+    await editor.locator('.cm-line', { hasText: 'end' }).click();
+    await window.keyboard.press('End');
+    // A word at a time, each one in the preview before the next: every render could move the caret.
+    for (const [index, word] of [' alpha', ' beta', ' gamma'].entries()) {
+      await window.keyboard.type(word);
+      await expect(document.locator('p').last()).toHaveText(`end${[' alpha', ' beta', ' gamma'].slice(0, index + 1).join('')}`);
+    }
+    await expect(editor.locator('.cm-line', { hasText: 'end' })).toHaveText('end alpha beta gamma');
+    await expect(editor.locator('.cm-line', { hasText: 'cat' })).toHaveText(['cat one', 'cat two', 'cat three']);
+  } finally {
+    await close();
+  }
+});
+
 test('the find bar with its replace row has no accessibility violations, light or dark', async () => {
   const { app, window, close } = await editing('# Notes\n\nplan plan\n');
   try {
