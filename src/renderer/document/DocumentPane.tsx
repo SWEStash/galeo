@@ -753,7 +753,7 @@ export function DocumentPane({
   // An anchor waits until the rendered view has content to scroll to.
   useEffect(() => {
     if (!pendingAnchor || view === 'source' || !rendered) return;
-    documentHandle.current?.scrollToAnchor(pendingAnchor.anchor);
+    documentHandle.current?.landOnAnchor(pendingAnchor.anchor);
     onAnchorShown();
   }, [pendingAnchor, view, rendered, onAnchorShown]);
 

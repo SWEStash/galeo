@@ -712,15 +712,12 @@ describe('App', () => {
     const api = oneDoc('/d/a.md', readyContent('markdown', 'rendered', '[go](#goals)'));
     api.documents.followLink.mockResolvedValue({ kind: 'anchor', anchor: 'goals' });
     workerMode = 'links';
-    const scrolled: string[] = [];
-    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function (this: Element) {
-      scrolled.push(this.id);
-    });
     const container = await renderApp();
     const shadow = await documentShadow(container);
     const link = await vi.waitFor(() => shadow.querySelector<HTMLAnchorElement>('a[href="#goals"]')!);
     await act(async () => link.click());
-    await vi.waitFor(() => expect(scrolled).toContain('user-content-goals'));
+    // The link's target is marked where it landed (#75).
+    await vi.waitFor(() => expect(shadow.querySelector('.galeo-landed')?.id).toBe('user-content-goals'));
   });
 
   it("lands on the anchor of a link to another file in that file, not the one it came from", async () => {
@@ -729,15 +726,18 @@ describe('App', () => {
     api.documents.read.mockResolvedValueOnce(first).mockResolvedValueOnce(readyContent('markdown', 'rendered', 'second'));
     api.documents.followLink.mockResolvedValue({ kind: 'navigated', anchor: 'goals' });
     workerMode = 'links';
-    const scrolledIn: string[] = [];
-    vi.spyOn(Element.prototype, 'scrollIntoView').mockImplementation(function (this: Element) {
-      scrolledIn.push((this.getRootNode() as ShadowRoot).querySelector('article p')?.textContent ?? '');
+    // Landing measures the target, in whichever document it is (#75).
+    const landedIn: string[] = [];
+    const measure = Element.prototype.getBoundingClientRect;
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      if (this.id === 'user-content-goals') landedIn.push((this.getRootNode() as ShadowRoot).querySelector('article p')?.textContent ?? '');
+      return measure.call(this);
     });
     const container = await renderApp();
     const link = await vi.waitFor(async () => (await documentShadow(container)).querySelector<HTMLAnchorElement>('a[href="next.md#goals"]')!);
     await act(async () => link.click());
-    await vi.waitFor(() => expect(scrolledIn).toContain('second'));
-    expect(scrolledIn).not.toContain('next');
+    await vi.waitFor(() => expect(landedIn).toContain('second'));
+    expect(landedIn).not.toContain('next');
   });
 
   it('says so in the status bar when main refuses a link', async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, scrollTopFor } from './anchor';
+import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, landingOffset, scrollTopFor } from './anchor';
 
 describe('firstVisibleLine', () => {
   const blocks = [
@@ -131,5 +131,15 @@ describe('currentHeading', () => {
   it('is the first heading before any is reached (the top of the document), and null without headings', () => {
     expect(currentHeading(headings, 50)).toBe('intro');
     expect(currentHeading([], 50)).toBeNull();
+  });
+});
+
+describe('landingOffset', () => {
+  it('is a sixth of the view, so a link target lands with context above it (#75)', () => {
+    expect(landingOffset(900, 24)).toBe(150);
+  });
+
+  it('is at least three lines in a short view', () => {
+    expect(landingOffset(300, 24)).toBe(72);
   });
 });

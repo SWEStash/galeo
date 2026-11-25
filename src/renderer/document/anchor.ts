@@ -82,6 +82,14 @@ export function keptTopFor(
   return scrollTopFor(anchorAt(before, { top, ...size }), after, size);
 }
 
+/**
+ * How far below the top of the view a link's target lands: a sixth of the view, at least three
+ * lines, so the eye doesn't have to go to the top edge and the lines above show where it is (#75).
+ */
+export function landingOffset(viewport: number, lineHeight: number): number {
+  return Math.max(viewport / 6, 3 * lineHeight);
+}
+
 /** A heading scrolled to sits a few pixels under the top of the view (rounding, margins). */
 const HEADING_SLACK_PX = 8;
 

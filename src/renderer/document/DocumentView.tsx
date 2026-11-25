@@ -14,7 +14,7 @@ import type { JsonTreeView } from './json-tree-view';
 import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
 import type { OutlineEntry } from '../worker/pipeline/render';
-import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, scrollTopFor, type PlacedBlock } from './anchor';
+import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, landingOffset, scrollTopFor, type PlacedBlock } from './anchor';
 import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, placesFractions, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
@@ -105,6 +105,10 @@ export interface DocumentViewProps {
 }
 
 
+/** How long a link's target stays marked before the mark fades (#75). */
+const LANDED_MS = 1500;
+const LANDED_CLASS = 'galeo-landed';
+
 /** Scrolling has settled once it pauses this long; only then is the position reported. */
 const POSITION_SETTLE_MS = 300;
 
@@ -134,6 +138,11 @@ export interface DocumentHandle extends Finder {
   focus(): void;
   /** Scrolls the rendered view to an anchor ('' is the top); false if there's no such place. */
   scrollToAnchor(anchor: string): boolean;
+  /**
+   * Lands a followed link on its anchor ('' is the top): a little below the top of the view, marked
+   * for a moment (#75); false if there's no such place.
+   */
+  landOnAnchor(anchor: string): boolean;
   /** Scrolls the source view to a line. */
   scrollToLine(line: number): void;
   /** The source view's text with the reader's edits, or null before it exists. */
@@ -237,6 +246,10 @@ export function DocumentView({
   const turnedTo = useRef<'source' | 'rendered'>('source');
   const host = () => mountDocumentHost(container.current!);
   const sync = useRef<{ controller: ScrollSync; rendered: SyncPane } | null>(null);
+  /** The link target marked last, and the timer that clears its mark. */
+  const landed = useRef<{ target: Element; timer: ReturnType<typeof setTimeout> } | null>(null);
+  /** The heading a link landed on, and where the view was left: the current heading until the reader scrolls. */
+  const landedHeading = useRef<{ id: string; top: number } | null>(null);
 
   const inRendered = () => (renderedFinder.current ??= createRenderedFinder(host().article, () => host().renderedScroller));
   /** The finder for the view showing. */
@@ -249,8 +262,27 @@ export function DocumentView({
     return inRendered();
   };
 
+  /** The element an anchor names: footnote links name the full id, heading links the slug, which has the prefix. */
+  const anchorTarget = (anchor: string): HTMLElement | null => {
+    const root = host().root;
+    return root.getElementById(anchor) ?? root.getElementById(`${ID_PREFIX}${anchor}`);
+  };
+  /** Marks a link's target for a moment; the mark fades as it goes (document.css). */
+  const markLanded = (target: Element) => {
+    if (landed.current) {
+      clearTimeout(landed.current.timer);
+      landed.current.target.classList.remove(LANDED_CLASS);
+    }
+    target.classList.add(LANDED_CLASS);
+    const timer = setTimeout(() => {
+      target.classList.remove(LANDED_CLASS);
+      landed.current = null;
+    }, LANDED_MS);
+    landed.current = { target, timer };
+  };
+
   useImperativeHandle(ref, () => {
-    return {
+    const handle: DocumentHandle = {
       takeSpellingClick: () => {
         const recent = performance.now() - spellingClick.current < SPELLING_CLICK_MS;
         spellingClick.current = -Infinity;
@@ -312,13 +344,23 @@ export function DocumentView({
           host().renderedScroller.scrollTop = 0;
           return true;
         }
-        // Footnote links name the full id; heading links name the slug, which has the prefix.
-        const root = host().root;
-        const target = root.getElementById(anchor) ?? root.getElementById(`${ID_PREFIX}${anchor}`);
+        const target = anchorTarget(anchor);
         target?.scrollIntoView({ block: 'start' });
         return target !== null;
       },
+      landOnAnchor: (anchor) => {
+        const target = anchor ? anchorTarget(anchor) : null;
+        if (!target) return handle.scrollToAnchor(anchor);
+        const scroller = host().renderedScroller;
+        const lineHeight = Number.parseFloat(getComputedStyle(host().article).lineHeight) || 0;
+        const below = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTop += below - landingOffset(scroller.clientHeight, lineHeight);
+        landedHeading.current = /^H[1-6]$/.test(target.tagName) ? { id: target.id, top: scroller.scrollTop } : null;
+        markLanded(target);
+        return true;
+      },
     };
+    return handle;
   }, [view, replacing]);
 
   // Links never navigate the page: every click goes to main as the href written in the document.
@@ -693,7 +735,8 @@ export function DocumentView({
     };
   }, [view, rendered, sourceReady]);
 
-  // The outline follows the reader: the heading at the top of the view, once per frame of scrolling.
+  // The outline follows the reader: the heading at the top of the view, once per frame of scrolling; a
+  // link's heading while the view stays where the link landed it, below the top (#75).
   useEffect(() => {
     if (!onHeading || !showsRendered(view) || !rendered) return;
     const element = host().renderedScroller;
@@ -703,6 +746,9 @@ export function DocumentView({
         id: heading.id,
         top: heading.getBoundingClientRect().top,
       }));
+      const link = landedHeading.current;
+      if (link && link.top === element.scrollTop) return onHeading(link.id);
+      landedHeading.current = null;
       onHeading(currentHeading(headings, element.getBoundingClientRect().top));
     };
     update();

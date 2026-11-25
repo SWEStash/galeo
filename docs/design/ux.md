@@ -274,6 +274,9 @@ mode closes the replace row and keeps find open.
 - Click a relative link to a supported file → navigates **in the same tab**, with per-tab
   back/forward (Alt+← / Alt+→), like a browser. Ctrl+click or middle-click → new background tab.
 - `#anchor` links scroll within the document and are part of back/forward history.
+- A link's target (in this document or another) lands about a sixth of the view below the top, at
+  least three lines, and is tinted for 1.5 s, then the tint fades (#75). The outline names the target
+  until the reader scrolls. Choosing a heading in the outline still puts it at the top, unmarked.
 - (v0.7) The document's right-click menu, which main builds: Back and Forward (greyed out without
   history), Find…, Reload, Edit (main's own Ctrl+E) or Save while editing, in a JSON tree Expand all,
   Collapse all and Copy JSON path, on rendered Markdown Copy as rich text and Export to PDF…, then Open with default

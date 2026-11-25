@@ -77,6 +77,55 @@ test('a link opened in a new tab lands on its heading, there and within the docu
   }
 });
 
+/** How far an element sits below the top of the shown document view, as a share of the view's height. */
+function shareFromTop(window: Page, text: string): Promise<number> {
+  return window.getByTestId('document').filter({ visible: true }).evaluate((view, wanted) => {
+    const heading = [...view.shadowRoot!.querySelectorAll('h1, h2, h3, h4, h5, h6')].find((each) => each.textContent?.includes(wanted))!;
+    return (heading.getBoundingClientRect().top - view.getBoundingClientRect().top) / view.clientHeight;
+  }, text);
+}
+
+test('a link lands its heading below the top of the view, marked for a moment, there and within the document (#75)', async () => {
+  const { window, close } = await launchApp(['--', index], { env });
+  try {
+    const document = window.getByTestId('document');
+    await expect(heading(window)).toHaveText('Links index');
+    await window.keyboard.press('ControlOrMeta+Shift+O');
+    const outline = window.getByRole('navigation', { name: 'Outline' });
+    await expect(outline).toBeVisible();
+    const current = outline.locator('[aria-current="location"]');
+    for (const [link, name] of [
+      ['Raw HTML link to a section', 'Details'],
+      ['A section further down', 'Far section'],
+    ] as const) {
+      if (name === 'Far section') await window.keyboard.press('Alt+ArrowLeft');
+      await document.getByRole('link', { name: link }).click();
+      const target = document.locator('h2', { hasText: name });
+      await expect(target).toHaveClass(/galeo-landed/);
+      await expect.poll(() => shareFromTop(window, name)).toBeCloseTo(1 / 6, 1);
+      await expect(current).toHaveText(name);
+      await expect(target).not.toHaveClass(/galeo-landed/, { timeout: 3000 });
+    }
+  } finally {
+    await close();
+  }
+});
+
+test('a link to a heading too near the end to land below the top still marks it (#75)', async () => {
+  const dir = tempHome();
+  const doc = path.join(dir, 'short.md');
+  writeFileSync(doc, '# Short\n\n[To the end](#the-end)\n\n## The end\n\nLast words.\n');
+  const { window, close } = await launchApp(['--', doc], { home: dir, env });
+  try {
+    const document = window.getByTestId('document');
+    await document.getByRole('link', { name: 'To the end' }).click();
+    await expect(document.locator('h2', { hasText: 'The end' })).toHaveClass(/galeo-landed/);
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
 test('web and mail links go to the desktop, normalized, and never navigate the page', async () => {
   const { app, window, close } = await launchApp(['--', index], { env });
   try {

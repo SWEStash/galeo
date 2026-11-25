@@ -124,7 +124,8 @@ Contrast, computed with `tests/helpers/contrast.ts` (minimum: 4.5 text, 3 contro
 | `--galeo-motion-base` | 150 ms | Menus and overlays opening (fade + 4 px rise), the side panel collapsing |
 | `--galeo-ease` | `cubic-bezier(0.2, 0, 0, 1)` | Everything |
 
-Nothing animates on close, on tab switches or in the document. Under `prefers-reduced-motion:
+Nothing animates on close, on tab switches or in the document, save one exception: a followed link's
+target fades its mark out over `--galeo-motion-base` (#75), so the eye finds where it landed. Under `prefers-reduced-motion:
 reduce` every duration is 0 (one rule in `tokens.css`), as the reload pulse and skeleton already are.
 
 ### Focus

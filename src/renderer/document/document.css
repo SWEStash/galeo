@@ -505,6 +505,15 @@ dl[data-galeo-mdx='props'] dd {
   color: #1f2328;
 }
 
+/* A followed link's target, marked for a moment after the jump; the mark fades as it goes (#75). The one
+   animation in the document: it shows where the eye should land. Reduced motion makes the fade instant. */
+[id] {
+  transition: background-color var(--galeo-motion-base) var(--galeo-ease);
+}
+.galeo-landed {
+  background-color: var(--galeo-color-mark);
+}
+
 /* A block that failed on its own (a formula), with its message and source; the rest renders. */
 .galeo-block-error {
   display: inline-block;
