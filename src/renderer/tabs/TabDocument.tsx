@@ -149,12 +149,12 @@ function LiveTab({ id, active, path, staleReads, zoom, store, client, scheme, on
     [id, moved, onMessage],
   );
 
-  // Main's Ctrl+E for this tab (ADR-013): each one is a new request for the pane.
+  // Main's Ctrl+E for this tab (ADR-013), or its Ctrl+H on a reading tab (ADR-038): each one is a new request for the pane.
   const [editRequest, setEditRequest] = useState<EditRequest | null>(null);
   useEffect(
     () =>
-      window.galeo.documents.onEditMode(({ id: tab, edit }) => {
-        if (tab === id) setEditRequest((last) => ({ edit, token: (last?.token ?? 0) + 1 }));
+      window.galeo.documents.onEditMode(({ id: tab, edit, replace }) => {
+        if (tab === id) setEditRequest((last) => ({ edit, replace, token: (last?.token ?? 0) + 1 }));
       }),
     [id],
   );

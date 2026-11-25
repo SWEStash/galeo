@@ -68,7 +68,7 @@ export function WatchPanel({ state, platform, onClose, say, autoFocus = false }:
           <bdi>{state.shown}</bdi>
         </span>
         {state.polling && <span className="watch-note">checked every few seconds</span>}
-        <button type="button" className="watch-close" aria-label="Close watched folder (Ctrl+Shift+D)" title="Close (Ctrl+Shift+D)" onClick={onClose}>
+        <button type="button" className="panel-close watch-close" aria-label="Close watched folder (Ctrl+Shift+D)" title="Close (Ctrl+Shift+D)" onClick={onClose}>
           <Icon name="close" />
         </button>
       </header>

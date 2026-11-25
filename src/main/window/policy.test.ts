@@ -90,6 +90,7 @@ describe('mainKey', () => {
     expect(mainKey(input('e', true, 'keyUp'), 'linux')).toBeNull();
     expect(mainKey(input('f'), 'linux')).toBeNull();
     expect(mainKey(input('e', false), 'linux')).toBeNull();
+    expect(mainKey(input('h'), 'linux')).toBe('findReplace');
   });
 
   it('names the window keys main handles itself, and leaves tab keys to the page', () => {

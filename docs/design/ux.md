@@ -55,8 +55,8 @@ the [decision records](../decisions/)).
 | **Find in all tabs** (v0.4) | Matches in the source text of the window's tabs, by tab, each with its line (F19) | Ctrl+Shift+F, the palette / Esc |
 | **Side tab panel** (v0.4) | The tabs as a vertical list on the left, when the profile's setting puts them there (F18) | Setting; the panel button or Ctrl+Shift+B collapses and expands it |
 | **Command palette** | Every command by name, with its shortcut; also "About galeo" (version, licence, third-party notices), which v0.3 adds to the profile menu and Settings | Ctrl+Shift+P / Esc |
-| **Find bar** | In-document search, top-right overlay | Ctrl+F / Esc |
-| **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side; (v0.6) a heading with task items under it (up to the next heading) shows them done of all, "2/5", at the end of its row, read as "(2 of 5 tasks done)" | Ctrl+Shift+O (toggle) |
+| **Find bar** | In-document search, top-right overlay, clear of the outline when it is open | Ctrl+F / Esc, or its × (v0.11) |
+| **Outline panel** | Heading tree of the active Markdown document (top-level keys for YAML and TOML), right side; (v0.6) a heading with task items under it (up to the next heading) shows them done of all, "2/5", at the end of its row, read as "(2 of 5 tasks done)" | Ctrl+Shift+O (toggle) / Esc, or its × (v0.11) |
 | **Viewer** (diagrams and images) | One Mermaid diagram or document image filling the window, fitted: zoom (− / + buttons and keys, the wheel around the pointer), pan (drag, arrows), 0 fits, 1 shows it at 100 %; (v0.7) a diagram's Save as SVG… or Save as PNG… (main asks where) | A diagram's or image's ⤢ Expand button (on hover or keyboard focus), or a click on an image that isn't a link; images smaller than 48 px both ways (icons, badges) don't offer it / Esc, focus back on the button (owner, 2026-10-06) |
 | **Profile menu** | Switch / new / rename / delete profile, open profile settings, About galeo (v0.3); (v0.7) New window and Settings | Click profile chip or Ctrl+Shift+M |
 | **Watched folder panel** (v0.8) | The files created or changed in the window's watched folder, newest first (F21) | `--watch`, *Watch folder…*, the title-bar folder button, Ctrl+Shift+D / its close button |
@@ -237,15 +237,20 @@ placement is not restorable on Wayland).
 Overlay at top-right with query, `n of m`, previous/next (Shift+Enter / Enter, F3 / Shift+F3),
 case-sensitivity toggle. Works in rendered and source views (source view searches raw text).
 Matches highlighted; the current match scrolls into the middle third of the viewport. Esc closes
-and keeps the scroll position at the current match.
+and keeps the scroll position at the current match. (v0.11, #70) The bar's × button closes it
+too. With text selected on one line, in the rendered view or the editor, Ctrl+F puts it in the
+field and starts from it, also when the bar is already open. A selection over several lines
+leaves the field as it was.
 
 In edit mode, Ctrl+H opens the same bar with a replace row (v0.2): *Replace with*, *Replace*
 (or Enter in that field) swaps the current match and selects the next, *Replace all* swaps every
 match as one undo step and announces "Replaced N". The replacement is literal, like the query.
 In split view the bar then searches the source pane, the only one replace can change; from the
-rendered view alone, Ctrl+H goes back to the editor first (#78). Outside
-edit mode Ctrl+H opens nothing and the status bar says it needs edit mode (Ctrl+E); leaving edit
-mode closes the replace row and keeps find open.
+rendered view alone, Ctrl+H goes back to the editor first (#78). (v0.11, ADR-038) While
+reading, Ctrl+H turns on edit mode first, as Ctrl+E does (with main's question for a file the
+reader didn't hand over), then opens the replace row; the view becomes the editor, and split
+stays split. The palette's *Find and replace* can't turn on edit mode, so while reading it says
+so in the status bar. Leaving edit mode closes the replace row and keeps find open.
 
 ### F10 — Views
 
@@ -478,7 +483,7 @@ labelled placeholder boxes (`<Callout>` with its props listed).
 ### F19 — Find in all tabs (v0.4)
 
 - Ctrl+Shift+F (also in the palette) opens a list over the document, like search tabs (F16): a
-  search field with a **Match case** toggle (Aa), then one group per tab with matches, headed by
+  search field (v0.11: holding the text selected on one line in the shown tab) with a **Match case** toggle (Aa), then one group per tab with matches, headed by
   its name, folder and count ("plan.md — ~/docs · 3 matches"), listing its first 20 matches, each
   with its line number and the text around it on that line. Tabs whose file couldn't be read come
   last under **Not searched**, with the reason.
@@ -595,7 +600,7 @@ the native menu on the active tab.
 | Edit mode (v0.2) | Ctrl+E | |
 | Save (v0.2) | Ctrl+S | |
 | Split view (v0.2; CSV/TSV v0.3) | Ctrl+\ | Source left, rendered right; edit mode keeps it; Ctrl+U leaves it |
-| Find & replace (v0.2) | Ctrl+H | Edit mode only |
+| Find & replace (v0.2) | Ctrl+H | Edit mode; (v0.11) while reading it turns edit mode on first (ADR-038) |
 | Next / previous change (v0.6) | F7 / Shift+F7 | Change marks (F20); *Clear change marks* is in the palette |
 | Add the next match / every match as cursors (v0.2) | Ctrl+D / Ctrl+Shift+L | Edit mode |
 | Add a cursor above / below (v0.2) | Shift+Alt+↑ / Shift+Alt+↓ | Edit mode. Ctrl+Alt+↑/↓ is GNOME's (workspaces); these keys were CodeMirror's copy line up/down, which is left out |

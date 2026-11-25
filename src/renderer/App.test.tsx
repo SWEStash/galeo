@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { AppInfo, GaleoApi, StartInfo, DocumentContent, DocumentRecord, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
+import type { AppInfo, GaleoApi, StartInfo, DocumentContent, DocumentRecord, Events, ProfilesState, SettingsState, TabSnapshot } from '../shared/contracts';
 import { DEFAULT_SETTINGS, type Settings } from '../shared/settings';
 import type { WatchState } from '../shared/watch';
 import type { FormatId } from '../shared/formats';
@@ -56,7 +56,7 @@ const events: {
   demote?: (ids: string[]) => void;
   stale?: (id: string) => void;
   dragging?: (on: boolean) => void;
-  editMode?: (request: { id: string; edit: 'granted' | 'leave' | 'refused' }) => void;
+  editMode?: (request: Events['documents.editMode']) => void;
   confirmClose?: (ids: string[]) => void;
   settings?: (state: SettingsState) => void;
   profiles?: (state: ProfilesState) => void;
@@ -99,7 +99,7 @@ function stubBridge(info: Partial<AppInfo> = {}, documents: { records?: Document
         events.confirmClose = listener;
         return () => {};
       }),
-      onEditMode: vi.fn((listener: (request: { id: string; edit: 'granted' | 'leave' | 'refused' }) => void) => {
+      onEditMode: vi.fn((listener: (request: Events['documents.editMode']) => void) => {
         events.editMode = listener;
         return () => {};
       }),
@@ -1328,6 +1328,22 @@ describe('App editing', () => {
     await vi.waitFor(() =>
       expect(container.querySelector('[data-testid="status-message"]')?.textContent).toBe('Find and replace works in edit mode (Ctrl+E)'),
     );
+  });
+
+  it("opens the replace row with main's grant from Ctrl+H on a reading tab (ADR-038)", async () => {
+    const { EditorView } = await import('@codemirror/view');
+    vi.spyOn(EditorView.prototype, 'focus').mockImplementation(() => {});
+    oneDoc('/d/a.md', { ...readyContent('markdown', 'rendered', '# hi'), path: '/d/a.md' });
+    const container = await renderApp();
+    await documentShadow(container);
+    await act(async () => events.editMode!({ id: 'doc-1', edit: 'granted', replace: true }));
+    await vi.waitFor(() => expect(container.querySelector('.find-bar input[aria-label="Replace with"]')).not.toBeNull(), { timeout: 5_000 });
+    expect(container.querySelector('[data-testid="status-mode"]')?.textContent).toBe('Editing');
+  });
+
+  it('opens no replace row with a plain grant (Ctrl+E)', async () => {
+    const { container } = await editing();
+    expect(container.querySelector('.find-bar')).toBeNull();
   });
 
   it("opens main's grant as an editable source view, and marks it in the tab and the status bar", async () => {

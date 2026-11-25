@@ -19,6 +19,7 @@ import type { OutlineEntry } from '../worker/pipeline/render';
 import { DocumentLoading, DocumentState, type DiskChange } from './DocumentState';
 import { DocumentView, type DocumentHandle, type RenderedContent } from './DocumentView';
 import { FindBar } from './FindBar';
+import { findSeedOf, selectedQueries } from './find-seed';
 import type { ColorScheme } from './host';
 import { FORMAT_NAMES, sourceLanguage } from './formats';
 import { useDelayed } from './useDelayed';
@@ -275,6 +276,9 @@ export function DocumentPane({
   // Edit mode (ADR-013). While the text has unsaved changes, the editor keeps it: a new read of
   // the file (it changed on disk) neither replaces it nor becomes the version a save names.
   const [editing, setEditing] = useState(false);
+  // Ctrl+H from the rendered view in edit mode (#78), or granting edit mode on a reading tab (ADR-038):
+  // the replace row opens once the editor shows and took the caret, so the find field keeps the focus.
+  const replacePending = useRef(false);
   // What changed since the reader last looked (ADR-030): rendered Markdown and the source view, not logs.
   const changeMarks = useChangeMarks({ tabId, path: ready?.path ?? '', text: ready?.text ?? null, version: ready?.version ?? null, active, editing, encoding: ready?.encoding ?? null });
   const shownChanges = ready && ready.format !== 'log' ? changeMarks.ranges : null;
@@ -378,6 +382,7 @@ export function DocumentPane({
       }
       setEditing(true);
       setChosenView(viewForEditing(layout));
+      if (editRequest.replace) replacePending.current = true;
     } else if (dirtyNow.current) {
       void onConfirmLeave().then((left) => {
         if (!left) return;
@@ -629,7 +634,11 @@ export function DocumentPane({
           onMessage('Find works in the source view (Ctrl+U)');
           return true;
         }
-        openFind();
+        // Text selected on one line is the query, searched from there (#70); not while in the find field.
+        const selected = document.activeElement instanceof HTMLInputElement ? null : documentHandle.current?.selection();
+        const query = findSeedOf(selected?.text ?? null);
+        if (query) openFindOn({ query, caseSensitive: find.caseSensitive, line: selected?.line });
+        else openFind();
         return true;
       },
       findReplace: () => {
@@ -638,7 +647,7 @@ export function DocumentPane({
         else if (view === 'rendered') {
           // Replacing is the editor's: from the rendered view alone, back to it first (#78).
           setChosenView('source');
-          setReplaceOnSource(true);
+          replacePending.current = true;
         } else openFind({ replace: true });
         return true;
       },
@@ -728,14 +737,17 @@ export function DocumentPane({
     return () => window.removeEventListener('keydown', onKey, true);
   }, [active, find.open, closeFind]);
 
-  // Ctrl+H from the rendered view in edit mode: the replace row opens once the editor shows, after
-  // the editor took the focus the view switch gives it, so the find field keeps it.
-  const [replaceOnSource, setReplaceOnSource] = useState(false);
-  useEffect(() => {
-    if (!replaceOnSource || view !== 'source') return;
-    setReplaceOnSource(false);
+  const editorFocused = useCallback(() => {
+    if (!replacePending.current) return;
+    replacePending.current = false;
     openFind({ replace: true });
-  }, [replaceOnSource, view, openFind]);
+  }, [openFind]);
+
+  // Find in all tabs starts from the text selected in the shown tab (#70).
+  useEffect(() => {
+    selectedQueries.set(tabId, () => findSeedOf(documentHandle.current?.selection()?.text ?? null));
+    return () => void selectedQueries.delete(tabId);
+  }, [tabId]);
 
   // Replace is edit mode's: leaving edit mode closes its row and leaves find open.
   useEffect(() => {
@@ -878,6 +890,7 @@ export function DocumentPane({
           }}
           editable={editing}
           onEdit={edited}
+          onEditorFocused={editorFocused}
           vim={vim}
           spellCheck={spellCheck}
           replacing={find.open && find.replace}

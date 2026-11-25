@@ -1,16 +1,18 @@
 import type { Events } from '../../shared/contracts';
 
-/** Find in the shown document from a line; a new `token` asks again for the same query. */
+/** Find in the shown document from a line, else from the reading position; a new `token` asks again for the same query. */
 export interface FindRequest {
   query: string;
   caseSensitive: boolean;
-  line: number;
+  line?: number | undefined;
   token: number;
 }
 
 /** Main's word on edit mode for the tab (ADR-013); a new `token` is a new word. */
 export interface EditRequest {
   edit: Events['documents.editMode']['edit'];
+  /** Granted from Ctrl+H on a reading tab (ADR-038): replace opens once the editor shows. */
+  replace?: true | undefined;
   token: number;
 }
 

@@ -37,6 +37,14 @@ afterEach(() => {
 });
 
 describe('FindBar', () => {
+  it('closes from its button, named with its key (#70)', async () => {
+    const { container, props } = await render();
+    const close = container.querySelector<HTMLButtonElement>('button[aria-label="Close find (Esc)"]');
+    expect(close?.title).toBe('Close (Esc)');
+    await act(async () => close!.click());
+    expect(props.onClose).toHaveBeenCalledOnce();
+  });
+
   it('is a labelled search region whose field takes focus when it opens', async () => {
     const { container, input } = await render();
     expect(container.querySelector('[role="search"]')?.getAttribute('aria-label')).toBe('Find in document');
@@ -84,10 +92,10 @@ describe('FindBar', () => {
     expect(status.textContent).toBe('1 of 10000+');
   });
 
-  it('has named previous and next buttons and a match-case toggle', async () => {
+  it('has named previous and next buttons and a match-case toggle, then close', async () => {
     const { container, input, props } = await render();
     const buttons = [...container.querySelectorAll('button')];
-    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Match case', 'Previous match', 'Next match']);
+    expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual(['Match case', 'Previous match', 'Next match', 'Close find (Esc)']);
     const matchCase = buttons[0]!;
     expect(matchCase.getAttribute('aria-pressed')).toBe('false');
     await type(input, 'Plan');

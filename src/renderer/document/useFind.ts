@@ -1,4 +1,4 @@
-import { useCallback, useState, type RefObject } from 'react';
+import { useCallback, useRef, useState, type RefObject } from 'react';
 import { NO_MATCHES, type FindResult } from '../../shared/find';
 import type { DocumentHandle } from './DocumentView';
 import type { FindRequest } from './requests';
@@ -24,11 +24,12 @@ export function useFind(handle: RefObject<DocumentHandle | null>) {
   const openFind = useCallback(({ replace }: { replace?: true } = {}) => {
     setFind((current) => ({ ...current, open: true, token: current.token + 1, ...(replace ? { replace } : {}) }));
   }, []);
-  /** Opens on a match chosen in find in all tabs (ADR-024), its query in the bar. */
-  const openFindOn = useCallback((request: FindRequest) => {
+  const seeds = useRef(0);
+  /** Opens with a query in the bar, searched from its line: a match chosen in find in all tabs (ADR-024), or the selection (#70). */
+  const openFindOn = useCallback((request: Omit<FindRequest, 'token'>) => {
     setReplaced(null);
     setFind((current) => ({ ...current, open: true, token: current.token + 1, query: request.query, caseSensitive: request.caseSensitive, line: request.line }));
-    setFindSeed(request);
+    setFindSeed({ ...request, token: ++seeds.current });
   }, []);
   /** Replace is edit mode's: leaving edit mode closes its row and leaves find open. */
   const endReplace = useCallback(() => setFind((current) => (current.replace ? { ...current, replace: false } : current)), []);

@@ -2,7 +2,8 @@
 
 - Status: Accepted (2026-10-08); amended in place the same day to match the build (owner), see
   "Amendment" at the end. Which files Ctrl+E can grant: superseded by
-  [ADR-015](ADR-015-edit-grant-for-files-the-reader-chose.md) (2026-10-11)
+  [ADR-015](ADR-015-edit-grant-for-files-the-reader-chose.md) (2026-10-11). Which keys grant: Ctrl+H on a
+  reading tab too, superseded by [ADR-038](ADR-038-ctrl-h-grants-edit-mode.md) (2026-11-25)
 - Date: 2026-10-08
 - Deciders: project owner
 - Builds on: [ADR-004](ADR-004-security-and-zero-network.md) (verified capabilities: "Enable edit

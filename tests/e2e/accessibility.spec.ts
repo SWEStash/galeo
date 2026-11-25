@@ -62,6 +62,23 @@ for (const scheme of SCHEMES) {
       }
     });
 
+    test('the outline and the find bar, with their close buttons (#70)', async () => {
+      const { app, window, close } = await launchApp(['--', fixture('basic.md')]);
+      try {
+        await setScheme(app, scheme);
+        await expect(shownPanel(window).getByTestId('document').locator('article h1')).toBeVisible();
+        await window.keyboard.press('ControlOrMeta+Shift+O');
+        await expect(shownPanel(window).getByRole('button', { name: 'Close outline (Ctrl+Shift+O)' })).toBeVisible();
+        await window.keyboard.press('ControlOrMeta+F');
+        await shownPanel(window).getByRole('searchbox', { name: 'Find in document' }).fill('the');
+        await expect(shownPanel(window).getByRole('button', { name: 'Close find (Esc)' })).toBeVisible();
+        expect(await violations(window, '[data-testid="outline"]'), 'outline').toEqual([]);
+        expect(await violations(window, '.find-bar'), 'find bar').toEqual([]);
+      } finally {
+        await close();
+      }
+    });
+
     test('the JSON tree', async () => {
       const dir = tempHome();
       const file = path.join(dir, 'data.json');

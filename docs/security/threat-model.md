@@ -378,8 +378,8 @@ opaque `galeo://file/<id>` URLs. Broken link marks (v0.6, `documents.missingLink
 local file targets of links in the text main read itself (at most 500, 4 at a time) and answer
 which don't exist: the page learns nothing about paths its document doesn't name, and no content. Reads are limited to regular files under the size caps.
 Writes (v0.2) are allowed only to paths that main has marked **edit-enabled** after the user's
-explicit edit command on that tab, observed by main itself (a `before-input-event` key such as
-Ctrl+E, or a native menu item). The renderer cannot enable editing by itself, and cannot
+explicit edit command on that tab, observed by main itself (a `before-input-event` key: Ctrl+E,
+or Ctrl+H on a reading tab, ADR-038; or a native menu item). The renderer cannot enable editing by itself, and cannot
 write any other path. Each save also spends an input credit (one per real key or click).
 Ctrl+E enables only a file main last read as text with content, so a save never creates a file.
 A file the reader didn't hand over from the command line, Files or a second launch (one reached

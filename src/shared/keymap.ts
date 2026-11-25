@@ -165,8 +165,14 @@ export const CAPABILITY_COMMANDS: readonly Command[] = ['editMode'];
 export const WINDOW_COMMANDS = ['newWindow', 'closeWindow', 'quit', 'fullScreen'] as const satisfies readonly Command[];
 export type WindowCommand = (typeof WINDOW_COMMANDS)[number];
 
-/** A key main takes before the page sees it: a capability or a window command. */
+/**
+ * Page commands whose key main sees first (ADR-038): on a reading tab it grants edit mode as Ctrl+E
+ * does, and the page runs the command once granted; in edit mode main lets the key go on to the page.
+ */
+const GRANTING_COMMANDS: readonly Command[] = ['findReplace'];
+
+/** A key main sees before the page: a capability, a window command, or one that can grant edit mode. */
 export function mainCommandFor(event: KeyEventLike, platform: Platform): Command | null {
   const command = commandFor(event, platform);
-  return command && (CAPABILITY_COMMANDS.includes(command) || (WINDOW_COMMANDS as readonly Command[]).includes(command)) ? command : null;
+  return command && [...CAPABILITY_COMMANDS, ...WINDOW_COMMANDS, ...GRANTING_COMMANDS].includes(command) ? command : null;
 }

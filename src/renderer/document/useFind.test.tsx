@@ -44,10 +44,13 @@ describe('useFind', () => {
 
   it('opens on a match chosen in find in all tabs, and seeds the bar with it', async () => {
     const { run, get, unmount } = await mount();
-    const request = { query: 'dog', caseSensitive: false, line: 4, token: 9 };
-    await run(() => get().openFindOn(request));
+    await run(() => get().openFindOn({ query: 'dog', caseSensitive: false, line: 4 }));
     expect(get().find).toMatchObject({ open: true, query: 'dog', line: 4, token: 1 });
-    expect(get().findSeed).toBe(request);
+    expect(get().findSeed).toMatchObject({ query: 'dog', caseSensitive: false, line: 4 });
+    // The same query asked again is a new seed: the bar starts over with it (#70).
+    const first = get().findSeed!.token;
+    await run(() => get().openFindOn({ query: 'dog', caseSensitive: false, line: 4 }));
+    expect(get().findSeed!.token).not.toBe(first);
     unmount();
   });
 
@@ -65,7 +68,7 @@ describe('useFind', () => {
 
   it('closes: clears the matches, forgets the query and the seed, and gives focus back to the document', async () => {
     const { handle, run, get, unmount } = await mount();
-    await run(() => get().openFindOn({ query: 'dog', caseSensitive: false, line: 4, token: 9 }));
+    await run(() => get().openFindOn({ query: 'dog', caseSensitive: false, line: 4 }));
     await run(() => get().closeFind());
     expect(get().find).toMatchObject({ open: false, replace: false, query: '' });
     expect(get().findSeed).toBeNull();

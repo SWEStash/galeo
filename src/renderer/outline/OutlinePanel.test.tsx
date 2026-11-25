@@ -23,7 +23,7 @@ async function render(props: Partial<Parameters<typeof OutlinePanel>[0]> = {}) {
   return { container, ...handlers };
 }
 
-const buttons = (container: HTMLElement) => [...container.querySelectorAll('button')];
+const buttons = (container: HTMLElement) => [...container.querySelectorAll<HTMLButtonElement>('.outline-item')];
 
 describe('OutlinePanel', () => {
   it("shows a heading's tasks done of all after its text, read with it", async () => {
@@ -64,6 +64,22 @@ describe('OutlinePanel', () => {
     const { container, onClose } = await render();
     await act(async () => buttons(container)[0]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('closes from its button, named with its key (#70)', async () => {
+    const { container, onClose } = await render();
+    const close = container.querySelector<HTMLButtonElement>('button[aria-label="Close outline (Ctrl+Shift+O)"]');
+    expect(close?.title).toBe('Close (Ctrl+Shift+O)');
+    await act(async () => close!.click());
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('opening without a current heading focuses the first heading, not the close button (#70)', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root!.render(<OutlinePanel entries={ENTRIES} current={null} onChoose={() => {}} onClose={() => {}} autoFocus />));
+    expect(document.activeElement?.textContent).toBe('Title');
   });
 
   it('says so when the document has no headings', async () => {

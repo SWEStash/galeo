@@ -39,7 +39,8 @@
   [034](decisions/ADR-034-watching-a-folder.md) ·
   [035](decisions/ADR-035-linux-arm64-packages.md) ·
   [036](decisions/ADR-036-rpm-packages-and-dnf-repository.md) ·
-  [037](decisions/ADR-037-live-demo-on-the-website.md)
+  [037](decisions/ADR-037-live-demo-on-the-website.md) ·
+  [038](decisions/ADR-038-ctrl-h-grants-edit-mode.md)
 
 This document shows **what exists and how it connects**. The *why* lives in the ADRs; each
 section links the decision it depicts. Diagrams are Mermaid, so they render on GitHub and in
@@ -368,7 +369,8 @@ ones that don't exist, which the page marks; no content is read and the page nam
 
 Ctrl+E (a Main accelerator) grants the shown tab edit mode (`EditGrants`, core) and tells the page
 (`documents.editMode`); a second Ctrl+E asks the page to leave, which it does once its text is
-saved or discarded. Main grants only a file it last read as text with content, and otherwise
+saved or discarded. Ctrl+H on a reading tab asks for the grant the same way, and the grant tells
+the page to open replace; in edit mode main lets Ctrl+H through to the page (ADR-038). Main grants only a file it last read as text with content, and otherwise
 answers *refused*. A file the reader didn't hand over (its history entry isn't `chosen`: it
 came from a link, a drop, quick open or recent files, not the command line, Files or a second
 launch) is granted only after main's native dialog, naming the path, is answered *Edit*

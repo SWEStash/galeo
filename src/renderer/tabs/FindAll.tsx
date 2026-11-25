@@ -58,14 +58,17 @@ export function FindAll({
   onChoose,
   onClose,
   say,
+  initial = '',
 }: {
   /** The window's tabs, named as the tab bar names them. */
   tabs: readonly TabView[];
   onChoose: (id: string, choice: FindAllChoice) => void;
   onClose: () => void;
   say: (message: string) => void;
+  /** What the field opens with: the text selected in the shown tab (#70). */
+  initial?: string;
 }) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initial);
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [search, setSearch] = useState<Search | null>(null);
   /** Enter came before main answered what was typed: it takes the first row of that answer. */

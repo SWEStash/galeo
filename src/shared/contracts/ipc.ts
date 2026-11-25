@@ -495,7 +495,7 @@ export interface Events {
    * Ctrl+E (seen by main, never sent by the page): `granted`, the tab is now in edit mode; `leave`,
    * the reader asks to leave it, which the page does once its text is saved or discarded (ADR-013).
    */
-  'documents.editMode': { id: string; edit: 'granted' | 'leave' | 'refused' };
+  'documents.editMode': { id: string; edit: 'granted' | 'leave' | 'refused'; replace?: true };
   /** A right-click in the tab's spell-checked editor (#52): ask for the document menu, which main tops with the spelling. */
   'documents.spellingMenu': { id: string };
   /** The window is closing (or the app quitting, or its profile going) with these tabs unsaved: ask the reader. */

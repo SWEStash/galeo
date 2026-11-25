@@ -70,6 +70,8 @@ export interface DocumentViewProps {
   editable?: boolean;
   /** The reader changed the source text (never for new text from the file). */
   onEdit?: (() => void) | undefined;
+  /** Edit mode put the caret in the editor, now showing (anything opened after it keeps the focus). */
+  onEditorFocused?: (() => void) | undefined;
   /** Vim keys in edit mode (#51), with what they ask of the tab; the Vim code loads only while set. */
   vim?: VimHooks | undefined;
   /** Spell check in edit mode (#52). */
@@ -168,6 +170,11 @@ export interface DocumentHandle extends Finder {
   printable(): Printable | null;
   /** Goes to the next (1) or previous (-1) change mark, wrapping round; null when there is none. */
   stepChange(direction: 1 | -1): { index: number; count: number } | null;
+  /**
+   * The text selected in the view the reader is in, and the source line it starts on (#70): the
+   * editor's when it has the focus or shows alone, else the rendered view's; null with none.
+   */
+  selection(): { text: string; line: number | undefined } | null;
 }
 
 /** The source line at the top of the rendered view. */
@@ -216,6 +223,7 @@ export function DocumentView({
   onExpandImage,
   editable = false,
   onEdit,
+  onEditorFocused,
   vim,
   spellCheck = false,
   replacing = false,
@@ -303,6 +311,22 @@ export function DocumentView({
         else container.current?.focus();
       },
       sourceText: () => host().source?.text() ?? null,
+      selection: () => {
+        const source = host().source;
+        if (source && (view === 'source' || (view === 'split' && source.view.hasFocus))) {
+          const { from, to } = source.view.state.selection.main;
+          return from === to ? null : { text: source.view.state.sliceDoc(from, to), line: source.view.state.doc.lineAt(from).number };
+        }
+        if (view === 'source') return null;
+        // Chromium answers for a shadow root's own selection; the document's stops at its host.
+        const root = host().root as ShadowRoot & { getSelection?: () => Selection | null };
+        const selected = root.getSelection?.() ?? null;
+        const range = selected && selected.rangeCount > 0 ? selected.getRangeAt(0) : null;
+        if (!range || range.collapsed || !host().article.contains(range.commonAncestorContainer)) return null;
+        const start = range.startContainer;
+        const block = (start instanceof Element ? start : start.parentElement)?.closest<HTMLElement>('[data-src-line]');
+        return { text: range.toString(), line: block ? Number(block.dataset['srcLine']) : undefined };
+      },
       replaceSource: (text) => host().source?.setText(text),
       scrollToLine: (line) => host().source?.scrollToLine(line),
       recountFind: () => {
@@ -586,11 +610,14 @@ export function DocumentView({
   // After the view switch above (a hidden view can't take focus): edit mode makes the source view
   // editable and puts the caret in it; reading makes it read-only again.
   const editListener = useLatest(onEdit);
+  const editorFocusedListener = useLatest(onEditorFocused);
   useLayoutEffect(() => {
     const sourceView = host().source;
     if (!sourceReady || !sourceView) return;
     sourceView.setEditable(editable);
-    if (editable && showsSource(view)) sourceView.view.focus();
+    if (!editable || !showsSource(view)) return;
+    sourceView.view.focus();
+    editorFocusedListener.current?.();
   }, [editable, sourceReady, view]);
 
   // Vim keys (#51): loaded as soon as they're on, before edit mode, so the first keys typed are Vim's;

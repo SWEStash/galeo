@@ -36,6 +36,34 @@ test('main takes Ctrl+E before the page sees it', async () => {
   }
 });
 
+test('main takes Ctrl+H on a reading tab, and leaves it to the page in edit mode (ADR-038)', async () => {
+  const { app, window, close } = await launchApp(['--', path.join(docs, 'basic.md')]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await window.evaluate(() => {
+      const page = globalThis as unknown as Window & { __keys?: string[] };
+      page.__keys = [];
+      page.addEventListener('keydown', (event) => page.__keys!.push(event.key.toLowerCase()), true);
+    });
+    const press = () =>
+      app.evaluate(({ BrowserWindow }) => {
+        const contents = BrowserWindow.getAllWindows()[0]!.webContents;
+        contents.sendInputEvent({ type: 'keyDown', keyCode: 'H', modifiers: [process.platform === 'darwin' ? 'meta' : 'control'] });
+        contents.sendInputEvent({ type: 'keyUp', keyCode: 'H', modifiers: [process.platform === 'darwin' ? 'meta' : 'control'] });
+      });
+    await press();
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    expect(await window.evaluate(() => (globalThis as { __keys?: string[] }).__keys)).not.toContain('h');
+    expect(await app.evaluate(() => (globalThis as { __galeoCapabilityKeys?: string[] }).__galeoCapabilityKeys)).toEqual(['findReplace']);
+    // In edit mode the key is the page's.
+    await press();
+    await expect.poll(() => window.evaluate(() => (globalThis as { __keys?: string[] }).__keys)).toContain('h');
+    expect(await app.evaluate(() => (globalThis as { __galeoCapabilityKeys?: string[] }).__galeoCapabilityKeys)).toEqual(['findReplace']);
+  } finally {
+    await close();
+  }
+});
+
 test("a right-click shows main's menu, whose Open with default app opens a plain document", async () => {
   const file = path.join(docs, 'basic.md');
   const { app, window, close } = await launchApp(['--', file], { env });

@@ -79,16 +79,32 @@ test('Ctrl+H in edit mode from the rendered view goes back to the editor with th
   }
 });
 
-test("Ctrl+H outside edit mode opens no replace row and says it's for edit mode", async () => {
+test('Ctrl+H while reading turns on edit mode and opens the replace row, in split too (ADR-038)', async () => {
   const dir = tempHome();
   const file = path.join(dir, 'notes.md');
-  writeFileSync(file, '# Notes\n');
-  const { window, close } = await launchApp(['--', file]);
+  writeFileSync(file, '# Notes\n\ncat, cat.\n');
+  const { app, window, close } = await launchApp(['--', file]);
   try {
     await expect(shownDocument(window).locator('h1')).toBeVisible();
-    await window.keyboard.press('ControlOrMeta+H');
-    await expect(window.getByTestId('status-message')).toHaveText('Find and replace works in edit mode (Ctrl+E)');
-    await expect(window.locator('.find-bar')).toHaveCount(0);
+    await pressInMain(app, window, 'H');
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    await expect(window.getByTestId('status-view')).toHaveText('Source');
+    await expect(replaceField(window)).toBeVisible();
+    await expect(window.getByRole('searchbox', { name: 'Find in document' })).toBeFocused();
+    await window.keyboard.type('cat');
+    await expect(status(window)).toHaveText('1 of 2');
+
+    // Back to reading, in split: Ctrl+H keeps the split.
+    await window.keyboard.press('Escape');
+    await pressInMain(app, window, 'E');
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+    await window.keyboard.press('ControlOrMeta+Backslash');
+    await expect(window.getByTestId('status-view')).toHaveText('Split');
+    await pressInMain(app, window, 'H');
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    await expect(window.getByTestId('status-view')).toHaveText('Split');
+    await expect(replaceField(window)).toBeVisible();
+    await expect(window.getByRole('searchbox', { name: 'Find in document' })).toBeFocused();
   } finally {
     await close();
     removeTempHome(dir);

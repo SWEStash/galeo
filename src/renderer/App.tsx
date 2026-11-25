@@ -16,6 +16,7 @@ import { CommandsProvider, useCommands } from './commands/useCommands';
 import { baselines } from './document/change-marks';
 import { setCustomCss } from './document/host';
 import type { FindRequest } from './document/requests';
+import { selectedQueries } from './document/find-seed';
 import { useColorScheme } from './document/theme';
 import { readerWidthStyle } from './document/width';
 import { UnsavedPrompt } from './edit/UnsavedPrompt';
@@ -207,6 +208,8 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
   }, []);
 
   const { overlay, openOverlay, closeOverlay, returnFocusTo } = useOverlay();
+  // Find in all tabs opens with the text selected in the shown tab (#70).
+  const [findAllSeed, setFindAllSeed] = useState('');
   const openQuickOpen = useCallback(() => openOverlay('quickOpen'), [openOverlay]);
   const openOverview = useCallback(() => openOverlay('tabOverview'), [openOverlay]);
   const openTabSearch = useCallback(() => openOverlay('tabSearch'), [openOverlay]);
@@ -218,7 +221,11 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
     commandPalette: openPalette,
     searchTabs: openTabSearch,
     tabOverview: openOverview,
-    findAll: () => openOverlay('findAll'),
+    findAll: () => {
+      const shown = store.getSnapshot().active;
+      setFindAllSeed((shown && selectedQueries.get(shown)?.()) ?? '');
+      openOverlay('findAll');
+    },
     moveTabToWindow: () => {
       const shown = movableTab(store, setMessage);
       if (shown) openOverlay('moveTab');
@@ -380,7 +387,7 @@ function MainView({ sandboxed, platform, commandLauncher, version }: { sandboxed
       )}
       {overlay === 'findAll' && (
         <Suspense fallback={null}>
-          <FindAll tabs={view.tabs} onChoose={showMatch} onClose={closeOverlay} say={setMessage} />
+          <FindAll tabs={view.tabs} initial={findAllSeed} onChoose={showMatch} onClose={closeOverlay} say={setMessage} />
         </Suspense>
       )}
       {overlay === 'palette' && <Palette platform={platform} onChoose={choose} onClose={closeOverlay} />}

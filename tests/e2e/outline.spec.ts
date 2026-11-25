@@ -10,6 +10,8 @@ const plan = path.join(docs, 'plan-50k.md');
 const shownDocument = (window: Page) => window.locator('[data-testid="tab-panel"][data-active="true"] [data-testid="document"]');
 const outline = (window: Page) => window.getByRole('navigation', { name: 'Outline' });
 const current = (window: Page) => outline(window).locator('[aria-current="location"]');
+/** The outline's entries, without its close button. */
+const entries = (window: Page) => outline(window).getByRole('list').first().getByRole('button');
 
 /** How far a heading sits below the top of the document view, in pixels. */
 function offsetFromTop(window: Page, text: string): Promise<number> {
@@ -30,6 +32,22 @@ test('Ctrl+Shift+O opens the outline on the heading being read, passes axe, and 
     const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="outline"]').analyze();
     expect(results.violations).toEqual([]);
     await window.keyboard.press('Escape');
+    await expect(outline(window)).toHaveCount(0);
+    await expect(shownDocument(window)).toBeFocused();
+  } finally {
+    await close();
+  }
+});
+
+test("the outline's close button closes it and gives focus back, the find bar open beside it (#70)", async () => {
+  const { window, close } = await launchApp(['--', plan]);
+  try {
+    await expect(shownDocument(window).locator('h1')).toBeVisible();
+    await window.keyboard.press('ControlOrMeta+Shift+O');
+    // The find bar stays clear of the outline's header: the click would fail on a covered button.
+    await window.keyboard.press('ControlOrMeta+F');
+    await window.getByRole('searchbox', { name: 'Find in document' }).fill('plan');
+    await outline(window).getByRole('button', { name: 'Close outline (Ctrl+Shift+O)' }).click({ timeout: 5_000 });
     await expect(outline(window)).toHaveCount(0);
     await expect(shownDocument(window)).toBeFocused();
   } finally {
@@ -88,7 +106,7 @@ test("a YAML file's outline lists its top-level keys; choosing one scrolls the s
   try {
     await expect(shownDocument(window).locator('.cm-content')).toBeVisible();
     await window.keyboard.press('ControlOrMeta+Shift+O');
-    await expect(outline(window).getByRole('button')).toHaveText(['name', 'version', 'server', 'database', 'cache', 'queue', 'storage', 'mail', 'search', 'metrics', 'tracing', 'logging', 'auth', 'billing', 'reports', 'exports', 'imports', 'webhooks', 'scheduler', 'workers', 'features', 'limits']);
+    await expect(entries(window)).toHaveText(['name', 'version', 'server', 'database', 'cache', 'queue', 'storage', 'mail', 'search', 'metrics', 'tracing', 'logging', 'auth', 'billing', 'reports', 'exports', 'imports', 'webhooks', 'scheduler', 'workers', 'features', 'limits']);
     await expect(current(window)).toHaveText('name');
     const results = await new AxeBuilder({ page: window }).setLegacyMode(true).include('[data-testid="outline"]').analyze();
     expect(results.violations).toEqual([]);
@@ -105,10 +123,9 @@ test("a TOML file's outline lists its root keys and tables", async () => {
   try {
     await expect(shownDocument(window).locator('.cm-content')).toBeVisible();
     await window.keyboard.press('ControlOrMeta+Shift+O');
-    const entries = outline(window).getByRole('button');
-    await expect(entries.first()).toHaveText('title');
-    await expect(entries).toHaveCount(2 + 20 + 2);
-    await expect(entries.last()).toHaveText('[[bin]]');
+    await expect(entries(window).first()).toHaveText('title');
+    await expect(entries(window)).toHaveCount(2 + 20 + 2);
+    await expect(entries(window).last()).toHaveText('[[bin]]');
   } finally {
     await close();
   }
@@ -122,7 +139,7 @@ test("a plan's tasks show done of all in the status bar and under each heading, 
   try {
     await expect(window.getByTestId('status-tasks')).toHaveText('1 of 3 tasks');
     await window.keyboard.press('ControlOrMeta+Shift+O');
-    const rows = outline(window).getByRole('button');
+    const rows = entries(window);
     // The "1/2" on show is hidden from screen readers, which read the words instead.
     await expect(rows.nth(0)).toHaveAccessibleName('Build (1 of 2 tasks done)');
     await expect(rows.nth(1)).toHaveAccessibleName('Ship (0 of 1 tasks done)');

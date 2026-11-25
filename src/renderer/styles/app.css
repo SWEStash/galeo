@@ -37,6 +37,7 @@ body,
 
 :root {
   --galeo-status-bar-height: 24px;
+  --galeo-outline-width: min(260px, 35vw);
 }
 
 #root,
@@ -1160,14 +1161,42 @@ main {
   flex: 1;
   min-height: 0;
 }
+/* A panel's or bar's × button: the outline, find, the watched folder. */
+.panel-close {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--galeo-radius-md);
+  background: none;
+  color: var(--galeo-color-muted);
+  cursor: pointer;
+}
+.panel-close:hover {
+  background: var(--galeo-chrome-hover);
+  color: var(--galeo-color-fg);
+}
+.panel-close:focus-visible {
+  outline: var(--galeo-focus-ring);
+  outline-offset: 1px;
+}
+
 .outline-panel {
   flex: 0 0 auto;
-  width: min(260px, 35vw);
+  width: var(--galeo-outline-width);
   overflow-y: auto;
   padding: var(--galeo-space-md) 0;
   border-left: 1px solid var(--galeo-color-border);
   background: var(--galeo-chrome-bar);
   font: var(--galeo-text-md) var(--galeo-font-ui);
+}
+.outline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--galeo-space-sm) 0 0;
 }
 .outline-title {
   margin: 0;
@@ -1275,26 +1304,8 @@ main {
   text-align: left;
 }
 .watch-close {
-  display: grid;
   grid-row: 1;
   grid-column: 2;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: none;
-  border-radius: var(--galeo-radius-md);
-  background: none;
-  color: var(--galeo-color-muted);
-  cursor: pointer;
-}
-.watch-close:hover {
-  background: var(--galeo-chrome-hover);
-  color: var(--galeo-color-fg);
-}
-.watch-close:focus-visible {
-  outline: var(--galeo-focus-ring);
-  outline-offset: 1px;
 }
 .watch-empty,
 .watch-state {
@@ -1590,6 +1601,10 @@ button.quiet:hover:not(:disabled) {
   min-width: 6.5em;
   color: var(--galeo-color-muted);
   font-variant-numeric: tabular-nums;
+}
+/* With the outline open, find stays over the document, clear of the outline's header and × (#70). */
+.find-bar:has(~ .document-body > .outline-panel) {
+  right: calc(var(--galeo-outline-width) + 20px);
 }
 /* Edit mode's replace row (Ctrl+H), on a line of its own under the find row. */
 .find-replace {

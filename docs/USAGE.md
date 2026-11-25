@@ -236,7 +236,8 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
   If the file changed on disk meanwhile, nothing is written: tick again once it shows.
 - **Task progress**: a Markdown plan with task items (`- [ ]`, `- [x]`) shows how many are done in
   the status bar ("7 of 12 tasks"), and the outline shows each heading's own count ("2/5").
-- **Find** (Ctrl+F), **outline** (Ctrl+Shift+O), **zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
+- **Find** (Ctrl+F, starting from the text selected on one line), **outline** (Ctrl+Shift+O); each
+  closes with Esc or its × button. **Zoom** per tab (Ctrl++ or Ctrl+= / Ctrl+- /
   Ctrl+0, or Ctrl and the wheel), and every command by name in the **palette** (Ctrl+Shift+P).
 - **Reader width** per tab: Alt++ or Alt+= widens the reading column of Markdown and `.txt` by
   8 characters, Alt+- narrows it (40 to 200), Alt+0 puts it back to the setting; **Full width** in
@@ -292,8 +293,8 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
   typing once you pause. If a preview takes too long to render (or can't be rendered), the last
   one stays with *Preview paused*, and the next pause tries again. Ctrl+U goes to the editor alone;
   a narrow window shows the editor.
-- **Find and replace** with **Ctrl+H** in edit mode (from the rendered view, it goes back to the
-  editor): the find bar gains a replace row. Enter or
+- **Find and replace** with **Ctrl+H**: while reading it turns on edit mode first, as Ctrl+E does;
+  from the rendered view it goes back to the editor. The find bar gains a replace row. Enter or
   *Replace* swaps the current match and moves to the next; *Replace all* swaps them all, and one
   Ctrl+Z puts them back. The replacement is taken as typed.
 - **Several cursors**: Ctrl+D adds the next match of the selection, Ctrl+Shift+L every match;
@@ -342,7 +343,7 @@ and its last 25 closed ones by name or folder: Enter shows an open tab, or bring
 where it was. Ctrl+Shift+E (or ▦ at the end of the tab bar) shows the window's tabs as a grid of
 cards, each with its folder, format and marks: the arrows move between them, Enter shows one, Delete
 closes it, and Ctrl+Shift+PgUp/PgDn or a drag moves it. Ctrl+Shift+F finds text in all the
-window's tabs, unsaved ones as they are on screen: each tab with matches lists its first ones with
+window's tabs (starting from the text selected on one line), unsaved ones as they are on screen: each tab with matches lists its first ones with
 their line, and Enter shows that tab with its find bar on the match. It searches the files' source
 text, so a rendered page can count differently. The ⌕ and ⋯ buttons at the end of the bar open tab
 search and the command palette.

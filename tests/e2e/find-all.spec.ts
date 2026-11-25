@@ -120,3 +120,15 @@ test('a tab with unsaved changes is searched as it is on screen', async () => {
     await expect(window.getByTestId('status-message')).toHaveText('Saved');
   });
 });
+
+test('Ctrl+Shift+F with a word selected starts from it (#70)', async () => {
+  await withTabs(async (window) => {
+    await shownDocument(window).evaluate((view) => {
+      const text = [...view.shadowRoot!.querySelectorAll('p')].find((each) => each.textContent!.includes('Second paragraph'))!.firstChild!;
+      document.getSelection()!.setBaseAndExtent(text, 0, text, 'Second'.length);
+    });
+    await window.keyboard.press('ControlOrMeta+Shift+F');
+    await expect(field(window)).toHaveValue('Second');
+    await expect(field(window)).toBeFocused();
+  });
+});

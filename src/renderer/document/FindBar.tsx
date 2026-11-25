@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { FindResult } from '../../shared/find';
+import { Icon } from '../ui/icons';
 
 export interface FindBarProps {
   result: FindResult;
@@ -21,7 +22,7 @@ function describe({ current, total, capped }: FindResult): string {
 
 /**
  * Find in the document (UX F9). Not a dialog: the document stays usable and the bar holds no
- * focus trap; Esc closes it and the app returns focus to the document.
+ * focus trap; Esc or its × button closes it and the app returns focus to the document.
  */
 export function FindBar({ result, focusToken, onQuery, onStep, onClose, replace, initial }: FindBarProps) {
   const input = useRef<HTMLInputElement>(null);
@@ -76,6 +77,9 @@ export function FindBar({ result, focusToken, onQuery, onStep, onClose, replace,
       </button>
       <button type="button" aria-label="Next match" title="Next match (Enter, F3)" onClick={() => onStep(1)}>
         ↓
+      </button>
+      <button type="button" className="panel-close" aria-label="Close find (Esc)" title="Close (Esc)" onClick={onClose}>
+        <Icon name="close" />
       </button>
       {replace && (
         <div className="find-replace">

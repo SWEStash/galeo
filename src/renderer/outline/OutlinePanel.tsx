@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react';
 import type { OutlineEntry } from '../worker/pipeline/render';
+import { Icon } from '../ui/icons';
 
 interface OutlineNode {
   entry: OutlineEntry;
@@ -33,14 +34,14 @@ interface OutlinePanelProps {
 
 /**
  * The outline of the shown Markdown document (UX §2, Ctrl+Shift+O): its headings as nested lists
- * of buttons, the one being read marked as the current location. Esc closes it.
+ * of buttons, the one being read marked as the current location. Esc or its × button closes it.
  */
 export function OutlinePanel({ entries, current, onChoose, onClose, empty = 'No headings', autoFocus = false }: OutlinePanelProps) {
   const panel = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!autoFocus) return;
-    const target = panel.current?.querySelector<HTMLElement>('[aria-current="location"]') ?? panel.current?.querySelector<HTMLElement>('button');
+    const target = panel.current?.querySelector<HTMLElement>('[aria-current="location"]') ?? panel.current?.querySelector<HTMLElement>('.outline-item');
     target?.focus();
     // Only when asked: following the reader must never take the focus.
   }, [autoFocus]);
@@ -83,7 +84,12 @@ export function OutlinePanel({ entries, current, onChoose, onClose, empty = 'No 
 
   return (
     <nav ref={panel} className="outline-panel" aria-label="Outline" data-testid="outline" onKeyDown={onKeyDown}>
-      <h2 className="outline-title">Outline</h2>
+      <header className="outline-header">
+        <h2 className="outline-title">Outline</h2>
+        <button type="button" className="panel-close" aria-label="Close outline (Ctrl+Shift+O)" title="Close (Ctrl+Shift+O)" onClick={onClose}>
+          <Icon name="close" />
+        </button>
+      </header>
       {entries.length > 0 ? list(nest(entries)) : <p className="outline-empty">{empty}</p>}
     </nav>
   );

@@ -12,8 +12,11 @@ interface WindowOptions {
   sandboxed: boolean;
   /** A small fixed-size window for app-level choices, such as "sandbox unavailable". */
   dialog?: boolean;
-  /** A key main handles was pressed (a capability, ADR-004, or a window key); the page never saw it. */
-  onMainKey?: (command: Command) => void;
+  /**
+   * A key main sees first was pressed (a capability, ADR-004; a window key; or one that can grant edit
+   * mode, ADR-038). The page never sees it, unless the handler answers false.
+   */
+  onMainKey?: (command: Command) => boolean | void;
   /** The parts of the title before "galeo" (see `windowTitle`); main updates it later with `setTitle`. */
   title?: readonly (string | null)[];
   /** Where the window was last time (a restored session); the platform may place it itself. */
@@ -64,8 +67,8 @@ export function createAppWindow({ url, sandboxed, dialog = false, onMainKey, bou
   window.webContents.on('before-input-event', (event, input) => {
     const command = mainKey(input, keymapPlatform(process.platform));
     if (!command) return;
-    event.preventDefault();
-    onMainKey?.(command);
+    // A handler answering false leaves the key to the page (Ctrl+H in edit mode, ADR-038).
+    if (onMainKey?.(command) !== false) event.preventDefault();
   });
   if (!dialog && process.platform !== 'darwin') {
     const recolour = () => window.setTitleBarOverlay(titleBarOverlay(scheme()));

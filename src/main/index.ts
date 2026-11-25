@@ -21,7 +21,7 @@ import { ProfileCatalog } from '../core/profiles/catalog';
 import { profileIdFor } from '../core/profiles/names';
 import { ThemeGate } from '../core/desktop/theme-gate';
 import { openFiles, spelledAsOpen } from '../core/routing/open-files';
-import { editToggle } from '../core/documents/edit-toggle';
+import { editToggle, replaceKey } from '../core/documents/edit-toggle';
 import { route, type Route, type RouteRequest, type RouteWorld } from '../core/routing/router';
 import type { SessionFile, WindowBounds, WindowWatch } from '../core/session/model';
 import { CrashRecovery } from '../core/tabs/crashes';
@@ -473,8 +473,12 @@ function start(initialMode: StartupMode): void {
     window?.setTitle(windowTitle([shownFile(windowId), profile.name], { sandboxed }));
   };
 
-  /** Keys main takes before the page (ADR-004 capabilities; window keys work even when the page is busy). */
-  const mainKey = (command: Command, profile: ProfileRuntime, window: BrowserWindow) => {
+  /**
+   * Keys main takes before the page (ADR-004 capabilities; window keys work even when the page is busy);
+   * false leaves the key to the page.
+   */
+  const mainKey = (command: Command, profile: ProfileRuntime, window: BrowserWindow): boolean => {
+    if (command === 'findReplace') return replaceKeyPressed(window.webContents.id);
     // A profile being deleted gets no new windows: its folders are about to go.
     if (command === 'newWindow') {
       if (!profile.discard) openMainWindow(profile);
@@ -486,6 +490,7 @@ function start(initialMode: StartupMode): void {
       recordCapabilityKey(command);
       if (command === 'editMode') toggleEditMode(window.webContents.id);
     }
+    return true;
   };
 
   /**
@@ -495,17 +500,39 @@ function start(initialMode: StartupMode): void {
    * is granted only once they confirm its path in main's own dialog.
    */
   const toggleEditMode = (windowId: number) => {
+    const tab = shownDocument(windowId);
+    if (!tab) return;
+    const toggle = editToggle(editState(windowId, tab));
+    if (toggle === 'leave') return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'leave' });
+    askEdit(windowId, tab, toggle);
+  };
+  /**
+   * Ctrl+H (ADR-038): the page's key in edit mode, where it opens replace; on a reading tab it asks
+   * for edit mode as Ctrl+E does, and the grant tells the page to open replace. False: the page's.
+   */
+  const replaceKeyPressed = (windowId: number): boolean => {
+    const tab = shownDocument(windowId);
+    if (!tab) return false;
+    const asked = replaceKey(editState(windowId, tab));
+    if (asked === 'page') return false;
+    recordCapabilityKey('findReplace');
+    askEdit(windowId, tab, asked, { replace: true });
+    return true;
+  };
+  const shownDocument = (windowId: number) => {
     const { active } = documents.snapshot(windowId);
     const tab = active ? documents.get(active, windowId) : undefined;
-    if (!tab || tab.kind === 'settings') return;
-    const toggle = editToggle({
-      granted: grants.allows(tab.id, windowId, tab.path),
-      text: reads.shapeOf(tab.id, tab.path) !== null,
-      chosen: documents.chosen(tab.id, windowId),
-    });
-    if (toggle === 'leave') return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'leave' });
-    if (toggle === 'refuse') return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'refused' });
-    if (toggle === 'grant') return grantEdit(windowId, tab.id, tab.path);
+    return tab && tab.kind !== 'settings' ? tab : undefined;
+  };
+  const editState = (windowId: number, tab: { id: string; path: string }) => ({
+    granted: grants.allows(tab.id, windowId, tab.path),
+    text: reads.shapeOf(tab.id, tab.path) !== null,
+    chosen: documents.chosen(tab.id, windowId),
+  });
+  /** Refuses, grants, or asks first in main's own dialog (ADR-015); `replace`: the page opens replace once granted (ADR-038). */
+  const askEdit = (windowId: number, tab: { id: string; path: string }, asked: 'refuse' | 'grant' | 'ask', then: { replace?: true } = {}) => {
+    if (asked === 'refuse') return sendTo(windowId, 'documents.editMode', { id: tab.id, edit: 'refused' });
+    if (asked === 'grant') return grantEdit(windowId, tab.id, tab.path, then);
     if (askingEdit.has(windowId)) return;
     askingEdit.add(windowId);
     void confirmEdit(windowId, tab.path)
@@ -513,15 +540,15 @@ function start(initialMode: StartupMode): void {
         // Only the tab and file the key press named, if it still shows that file.
         if (!edit || documents.get(tab.id, windowId)?.path !== tab.path || grants.allows(tab.id, windowId, tab.path)) return;
         documents.markChosen(tab.id, windowId);
-        grantEdit(windowId, tab.id, tab.path);
+        grantEdit(windowId, tab.id, tab.path, then);
       })
       .finally(() => askingEdit.delete(windowId));
   };
   /** Windows showing main's "Edit this file?" question: one at a time. */
   const askingEdit = new Set<number>();
-  const grantEdit = (windowId: number, id: string, file: string) => {
+  const grantEdit = (windowId: number, id: string, file: string, then: { replace?: true } = {}) => {
     grants.grant(id, windowId, file);
-    sendTo(windowId, 'documents.editMode', { id, edit: 'granted' });
+    sendTo(windowId, 'documents.editMode', { id, edit: 'granted', ...then });
   };
 
   const openMainWindow = (

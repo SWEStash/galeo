@@ -164,6 +164,11 @@ describe('mainCommandFor', () => {
     expect(mainCommandFor(key('F11'), 'linux')).toBe('fullScreen');
   });
 
+  it('sees Ctrl+H first too, which can grant edit mode on a reading tab (ADR-038)', () => {
+    expect(mainCommandFor(key('h', { ctrlKey: true }), 'linux')).toBe('findReplace');
+    expect(mainCommandFor(key('h', { metaKey: true }), 'darwin')).toBe('findReplace');
+  });
+
   it('leaves every other shortcut to the page', () => {
     expect(mainCommandFor(key('f', { ctrlKey: true }), 'linux')).toBeNull();
     expect(mainCommandFor(key('w', { ctrlKey: true }), 'linux')).toBeNull();
