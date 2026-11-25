@@ -120,7 +120,7 @@ export interface DocumentPaneProps {
 /** What the status bar says when a task box couldn't be ticked (ADR-031). */
 const TICK_FAILURES: Record<Extract<TaskToggleResult, { kind: 'refused' | 'failed' }>['reason'], string> = {
   'no-input': "Couldn't tick the box: try again",
-  editing: 'In edit mode, tick in the preview of split view',
+  editing: 'In edit mode, tick in the rendered view',
   'not-a-task': "This box isn't a task item in the file",
   'not-in-place': "This file's line endings or encoding can't be kept: tick it in edit mode",
   unavailable: "galeo couldn't change the file just now",
@@ -218,13 +218,13 @@ export function DocumentPane({
   const renderable = shape?.renderable === true;
   const splittable = shape?.splittable === true;
   const wantedView = (chosenView === 'split' && !splittable ? null : chosenView) ?? ready?.view ?? 'rendered';
-  // Editing in split, the preview follows the editor's text rather than the file's (ADR-014).
+  // Editing, the rendered view (in split, or alone: #78) shows the editor's text rather than the file's (ADR-014).
   const [previewText, setPreviewText] = useState<string | null>(null);
   const markdown = ready && article ? (previewText ?? ready.text) : null;
   // Over the render limit, it opens as source: rendering it is the reader's request (UX §4).
   const render = useRenderedHtml(client, markdown, wantedView !== 'source', { readerAsked: ready?.banner === 'too-large', live: previewText !== null, format: format ?? 'markdown' });
   // JSON's tree: indexed by the worker, drawn by the page (ADR-018).
-  const jsonTree = useJsonTree(client, json && ready ? ready.text : null, wantedView !== 'source');
+  const jsonTree = useJsonTree(client, json && ready ? (previewText ?? ready.text) : null, wantedView !== 'source');
   const treeFailed = jsonTree.status === 'invalid' || jsonTree.status === 'too-large' || jsonTree.status === 'failed';
   const treeModel = jsonTree.status === 'ready' || jsonTree.status === 'pending' ? jsonTree.model : null;
   // Invalid JSON opens as source with the cursor where it breaks (UX F14); a new reading moves it there again.
@@ -234,7 +234,7 @@ export function DocumentPane({
     [invalidAt?.line, invalidAt?.column, ready?.text],
   );
   // CSV/TSV's table: read by the worker on its own budget, drawn by the page (ADR-018, ADR-020); in
-  // split while editing it follows the editor's text.
+  // edit mode it follows the editor's text.
   const csvTable = useCsvTable(client, tabular && ready ? (previewText ?? ready.text) : null, wantedView !== 'source', {
     // Auto keeps a .tsv on tabs; anything else is sniffed (ADR-021).
     separator: separatorChoice !== 'auto' ? separatorChoice : (shape?.separator ?? 'sniff'),
@@ -281,7 +281,7 @@ export function DocumentPane({
   const [changeCount, setChangeCount] = useState({ count: 0, mostChanged: false });
   // A split in a window too narrow for it shows one view; the toggles still act on the split.
   const view = shownView(layout, { narrow, editing });
-  const live = editing && view === 'split' && splittable;
+  const live = editing && (view === 'rendered' || (view === 'split' && splittable));
   const liveNow = useLatest(live);
   const preview = useMemo(() => pauseOrMax(() => setPreviewText(documentHandle.current?.sourceText() ?? null), PREVIEW_TIMING), []);
   useEffect(() => {
@@ -595,10 +595,10 @@ export function DocumentPane({
   useCommands(
     {
       toggleSource: () => renderable && toggle(afterToggleSource(layout, { editing })),
-      toggleSplit: () => ready !== null && toggle(afterToggleSplit(layout, { splittable, editing, lastSingle: lastSingle.current, formatName: FORMAT_NAMES[ready.format] })),
+      toggleSplit: () => ready !== null && toggle(afterToggleSplit(layout, { splittable, lastSingle: lastSingle.current, formatName: FORMAT_NAMES[ready.format] })),
       viewRendered: () => {
         if (!renderable) return false;
-        if (view !== 'rendered') toggle(editing ? { refused: 'Leave edit mode (Ctrl+E) to see the rendered view' } : { view: 'rendered' });
+        if (view !== 'rendered') toggle({ view: 'rendered' });
         return true;
       },
       viewSource: () => {
@@ -635,7 +635,11 @@ export function DocumentPane({
       findReplace: () => {
         if (!ready) return false;
         if (!editing) onMessage('Find and replace works in edit mode (Ctrl+E)');
-        else openFind({ replace: true });
+        else if (view === 'rendered') {
+          // Replacing is the editor's: from the rendered view alone, back to it first (#78).
+          setChosenView('source');
+          setReplaceOnSource(true);
+        } else openFind({ replace: true });
         return true;
       },
       findNext: step(1),
@@ -723,6 +727,15 @@ export function DocumentPane({
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [active, find.open, closeFind]);
+
+  // Ctrl+H from the rendered view in edit mode: the replace row opens once the editor shows, after
+  // the editor took the focus the view switch gives it, so the find field keeps it.
+  const [replaceOnSource, setReplaceOnSource] = useState(false);
+  useEffect(() => {
+    if (!replaceOnSource || view !== 'source') return;
+    setReplaceOnSource(false);
+    openFind({ replace: true });
+  }, [replaceOnSource, view, openFind]);
 
   // Replace is edit mode's: leaving edit mode closes its row and leaves find open.
   useEffect(() => {

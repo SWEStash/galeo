@@ -63,6 +63,22 @@ test('Ctrl+H replaces one match then all of them, one undo takes Replace all bac
   }
 });
 
+test('Ctrl+H in edit mode from the rendered view goes back to the editor with the replace row (#78)', async () => {
+  const { window, editor, close } = await editing('# Cats\n\ncat, cat.\n');
+  try {
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(window.getByTestId('status-view')).toHaveText('Rendered');
+    await openReplace(window, 'cat');
+    await expect(window.getByTestId('status-view')).toHaveText('Source');
+    await expect(status(window)).toHaveText('1 of 3');
+    await replaceField(window).fill('dog');
+    await window.getByRole('button', { name: 'Replace all' }).click();
+    await expect(editor).toContainText('dog, dog.');
+  } finally {
+    await close();
+  }
+});
+
 test("Ctrl+H outside edit mode opens no replace row and says it's for edit mode", async () => {
   const dir = tempHome();
   const file = path.join(dir, 'notes.md');

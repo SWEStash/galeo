@@ -242,7 +242,8 @@ and keeps the scroll position at the current match.
 In edit mode, Ctrl+H opens the same bar with a replace row (v0.2): *Replace with*, *Replace*
 (or Enter in that field) swaps the current match and selects the next, *Replace all* swaps every
 match as one undo step and announces "Replaced N". The replacement is literal, like the query.
-In split view the bar then searches the source pane, the only one replace can change. Outside
+In split view the bar then searches the source pane, the only one replace can change; from the
+rendered view alone, Ctrl+H goes back to the editor first (#78). Outside
 edit mode Ctrl+H opens nothing and the status bar says it needs edit mode (Ctrl+E); leaving edit
 mode closes the replace row and keeps find open.
 
@@ -302,11 +303,15 @@ mode closes the replace row and keeps find open.
   save/discard). A file opened from a link, a drop, quick open or recent files first asks in a
   native dialog naming its full path: *Edit* / *Cancel* (Cancel is the default), once per file
   per tab (ADR-015).
+- (v0.11, #78) Ctrl+U in edit mode switches between the editor and the rendered view (tree, table)
+  of the editor's text, unsaved changes included, as split's preview does; edit mode stays on, and
+  coming back puts the caret where it was. Ctrl+\ out of split goes back to the single view the
+  reader had, in edit mode too. Ctrl+H from the rendered view goes back to the editor first.
 - (v0.6) Task boxes (ADR-031). Reading: a click (or Space) on a box asks main to flip `[ ]` ↔ `[x]`
   on its line in the file; the box shows the file's state, so it changes once the new text is in,
   which isn't marked as a change (F20). Refusals say why in the status bar ("The file changed on
   disk: tick again once it shows", "This box isn't a task item in the file", …). In edit mode the
-  split view's preview ticks the editor's text instead, as an ordinary edit (unsaved until Ctrl+S,
+  rendered view (alone or in split) ticks the editor's text instead, as an ordinary edit (unsaved until Ctrl+S,
   undone with Ctrl+Z).
 - Ctrl+S saves (atomic); status bar shows "Saved" briefly. Unsaved `●` on tab.
 - (v0.10, #51) **Vim keys**, a setting (Settings → Editing, off by default) that applies to open

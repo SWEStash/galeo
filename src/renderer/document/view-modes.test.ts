@@ -3,21 +3,22 @@ import { afterToggleSource, afterToggleSplit, shownView, viewForEditing } from '
 
 describe('afterToggleSplit (Ctrl+\\)', () => {
   it('opens split from either single view', () => {
-    expect(afterToggleSplit('rendered', { splittable: true, editing: false, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'split' });
-    expect(afterToggleSplit('source', { splittable: true, editing: true, lastSingle: 'source', formatName: 'Markdown' })).toEqual({ view: 'split' });
+    expect(afterToggleSplit('rendered', { splittable: true, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'split' });
+    expect(afterToggleSplit('source', { splittable: true, lastSingle: 'source', formatName: 'Markdown' })).toEqual({ view: 'split' });
   });
 
   it('closes split back to the single view the reader had before', () => {
-    expect(afterToggleSplit('split', { splittable: true, editing: false, lastSingle: 'source', formatName: 'Markdown' })).toEqual({ view: 'source' });
-    expect(afterToggleSplit('split', { splittable: true, editing: false, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'rendered' });
+    expect(afterToggleSplit('split', { splittable: true, lastSingle: 'source', formatName: 'Markdown' })).toEqual({ view: 'source' });
+    expect(afterToggleSplit('split', { splittable: true, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'rendered' });
   });
 
-  it('closes split to the source while editing, where the rendered view is not offered', () => {
-    expect(afterToggleSplit('split', { splittable: true, editing: true, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'source' });
+  it('closes split back to the single view the reader had while editing too (#78)', () => {
+    expect(afterToggleSplit('split', { splittable: true, lastSingle: 'rendered', formatName: 'Markdown' })).toEqual({ view: 'rendered' });
+    expect(afterToggleSplit('split', { splittable: true, lastSingle: 'source', formatName: 'Markdown' })).toEqual({ view: 'source' });
   });
 
   it('is refused, with a reason, for formats without a split view', () => {
-    expect(afterToggleSplit('source', { splittable: false, editing: false, lastSingle: 'source', formatName: 'JSON' })).toEqual({
+    expect(afterToggleSplit('source', { splittable: false, lastSingle: 'source', formatName: 'JSON' })).toEqual({
       refused: 'No split view for JSON files',
     });
   });
@@ -34,8 +35,9 @@ describe('afterToggleSource (Ctrl+U)', () => {
     expect(afterToggleSource('split', { editing: true })).toEqual({ view: 'source' });
   });
 
-  it('keeps the editor in a single view while editing, saying how to see the rendered view', () => {
-    expect(afterToggleSource('source', { editing: true })).toEqual({ refused: 'Leave edit mode (Ctrl+E) to see the rendered view' });
+  it('switches between the editor and the rendered view while editing (#78)', () => {
+    expect(afterToggleSource('source', { editing: true })).toEqual({ view: 'rendered' });
+    expect(afterToggleSource('rendered', { editing: true })).toEqual({ view: 'source' });
   });
 });
 

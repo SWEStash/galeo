@@ -168,3 +168,26 @@ for (const scheme of ['light', 'dark'] as const) {
     }
   });
 }
+
+test('in edit mode Ctrl+U shows the tree of the unsaved text, and back to the editor (#78)', async () => {
+  const { home, files } = setUp({ 'data.json': '{ "a": 1 }\n' });
+  const { app, window, close } = await launchApp(['--', files['data.json']!], { home });
+  try {
+    await expect(rows(window)).toHaveText([/{1 key}$/, /a: 1$/]);
+    await pressInMain(app, window, 'E');
+    const editor = shownDocument(window).locator('.cm-content');
+    await expect(editor).toBeFocused();
+    await window.keyboard.press('ControlOrMeta+A');
+    await window.keyboard.insertText('{ "b": 2 }\n');
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(window.getByTestId('status-view')).toHaveText('Tree');
+    await expect(rows(window)).toHaveText([/{1 key}$/, /b: 2$/]);
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(editor).toBeFocused();
+    await window.keyboard.press('ControlOrMeta+s');
+    await expect(window.getByTestId('status-message')).toHaveText('Saved');
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});

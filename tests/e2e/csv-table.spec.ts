@@ -255,3 +255,24 @@ test("Settings' table defaults apply to a tab with no choice of its own (ADR-021
     removeTempHome(home);
   }
 });
+
+test('in edit mode Ctrl+U shows the table of the unsaved text, and back to the editor (#78)', async () => {
+  const { home, files } = setUp({ 'fruit.csv': 'name,qty\npear,3\n' });
+  const { app, window, close } = await launchApp(['--', files['fruit.csv']!], { home });
+  try {
+    await expect(bodyRows(window)).toHaveCount(1);
+    await pressInMain(app, window, 'E');
+    const editor = shownDocument(window).locator('.cm-content');
+    await expect(editor).toBeFocused();
+    await window.keyboard.press('ControlOrMeta+End');
+    await window.keyboard.insertText('fig,12\n');
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(window.getByTestId('status-view')).toHaveText('Table');
+    await expect(bodyRows(window)).toHaveCount(2);
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(editor).toBeFocused();
+  } finally {
+    await close();
+    removeTempHome(home);
+  }
+});

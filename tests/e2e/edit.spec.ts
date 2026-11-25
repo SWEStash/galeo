@@ -189,6 +189,38 @@ test('after a save, the rendered view shows the saved text', async () => {
   }
 });
 
+test('Ctrl+U in edit mode shows the unsaved text rendered and goes back to the editor; Ctrl+E from there still asks (#78)', async () => {
+  const { app, window, close, dir } = await dirtyEdit();
+  try {
+    const document = shownDocument(window);
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(window.getByTestId('status-view')).toHaveText('Rendered');
+    await expect(document.locator('p')).toHaveText('More.');
+    await expect(document.locator('.cm-editor')).toBeHidden();
+    await expect(window.getByTestId('status-mode')).toHaveText('Editing');
+    await expect(indicator(window, 'unsaved changes')).toBeAttached();
+
+    await window.keyboard.press('ControlOrMeta+U');
+    await expect(document.locator('.cm-content')).toBeFocused();
+    await window.keyboard.type(' Again.');
+    await expect(document.locator('.cm-content')).toHaveText('# DraftMore. Again.');
+
+    // The palette's (and the status bar's) Show rendered view does the same.
+    await window.keyboard.press('ControlOrMeta+Shift+P');
+    await window.getByTestId('palette').getByRole('combobox').fill('Show rendered view');
+    await window.keyboard.press('Enter');
+    await expect(document.locator('p')).toHaveText('More. Again.');
+    await pressInMain(app, window, 'E');
+    await unsavedDialog(window).getByRole('button', { name: "Don't save" }).click();
+    await expect(window.getByTestId('status-mode')).toHaveText('Read-only');
+    await expect(window.getByTestId('status-view')).toHaveText('Rendered');
+    await expect(document.locator('p')).toHaveCount(0);
+  } finally {
+    await close();
+    removeTempHome(dir);
+  }
+});
+
 /** A file in edit mode with one unsaved line. Closing it would ask, so a failed test's cleanup kills it. */
 async function dirtyEdit(text = '# Draft\n', { open = (file: string) => file, env }: { open?: (file: string) => string; env?: Record<string, string> } = {}) {
   const dir = tempHome();

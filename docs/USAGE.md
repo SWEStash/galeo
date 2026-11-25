@@ -286,17 +286,20 @@ galeo reads nothing in the folder until you open a file: the list comes from fil
   can't be edited. A file you opened from a link, a drop, quick open or recent files asks once,
   naming its full path, before its first edit; files you open from Files or the command line
   don't ask.
+- **Ctrl+U** in edit mode switches between the editor and the rendered view (or the tree or table)
+  of your text, unsaved changes included; you stay in edit mode until Ctrl+E.
 - **In split view**, edit mode keeps the rendered view beside the editor, and it follows your
   typing once you pause. If a preview takes too long to render (or can't be rendered), the last
   one stays with *Preview paused*, and the next pause tries again. Ctrl+U goes to the editor alone;
   a narrow window shows the editor.
-- **Find and replace** with **Ctrl+H** in edit mode: the find bar gains a replace row. Enter or
+- **Find and replace** with **Ctrl+H** in edit mode (from the rendered view, it goes back to the
+  editor): the find bar gains a replace row. Enter or
   *Replace* swaps the current match and moves to the next; *Replace all* swaps them all, and one
   Ctrl+Z puts them back. The replacement is taken as typed.
 - **Several cursors**: Ctrl+D adds the next match of the selection, Ctrl+Shift+L every match;
   Shift+Alt+↑/↓ adds a cursor above or below; Ctrl+click adds one where you click, and Alt+drag
   puts one on each line it crosses. Typing goes to all of them; Esc goes back to one.
-- **Task boxes**: in edit mode, the preview of split view (Ctrl+\) ticks them: a click (or Space)
+- **Task boxes**: in edit mode, the rendered view (alone or in split) ticks them: a click (or Space)
   changes the editor's line from `[ ]` to `[x]` and back; Ctrl+S saves it, Ctrl+Z undoes it. (While
   reading, a click ticks the box in the file at once: see Reading.)
 - **Tab** indents: at the cursor it adds the file's own indent (a tab, or its two or four spaces);

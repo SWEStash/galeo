@@ -9,23 +9,22 @@ export type SingleView = Exclude<ViewMode, 'split'>;
 /** The view a toggle leads to, or why it doesn't apply here. */
 export type ViewToggle = { view: ViewMode } | { refused: string };
 
-/**
- * Ctrl+\ (ADR-014): into split, or back out to the single view the reader had; while editing,
- * back out to the source, as the rendered view alone isn't offered then.
- */
+/** Ctrl+\ (ADR-014): into split, or back out to the single view the reader had. */
 export function afterToggleSplit(
   view: ViewMode,
-  { splittable, editing, lastSingle, formatName }: { splittable: boolean; editing: boolean; lastSingle: SingleView; formatName: string },
+  { splittable, lastSingle, formatName }: { splittable: boolean; lastSingle: SingleView; formatName: string },
 ): ViewToggle {
   if (!splittable) return { refused: `No split view for ${formatName} files` };
   if (view !== 'split') return { view: 'split' };
-  return { view: editing ? 'source' : lastSingle };
+  return { view: lastSingle };
 }
 
-/** Ctrl+U: the other single view; out of split, the source while editing and the rendered view when reading. */
+/**
+ * Ctrl+U: the other single view, while editing too (the rendered view then shows the editor's text,
+ * #78); out of split, the source while editing and the rendered view when reading.
+ */
 export function afterToggleSource(view: ViewMode, { editing }: { editing: boolean }): ViewToggle {
   if (view === 'split') return { view: editing ? 'source' : 'rendered' };
-  if (editing) return { refused: 'Leave edit mode (Ctrl+E) to see the rendered view' };
   return { view: view === 'rendered' ? 'source' : 'rendered' };
 }
 
