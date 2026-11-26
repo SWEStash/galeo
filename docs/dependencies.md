@@ -66,7 +66,7 @@ Registry data as of 2026-09-25: latest version, licence, last publish, weekly do
 | `shiki`, `@shikijs/rehype` | 4.6.x | MIT | 2026-11-02 | 21 M / 680 k | Code highlighting with the GitHub themes; grammars loaded per document |
 | `katex`, `rehype-katex` | 0.19.x / 7.0.x | MIT | 2026-10-23 / 2024-08-19 | 24 M / 6.8 M | Math (`trust: false`, limits; SR-03). **Exact version pin**; `rehype-katex`, Mermaid and `micromark-extension-math` ask for `^0.16`, so `overrides` in `package.json` give them the pinned `katex` (without them, math ran on a nested 0.16 copy, under a KaTeX advisory fixed in 0.18.2, and only the stylesheet followed the pin) |
 | `mermaid` | 12.2.0 | MIT | 2026-10-13 | 15 M | Diagrams, lazy on the UI thread, `securityLevel: 'strict'` (SR-03). Heavy (split into chunks); **exact version pin**. On 12.x since 2026-10-06 (owner): ELK layout (12's default; brings `elkjs`, EPL-2.0, allowed by name under "Licence"; 12.3.0 with elkjs 0.12 was reverted on 2026-11-07: its layout froze the page past the pathological budget), `look: 'classic'` |
-| `dompurify` | 3.4.18 | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
+| `dompurify` | 3.5.0 | MPL-2.0 OR Apache-2.0 (Apache chosen) | 2026-09-23 | 59 M | Sanitizes Mermaid SVG output before insertion. Already a Mermaid dependency. **Exact version pin** |
 
 ### Runtime: source views (CodeMirror 6, ADR-003)
 
