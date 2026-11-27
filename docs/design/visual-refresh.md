@@ -122,10 +122,11 @@ Contrast, computed with `tests/helpers/contrast.ts` (minimum: 4.5 text, 3 contro
 |---|---|---|
 | `--galeo-motion-fast` | 100 ms | Hover and press colours |
 | `--galeo-motion-base` | 150 ms | Menus and overlays opening (fade + 4 px rise), the side panel collapsing |
-| `--galeo-ease` | `cubic-bezier(0.2, 0, 0, 1)` | Everything |
+| `--galeo-motion-slow` | 1000 ms | A followed link's mark fading out, ease-out (#79) |
+| `--galeo-ease` | `cubic-bezier(0.2, 0, 0, 1)` | Everything but the link mark's fade |
 
 Nothing animates on close, on tab switches or in the document, save one exception: a followed link's
-target fades its mark out over `--galeo-motion-base` (#75), so the eye finds where it landed. Under `prefers-reduced-motion:
+target fades its mark out over `--galeo-motion-slow`, ease-out (#75, #79), so the eye finds where it landed. Under `prefers-reduced-motion:
 reduce` every duration is 0 (one rule in `tokens.css`), as the reload pulse and skeleton already are.
 
 ### Focus

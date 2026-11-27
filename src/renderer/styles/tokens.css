@@ -80,6 +80,8 @@
   --galeo-scrim: rgb(0 0 0 / 25%);
   --galeo-motion-fast: 100ms;
   --galeo-motion-base: 150ms;
+  /* The one slow motion: a followed link's mark fading out in the document (#79). */
+  --galeo-motion-slow: 1000ms;
   --galeo-ease: cubic-bezier(0.2, 0, 0, 1);
   /*
    * Chrome colours: the bars and panels, menus and overlays on them, and a control under the pointer
@@ -154,5 +156,6 @@
   :root {
     --galeo-motion-fast: 0ms;
     --galeo-motion-base: 0ms;
+    --galeo-motion-slow: 0ms;
   }
 }

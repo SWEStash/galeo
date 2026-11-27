@@ -418,7 +418,8 @@ th {
 th:not([align]) {
   text-align: start;
 }
-tbody tr:nth-child(2n) {
+/* Striped rows, kept under a single class so a mark on a row (#79) shows over the stripe. */
+:where(tbody tr:nth-child(2n)) {
   background: color-mix(in srgb, var(--galeo-color-code-bg) 70%, transparent);
 }
 
@@ -505,13 +506,14 @@ dl[data-galeo-mdx='props'] dd {
   color: #1f2328;
 }
 
-/* A followed link's target, marked for a moment after the jump; the mark fades as it goes (#75). The one
-   animation in the document: it shows where the eye should land. Reduced motion makes the fade instant. */
-[id] {
-  transition: background-color var(--galeo-motion-base) var(--galeo-ease);
-}
+/* A followed link's target (#75), or the row, item or paragraph an empty anchor starts (#79), marked at
+   once after the jump; then the mark fades out slowly. The one animation in the document: it shows where
+   the eye should land. Reduced motion makes the fade instant. */
 .galeo-landed {
   background-color: var(--galeo-color-mark);
+}
+.galeo-landed-fading {
+  transition: background-color var(--galeo-motion-slow) ease-out;
 }
 
 /* A block that failed on its own (a formula), with its message and source; the rest renders. */

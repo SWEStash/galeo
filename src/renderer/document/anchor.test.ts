@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, landingOffset, scrollTopFor } from './anchor';
+import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, landingMark, landingOffset, scrollTopFor } from './anchor';
 
 describe('firstVisibleLine', () => {
   const blocks = [
@@ -141,5 +141,35 @@ describe('landingOffset', () => {
 
   it('is at least three lines in a short view', () => {
     expect(landingOffset(300, 24)).toBe(72);
+  });
+});
+
+describe('landingMark (#79)', () => {
+  const html = (markup: string) => {
+    const root = document.createElement('article');
+    root.innerHTML = markup;
+    return root;
+  };
+
+  it('marks a heading or a footnote item itself', () => {
+    const root = html('<h2 id="setup">Setup</h2><ol><li id="fn-1">Note</li></ol>');
+    expect(landingMark(root.querySelector('#setup')!)).toBe(root.querySelector('h2'));
+    expect(landingMark(root.querySelector('#fn-1')!)).toBe(root.querySelector('li'));
+  });
+
+  it('marks the row, list item or paragraph an empty anchor starts', () => {
+    const root = html(
+      '<table><tbody><tr><td><a id="d-02"></a>D-02</td><td>Memory</td></tr></tbody></table>' +
+        '<ul><li><a id="r-01"></a>R-01 <em>done</em></li></ul>' +
+        '<p>See <a id="q-01"></a>Q-01 here.</p>',
+    );
+    expect(landingMark(root.querySelector('#d-02')!)).toBe(root.querySelector('tr'));
+    expect(landingMark(root.querySelector('#r-01')!)).toBe(root.querySelector('li'));
+    expect(landingMark(root.querySelector('#q-01')!)).toBe(root.querySelector('p'));
+  });
+
+  it('keeps an inline target with no block around it', () => {
+    const root = html('<span id="loose">Loose</span>');
+    expect(landingMark(root.querySelector('#loose')!)).toBe(root.querySelector('span'));
   });
 });

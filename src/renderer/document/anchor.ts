@@ -90,6 +90,19 @@ export function landingOffset(viewport: number, lineHeight: number): number {
   return Math.max(viewport / 6, 3 * lineHeight);
 }
 
+/** Elements that sit inside a line of text, with no box of their own to mark (an empty `<a id>`). */
+const INLINE = 'a, span, sup, sub, em, strong, b, i, code, small, mark, abbr, cite, q, s, u, img';
+/** The blocks a reader sees as one entry: a row, an item, a paragraph. */
+const MARKED_BLOCKS = 'h1, h2, h3, h4, h5, h6, p, li, tr, dt, dd, blockquote, pre, figure';
+
+/**
+ * What a followed link's target marks (#79): a block target itself; an inline one, such as the
+ * empty anchor that starts a table row, the row, item or paragraph that holds it.
+ */
+export function landingMark(target: Element): Element {
+  return target.matches(INLINE) ? (target.closest(MARKED_BLOCKS) ?? target) : target;
+}
+
 /** A heading scrolled to sits a few pixels under the top of the view (rounding, margins). */
 const HEADING_SLACK_PX = 8;
 

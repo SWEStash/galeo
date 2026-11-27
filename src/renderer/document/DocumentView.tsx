@@ -14,7 +14,7 @@ import type { JsonTreeView } from './json-tree-view';
 import type { ScrollAnchor } from '../../shared/tabs';
 import { markDocumentPaint } from '../perf';
 import type { OutlineEntry } from '../worker/pipeline/render';
-import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, landingOffset, scrollTopFor, type PlacedBlock } from './anchor';
+import { anchorAt, blockAtOrBefore, currentHeading, firstVisibleLine, keptTopFor, landingMark, landingOffset, scrollTopFor, type PlacedBlock } from './anchor';
 import { attachDiagrams, type Diagrams } from './diagrams';
 import { loadSourceView, mountDocumentHost, placesFractions, sourceViewLoaded, type ColorScheme, type DocumentHost } from './host';
 import { createRenderedFinder, type Finder } from './rendered-finder';
@@ -110,6 +110,9 @@ export interface DocumentViewProps {
 /** How long a link's target stays marked before the mark fades (#75). */
 const LANDED_MS = 1500;
 const LANDED_CLASS = 'galeo-landed';
+/** The fade that follows, as long as `--galeo-motion-slow` (#79). */
+const FADING_MS = 1000;
+const FADING_CLASS = 'galeo-landed-fading';
 
 /** Scrolling has settled once it pauses this long; only then is the position reported. */
 const POSITION_SETTLE_MS = 300;
@@ -279,14 +282,18 @@ export function DocumentView({
   const markLanded = (target: Element) => {
     if (landed.current) {
       clearTimeout(landed.current.timer);
-      landed.current.target.classList.remove(LANDED_CLASS);
+      landed.current.target.classList.remove(LANDED_CLASS, FADING_CLASS);
     }
     target.classList.add(LANDED_CLASS);
-    const timer = setTimeout(() => {
-      target.classList.remove(LANDED_CLASS);
+    const fade = () => {
+      target.classList.replace(LANDED_CLASS, FADING_CLASS);
+      landed.current = { target, timer: setTimeout(done, FADING_MS) };
+    };
+    const done = () => {
+      target.classList.remove(FADING_CLASS);
       landed.current = null;
-    }, LANDED_MS);
-    landed.current = { target, timer };
+    };
+    landed.current = { target, timer: setTimeout(fade, LANDED_MS) };
   };
 
   useImperativeHandle(ref, () => {
@@ -380,7 +387,7 @@ export function DocumentView({
         const below = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
         scroller.scrollTop += below - landingOffset(scroller.clientHeight, lineHeight);
         landedHeading.current = /^H[1-6]$/.test(target.tagName) ? { id: target.id, top: scroller.scrollTop } : null;
-        markLanded(target);
+        markLanded(landingMark(target));
         return true;
       },
     };

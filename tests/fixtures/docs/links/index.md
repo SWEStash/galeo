@@ -4,6 +4,8 @@
 - [A section further down](#far-section)
 - [By reference][other-ref]
 - <a href="other.md#details">Raw HTML link to a section</a>
+- [Decision D-02](#d-02)
+- [Question Q-01, over there](other.md#q-01)
 - [Missing file](missing.md)
 - [Web](https://example.org/page?x=1)
 - [Mail](mailto:someone@example.org)
@@ -134,6 +136,13 @@ Filler paragraph 59 to push the section below the fold.
 ## Far section
 
 You arrived.
+
+| Id | Decision |
+|---|---|
+| <a id="d-01"></a>D-01 | The first decision |
+| <a id="d-02"></a>D-02 | The second decision |
+| <a id="d-03"></a>D-03 | The third decision |
+| <a id="d-04"></a>D-04 | The fourth decision |
 
 Filler paragraph 0 after the section, so it can land below the top of the view.
 

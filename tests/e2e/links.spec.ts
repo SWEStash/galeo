@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, test, type ElectronApplication, type Page } from '@playwright/test';
+import { expect, test, type ElectronApplication, type Locator, type Page } from '@playwright/test';
 import { launchApp, removeTempHome, tempHome } from '../helpers/launch';
 import { saveFile } from '../helpers/save';
 
@@ -10,6 +10,8 @@ const env = { GALEO_TEST_EXTERNAL: 'record', GALEO_TEST_BURST_ANSWER: 'block' };
 const opened = (app: ElectronApplication) =>
   app.evaluate(() => (globalThis as { __galeoOpenedExternal?: string[] }).__galeoOpenedExternal ?? []);
 
+/** The mark's class itself, not the `galeo-landed-fading` that follows it. */
+const LANDED = /(^|\s)galeo-landed(\s|$)/;
 const heading = (window: Page) => window.getByTestId('document').locator('h1');
 
 test('follows a local link in the same tab, and goes back and forward with Alt+←/→', async () => {
@@ -101,10 +103,10 @@ test('a link lands its heading below the top of the view, marked for a moment, t
       if (name === 'Far section') await window.keyboard.press('Alt+ArrowLeft');
       await document.getByRole('link', { name: link }).click();
       const target = document.locator('h2', { hasText: name });
-      await expect(target).toHaveClass(/galeo-landed/);
+      await expect(target).toHaveClass(LANDED);
       await expect.poll(() => shareFromTop(window, name)).toBeCloseTo(1 / 6, 1);
       await expect(current).toHaveText(name);
-      await expect(target).not.toHaveClass(/galeo-landed/, { timeout: 3000 });
+      await expect(target).not.toHaveClass(LANDED, { timeout: 3000 });
     }
   } finally {
     await close();
@@ -119,10 +121,67 @@ test('a link to a heading too near the end to land below the top still marks it 
   try {
     const document = window.getByTestId('document');
     await document.getByRole('link', { name: 'To the end' }).click();
-    await expect(document.locator('h2', { hasText: 'The end' })).toHaveClass(/galeo-landed/);
+    await expect(document.locator('h2', { hasText: 'The end' })).toHaveClass(LANDED);
   } finally {
     await close();
     removeTempHome(dir);
+  }
+});
+
+/** A row's background colour, and the size of the box it fills. */
+function backgroundOf(row: Locator): Promise<{ colour: string; height: number }> {
+  return row.evaluate((element) => ({ colour: getComputedStyle(element).backgroundColor, height: element.getBoundingClientRect().height }));
+}
+
+/** The mark's colour in the document's current scheme. */
+function markColour(view: Locator): Promise<string> {
+  return view.evaluate((host) => {
+    const probe = document.createElement('div');
+    probe.style.backgroundColor = 'var(--galeo-color-mark)';
+    host.shadowRoot!.append(probe);
+    const colour = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return colour;
+  });
+}
+
+test('a link to the empty anchor that starts a table row marks the row, drawn, and the mark fades gradually (#79)', async () => {
+  const { window, close } = await launchApp(['--', index], { env });
+  try {
+    const document = window.getByTestId('document');
+    await document.getByRole('link', { name: 'Decision D-02' }).click();
+    // D-02 is an even row, which has the tables' stripe: the mark shows over it.
+    const row = document.locator('tr', { hasText: 'D-02' });
+    const resting = (await backgroundOf(document.locator('tr', { hasText: 'D-04' }))).colour;
+    const mark = await markColour(document);
+    await expect(row).toHaveClass(LANDED);
+    await expect(row).toBeInViewport();
+    expect(await backgroundOf(row)).toEqual({ colour: mark, height: expect.any(Number) });
+    expect((await backgroundOf(row)).height).toBeGreaterThan(0);
+    await expect(row).not.toHaveClass(LANDED, { timeout: 3000 });
+    // A fade, not a blink: a fifth of a second after the mark goes, it is still on its way out.
+    await window.waitForTimeout(200);
+    expect((await backgroundOf(row)).colour).not.toBe(mark);
+    expect((await backgroundOf(row)).colour).not.toBe(resting);
+    await expect.poll(async () => (await backgroundOf(row)).colour, { timeout: 3000 }).toBe(resting);
+  } finally {
+    await close();
+  }
+});
+
+test('a middle-clicked link to a row in another file lands it and marks it once its tab is shown (#79)', async () => {
+  const { window, close } = await launchApp(['--', index], { env });
+  try {
+    const tabs = window.getByRole('tab');
+    await window.getByTestId('document').getByRole('link', { name: 'Question Q-01, over there' }).click({ button: 'middle' });
+    await expect(tabs).toHaveCount(2);
+    await tabs.filter({ hasText: 'other.md' }).click();
+    const row = window.getByTestId('document').filter({ visible: true }).locator('tr', { hasText: 'Q-01' });
+    await expect(row).toHaveClass(LANDED);
+    await expect(row).toBeInViewport();
+    expect((await backgroundOf(row)).colour).toBe(await markColour(window.getByTestId('document').filter({ visible: true })));
+  } finally {
+    await close();
   }
 });
 
